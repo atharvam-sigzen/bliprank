@@ -97,15 +97,23 @@ quote `[low, high]`, never `±`:
 | 200 | [0.195, 0.314] | 0.060 | |
 | 500 | [0.214, 0.290] | 0.038 | |
 
-**Estimating ρ** — in the P0 pilot, and every cycle after that as a monitor. Over N
-cells of m runs each, on the mention indicator: `MSB = m·Σ(p̂ᵢ − p̄)² / (N − 1)`,
-`MSW = Σ m·p̂ᵢ(1 − p̂ᵢ) / (N(m − 1))`, `ρ̂ = (MSB − MSW) / (MSB + (m − 1)·MSW)`
-(one-way ANOVA estimator). For a fixed prompt bank this charges between-prompt
-heterogeneity as well as within-cell repetition, so it is conservative — the
-direction to err in. Day-to-day dispersion (same cell re-collected on a second
-day) is estimated separately and governs n_eff for multi-day reported units.
+**Estimating ρ** — in the P0 pilot, and every cycle after that as a monitor. The
+prompt bank is fixed, so between-prompt heterogeneity is a fixed effect: it
+cancels in cycle-to-cycle comparisons and only makes a single-cycle Wilson
+interval conservative. What makes Wilson anti-conservative is the **day×cell**
+component — runs of one cell within a cycle being more alike than runs of that
+cell across cycles (caching, per-day engine state). Estimate it from a
+re-collection of the same cells on a second day: with kᵢ₁, kᵢ₂ mentions out of m
+runs each, `D = Σ(kᵢ₁ − kᵢ₂)² / Σ 2m·p̂ᵢ(1 − p̂ᵢ)·2m/(2m − 1)` (p̂ᵢ pooled over both
+days), `E[D] = 1 + (m − 1)·ρ_u`, so **`ρ̂_u = (D − 1)/(m − 1)`**, floored at 0. This
+is heterogeneity-free. The single-day one-way ANOVA estimator
+`ρ̂ = (MSB − MSW)/(MSB + (m − 1)·MSW)` (with `MSB = m·Σ(p̂ᵢ − p̄)²/(N − 1)`,
+`MSW = Σ m·p̂ᵢ(1 − p̂ᵢ)/(N(m − 1))`) includes the fixed cell effect and is an **upper
+bound** on ρ_u — report it, never gate on it (with a diverse bank it sits near
+0.25 even when runs are independent). The within-day pass-to-pass ratio (first
+half of a cell's runs vs the second half, hours apart) is a lower-bound proxy.
 
-Gate G0 requires DEFF ≤ 1.5 at m = 5 (ρ̂ ≤ 0.125) on every engine, so that the
+Gate G0 requires DEFF = 1 + 4ρ̂_u ≤ 1.5 (ρ̂_u ≤ 0.125) on every engine, so that the
 Starter unit's n_eff ≥ 100. If it is higher, nothing is "wrong" — every published
 interval uses n_eff and runs-per-tier are re-derived before pricing is fixed.
 

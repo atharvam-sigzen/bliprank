@@ -18,8 +18,8 @@ the product.
 | 0.2 | `CLAUDE.md`, `.claude/` (agents, commands, skills, hooks), plugins installed |
 | 0.3 | `packages/contracts` — the `EngineAdapter` interface, **hand-written** |
 | 0.4 | `packages/stats` — Wilson intervals, verified against reference implementation |
-| 0.5 | **OpenWeb Ninja pilot**: 100 prompts × 5 engines × 10 runs × 3 known brands, every cell re-collected on a second day (≈30k calls, ≈$60) |
-| 0.6 | Cost/variance instrumentation dashboard: $/answer, latency, ρ̂ within-day, day-to-day dispersion, DEFF, n_eff per engine |
+| 0.5 | **OpenWeb Ninja pilot**: 100 prompts × 5 engines × 10 runs, three known brands detected in every answer, every cell re-collected on a second day (≈10k calls; ≈$68 at pay-as-you-go, ≈$18 at Mega marginal). Runner: `services/collector/pilot/README.md` |
+| 0.6 | Cost/variance instrumentation: $/answer, latency, ρ̂_u (day×cell), pass-to-pass and day-to-day dispersion, ANOVA upper bound, DEFF, n_eff per engine — `pnpm collector:analyse` |
 
 ### GATE G0 — the assumption gate
 
@@ -29,9 +29,9 @@ the product.
 | Functional | Wilson implementation agrees with reference | ≤1e-9 across the n×p̂ grid |
 | Performance | Response latency observed | p95 ≤ 20s (provider states 2–20s) |
 | **Cost** | **Measured $/answer** | **≤ $0.0022 (model says $0.002)** |
-| **Cost** | **Design effect** — intra-cell correlation ρ̂ of the mention indicator, ANOVA estimator across the pilot's 10-run cells, per engine | **DEFF = 1 + 4ρ̂ ≤ 1.5 at the Starter default of 5 runs/cell (ρ̂ ≤ 0.125), on every engine** |
+| **Cost** | **Design effect** — day×cell correlation ρ̂_u of the mention indicator, per engine, from the two-day re-collection: ρ̂_u = (D − 1)/(m − 1) where D is the day-to-day dispersion ratio of per-cell counts (heterogeneity-free; the single-day ANOVA ρ̂ is only an upper bound) | **DEFF = 1 + 4ρ̂_u ≤ 1.5 at the Starter default of 5 runs/cell (ρ̂_u ≤ 0.125), on every engine** |
 | **Cost** | **Precision at the reported unit** — Starter unit = brand × engine × cycle over 30 prompts × 5 runs, n = 150 nominal | **n_eff = 150 / DEFF ≥ 100, i.e. the Wilson interval at p̂ = 0.25 lies within [0.17, 0.35]** |
-| Cost | Day-to-day dispersion (day-2 re-collection vs day-1, per engine) | reported, not gated — the threshold is set when the weekly reported unit is defined (P2.6) |
+| Cost | Within-day pass-to-pass dispersion and the single-day ANOVA ρ̂ (upper bound), per engine | reported alongside, not gated; without the second day the two design-effect rows are NOT RUN |
 | Usability | A second person can reproduce the pilot from the README | unaided |
 
 > **G0 is the most important gate in the project.** If measured cost per answer is
@@ -44,9 +44,14 @@ the product.
 > (n, p̂) is arithmetic, not evidence — a 5-run cell at p̂ = 0.25 is [0.05, 0.66]
 > whatever the engine does, so no pilot can pass or fail a half-width threshold.
 > What the pilot *can* falsify is the independence assumption behind every
-> interval we will ever publish. If DEFF exceeds 1.5 the product is not broken:
-> every published interval switches to n_eff = n / DEFF and runs-per-tier are
-> re-derived — but that has to be known before pricing is fixed, not after launch.
+> interval we will ever publish — specifically the day×cell component: runs of a
+> cell within one cycle being more alike than runs of that cell across cycles.
+> Between-prompt heterogeneity is a fixed effect of the bank; it cancels in
+> cycle-to-cycle comparisons and only makes single-cycle Wilson conservative,
+> which is why the gate uses the two-day estimator and not the single-day ANOVA
+> figure. If DEFF exceeds 1.5 the product is not broken: every published interval
+> switches to n_eff = n / DEFF and runs-per-tier are re-derived — but that has to
+> be known before pricing is fixed, not after launch.
 
 ---
 
