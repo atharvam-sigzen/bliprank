@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cacheCell, type RawAnswer } from '@bliprank/contracts'
-import { analyseEngine, cites, deffAt, dispersionRatio, icc, mentionRegex, mentions } from './analyse.js'
+import { analyseEngine, cites, deffAt, dispersionRatio, icc, mentionRegex, mentions, rhoFromRatio } from './analyse.js'
 import { fixtureAdapter, unit } from './fixture-adapter.js'
 
 describe('mention / citation detection (rule R1: alias tables, no model)', () => {
@@ -82,11 +82,36 @@ describe('deffAt / dispersionRatio', () => {
       }
       return { kA, mA: 5, kB, mB: 5 }
     })
-    expect(dispersionRatio(pairs)!.ratio).toBeCloseTo(1, 0)
+    const d = dispersionRatio(pairs, 200)!
+    expect(d.ratio).toBeCloseTo(1, 0)
+    expect(d.ci.ratioLo).toBeLessThan(1)
+    expect(d.ci.ratioHi).toBeGreaterThan(1)
     const drifted = pairs.map((p) => ({ ...p, kB: p.kA >= 2 ? 0 : 5 }))
-    expect(dispersionRatio(drifted)!.ratio).toBeGreaterThan(2)
+    expect(dispersionRatio(drifted, 200)!.ratio).toBeGreaterThan(2)
     expect(dispersionRatio([{ kA: 1, mA: 5, kB: 1, mB: 4 }])).toBeNull()
+    expect(dispersionRatio([{ kA: 0, mA: 5, kB: 0, mB: 5 }])).toBeNull() // no information at all
   })
+  it('exact inversion recovers a planted day×cell correlation (0.05 / 0.125 / 0.25) at m=10, N=6000', () => {
+    // Model: fixed p per cell, per-day latent c ~ Bern(p), each run copies c w.p. √ρ else independent Bern(p).
+    for (const rho of [0.05, 0.125, 0.25]) {
+      const pairs = []
+      for (let i = 0; i < 6000; i++) {
+        const p = 0.15 + 0.7 * unit(`p${i}`) // heterogeneous, persists across days
+        const day = (d: number) => {
+          const c = unit(`c${i}d${d}`) < p
+          let k = 0
+          for (let j = 0; j < 10; j++) if (unit(`z${i}d${d}j${j}`) < Math.sqrt(rho) ? c : unit(`b${i}d${d}j${j}`) < p) k++
+          return k
+        }
+        pairs.push({ kA: day(1), mA: 10, kB: day(2), mB: 10 })
+      }
+      const d = dispersionRatio(pairs, 100)!
+      const naive = (d.ratio - 1) / 9
+      expect(Math.abs(d.rhoRaw - rho)).toBeLessThan(0.02) // exact inversion lands on the planted value
+      if (rho >= 0.125) expect(naive - rho).toBeGreaterThan(Math.abs(d.rhoRaw - rho)) // naive (D−1)/(m−1) over-reads
+      expect(rhoFromRatio(1, 10)).toBe(0)
+    }
+  }, 60_000)
 })
 
 describe('analyseEngine end to end on fixture answers', () => {
@@ -114,21 +139,23 @@ describe('analyseEngine end to end on fixture answers', () => {
     }
     return { answers, failed: 0, parseFailures: 0, rejected: 0 }
   }
-  it('independent runs → ρ̂_u≈0, DEFF≈1, gate PASS; day×cell correlation → FAIL; one day → NOT RUN', async () => {
-    const good = analyseEngine('gemini', await collectDay('2026-08-19', 0, 0.3), await collectDay('2026-08-20', 0, 0.3), bank, { calls: 600, usd: 4.2 }, 10)
+  it('independent runs → PASS; day×cell correlation → FAIL; one day → NOT RUN; replays → integrity FAIL', async () => {
+    const good = analyseEngine('gemini', await collectDay('2026-08-19', 0, 0.3), await collectDay('2026-08-20', 0, 0.3), bank, { calls: 600, usd: 4.2 }, 10, 'payg')
     expect(good.answers).toBe(600)
     expect(good.usdPerAnswer).toBeCloseTo(0.007)
+    expect(good.usdPerAnswerAtMega).toBeCloseTo(0.002)
+    expect(good.gate.cost).toBe(true)
     expect(good.dayToDay!.cells).toBe(180)
     expect(good.dayToDay!.m).toBe(10)
     expect(good.dayToDay!.ratio).toBeCloseTo(1, 0)
     expect(good.gate.status).toBe('RUN')
-    expect(good.gate.deff5!).toBeLessThan(1.3)
-    expect(good.gate.neff!).toBeGreaterThan(115)
+    expect(good.gate.rhoUpper!).toBeLessThan(0.125)
+    expect(good.gate.deff5!).toBeLessThan(1.5)
+    expect(good.gate.integrity).toBe(true)
     expect(good.gate.pass).toBe(true)
-    expect(good.passToPass!.ratio).toBeCloseTo(1, 0)
+    expect(good.identicalTextRate).toBeLessThan(0.5)
 
-    // heterogeneous fixed p (default) with independent runs: the ANOVA bound is well above 0,
-    // the day×cell estimate stays near 0 — the whole reason the gate uses ρ̂_u.
+    // heterogeneous fixed p with independent runs: ANOVA bound well above 0, ρ̂_u near 0
     const het = analyseEngine('gemini', await collectDayHet('2026-08-19', 0), await collectDayHet('2026-08-20', 0), bank, null, 10)
     expect(het.anova.rho).toBeGreaterThan(0.1)
     expect(het.dayToDay!.rho).toBeLessThan(0.05)
@@ -137,14 +164,43 @@ describe('analyseEngine end to end on fixture answers', () => {
     const bad = analyseEngine('gemini', await collectDay('2026-08-19', 0.6, 0.3), await collectDay('2026-08-20', 0.6, 0.3), bank, null, 10)
     expect(bad.dayToDay!.rho).toBeGreaterThan(0.4)
     expect(bad.gate.deff5!).toBeGreaterThan(1.5)
-    expect(bad.gate.neff!).toBeLessThan(100)
     expect(bad.gate.deff).toBe(false)
     expect(bad.gate.pass).toBe(false)
+    expect(bad.gate.reasons.join(' ')).toMatch(/DEFF/)
 
     const single = analyseEngine('gemini', await collectDay('2026-08-19', 0.6, 0.3), null, bank, null, 10)
     expect(single.gate.status).toBe('NOT RUN')
     expect(single.gate.pass).toBeNull()
     expect(single.dayToDay).toBeNull()
-    expect(single.provisional).not.toBeNull()
+
+    // day 2 is a byte-for-byte replay of day 1: D → 0, identical-text rate 100% → integrity FAIL, never a pass
+    const d1 = await collectDay('2026-08-19', 0, 0.3)
+    const replay = { ...d1, answers: d1.answers.map((a) => ({ ...a, cell: { ...a.cell, dateBucket: '2026-08-20', key: a.cell.key + 'x' } })) }
+    const cached = analyseEngine('gemini', d1, replay, bank, null, 10)
+    expect(cached.identicalTextRate).toBe(1)
+    expect(cached.dayToDay === null || cached.dayToDay.ratio < 0.5).toBe(true)
+    expect(cached.gate.pass).not.toBe(true)
+  })
+
+  it('pairs cells on the run indices both days actually have, not by position', async () => {
+    const d1 = await collectDay('2026-08-19', 0, 0.3)
+    const d2full = await collectDay('2026-08-20', 0, 0.3)
+    // drop run 3 from every day-2 cell: a per-run failure must not silently delete the cell
+    const d2 = { ...d2full, answers: d2full.answers.filter((a) => a.run !== 3) }
+    const r = analyseEngine('gemini', d1, d2, bank, null, 10)
+    expect(r.dayToDay!.cells).toBe(180)
+    expect(r.dayToDay!.m).toBe(9)
+    expect(r.dayToDayM5!.m).toBe(5)
+  })
+
+  it('empty answers are excluded from cells for chat engines and count against parseable', async () => {
+    const d1 = await collectDay('2026-08-19', 0, 0.3)
+    const blanks = { ...d1, answers: d1.answers.map((a, i) => (i % 5 === 0 ? { ...a, text: '' } : a)) }
+    const r = analyseEngine('gemini', blanks, null, bank, null, 10)
+    expect(r.emptyRate).toBeCloseTo(0.2)
+    expect(r.gate.parseable).toBe(false)
+    expect(r.byBrand[0]!.n).toBe(480)
+    const aio = analyseEngine('google-ai-overviews', { ...blanks }, null, bank, null, 10)
+    expect(aio.gate.parseable).toBe(true) // "no overview" is a legitimate empty answer there
   })
 })

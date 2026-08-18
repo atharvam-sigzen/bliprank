@@ -59,9 +59,12 @@ export function fixtureAdapter(engine: EngineId, opts: FixtureOptions = {}): Eng
     async collect(req: CollectRequest): Promise<RawAnswer> {
       if (latency > 0) await sleep(latency)
       const mentioned = brands.filter((b) => mention(req.prompt, req.cell.dateBucket, b, req.run))
+      // Real engines never repeat a long answer byte-for-byte unless it is cached, so
+      // give each run its own wording; identical text across days then means replay.
+      const salt = unit(`${engine}|${req.prompt}|${req.cell.dateBucket}|${req.run}|salt`).toString(36).slice(2, 8)
       const text = mentioned.length
-        ? `For "${req.prompt}" the usual recommendations are ${mentioned.join(', ')}. Each has trade-offs.`
-        : `For "${req.prompt}" it depends on your team size and budget; compare a few options before deciding.`
+        ? `For "${req.prompt}" the usual recommendations are ${mentioned.join(', ')}. Each has trade-offs (ref ${salt}).`
+        : `For "${req.prompt}" it depends on your team size and budget; compare a few options before deciding (ref ${salt}).`
       const payload = { status: 'OK', request_id: `fixture-${req.run}`, data: { reply_text: text } }
       return {
         text,

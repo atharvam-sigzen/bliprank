@@ -15,7 +15,7 @@
  *   COLLECTION_ENABLED=true COLLECTION_BUDGET_USD=75 pnpm collector:pilot -- --day 2026-08-19 [--plan payg] [--runs 10]
  */
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cacheCell, ENGINES, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, AdapterError } from '@bliprank/contracts'
@@ -66,6 +66,36 @@ interface EngineStats {
 
 const REPO_ROOT = resolve(fileURLToPath(new URL('../../../../', import.meta.url)))
 export const PILOT_DIR = join(REPO_ROOT, 'services', 'collector', 'pilot')
+/** CLAUDE.md: one key, 15 req/s ceiling — per-engine ceilings are scaled so their sum stays under it. */
+export const KEY_RPS_CEILING = 15
+/** Retry-After from the provider is honoured but never beyond this. */
+const MAX_RETRY_AFTER_MS = 60_000
+
+/** Spend recorded by other days' ledgers under the same data dir: the cap is per pilot, not per day. */
+export function priorSpendUsd(dataDir: string, exceptDay: string): number {
+  if (!existsSync(dataDir)) return 0
+  let total = 0
+  for (const d of readdirSync(dataDir)) {
+    if (d === exceptDay) continue
+    const f = join(dataDir, d, 'ledger.json')
+    if (!existsSync(f)) continue
+    try {
+      total += (JSON.parse(readFileSync(f, 'utf8')) as { spentUsd?: number }).spentUsd ?? 0
+    } catch {
+      /* unreadable ledger: treated as zero, but a torn ledger is itself worth noticing */
+    }
+  }
+  return total
+}
+
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
 
 /** Simple per-engine rate limiter: at most one dispatch per interval, no burst. */
 class Pacer {
@@ -79,16 +109,30 @@ class Pacer {
   }
 }
 
-function loadDone(file: string): Set<string> {
+function loadDone(file: string, failuresFile: string, engine: string): Set<string> {
   const done = new Set<string>()
-  if (!existsSync(file)) return done
-  for (const line of readFileSync(file, 'utf8').split('\n')) {
-    if (!line.trim()) continue
-    try {
-      const r = JSON.parse(line) as RawAnswer
-      done.add(`${r.cell.key}#${r.run}`)
-    } catch {
-      /* a torn last line from a crash is simply re-collected */
+  if (existsSync(file)) {
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+      if (!line.trim()) continue
+      try {
+        const r = JSON.parse(line) as RawAnswer
+        done.add(`${r.cell.key}#${r.run}`)
+      } catch {
+        /* a torn last line from a crash is simply re-collected */
+      }
+    }
+  }
+  // Non-retryable failures stay failed on resume: re-attempting a rejected key or an
+  // unparseable shape only spends more. Retryable failures (timeouts, 5xx) are retried.
+  if (existsSync(failuresFile)) {
+    for (const line of readFileSync(failuresFile, 'utf8').split('\n')) {
+      if (!line.trim()) continue
+      try {
+        const f = JSON.parse(line) as { engine: string; cellKey: string; run: number; kind: string }
+        if (f.engine === engine && (f.kind === 'rejected' || f.kind === 'unparseable')) done.add(`${f.cellKey}#${f.run}`)
+      } catch {
+        /* ignore */
+      }
     }
   }
   return done
@@ -99,7 +143,33 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   mkdirSync(dayDir, { recursive: true })
   const ledgerFile = join(dayDir, 'ledger.json')
   const failuresFile = join(dayDir, 'failures.jsonl')
-  const budget = new Budget(ledgerFile, o.capUsd, (engine) => (o.fixture ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+  const lockFile = join(dayDir, 'run.lock')
+  if (existsSync(lockFile)) {
+    const pid = Number(readFileSync(lockFile, 'utf8').trim())
+    if (pid && pidAlive(pid)) throw new Error(`another run holds ${lockFile} (pid ${pid}); two runs would each spend up to the cap`)
+  }
+  writeFileSync(lockFile, String(process.pid))
+  const releaseLock = () => {
+    try {
+      unlinkSync(lockFile)
+    } catch {
+      /* already gone */
+    }
+  }
+  process.once('exit', releaseLock)
+  writeFileSync(join(dayDir, 'meta.json'), JSON.stringify({ day: o.day, plan: o.plan, fixture: o.fixture, runs: o.runs, startedAt: new Date().toISOString() }, null, 2) + '\n')
+
+  // The cap is for the whole pilot: what earlier days already spent comes off the top.
+  const prior = priorSpendUsd(o.dataDir, o.day)
+  const capToday = o.capUsd - prior
+  if (capToday <= 0) {
+    releaseLock()
+    throw new BudgetExceeded({ capUsd: o.capUsd, spentUsd: prior, calls: 0, byEngine: {}, updatedAt: new Date().toISOString() }, 0)
+  }
+  if (prior > 0) o.log(`earlier days under ${o.dataDir} already spent $${prior.toFixed(4)}; today's ceiling is $${capToday.toFixed(4)} of the $${o.capUsd} pilot cap`)
+  const budget = new Budget(ledgerFile, capToday, (engine) => (o.fixture ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+  const planTotalRps = o.engines.reduce((sum, e) => sum + RPS_CEILING[o.plan][e], 0)
+  const keyScale = Math.min(1, KEY_RPS_CEILING / planTotalRps)
 
   const prompts = o.limitPrompts ? o.bank.prompts.slice(0, o.limitPrompts) : o.bank.prompts
   const adapters = new Map<EngineId, EngineAdapter>()
@@ -125,7 +195,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
     const st: EngineStats = { done: 0, failed: 0, attempts: 0, latencies: [], parseFailures: 0 }
     stats[engine] = st
     const outFile = join(dayDir, `${engine}.jsonl`)
-    const done = loadDone(outFile)
+    const done = loadDone(outFile, failuresFile, engine)
     // runs are the outer loop so every cell gets run 0 before any cell gets run 1:
     // repeats are spread across the whole cycle rather than fired back-to-back.
     const jobs: Job[] = []
@@ -136,7 +206,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
       }
     }
     const skipped = o.runs * prompts.length - jobs.length
-    const rps = Math.max(0.2, RPS_CEILING[o.plan][engine] * o.rpsScale)
+    const rps = Math.max(0.2, RPS_CEILING[o.plan][engine] * keyScale * o.rpsScale)
     const pacer = new Pacer(1000 / rps)
     const concurrency = Math.min(64, Math.max(2, Math.ceil(rps * (o.timeoutMs / 1000))))
     o.log(`${engine}: ${jobs.length} calls to make (${skipped} already stored), ${rps.toFixed(2)} rps, ${concurrency} in flight max`)
@@ -164,6 +234,15 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
           const timer = setTimeout(() => ac.abort(), o.timeoutMs)
           try {
             const answer = await adapter.collect({ cell: job.cell, prompt: job.prompt, run: job.run, signal: ac.signal })
+            // An adapter that had to chain calls reports it; charge the extra ones now.
+            for (let extra = 1; extra < answer.providerCalls; extra++) {
+              try {
+                budget.charge(engine)
+              } catch (e) {
+                if (e instanceof BudgetExceeded) stopAll(e.message)
+                else throw e
+              }
+            }
             appendFileSync(outFile, JSON.stringify(answer) + '\n')
             st.done++
             st.latencies.push(answer.latencyMs)
@@ -186,7 +265,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
               }
               break
             }
-            const backoff = err.retryAfterMs ?? 1000 * 4 ** (attempt - 1)
+            const backoff = Math.min(MAX_RETRY_AFTER_MS, err.retryAfterMs ?? 1000 * 4 ** (attempt - 1))
             await sleep(backoff + Math.random() * 250)
           } finally {
             clearTimeout(timer)
@@ -201,7 +280,8 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   await Promise.all(enginePromises)
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(0)
-  o.log(`finished in ${elapsed}s: $${budget.state.spentUsd.toFixed(4)} charged of $${o.capUsd} cap (${budget.state.calls} attempts); ledger ${ledgerFile}`)
+  releaseLock()
+  o.log(`finished in ${elapsed}s: $${budget.state.spentUsd.toFixed(4)} charged today, $${(prior + budget.state.spentUsd).toFixed(4)} across the pilot, cap $${o.capUsd} (${budget.state.calls} attempts today); ledger ${ledgerFile}`)
   if (stopping && stopReason !== 'SIGINT') return { exitCode: 3, stats, ledgerFile }
   return { exitCode: stopping ? 130 : 0, stats, ledgerFile }
 }
@@ -257,9 +337,10 @@ if (isMain) {
   const { plan, engines, runs, day, capUsd, fixture } = opts
   const calls = opts.bank.prompts.length * engines.length * runs
   const est = fixture ? 0 : engines.reduce((s, e) => s + PRICE_USD_PER_CALL[plan][e] * (opts.limitPrompts ?? opts.bank.prompts.length) * runs, 0)
-  console.error(`pilot ${day}: ${calls} calls planned, plan=${plan}, projected $${est.toFixed(2)} (before retries), cap $${capUsd}${fixture ? ' [FIXTURE MODE, no network]' : ''}`)
-  if (!fixture && est > capUsd) {
-    console.error(`REFUSED: projected spend $${est.toFixed(2)} exceeds cap $${capUsd}; shrink --runs/--limit-prompts or raise the cap deliberately`)
+  const prior = priorSpendUsd(opts.dataDir, day)
+  console.error(`pilot ${day}: ${calls} calls planned, plan=${plan}, projected $${est.toFixed(2)} (before retries); pilot cap $${capUsd}, already spent on other days $${prior.toFixed(2)}${fixture ? ' [FIXTURE MODE, no network]' : ''}`)
+  if (!fixture && est > capUsd - prior) {
+    console.error(`REFUSED: projected spend $${est.toFixed(2)} exceeds the remaining cap $${(capUsd - prior).toFixed(2)}; shrink --runs/--limit-prompts or raise the cap deliberately`)
     process.exit(2)
   }
   runPilot(opts).then((r) => process.exit(r.exitCode))

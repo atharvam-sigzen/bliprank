@@ -2,7 +2,9 @@ import { mkdtempSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { optionsFromEnv, runPilot, PILOT_DIR, type RunOptions } from './collect.js'
+import { optionsFromEnv, priorSpendUsd, runPilot, PILOT_DIR, type RunOptions } from './collect.js'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { BudgetExceeded } from '../budget.js'
 
 const bankFile = join(PILOT_DIR, 'bank.json')
 
@@ -59,5 +61,33 @@ describe('runPilot in fixture mode — resumable, budgeted, day-bucketed', () =>
     const ledger = JSON.parse(readFileSync(r.ledgerFile, 'utf8')) as { spentUsd: number; calls: number }
     expect(ledger.spentUsd).toBe(0)
     expect(ledger.calls).toBe(2)
+  })
+})
+
+describe('the cap is per pilot, not per day', () => {
+  it('earlier days\' ledgers come off the top; a spent cap refuses the next day before any call', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    mkdirSync(join(dataDir, '2026-08-19'), { recursive: true })
+    writeFileSync(join(dataDir, '2026-08-19', 'ledger.json'), JSON.stringify({ capUsd: 5, spentUsd: 3.25, calls: 500, byEngine: {}, updatedAt: 'x' }))
+    expect(priorSpendUsd(dataDir, '2026-08-20')).toBeCloseTo(3.25)
+    expect(priorSpendUsd(dataDir, '2026-08-19')).toBe(0)
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-20', '--bank', bankFile, '--runs', '1', '--limit-prompts', '2', '--engines', 'gemini', '--data', dataDir, '--cap', '3'], {}) as RunOptions
+    opts.log = () => {}
+    await expect(runPilot(opts)).rejects.toBeInstanceOf(BudgetExceeded)
+    // with headroom the day runs under (cap − prior); the lock is released afterwards
+    const ok = await runPilot({ ...opts, capUsd: 5 })
+    expect(ok.exitCode).toBe(0)
+    const ledger = JSON.parse(readFileSync(ok.ledgerFile, 'utf8')) as { capUsd: number }
+    expect(ledger.capUsd).toBeCloseTo(1.75)
+    expect(existsSync(join(dataDir, '2026-08-20', 'run.lock'))).toBe(false)
+    expect(existsSync(join(dataDir, '2026-08-20', 'meta.json'))).toBe(true)
+  })
+  it('a live lock from another process refuses a second run', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    mkdirSync(join(dataDir, '2026-08-21'), { recursive: true })
+    writeFileSync(join(dataDir, '2026-08-21', 'run.lock'), String(process.pid)) // this very process is alive
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-21', '--bank', bankFile, '--runs', '1', '--limit-prompts', '1', '--engines', 'gemini', '--data', dataDir], {}) as RunOptions
+    opts.log = () => {}
+    await expect(runPilot(opts)).rejects.toThrow(/another run holds/)
   })
 })
