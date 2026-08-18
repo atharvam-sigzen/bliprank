@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "openwebninja": {
+      "command": "npx",
+      "args": ["-y", "@openwebninja/mcp-server"],
+      "env": { "OPENWEBNINJA_API_KEY": "${OPENWEBNINJA_API_KEY}" }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
+    },
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server"],
+      "env": { "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}" }
+    }
+  }
+}

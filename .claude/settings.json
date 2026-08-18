@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(npm run *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm drizzle-kit *)",
+      "Read(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Bash(npx @claude-flow*)",
+      "Bash(npx claude-flow*)",
+      "Bash(node .claude/*)",
+      "mcp__claude-flow__*"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(*OPENWEBNINJA_API_KEY*)",
+      "Read(./.env*)",
+      "Read(./**/*.pem)",
+      "Bash(curl *api.openwebninja.com*)",
+      "Bash(node services/collector/**)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(pnpm deploy*)",
+      "Bash(wrangler *)",
+      "Bash(pnpm db:migrate*)",
+      "Bash(pnpm backfill*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-spend.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "COLLECTION_ENABLED": "false",
+    "NODE_ENV": "development",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_FLOW_V3_ENABLED": "true",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
+  }
+}
