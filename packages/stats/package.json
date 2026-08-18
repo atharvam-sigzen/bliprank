@@ -1,0 +1,16 @@
+{
+  "name": "@bliprank/stats",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "reference:wilson": "uv run reference/wilson-reference.py"
+  },
+  "devDependencies": {
+    "fast-check": "^4.9.0"
+  }
+}
