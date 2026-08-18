@@ -6,8 +6,9 @@ import { wilson, Z_95 } from './wilson.js'
 interface Reference {
   reference: string
   statsmodels: string
-  z: number
-  cases: { successes: number; trials: number; ci_low: number; ci_high: number }[]
+  /** critical value per alpha, e.g. { "0.05": 1.959… } */
+  z: Record<string, number>
+  cases: { alpha: number; successes: number; trials: number; ci_low: number; ci_high: number }[]
 }
 const ref: Reference = JSON.parse(
   readFileSync(new URL('../reference/wilson.reference.json', import.meta.url), 'utf8'),
@@ -15,17 +16,22 @@ const ref: Reference = JSON.parse(
 
 // PHASES.md gate G0: "Wilson implementation agrees with reference ≤ 1e-9 across the n×p̂ grid".
 describe(`agreement with ${ref.reference} (statsmodels ${ref.statsmodels})`, () => {
-  it('uses the same critical value', () => {
-    expect(Z_95).toBe(ref.z)
+  it('uses the same critical value for 95%', () => {
+    expect(Z_95).toBe(ref.z['0.05'])
   })
 
-  it(`matches all ${ref.cases.length} reference cases to 1e-9`, () => {
+  // Cases at alpha ≠ 0.05 exist so that an implementation which quietly hardcodes
+  // z somewhere (e.g. in the denominator only) cannot pass on the default alone.
+  it(`matches all ${ref.cases.length} reference cases (alphas ${Object.keys(ref.z).join(', ')}) to 1e-9`, () => {
     let worst = 0
     for (const c of ref.cases) {
-      const w = wilson(c.successes, c.trials)
+      const z = ref.z[String(c.alpha)]
+      if (z === undefined) throw new Error(`fixture has no z for alpha=${c.alpha}`)
+      const w = c.alpha === 0.05 ? wilson(c.successes, c.trials) : wilson(c.successes, c.trials, z)
       worst = Math.max(worst, Math.abs(w.ci_low - c.ci_low), Math.abs(w.ci_high - c.ci_high))
-      expect(w.ci_low, `ci_low k=${c.successes} n=${c.trials}`).toBeCloseTo(c.ci_low, 9)
-      expect(w.ci_high, `ci_high k=${c.successes} n=${c.trials}`).toBeCloseTo(c.ci_high, 9)
+      const at = `alpha=${c.alpha} k=${c.successes} n=${c.trials}`
+      expect(w.ci_low, `ci_low ${at}`).toBeCloseTo(c.ci_low, 9)
+      expect(w.ci_high, `ci_high ${at}`).toBeCloseTo(c.ci_high, 9)
     }
     expect(worst).toBeLessThanOrEqual(1e-9)
   })
@@ -36,10 +42,12 @@ describe('wilson properties', () => {
     .tuple(fc.integer({ min: 1, max: 1_000_000 }), fc.double({ min: 0, max: 1, noNaN: true }))
     .map(([n, u]) => ({ n, k: Math.round(u * n) }))
 
-  it('0 ≤ ci_low ≤ p̂ ≤ ci_high ≤ 1, and n is echoed', () => {
+  const zs = fc.double({ min: 0.5, max: 4, noNaN: true })
+
+  it('0 ≤ ci_low ≤ p̂ ≤ ci_high ≤ 1 for any z, and n is echoed', () => {
     fc.assert(
-      fc.property(kn, ({ k, n }) => {
-        const w = wilson(k, n)
+      fc.property(kn, zs, ({ k, n }, z) => {
+        const w = wilson(k, n, z)
         expect(w.n).toBe(n)
         expect(w.value).toBe(k / n)
         expect(w.ci_low).toBeGreaterThanOrEqual(0)
@@ -82,7 +90,7 @@ describe('wilson properties', () => {
 
   it('a larger z gives a wider interval', () => {
     fc.assert(
-      fc.property(kn, fc.double({ min: 0.5, max: 4, noNaN: true }), ({ k, n }, z) => {
+      fc.property(kn, zs, ({ k, n }, z) => {
         const a = wilson(k, n, z)
         const b = wilson(k, n, z + 0.5)
         expect(b.ci_high - b.ci_low).toBeGreaterThan(a.ci_high - a.ci_low)
@@ -103,7 +111,7 @@ describe('wilson rejects what it cannot measure', () => {
   ])('successes=%s trials=%s', (k, n) => {
     expect(() => wilson(k, n)).toThrow(RangeError)
   })
-  it('rejects a non-positive z', () => {
-    expect(() => wilson(1, 5, 0)).toThrow(RangeError)
+  it.each([0, -1.96, Number.NaN, Number.POSITIVE_INFINITY])('rejects z=%s', (z) => {
+    expect(() => wilson(1, 5, z)).toThrow(RangeError)
   })
 })

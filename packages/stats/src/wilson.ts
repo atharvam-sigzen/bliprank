@@ -7,6 +7,12 @@
  * operation order so the agreement is exact rather than approximate.
  *
  * Why Wilson and not Wald: see .claude/skills/measurement-methodology.
+ *
+ * Assumes `trials` independent, identically distributed Bernoulli draws. Runs
+ * of one prompt against a caching, non-stationary engine are positively
+ * correlated, and prompts within a brand are clustered, so a naive aggregate n
+ * overstates precision by roughly √DEFF. Callers must pass an *effective* n
+ * (n / design effect) once the pilot has measured the design effect (gate G0).
  */
 
 /** Two-sided 95%: scipy.stats.norm.isf(0.025), the constant statsmodels uses. */
@@ -49,8 +55,9 @@ export function wilson(successes: number, trials: number, z: number = Z_95): Int
 
   // At k = 0 the lower bound is exactly 0 and at k = n the upper bound is
   // exactly 1 (centre and spread cancel algebraically); floating point leaves
-  // ±1e-22 of noise there, so return the exact value. Nothing else is clipped
-  // (statsmodels does not clip Wilson either), so agreement stays bit-for-bit.
+  // ~1e-19 of noise there (statsmodels itself returns 1.0000000000000002 at
+  // n=150, k=n), so return the exact value. Nothing else is clipped; away from
+  // the boundaries the result matches statsmodels to the last ulp or two.
   return {
     value: p,
     ci_low: successes === 0 ? 0 : centre - spread,

@@ -22,27 +22,49 @@ under `uv run`. The JSON it writes is committed, so CI and gate checks run the
 comparison from the fixture alone. Regenerate whenever the grid or the statsmodels
 pin changes, and commit the result.
 
-## Interval width at p̂ = 0.25 (95%, Wilson)
+## Interval width by n (95%, Wilson)
 
-Half-widths from the implementation, for choosing runs per cell:
+For choosing runs per cell. Wilson intervals are **asymmetric about p̂** — the
+lower arm is shorter than the upper arm below 0.5 — so they are printed as
+`[low, high]`, never as `±`. Half-width `(high − low)/2` is shown only for
+comparison with documents that quote one number.
 
-| n | ±half-width at p̂=0.25 | at p̂=0.05 |
-|---|---|---|
-| 3 | 0.354 | 0.301 |
-| 5 | 0.305 | 0.243 |
-| 10 | 0.238 | 0.170 |
-| 20 | 0.178 | 0.114 |
-| 30 | 0.149 | 0.089 |
-| 50 | 0.117 | 0.066 |
-| 100 | 0.084 | 0.045 |
-| 150 | 0.069 | 0.036 |
-| 200 | 0.060 | 0.031 |
-| 500 | 0.038 | 0.019 |
+| n | p̂ = 0.25 → [low, high] | half-width | p̂ = 0.05 → [low, high] |
+|---|---|---|---|
+| 3 | [0.037, 0.744] | 0.354 | [0.002, 0.604] |
+| 5 | [0.053, 0.664] | 0.305 | [0.003, 0.488] |
+| 10 | [0.081, 0.558] | 0.238 | [0.005, 0.345] |
+| 20 | [0.112, 0.469] | 0.178 | [0.009, 0.236] |
+| 30 | [0.130, 0.427] | 0.149 | [0.012, 0.191] |
+| 50 | [0.151, 0.385] | 0.117 | [0.016, 0.149] |
+| 100 | [0.175, 0.343] | 0.084 | [0.022, 0.112] |
+| 150 | [0.188, 0.325] | 0.069 | [0.025, 0.097] |
+| 200 | [0.195, 0.314] | 0.060 | [0.027, 0.090] |
+| 500 | [0.214, 0.290] | 0.038 | [0.034, 0.073] |
 
-> ⚠️ These differ from the table in `.claude/skills/measurement-methodology`
-> (n=5 → ±0.19, n=150 → ±0.04) and from gate G0's "n=5 yields half-width ≤ ±0.20
-> at p̂≈0.25". A single cell of 5 runs at p̂=0.25 has half-width 0.305 by
-> construction; ±0.19 is n≈20 (or n=5 at p̂≈0.02). The G0 half-width criterion
-> should probably be restated in terms of *aggregate* n (prompts × runs), or as an
-> overdispersion check (do repeated runs behave like independent Bernoulli draws?),
-> which is the thing the pilot can actually falsify. Human decision.
+> ⚠️ **Open for human decision.** These differ from the "Choosing n" table in
+> `.claude/skills/measurement-methodology` (n=5 → ±0.19, n=150 → ±0.04) and from
+> gate G0 in `docs/PHASES.md` ("n=5 yields CI half-width ≤ ±0.20 at p̂≈0.25").
+> A single cell of 5 runs at p̂=0.25 has half-width 0.305 by construction, and the
+> smallest half-width n=5 can produce at *any* p̂ is 0.217 (at k=0 or k=n); a
+> half-width of 0.19 at p̂=0.25 first occurs at n=18. Because the half-width at
+> fixed (n, p̂) is a deterministic function, the pilot cannot pass or fail that
+> criterion — it says nothing about observed variance. `stats-reviewer` suggests
+> restating G0's variance criterion as (a) a design-effect / overdispersion check
+> — do repeated runs of a cell behave like independent Bernoulli draws? — with a
+> threshold such as DEFF ≤ 1.5, else publish intervals on `n_eff = n / DEFF`, and
+> (b) precision stated at the unit customers actually see (brand × engine × week,
+> aggregate n), e.g. n_eff ≥ 150 giving half-width ≤ 0.07 at p̂ = 0.25.
+
+## Assumptions to carry into the methodology page
+
+- `wilson()` assumes independent, identically distributed trials. Repeated runs
+  of one prompt on one day against a caching engine are correlated; prompts
+  within a brand are clustered. Until the design effect is measured (G0), an
+  aggregate n overstates precision.
+- Nominal 95% is not the worst-case coverage at small n: minimum exact coverage
+  over p is roughly 83% at n=5 and 89% at n=30 (still far better than Wald's ~1%
+  minimum). Worth stating publicly.
+- Movements must be tested with an interval **on the difference** (Newcombe's
+  score method), not by checking whether two Wilson intervals overlap. That
+  helper does not exist yet; no delta should be rendered until it does.
