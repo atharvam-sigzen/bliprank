@@ -5,11 +5,13 @@ set -euo pipefail
 INPUT=$(cat)
 CMD=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 
+# Patterns match spend *commands*, not filenames: "pnpm backfill ..." (the
+# /backfill command's runner) rather than any path that merely contains the word.
 BLOCK_PATTERNS=(
   "api.openwebninja.com"
   "services/collector/.*run"
   "collector:start"
-  "backfill"
+  "(^|[[:space:];&|(])pnpm[^;&|]*[[:space:]]backfill(:[[:alnum:]_-]+)?([[:space:]]|$)"
 )
 
 for pat in "${BLOCK_PATTERNS[@]}"; do
