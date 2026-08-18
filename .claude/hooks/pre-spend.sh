@@ -11,6 +11,7 @@ BLOCK_PATTERNS=(
   "api.openwebninja.com"
   "services/collector/.*run"
   "collector:start"
+  "collector:pilot"
   "(^|[[:space:];&|(])pnpm[^;&|]*[[:space:]]backfill(:[[:alnum:]_-]+)?([[:space:]]|$)"
 )
 
