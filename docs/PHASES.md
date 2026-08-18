@@ -18,8 +18,8 @@ the product.
 | 0.2 | `CLAUDE.md`, `.claude/` (agents, commands, skills, hooks), plugins installed |
 | 0.3 | `packages/contracts` — the `EngineAdapter` interface, **hand-written** |
 | 0.4 | `packages/stats` — Wilson intervals, verified against reference implementation |
-| 0.5 | **OpenWeb Ninja pilot**: 100 prompts × 5 engines × 10 runs × 3 known brands |
-| 0.6 | Cost/variance instrumentation dashboard |
+| 0.5 | **OpenWeb Ninja pilot**: 100 prompts × 5 engines × 10 runs × 3 known brands, every cell re-collected on a second day (≈30k calls, ≈$60) |
+| 0.6 | Cost/variance instrumentation dashboard: $/answer, latency, ρ̂ within-day, day-to-day dispersion, DEFF, n_eff per engine |
 
 ### GATE G0 — the assumption gate
 
@@ -29,14 +29,24 @@ the product.
 | Functional | Wilson implementation agrees with reference | ≤1e-9 across the n×p̂ grid |
 | Performance | Response latency observed | p95 ≤ 20s (provider states 2–20s) |
 | **Cost** | **Measured $/answer** | **≤ $0.0022 (model says $0.002)** |
-| **Cost** | **Run-to-run variance** | **n=5 yields CI half-width ≤ ±0.20 at p̂≈0.25** |
+| **Cost** | **Design effect** — intra-cell correlation ρ̂ of the mention indicator, ANOVA estimator across the pilot's 10-run cells, per engine | **DEFF = 1 + 4ρ̂ ≤ 1.5 at the Starter default of 5 runs/cell (ρ̂ ≤ 0.125), on every engine** |
+| **Cost** | **Precision at the reported unit** — Starter unit = brand × engine × cycle over 30 prompts × 5 runs, n = 150 nominal | **n_eff = 150 / DEFF ≥ 100, i.e. the Wilson interval at p̂ = 0.25 lies within [0.17, 0.35]** |
+| Cost | Day-to-day dispersion (day-2 re-collection vs day-1, per engine) | reported, not gated — the threshold is set when the weekly reported unit is defined (P2.6) |
 | Usability | A second person can reproduce the pilot from the README | unaided |
 
 > **G0 is the most important gate in the project.** If measured cost per answer is
-> materially above $0.002, or if variance is so high that n=5 gives a useless
-> interval, the unit economics in the business plan do not hold and the pricing
-> must be reworked **before** anything else is built. Do not proceed past G0 on
-> optimism.
+> materially above $0.002, or if the design effect is so large that the Starter
+> unit's effective n gives a useless interval, the unit economics in the business
+> plan do not hold and the pricing must be reworked **before** anything else is
+> built. Do not proceed past G0 on optimism.
+>
+> Why the variance criterion is shaped this way: the Wilson interval at a fixed
+> (n, p̂) is arithmetic, not evidence — a 5-run cell at p̂ = 0.25 is [0.05, 0.66]
+> whatever the engine does, so no pilot can pass or fail a half-width threshold.
+> What the pilot *can* falsify is the independence assumption behind every
+> interval we will ever publish. If DEFF exceeds 1.5 the product is not broken:
+> every published interval switches to n_eff = n / DEFF and runs-per-tier are
+> re-derived — but that has to be known before pricing is fixed, not after launch.
 
 ---
 

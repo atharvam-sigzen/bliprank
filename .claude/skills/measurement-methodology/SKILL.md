@@ -71,18 +71,46 @@ precisely what we criticise competitors for.
 
 ## Choosing n
 
-The interval width you can promise depends on runs per cell:
+Precision depends on the **effective** sample size behind a number, not the raw
+count of runs. Two things set it:
 
-| n per cell | Approx. 95% CI half-width at p̂≈0.25 |
-|---|---|
-| 3 | ±0.24 — directional only, do not report movements |
-| 5 | ±0.19 — the Starter default |
-| 10 | ±0.14 |
-| 30 | ±0.09 |
-| 150 | ±0.04 — the Confidence Grade A threshold |
+1. **How many runs sit behind the reported unit.** A single cell of 5 runs is an
+   input, never a reportable number. The Starter unit is brand × engine × cycle
+   over a 30-prompt bank at 5 runs per cell: n = 150 nominal.
+2. **How independent those runs are.** Wilson assumes iid Bernoulli trials. Runs
+   of one prompt against a caching, non-stationary engine are positively
+   correlated, and prompts within a brand are clustered. The design effect
+   `DEFF = 1 + (m − 1)·ρ` (m = runs per cell, ρ = intra-cell correlation of the
+   mention indicator) is what that costs; `n_eff = n / DEFF` is what every
+   interval must be computed on.
 
-Confidence Grade: **A** = n≥200 and half-width <0.04 · **B** = n≥50 ·
-**C** = n≥15 · **D** below that.
+Wilson 95% intervals at p̂ = 0.25 by effective n. They are asymmetric about p̂ —
+quote `[low, high]`, never `±`:
+
+| n_eff | interval at p̂ = 0.25 | (high − low)/2 | meaning |
+|---|---|---|---|
+| 5 | [0.053, 0.664] | 0.305 | one cell — an input, never reported |
+| 15 | [0.099, 0.503] | 0.202 | directional only, do not report movements |
+| 50 | [0.151, 0.385] | 0.117 | |
+| 100 | [0.175, 0.343] | 0.084 | the Starter unit if DEFF = 1.5 |
+| 150 | [0.188, 0.325] | 0.069 | the Starter unit if runs were independent |
+| 200 | [0.195, 0.314] | 0.060 | |
+| 500 | [0.214, 0.290] | 0.038 | |
+
+**Estimating ρ** — in the P0 pilot, and every cycle after that as a monitor. Over N
+cells of m runs each, on the mention indicator: `MSB = m·Σ(p̂ᵢ − p̄)² / (N − 1)`,
+`MSW = Σ m·p̂ᵢ(1 − p̂ᵢ) / (N(m − 1))`, `ρ̂ = (MSB − MSW) / (MSB + (m − 1)·MSW)`
+(one-way ANOVA estimator). For a fixed prompt bank this charges between-prompt
+heterogeneity as well as within-cell repetition, so it is conservative — the
+direction to err in. Day-to-day dispersion (same cell re-collected on a second
+day) is estimated separately and governs n_eff for multi-day reported units.
+
+Gate G0 requires DEFF ≤ 1.5 at m = 5 (ρ̂ ≤ 0.125) on every engine, so that the
+Starter unit's n_eff ≥ 100. If it is higher, nothing is "wrong" — every published
+interval uses n_eff and runs-per-tier are re-derived before pricing is fixed.
+
+Confidence Grade is a function of the design, not of the outcome: **A** = n_eff ≥ 200
+· **B** = n_eff ≥ 50 · **C** = n_eff ≥ 15 · **D** below that.
 
 ## The significance rule
 
