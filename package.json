@@ -8,10 +8,13 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "collector:pilot": "tsx services/collector/src/pilot/collect.ts",
+    "collector:analyse": "tsx services/collector/src/pilot/analyse.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
   }
