@@ -110,7 +110,8 @@ a five-figure invoice before anyone notices. The `pre-spend` hook enforces this.
 
 ### R4 — Raw payloads never go in Postgres
 R2 for raw answers, Postgres for extracted/scored rows, columnar for aggregates.
-Batch R2 writes: one object per `prompt × engine × day`, not per answer.
+Batch R2 writes: one object per cell (`prompt × engine × locale × geo × day`, i.e. per
+cache key — see ADR-0003), not per answer.
 
 ### R5 — Score rows are immutable and version-stamped
 Never mutate a historical score. When the algorithm changes, bump the version,
