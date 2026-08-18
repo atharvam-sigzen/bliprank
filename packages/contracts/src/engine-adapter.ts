@@ -66,6 +66,13 @@ export interface RawAnswer extends AnswerBody {
   readonly collectedAt: string
   readonly latencyMs: number
   /**
+   * HTTP calls actually made to the provider for this run — normally 1. The
+   * rate budget and /cost-audit debit this number, not `collect()` invocations,
+   * so an adapter that must chain calls (e.g. a SERP fetch plus an AI Overviews
+   * fetch) is charged for what it really spent.
+   */
+  readonly providerCalls: number
+  /**
    * The provider's response, verbatim and unmodified. Stored in R2 in the
    * `prompt × engine × day` object; never written to Postgres (rule R4).
    */
@@ -119,10 +126,11 @@ export interface EngineAdapter {
   readonly collectionPath: CollectionPath
 
   /**
-   * Issue exactly one provider call for one run and return the normalised
-   * answer with the verbatim payload attached. Must honour `req.signal`.
-   * Throws `AdapterError` only. Never retries internally — retries belong to
-   * the runner, where they are budgeted (rule R3).
+   * Perform exactly one run — normally one provider call; report the true
+   * count in `RawAnswer.providerCalls` — and return the normalised answer with
+   * the verbatim payload attached. Must honour `req.signal`. Throws
+   * `AdapterError` only. Never retries internally — retries belong to the
+   * runner, where they are budgeted (rule R3).
    */
   collect(req: CollectRequest): Promise<RawAnswer>
 

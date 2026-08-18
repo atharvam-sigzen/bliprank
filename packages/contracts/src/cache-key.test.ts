@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { cacheCell, cacheKey, normalisePrompt, NORMALISATION_VERSION } from './cache-key.js'
+import { canonicalGeo, ISO_3166_1_ALPHA2 } from './geo.js'
+
+describe('canonicalGeo', () => {
+  it('is the full ISO 3166-1 alpha-2 set', () => {
+    expect(ISO_3166_1_ALPHA2.size).toBe(249)
+    for (const c of ['IN', 'GB', 'US', 'AE', 'SA', 'DE', 'FR', 'AU', 'SG']) expect(ISO_3166_1_ALPHA2.has(c)).toBe(true)
+  })
+  it.each([
+    ['in', 'IN'],
+    [' gb ', 'GB'],
+    ['uk', 'GB'], // common mistake → resolved, not a new bucket
+    ['UK', 'GB'],
+    ['BU', 'MM'], // retired code → current
+    ['SU', 'RU'],
+  ])('%j → %j', (input, expected) => {
+    expect(canonicalGeo(input)).toBe(expected)
+  })
+  it.each(['XX', 'ZZ', 'EU', 'UN', 'XK', 'QO', 'IND', 'IN-MH', 'I', ''])('rejects %j', (bad) => {
+    expect(() => canonicalGeo(bad)).toThrow(RangeError)
+  })
+})
 
 describe('normalisePrompt v1', () => {
   it.each([
@@ -33,6 +54,7 @@ describe('cacheCell', () => {
     const k = cacheKey(base)
     expect(cacheKey({ ...base, prompt: 'best   crm for STARTUPS' })).toBe(k)
     expect(cacheKey({ ...base, locale: 'EN-IN', geo: 'In' })).toBe(k)
+    expect(cacheKey({ ...base, geo: 'uk' })).toBe(cacheKey({ ...base, geo: 'GB' }))
   })
 
   it('accepts a Date and buckets it by UTC day', () => {
@@ -54,6 +76,7 @@ describe('cacheCell', () => {
     [{ locale: 'not a locale' }, RangeError],
     [{ geo: 'IND' }, /alpha-2/],
     [{ geo: 'IN-MH' }, /alpha-2/],
+    [{ geo: 'XX' }, /unknown/],
     [{ dateBucket: '2026-13-40' }, /YYYY-MM-DD/],
     [{ dateBucket: '18/08/2026' }, /YYYY-MM-DD/],
     [{ prompt: ' ?! ' }, /empty/],

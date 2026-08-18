@@ -9,6 +9,7 @@
 
 import { createHash } from 'node:crypto'
 import { ENGINES, type EngineId } from './engines.js'
+import { canonicalGeo } from './geo.js'
 
 /**
  * Bump whenever `normalisePrompt` changes behaviour. Stored next to every row
@@ -19,6 +20,8 @@ export const NORMALISATION_VERSION = 1
 
 /**
  * v1: NFKC → lowercase → collapse whitespace → strip terminal punctuation.
+ * NFKC folds full-width and compatibility forms and also symbol-to-letter
+ * forms (™ → "tm"), so "Acme™" and "AcmeTM" share a cell — accepted.
  * Alias resolution to canonical brand names arrives with the alias table
  * (P2.2) as v2. Deterministic across machines: no locale-aware casing.
  */
@@ -37,7 +40,7 @@ export interface CacheKeyInput {
   readonly engine: EngineId
   /** BCP-47 language tag, any casing, e.g. 'en-in'. */
   readonly locale: string
-  /** ISO 3166-1 alpha-2 country, any casing, e.g. 'in'. */
+  /** ISO 3166-1 alpha-2 country, any casing; aliases resolved (UK → GB), e.g. 'in'. */
   readonly geo: string
   /**
    * The collection *cycle's* date (UTC), assigned by the scheduler — not the
@@ -69,8 +72,7 @@ export function cacheCell(input: CacheKeyInput): CacheCell {
   // Intl.getCanonicalLocales throws RangeError on a malformed tag — that is the validation.
   const locale = Intl.getCanonicalLocales(input.locale)[0]
   if (!locale) throw new RangeError(`invalid locale: ${input.locale}`)
-  const geo = input.geo.toUpperCase()
-  if (!/^[A-Z]{2}$/.test(geo)) throw new RangeError(`geo must be ISO 3166-1 alpha-2: ${input.geo}`)
+  const geo = canonicalGeo(input.geo)
   const dateBucket =
     input.dateBucket instanceof Date ? input.dateBucket.toISOString().slice(0, 10) : input.dateBucket
   if (!DATE_BUCKET.test(dateBucket) || Number.isNaN(Date.parse(`${dateBucket}T00:00:00Z`))) {
