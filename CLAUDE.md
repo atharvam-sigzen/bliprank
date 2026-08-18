@@ -47,8 +47,9 @@ attached. Getting this mental model right prevents the two expensive mistakes.
         ┌───────────────────────┐              ┌──────────────────────┐
         │  Cloudflare R2        │              │  services/scorer     │
         │  raw answers, batched │              │  1. deterministic    │  ← 90% of work
-        │  1 obj / prompt×      │              │  2. sampled LLM      │  ← 25% sample,
-        │  engine × day         │              │     sentiment        │    Batch + cache
+        │  1 obj / cell (prompt │              │  2. sampled LLM      │  ← 25% sample,
+        │  × engine × locale ×  │              │     sentiment        │    Batch + cache
+        │  geo × day, ADR-0003) │              │                      │
         └───────────────────────┘              └──────────┬───────────┘
                                                           │ score rows
                                                           ▼
