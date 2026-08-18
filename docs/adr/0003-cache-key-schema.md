@@ -61,6 +61,17 @@ re-collects a cell through the alternate path.
 **Run index: excluded.** A cell holds n runs; the interval is computed across them.
 The run is stored per answer, not keyed.
 
+**Path-qualified lookups.** When the runner needs "has *this adapter* collected
+this cell?" (alternate-path re-collection for the agreement monitor), the
+convention is `${cell.key}:${adapter.id}` — the cell key stays provider-agnostic
+and the qualifier is appended, never mixed into the hash. P1.4 implements it next
+to `cacheCell()`.
+
+**R2 object unit.** The docs' shorthand "one object per `prompt × engine × day`"
+elides locale and geo. The object unit is the **cell** — one object per cache
+key, holding all n runs. Two cells that differ only in locale or geo are two
+objects; the shorthand must never be reimplemented literally.
+
 **Raw vs normalised prompt sent to the engine.** The engine receives the raw
 authored prompt; the key uses the normalised form; `RawAnswer` records both. Two
 raw prompts in one cell are the same measurement by construction — if that ever

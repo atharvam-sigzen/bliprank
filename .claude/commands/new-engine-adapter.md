@@ -12,8 +12,9 @@ Delegate to the `measurement-engineer` subagent. Produce, in one change:
    `packages/contracts`. Do not modify the contract; if it genuinely does not fit,
    stop and propose an ADR instead.
 2. `services/collector/adapters/$1/normalise.ts` — maps the provider response to
-   the internal `RawAnswer` shape. Every field the provider does not supply must be
-   `undisclosed`, never a default value.
+   the internal `AnswerBody` shape (`text`, `citations`); `collect()` wraps it into
+   the self-describing `RawAnswer`. Every field the provider does not supply must
+   be `undisclosed`, never a default value.
 3. `services/collector/adapters/$1/__fixtures__/` — at least 6 captured responses
    covering: brand present + linked, brand present unlinked, brand absent,
    multi-competitor, empty/refusal, and a malformed payload.

@@ -125,7 +125,7 @@ code in the repository, because it *is* the product claim.
 
 | Store | Holds | Rate |
 |---|---|---|
-| Cloudflare R2 | Raw answer payloads, one object per `prompt × engine × day` | $0.015/GB-mo, $0 egress, $4.50/M Class A |
+| Cloudflare R2 | Raw answer payloads, one object per cell (`prompt × engine × locale × geo × day`, i.e. per cache key) | $0.015/GB-mo, $0 egress, $4.50/M Class A |
 | Postgres (Supabase) | Score rows, aggregates, prompt banks, workspaces, accounts | $0.125/GB-mo beyond 8GB + compute |
 | Upstash Redis | Cache index, rate budget, job state | usage-based |
 | ClickHouse (from ~M22) | CBI corpus, reconciliation variance, percentiles | ~$480/mo |
@@ -141,13 +141,21 @@ provider directly.
 
 ```ts
 interface EngineAdapter {
-  readonly id: string
+  readonly id: string                 // `${provider}:${engine}`, e.g. 'openwebninja:chatgpt'
+  readonly provider: string           // rate-budget bucket, shared across one provider key
+  readonly engine: EngineId
   readonly collectionPath: 'official-api' | 'third-party-grounded'  // disclosed publicly
-  collect(req: CollectRequest): Promise<RawAnswer>
-  normalise(raw: unknown): RawAnswer
+  collect(req: CollectRequest): Promise<RawAnswer>   // one run; never retries internally
+  normalise(payload: unknown): AnswerBody            // pure, sync — runs from fixtures
   rateLimit(): { rps: number; burst: number }
 }
 ```
+
+The authoritative definition is `packages/contracts/src/engine-adapter.ts`
+(sketch above is illustrative). `normalise` returns only the provider-agnostic
+body (`text`, `citations`); `collect` assembles the self-describing `RawAnswer`
+(cell, prompt as sent, run, adapter, collection path, timing, `providerCalls`,
+verbatim payload).
 
 `collectionPath` is not optional and is not cosmetic. BlipRank publishes, per
 engine, whether a surface is collected via an official API or third-party
