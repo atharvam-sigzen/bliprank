@@ -42,19 +42,14 @@ comparison with documents that quote one number.
 | 200 | [0.195, 0.314] | 0.060 | [0.027, 0.090] |
 | 500 | [0.214, 0.290] | 0.038 | [0.034, 0.073] |
 
-> ⚠️ **Open for human decision.** These differ from the "Choosing n" table in
-> `.claude/skills/measurement-methodology` (n=5 → ±0.19, n=150 → ±0.04) and from
-> gate G0 in `docs/PHASES.md` ("n=5 yields CI half-width ≤ ±0.20 at p̂≈0.25").
-> A single cell of 5 runs at p̂=0.25 has half-width 0.305 by construction, and the
-> smallest half-width n=5 can produce at *any* p̂ is 0.217 (at k=0 or k=n); a
-> half-width of 0.19 at p̂=0.25 first occurs at n=18. Because the half-width at
-> fixed (n, p̂) is a deterministic function, the pilot cannot pass or fail that
-> criterion — it says nothing about observed variance. `stats-reviewer` suggests
-> restating G0's variance criterion as (a) a design-effect / overdispersion check
-> — do repeated runs of a cell behave like independent Bernoulli draws? — with a
-> threshold such as DEFF ≤ 1.5, else publish intervals on `n_eff = n / DEFF`, and
-> (b) precision stated at the unit customers actually see (brand × engine × week,
-> aggregate n), e.g. n_eff ≥ 150 giving half-width ≤ 0.07 at p̂ = 0.25.
+> **Resolved 2026-08-18.** The earlier "Choosing n" table in
+> `.claude/skills/measurement-methodology` (n=5 → ±0.19) and gate G0's "n=5 yields
+> CI half-width ≤ ±0.20 at p̂≈0.25" were arithmetically unattainable (a 5-run cell
+> at p̂=0.25 is [0.053, 0.664]; the narrowest n=5 can be at any p̂ is 0.217) and,
+> being a deterministic function of (n, p̂), could not be tested by a pilot. Both
+> are now restated in terms of the design effect: G0 gates on DEFF = 1 + 4ρ̂ ≤ 1.5
+> at 5 runs/cell and on n_eff = n / DEFF ≥ 100 at the Starter unit; the skill's
+> table is by n_eff and printed as [low, high]. This table is the source for both.
 
 ## Assumptions to carry into the methodology page
 
