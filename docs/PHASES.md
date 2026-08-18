@@ -28,10 +28,11 @@ the product.
 | Functional | Pilot completes across all 5 surfaces | 5/5 return parseable responses |
 | Functional | Wilson implementation agrees with reference | ≤1e-9 across the n×p̂ grid |
 | Performance | Response latency observed | p95 ≤ 20s (provider states 2–20s) |
-| **Cost** | **Measured $/answer** | **≤ $0.0022 (model says $0.002)** |
-| **Cost** | **Design effect** — day×cell correlation ρ̂_u of the mention indicator, per engine, from the two-day re-collection: ρ̂_u = (D − 1)/(m − 1) where D is the day-to-day dispersion ratio of per-cell counts (heterogeneity-free; the single-day ANOVA ρ̂ is only an upper bound) | **DEFF = 1 + 4ρ̂_u ≤ 1.5 at the Starter default of 5 runs/cell (ρ̂_u ≤ 0.125), on every engine** |
+| **Cost** | **Measured $/answer**, re-priced at the Mega marginal rate the model assumes (attempts incl. retries × Mega price ÷ answers); the plan actually charged is reported alongside | **≤ $0.0022 at Mega marginal (model says $0.002)** |
+| **Cost** | **Design effect** — day×cell correlation ρ̂_u of the mention indicator, per engine, from the two-day re-collection: D = day-to-day dispersion ratio of per-cell counts (fixed cell effects cancel), ρ̂_u = (D − 1)/[(m − 1)(1 + D/(2m − 1))] (exact inversion of E[D]); the single-day ANOVA ρ̂ is only an upper bound | **DEFF = 1 + 4ρ̂_u ≤ 1.5 at the Starter default of 5 runs/cell, judged on the 95% upper confidence limit of ρ̂_u (bootstrap over cells), on every engine** |
 | **Cost** | **Precision at the reported unit** — Starter unit = brand × engine × cycle over 30 prompts × 5 runs, n = 150 nominal | **n_eff = 150 / DEFF ≥ 100, i.e. the Wilson interval at p̂ = 0.25 lies within [0.17, 0.35]** |
-| Cost | Within-day pass-to-pass dispersion and the single-day ANOVA ρ̂ (upper bound), per engine | reported alongside, not gated; without the second day the two design-effect rows are NOT RUN |
+| Functional | Day-2 answers are fresh, not replays — D's 95% CI not entirely below 1 and < 50% of day-2 texts byte-identical to a day-1 text of the same cell | required; a cached provider passes every variance row otherwise |
+| Cost | Within-day pass-to-pass dispersion (sub-day clustering, a different estimand), the single-day ANOVA ρ̂ (upper bound), ρ̂_u on the first 5 runs (exchangeability check), the engine-level day shift, per engine | reported alongside, not gated; without the second day the design-effect rows are NOT RUN |
 | Usability | A second person can reproduce the pilot from the README | unaided |
 
 > **G0 is the most important gate in the project.** If measured cost per answer is
@@ -52,6 +53,14 @@ the product.
 > figure. If DEFF exceeds 1.5 the product is not broken: every published interval
 > switches to n_eff = n / DEFF and runs-per-tier are re-derived — but that has to
 > be known before pricing is fixed, not after launch.
+>
+> Two things two days cannot see, stated rather than hidden: a cycle-level shift
+> common to all cells (a model deploy or index refresh — σ_g) enters week-on-week
+> differences undivided by prompts or runs and needs ≥ 4 cycles to estimate; the
+> engine-level day shift is reported as a diagnostic only. And the certified n_eff
+> is bank-conditional: it covers "this bank on this engine", not generalisation
+> from a 30-prompt bank to a category — the UI/API must label it so, or a
+> prompt-clustered DEFF must be added (human decision, P2.6).
 
 ---
 

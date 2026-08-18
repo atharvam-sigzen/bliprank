@@ -44,7 +44,11 @@ projected spend already exceeds the cap.
 COLLECTION_ENABLED=true COLLECTION_BUDGET_USD=75 pnpm collector:pilot -- --day 2026-08-19 --plan payg
 ```
 
-Resumable: re-running the same command skips (cell, run) pairs already stored.
+The cap is for the **whole pilot**: the runner reads earlier days' ledgers under
+`pilot/data/` and takes what they spent off the top, refuses if nothing is left,
+and holds a `run.lock` so two runs cannot each spend the cap. Resumable:
+re-running the same command skips (cell, run) pairs already stored (and
+previously rejected/unparseable ones).
 Raw answers land in `pilot/data/<day>/<engine>.jsonl` (verbatim payloads, rule R4 —
 gitignored), failures in `failures.jsonl`, the spend ledger in `ledger.json`.
 Exit 0 = complete, 2 = refused (gate), 3 = stopped by the cap.
@@ -55,7 +59,7 @@ Exit 0 = complete, 2 = refused (gate), 3 = stopped by the cap.
 COLLECTION_ENABLED=true COLLECTION_BUDGET_USD=75 pnpm collector:pilot -- --day 2026-08-20 --plan payg
 ```
 
-The ledger is per day; keep the cap at the *total* remaining budget for the pilot.
+Pass the same *total* cap; the runner subtracts day 1's actual spend itself.
 
 ## Analysis / gate
 
@@ -73,14 +77,23 @@ cancels in cycle-to-cycle comparisons and only makes a single-cycle Wilson inter
 conservative. What makes Wilson anti-conservative is the **day×cell** component —
 runs of a cell within one cycle being more alike than runs of that cell across
 cycles (caching, per-day engine state). The day-to-day dispersion ratio of per-cell
-counts is a heterogeneity-free estimator of it: `E[D] = 1 + (m−1)·ρ_u`, so
-`ρ̂_u = (D − 1)/(m − 1)`, `DEFF₅ = 1 + 4·ρ̂_u`, `n_eff = 150 / DEFF₅`.
+counts is a heterogeneity-free estimator of it: `E[D] = [1 + (m−1)ρ_u] / [1 −
+(m−1)ρ_u/(2m−1)]`, inverted exactly to `ρ̂_u = (D − 1)/[(m − 1)(1 + D/(2m − 1))]`;
+`DEFF₅ = 1 + 4·ρ̂_u`, `n_eff = 150 / DEFF₅`. The gate is judged on the 95% upper
+confidence limit of ρ̂_u (bootstrap over cells), and fails on integrity if day 2
+looks like a replay of day 1 (D confidence interval entirely below 1, or ≥ 50% of
+day-2 texts byte-identical to a day-1 text of the same cell).
 
 Reported alongside: the single-day one-way ANOVA ρ̂ (an **upper bound** — it
-includes the fixed cell effect) and the within-day pass-to-pass ratio (a
-lower-bound proxy). `--fixture` mode with `FIXTURE_RHO=<ρ>` reproduces all of this
+includes the fixed cell effect), the within-day pass-to-pass ratio (sub-day
+clustering — a different estimand, not a bound), ρ̂_u on the first 5 runs
+(exchangeability check), the engine-level day shift (diagnostic; σ_g needs ≥ 4
+cycles) and $/answer both as charged and re-priced at the Mega marginal rate the
+cost model assumes. `--fixture` mode with `FIXTURE_RHO=<ρ>` reproduces all of this
 offline: planted ρ_u = 0.05 with heavy prompt heterogeneity gives ρ̂_u ≈ 0.04–0.07
 and an ANOVA bound ≈ 0.25 — the reason the gate does not use the ANOVA figure.
+The certified n_eff is bank-conditional (this bank, this engine), not a category
+claim.
 
 ## Known limitations of this pilot
 

@@ -105,17 +105,37 @@ component — runs of one cell within a cycle being more alike than runs of that
 cell across cycles (caching, per-day engine state). Estimate it from a
 re-collection of the same cells on a second day: with kᵢ₁, kᵢ₂ mentions out of m
 runs each, `D = Σ(kᵢ₁ − kᵢ₂)² / Σ 2m·p̂ᵢ(1 − p̂ᵢ)·2m/(2m − 1)` (p̂ᵢ pooled over both
-days), `E[D] = 1 + (m − 1)·ρ_u`, so **`ρ̂_u = (D − 1)/(m − 1)`**, floored at 0. This
-is heterogeneity-free. The single-day one-way ANOVA estimator
-`ρ̂ = (MSB − MSW)/(MSB + (m − 1)·MSW)` (with `MSB = m·Σ(p̂ᵢ − p̄)²/(N − 1)`,
-`MSW = Σ m·p̂ᵢ(1 − p̂ᵢ)/(N(m − 1))`) includes the fixed cell effect and is an **upper
-bound** on ρ_u — report it, never gate on it (with a diverse bank it sits near
-0.25 even when runs are independent). The within-day pass-to-pass ratio (first
-half of a cell's runs vs the second half, hours apart) is a lower-bound proxy.
+days). Fixed cell effects cancel exactly, and because the pooled p̂ᵢ is itself
+depressed by the clustering, `E[D] = [1 + (m − 1)ρ_u] / [1 − (m − 1)ρ_u/(2m − 1)]`,
+which inverts to **`ρ̂_u = (D − 1) / [(m − 1)(1 + D/(2m − 1))]`**, floored at 0
+(the naive `(D − 1)/(m − 1)` over-reads by ~10% at the threshold). Gate on the
+**95% upper confidence limit** of ρ̂_u (bootstrap over cells): a point estimate
+against a hard threshold passes a borderline engine only one time in five. Also
+check the two sets are *fresh*: a D confidence interval entirely below 1, or
+many day-2 texts byte-identical to day-1 texts of the same cell, means the
+provider replayed cached answers — that fails the gate on integrity, because a
+fully cached engine would otherwise score as perfectly independent. The
+single-day one-way ANOVA estimator `ρ̂ = (MSB − MSW)/(MSB + (m − 1)·MSW)` (with
+`MSB = m·Σ(p̂ᵢ − p̄)²/(N − 1)`, `MSW = Σ m·p̂ᵢ(1 − p̂ᵢ)/(N(m − 1))`) includes the
+fixed cell effect and is an **upper bound** on ρ_u — report it, never gate on it
+(with a diverse bank it sits near 0.25 even when runs are independent). The
+within-day pass-to-pass ratio (first half of a cell's runs vs the second half,
+hours apart) measures sub-day clustering — a different estimand, neither an upper
+nor a lower bound; report it as such. Runs of a cell may be *time*-correlated
+rather than exchangeable (a TTL cache): recompute ρ̂_u on the first 5 runs as
+well and expect agreement.
 
-Gate G0 requires DEFF = 1 + 4ρ̂_u ≤ 1.5 (ρ̂_u ≤ 0.125) on every engine, so that the
-Starter unit's n_eff ≥ 100. If it is higher, nothing is "wrong" — every published
-interval uses n_eff and runs-per-tier are re-derived before pricing is fixed.
+Gate G0 requires DEFF = 1 + 4ρ̂_u ≤ 1.5 on every engine on the upper limit, so
+that the Starter unit's n_eff ≥ 100. If it is higher, nothing is "wrong" — every
+published interval uses n_eff and runs-per-tier are re-derived before pricing is
+fixed. Two limits to state, not hide: (1) a cycle-level shift common to all
+cells (σ_g — model deploys, index refreshes) enters week-on-week differences
+undivided by prompts or runs and is not identifiable from two days; it needs
+≥ 4 cycles, and the report of a difference must eventually carry
+`σ̂²_g + σ̂²_u/P + σ̂²_e/(PR)`, not one collapsed ρ. (2) n_eff as certified here is
+bank-conditional — it covers "this bank on this engine", not generalisation from
+a 30-prompt bank to the category; label it so wherever it is shown, or add a
+prompt-clustered DEFF.
 
 Confidence Grade is a function of the design, not of the outcome: **A** = n_eff ≥ 200
 · **B** = n_eff ≥ 50 · **C** = n_eff ≥ 15 · **D** below that.
