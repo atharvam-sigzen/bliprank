@@ -60,7 +60,7 @@ the product.
 | 1.2 | OpenWeb Ninja adapter implementing the contract + fixture suite |
 | 1.3 | **Second provider stubbed** against the same contract (proves the abstraction) |
 | 1.4 | Cache key + Redis index; shared prompt-pool dedupe |
-| 1.5 | R2 storage, batched one object per `prompt × engine × day` |
+| 1.5 | R2 storage, batched one object per cell (`prompt × engine × locale × geo × day`, ADR-0003) |
 | 1.6 | Rate-limit budget manager **behind a pluggable interface**, configurable window, multi-key sharding — the interface is what makes the P5 runner migration a swap, not a rewrite |
 | 1.7 | `packages/db` schema: partitioned score tables, RLS from day one |
 

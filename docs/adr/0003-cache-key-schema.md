@@ -22,7 +22,7 @@ key = sha256( JSON.stringify([normalised_prompt, engine, locale, geo, date_bucke
 | `engine` | one of `chatgpt` `gemini` `copilot` `google-ai-mode` `google-ai-overviews` | Closed set, append-only, never renamed. |
 | `locale` | canonical BCP-47 via `Intl.getCanonicalLocales` (`en-IN`) | Stdlib validation and casing; `EN-in` and `en-IN` are one cell. |
 | `geo` | upper-case ISO 3166-1 alpha-2 (`IN`) | Country is what the provider accepts and what we disclose. |
-| `date_bucket` | `YYYY-MM-DD` UTC, **the collection cycle's date, assigned by the scheduler** | Day granularity matches the R2 layout (one object per prompt × engine × day) and the "collect once per cycle" cache semantics. Using the cycle date, not the call timestamp, keeps a cycle that spans midnight in one cell. |
+| `date_bucket` | `YYYY-MM-DD` UTC, **the collection cycle's date, assigned by the scheduler** | Day granularity matches the R2 layout (one object per cell per day) and the "collect once per cycle" cache semantics. Using the cycle date, not the call timestamp, keeps a cycle that spans midnight in one cell. |
 
 Serialisation is a JSON array: canonical, delimiter-safe (a prompt containing `|`
 or newlines cannot collide), and the field order *is* the schema. Full SHA-256 hex

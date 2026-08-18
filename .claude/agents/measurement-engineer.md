@@ -29,7 +29,7 @@ know what ChatGPT says about brand X" to "a raw answer is durably stored".
    Nothing in the adapters, normalisation, cache lookup or retry policy may depend
    on which runner it is executing under. If you find yourself writing
    runner-specific code outside the runner module, stop and reconsider.
-4. **R2 writes are batched** — one object per `prompt × engine × day` holding all
+4. **R2 writes are batched** — one object per cell (`prompt × engine × locale × geo × day`, ADR-0003) holding all
    runs for that cell. Per-answer writes cost 5× more in Class A operations and do
    not match the read pattern reconciliation needs.
 5. **Retries are bounded and budgeted.** Exponential backoff, a hard attempt cap,
