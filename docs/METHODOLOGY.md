@@ -49,11 +49,11 @@ expresses it well. Sampled fields are labelled as sampled everywhere they appear
 
 | Engine | Collection path |
 |---|---|
-| Google AI Overviews | *[to be completed at P0]* |
-| Google AI Mode | *[to be completed at P0]* |
-| ChatGPT | *[to be completed at P0]* |
-| Google Gemini | *[to be completed at P0]* |
-| Microsoft Copilot | *[to be completed at P0]* |
+| Google AI Overviews | `third-party-grounded` — OpenWeb Ninja AI Answers API (third-party web-grounded infrastructure) |
+| Google AI Mode | `third-party-grounded` — OpenWeb Ninja AI Answers API (third-party web-grounded infrastructure) |
+| ChatGPT | `third-party-grounded` — OpenWeb Ninja AI Answers API (third-party web-grounded infrastructure) |
+| Google Gemini | `third-party-grounded` — OpenWeb Ninja AI Answers API (third-party web-grounded infrastructure) |
+| Microsoft Copilot | `third-party-grounded` — OpenWeb Ninja AI Answers API (third-party web-grounded infrastructure) |
 
 We state, per engine, whether a surface is collected via an official API or via
 third-party web-grounded infrastructure. Most of this category does not disclose
