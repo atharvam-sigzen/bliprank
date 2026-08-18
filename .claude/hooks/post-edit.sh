@@ -16,7 +16,7 @@ esac
 case "$FILE" in
   *packages/stats/*)
     echo "→ packages/stats touched: running statistical reference tests"
-    pnpm -s test --filter stats 2>&1 | tail -30
+    pnpm -s test --filter @bliprank/stats 2>&1 | tail -30
     echo "⚠️  Invoke the stats-reviewer subagent before considering this done."
     ;;
   *packages/db/*)
