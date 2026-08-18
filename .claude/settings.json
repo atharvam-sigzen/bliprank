@@ -1,5 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "COLLECTION_ENABLED": "false",
+    "NODE_ENV": "development",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_FLOW_V3_ENABLED": "true",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
+  },
   "permissions": {
     "allow": [
       "Bash(pnpm *)",
@@ -71,11 +78,19 @@
       }
     ]
   },
-  "env": {
-    "COLLECTION_ENABLED": "false",
-    "NODE_ENV": "development",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CLAUDE_FLOW_V3_ENABLED": "true",
-    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
+  "enabledPlugins": {
+    "ruflo-testgen@ruflo": true,
+    "ruflo-browser@ruflo": true,
+    "ruflo-cost-tracker@ruflo": false,
+    "ruflo-adr@ruflo": true,
+    "ruflo-metaharness@ruflo": true
+  },
+  "extraKnownMarketplaces": {
+    "ruflo": {
+      "source": {
+        "source": "github",
+        "repo": "ruvnet/ruflo"
+      }
+    }
   }
 }
