@@ -5,3 +5,8 @@
 .claude-flow/data/
 .claude-flow/logs/
 .claude-flow/sessions/
+
+# Node
+node_modules/
+dist/
+coverage/
