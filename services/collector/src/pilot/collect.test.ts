@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { optionsFromEnv, priorSpendUsd, runPilot, PILOT_DIR, type RunOptions } from './collect.js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { BudgetExceeded } from '../budget.js'
+import { loadDotEnv } from './util.js'
 
 const bankFile = join(PILOT_DIR, 'bank.json')
 
@@ -18,9 +19,11 @@ describe('R3 gate — the runner refuses unless collection is deliberately enabl
     expect(optionsFromEnv(base, { COLLECTION_ENABLED: 'true', COLLECTION_BUDGET_USD: '5' })).toMatchObject({ refuse: expect.stringContaining('API_KEY') })
     expect(optionsFromEnv(base, { COLLECTION_ENABLED: 'true', OPENWEBNINJA_API_KEY: 'k' })).toMatchObject({ refuse: expect.stringContaining('COLLECTION_BUDGET_USD') })
   })
-  it('accepts when all three are present and defaults to the pay-as-you-go price table', () => {
-    const o = optionsFromEnv(base, { COLLECTION_ENABLED: 'true', OPENWEBNINJA_API_KEY: 'k', COLLECTION_BUDGET_USD: '75' })
-    expect(o).toMatchObject({ day: '2026-08-19', runs: 10, plan: 'payg', capUsd: 75, engines: expect.arrayContaining(['chatgpt', 'google-ai-overviews']) })
+  it('refuses without an explicit plan — never defaults to pay-as-you-go for a real run', () => {
+    expect(optionsFromEnv(base, { COLLECTION_ENABLED: 'true', OPENWEBNINJA_API_KEY: 'k', COLLECTION_BUDGET_USD: '75' })).toMatchObject({ refuse: expect.stringContaining('plan') })
+    const o = optionsFromEnv(base, { COLLECTION_ENABLED: 'true', OPENWEBNINJA_API_KEY: 'k', COLLECTION_BUDGET_USD: '75', OPENWEBNINJA_PLAN: 'mega' })
+    expect(o).toMatchObject({ day: '2026-08-19', runs: 10, plan: 'mega', capUsd: 75, engines: expect.arrayContaining(['chatgpt', 'google-ai-overviews']) })
+    expect(optionsFromEnv([...base, '--plan', 'ultra'], { COLLECTION_ENABLED: 'true', OPENWEBNINJA_API_KEY: 'k', COLLECTION_BUDGET_USD: '75' })).toMatchObject({ plan: 'ultra' })
   })
   it('fixture mode needs no key and never spends', () => {
     const o = optionsFromEnv([...base, '--fixture'], {})
@@ -89,5 +92,23 @@ describe('the cap is per pilot, not per day', () => {
     const opts = optionsFromEnv(['--fixture', '--day', '2026-08-21', '--bank', bankFile, '--runs', '1', '--limit-prompts', '1', '--engines', 'gemini', '--data', dataDir], {}) as RunOptions
     opts.log = () => {}
     await expect(runPilot(opts)).rejects.toThrow(/another run holds/)
+  })
+})
+
+describe('dotenv loading', () => {
+  it('reads .env.local then .env; process env wins; values never overridden', () => {
+    const root = mkdtempSync(join(tmpdir(), 'env-'))
+    writeFileSync(join(root, '.env'), 'A=from-env\nB=from-env\nC="quoted"\n# comment\nPLAN=payg\n')
+    writeFileSync(join(root, '.env.local'), 'A=from-local\n')
+    const env: NodeJS.ProcessEnv = { B: 'from-process' }
+    const loaded = loadDotEnv(root, env, ['A', 'B', 'C', 'PLAN'])
+    expect(env['A']).toBe('from-local')
+    expect(env['B']).toBe('from-process')
+    expect(env['C']).toBe('quoted')
+    expect(env['PLAN']).toBe('payg')
+    expect(loaded).toEqual(['A (.env.local)', 'C (.env)', 'PLAN (.env)'])
+    const env2: NodeJS.ProcessEnv = {}
+    loadDotEnv(root, env2) // default allowlist: none of these test keys qualify
+    expect(Object.keys(env2)).toEqual([])
   })
 })

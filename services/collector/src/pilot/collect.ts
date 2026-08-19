@@ -22,7 +22,7 @@ import { cacheCell, ENGINES, type CacheCell, type EngineAdapter, type EngineId, 
 import { openWebNinjaAdapter, PRICE_USD_PER_CALL, RPS_CEILING, type OwnPlan } from '../adapters/openwebninja.js'
 import { Budget, BudgetExceeded } from '../budget.js'
 import { fixtureAdapter } from './fixture-adapter.js'
-import { loadDotEnvLocal, parseArgs, percentile, sleep } from './util.js'
+import { loadDotEnv, parseArgs, percentile, sleep } from './util.js'
 
 export interface Bank {
   category: string
@@ -295,7 +295,11 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
   const enginesArg = String(args.get('engines') ?? 'all')
   const engines = (enginesArg === 'all' ? [...ENGINES] : enginesArg.split(',')) as EngineId[]
   for (const e of engines) if (!(ENGINES as readonly string[]).includes(e)) return { refuse: `unknown engine ${e}` }
-  const plan = String(args.get('plan') ?? env['OPENWEBNINJA_PLAN'] ?? 'payg') as OwnPlan
+  // The plan decides the marginal price the ledger charges: pay-as-you-go is 3–4× Mega.
+  // It is never defaulted for a real run — a wrong guess is either an under-charged
+  // ledger or a cap that stops the pilot a third of the way in.
+  const planArg = args.get('plan') ?? env['OPENWEBNINJA_PLAN']
+  const plan = String(planArg ?? 'payg') as OwnPlan
   if (!(plan in PRICE_USD_PER_CALL)) return { refuse: `unknown plan ${plan}` }
   const bank = JSON.parse(readFileSync(String(args.get('bank') ?? join(PILOT_DIR, 'bank.json')), 'utf8')) as Bank
 
@@ -307,6 +311,7 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
   }
   const capUsd = Number(args.get('cap') ?? env['COLLECTION_BUDGET_USD'])
   if (!fixture && !(capUsd > 0)) return { refuse: 'COLLECTION_BUDGET_USD (or --cap) must be a positive number: no run without an explicit ceiling.' }
+  if (!fixture && !planArg) return { refuse: 'plan not set: pass --plan payg|pro|ultra|mega or set OPENWEBNINJA_PLAN. Not defaulted — it decides what every call is charged at.' }
 
   return {
     day,
@@ -326,9 +331,13 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
   }
 }
 
+/** `--preview`: validate the gate and print the projection, then stop before any call. */
+const opts_preview = (argv: string[]) => argv.includes('--preview')
+
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
-  loadDotEnvLocal(REPO_ROOT)
+  const loadedKeys = loadDotEnv(REPO_ROOT)
+  if (loadedKeys.length) console.error(`loaded from dotenv (values never printed): ${loadedKeys.join(', ')}`)
   const opts = optionsFromEnv(process.argv.slice(2), process.env)
   if ('refuse' in opts) {
     console.error(`REFUSED: ${opts.refuse}`)
@@ -342,6 +351,10 @@ if (isMain) {
   if (!fixture && est > capUsd - prior) {
     console.error(`REFUSED: projected spend $${est.toFixed(2)} exceeds the remaining cap $${(capUsd - prior).toFixed(2)}; shrink --runs/--limit-prompts or raise the cap deliberately`)
     process.exit(2)
+  }
+  if (opts_preview(process.argv)) {
+    console.error('PREVIEW: gate satisfied and cost projected; no call made, nothing charged.')
+    process.exit(0)
   }
   runPilot(opts).then((r) => process.exit(r.exitCode))
 }

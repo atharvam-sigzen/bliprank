@@ -32,26 +32,36 @@ export function percentile(values: readonly number[], q: number): number {
 }
 
 /**
- * Minimal .env.local loader (KEY=VALUE, # comments, optional quotes). Existing
- * process.env values win, so a session that pins COLLECTION_ENABLED=false in
- * its environment stays off regardless of the file. Never logs values.
+ * Minimal dotenv loader: `.env.local` first, then `.env` (KEY=VALUE, # comments,
+ * optional quotes). Existing process.env values win, and `.env.local` wins over
+ * `.env`, so a session that pins COLLECTION_ENABLED=false in its environment
+ * stays off regardless of either file. Never logs values. Returns the keys it
+ * set, tagged with the file they came from.
  */
-export function loadDotEnvLocal(root: string, env: NodeJS.ProcessEnv = process.env): string[] {
-  const file = join(root, '.env.local')
-  if (!existsSync(file)) return []
+export const COLLECTOR_ENV_KEYS = ['OPENWEBNINJA_API_KEY', 'OPENWEBNINJA_PLAN', 'COLLECTION_ENABLED', 'COLLECTION_BUDGET_USD'] as const
+
+export function loadDotEnv(root: string, env: NodeJS.ProcessEnv = process.env, only: readonly string[] = COLLECTOR_ENV_KEYS): string[] {
   const loaded: string[] = []
-  for (const raw of readFileSync(file, 'utf8').split('\n')) {
-    const line = raw.trim()
-    if (!line || line.startsWith('#')) continue
-    const eq = line.indexOf('=')
-    if (eq <= 0) continue
-    const key = line.slice(0, eq).trim()
-    let val = line.slice(eq + 1).trim()
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1)
-    if (env[key] === undefined || env[key] === '') {
-      env[key] = val
-      loaded.push(key)
+  for (const name of ['.env.local', '.env']) {
+    const file = join(root, name)
+    if (!existsSync(file)) continue
+    for (const raw of readFileSync(file, 'utf8').split('\n')) {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) continue
+      const eq = line.indexOf('=')
+      if (eq <= 0) continue
+      const key = line.slice(0, eq).trim()
+      if (!only.includes(key)) continue // least privilege: the collector never needs the other secrets
+      let val = line.slice(eq + 1).trim()
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1)
+      if (env[key] === undefined || env[key] === '') {
+        env[key] = val
+        loaded.push(`${key} (${name})`)
+      }
     }
   }
   return loaded
 }
+
+/** @deprecated kept for one release; use loadDotEnv */
+export const loadDotEnvLocal = loadDotEnv
