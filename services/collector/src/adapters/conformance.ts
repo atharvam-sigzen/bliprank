@@ -49,6 +49,11 @@ export function describeAdapterConformance(target: ConformanceTarget): void {
         for (const [i, c] of once.citations.entries()) {
           expect(c.position).toBe(i) // positions are 0-based and in order
           expect(() => new URL(c.url)).not.toThrow()
+          // ADR-0005: metadata is preserved, not flattened. When present it is a flat
+          // bag of scalars (no nested junk into R2) — pins the invariant for any adapter.
+          if (c.meta !== undefined) {
+            for (const v of Object.values(c.meta)) expect(['string', 'number']).toContain(typeof v)
+          }
         }
       }
     })

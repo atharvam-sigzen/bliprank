@@ -21,6 +21,7 @@ import {
   AdapterError,
   type AnswerBody,
   type Citation,
+  type CitationMeta,
   type CollectRequest,
   type EngineAdapter,
   type EngineId,
@@ -37,7 +38,7 @@ export interface StubEnvelope {
     /** Answer as HTML — the scorer needs text, so normalise must strip it. */
     content_html: string
     /** Citations under different names than the primary provider uses. */
-    sources: { target_url: string; display_name?: string; rank: number }[]
+    sources: { target_url: string; display_name?: string; rank: number; published_at?: string }[]
   } | null
   /** Vendor-style error object, present instead of result. */
   fault?: { code: string; description: string }
@@ -111,7 +112,15 @@ export function normaliseStub(payload: unknown): AnswerBody {
       .sort((a, b) => Number(a['rank'] ?? 0) - Number(b['rank'] ?? 0))
     for (const s of ranked) {
       const title = typeof s['display_name'] === 'string' && s['display_name'] ? { title: s['display_name'] } : {}
-      citations.push({ url: s['target_url'] as string, position: citations.length, ...title })
+      // preserve structured hints for the classifier (ADR-0005), same contract as the primary provider
+      const meta: Record<string, string | number> = {}
+      for (const [key, val] of Object.entries(s)) {
+        if (key === 'target_url' || key === 'display_name' || key === 'rank') continue
+        if (typeof val === 'string' && val !== '') meta[key] = val
+        else if (typeof val === 'number' && Number.isFinite(val)) meta[key] = val
+      }
+      const metaOut: { meta?: CitationMeta } = Object.keys(meta).length ? { meta } : {}
+      citations.push({ url: s['target_url'] as string, position: citations.length, ...title, ...metaOut })
     }
   }
   return { text, citations }

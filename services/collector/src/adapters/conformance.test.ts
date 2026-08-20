@@ -41,7 +41,7 @@ const stubValid: StubEnvelope = {
   result: {
     content_html: '<p>Consider <a href="https://www.zoho.com/crm/">Zoho CRM</a> or <strong>HubSpot</strong>.</p>',
     sources: [
-      { target_url: 'https://www.hubspot.com/products/crm', display_name: 'HubSpot', rank: 2 },
+      { target_url: 'https://www.hubspot.com/products/crm', display_name: 'HubSpot', rank: 2, published_at: '2026-07-01' },
       { target_url: 'https://www.zoho.com/crm/', display_name: 'Zoho CRM', rank: 1 },
     ],
   },
@@ -60,7 +60,7 @@ describeAdapterConformance({
           citations: [
             // rank order, not array order — the dialect really is different
             { url: 'https://www.zoho.com/crm/', title: 'Zoho CRM', position: 0 },
-            { url: 'https://www.hubspot.com/products/crm', title: 'HubSpot', position: 1 },
+            { url: 'https://www.hubspot.com/products/crm', title: 'HubSpot', position: 1, meta: { published_at: '2026-07-01' } },
           ],
         },
       },

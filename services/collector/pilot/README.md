@@ -128,5 +128,8 @@ stores real answers.
 - Copilot is called in `CHAT` mode; AI Overviews returns
   `search_returned_ai_overviews: false` as an empty (parseable) answer.
 - The `content_references` field on ChatGPT is not documented in shape; citations
-  for ChatGPT/Gemini come from markdown links in the answer text.
+  for ChatGPT/Gemini come from markdown links in the answer text. Consequence for
+  ADR-0005: ChatGPT/Gemini citations classify from the URL alone (no structured
+  `meta` — no timestamp/thread id) until a real payload is captured. Known
+  coverage gap for 2/5 engines; revisit before the P2.1b classifier.
 - Prompt bank is content-generated (flag for human review, CLAUDE.md §4).

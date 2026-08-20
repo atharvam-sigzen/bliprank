@@ -127,6 +127,7 @@ const META_KEYS: Record<string, keyof CitationMeta> = {
   snippet: 'snippet',
   timestamp: 'timestamp',
   thread_id: 'threadId',
+  listing_id: 'listingId',
 }
 
 /** Structured hints beyond url/title, preserved for the source classifier (ADR-0005). */
@@ -134,8 +135,11 @@ function citationMeta(item: Record<string, unknown>): CitationMeta | undefined {
   const meta: Record<string, string | number> = {}
   for (const [k, v] of Object.entries(item)) {
     if (k === 'url' || k === 'link' || k === 'title') continue // url is the citation; title is top-level
-    if (typeof v === 'string' && v !== '') meta[META_KEYS[k] ?? k] = v
-    else if (typeof v === 'number') meta[META_KEYS[k] ?? k] = v
+    // ponytail: cap pass-through so a future provider field carrying a large blob can't bloat R2; the verbatim payload already has it.
+    if (Object.keys(meta).length >= 24) break
+    const key = META_KEYS[k] ?? k
+    if (typeof v === 'string' && v !== '') meta[key] = v.length > 2000 ? v.slice(0, 2000) : v
+    else if (typeof v === 'number' && Number.isFinite(v)) meta[key] = v
   }
   return Object.keys(meta).length ? meta : undefined
 }
