@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AdapterError, cacheCell, ENGINES } from '@bliprank/contracts'
-import { normaliseOwn, openWebNinjaAdapter } from './openwebninja.js'
+import { normaliseOwn, openWebNinjaAdapter, probeEngine } from './openwebninja.js'
 
 // Payload shapes as documented on the provider's API pages (2026-08-18), wrapped
 // in the { status, request_id, data } envelope its official MCP client unwraps.
@@ -131,5 +131,20 @@ describe('openWebNinjaAdapter.collect', () => {
       expect(a.collectionPath).toBe('third-party-grounded')
       expect(a.rateLimit().rps).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('probeEngine (--doctor)', () => {
+  it('returns the verbatim status/body and never throws', async () => {
+    const f403 = (async () => new Response(JSON.stringify({ message: 'You are not subscribed to this API' }), { status: 403, headers: { 'x-amzn-requestid': 'req-1' } })) as unknown as typeof fetch
+    const bad = await probeEngine('chatgpt', { apiKey: 'k', fetch: f403 })
+    expect(bad).toMatchObject({ engine: 'chatgpt', method: 'POST', path: '/chatgpt/chat', status: 403, ok: false, requestId: 'req-1' })
+    expect(bad.body).toContain('not subscribed')
+    const fOk = (async () => new Response(JSON.stringify({ status: 'OK', data: { reply_text: 'hi' } }), { status: 200 })) as unknown as typeof fetch
+    expect((await probeEngine('google-ai-overviews', { apiKey: 'k', fetch: fOk })).ok).toBe(true)
+    const boom = (async () => { throw new TypeError('fetch failed') }) as unknown as typeof fetch
+    const net = await probeEngine('gemini', { apiKey: 'k', fetch: boom })
+    expect(net.status).toBe(0)
+    expect(net.body).toContain('network error')
   })
 })

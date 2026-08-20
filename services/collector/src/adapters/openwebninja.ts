@@ -193,6 +193,46 @@ function classifyHttp(status: number, detail: string, retryAfterMs?: number): Ad
   return new AdapterError('rejected', `HTTP ${status}: ${detail}`, false)
 }
 
+export interface ProbeResult {
+  engine: EngineId
+  method: string
+  path: string
+  status: number
+  ok: boolean
+  requestId: string | null
+  /** raw response body, truncated */
+  body: string
+}
+
+/**
+ * One raw diagnostic call, nothing normalised, nothing thrown: exactly what the
+ * provider answered, for the --doctor mode. Costs one billable call when the
+ * subscription is active.
+ */
+export async function probeEngine(engine: EngineId, opts: OwnAdapterOptions): Promise<ProbeResult> {
+  const base = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '')
+  const doFetch = opts.fetch ?? fetch
+  const cell = { locale: 'en-US', geo: 'US' }
+  const http = buildRequest(base, engine, {
+    cell: cell as never,
+    prompt: 'What is the best CRM for a small business?',
+    run: 0,
+  })
+  const init: RequestInit = {
+    method: http.method,
+    headers: { 'x-api-key': opts.apiKey, Accept: 'application/json', 'User-Agent': 'bliprank-collector-doctor', ...(http.body ? { 'Content-Type': 'application/json' } : {}) },
+  }
+  if (http.body) init.body = JSON.stringify(http.body)
+  try {
+    const res = await doFetch(http.url, init)
+    const body = (await res.text()).slice(0, 500)
+    const requestId = res.headers.get('x-request-id') ?? res.headers.get('x-amzn-requestid') ?? res.headers.get('apigw-requestid')
+    return { engine, method: http.method, path: new URL(http.url).pathname, status: res.status, ok: res.ok, requestId, body }
+  } catch (e) {
+    return { engine, method: http.method, path: new URL(http.url).pathname, status: 0, ok: false, requestId: null, body: `network error: ${(e as Error).message}` }
+  }
+}
+
 export function openWebNinjaAdapter(engine: EngineId, opts: OwnAdapterOptions): EngineAdapter {
   const base = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '')
   const plan: OwnPlan = opts.plan ?? 'payg'

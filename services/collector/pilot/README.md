@@ -107,9 +107,18 @@ first call is a **canary** sent alone, so a dead engine costs one attempt
 already recorded for the day is **SKIPPED at $0** on every re-run until
 `failures.jsonl` is deleted — deleting it is the "cause fixed, re-arm" signal.
 The provider does not usually bill unsubscribed 403s; reconcile the ledger
-(which charges every attempt by design) against the dashboard invoice. Verify
-cheaply before the full run: `--limit-prompts 1 --runs 1` is one call per
-engine (about $0.03).
+(which charges every attempt by design) against the dashboard invoice.
+
+**Beware the RapidAPI trap:** each API page offers "Try for Free" *and*
+"Connect on RapidAPI". A subscription made on RapidAPI attaches to your
+**RapidAPI** key and does nothing for the `api.openwebninja.com` key this
+runner uses — subscribe on openwebninja.com itself, per API, on your plan.
+
+Diagnose with the same gate as the runner: `--doctor` makes exactly one raw
+call per engine and prints the provider's verbatim status and body plus the
+subscribe link for anything unhealthy (≈ $0.03 if subscribed, likely unbilled
+403s if not). `--limit-prompts 1 --runs 1` remains the smoke test that also
+stores real answers.
 
 ## Known limitations of this pilot
 

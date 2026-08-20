@@ -19,7 +19,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlin
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cacheCell, ENGINES, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, AdapterError } from '@bliprank/contracts'
-import { openWebNinjaAdapter, PRICE_USD_PER_CALL, RPS_CEILING, type OwnPlan } from '../adapters/openwebninja.js'
+import { openWebNinjaAdapter, probeEngine, PRICE_USD_PER_CALL, RPS_CEILING, type OwnPlan } from '../adapters/openwebninja.js'
 import { Budget, BudgetExceeded } from '../budget.js'
 import { fixtureAdapter } from './fixture-adapter.js'
 import { loadDotEnv, parseArgs, percentile, sleep } from './util.js'
@@ -366,6 +366,42 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
 /** `--preview`: validate the gate and print the projection, then stop before any call. */
 const opts_preview = (argv: string[]) => argv.includes('--preview')
 
+/** Marketing-site slug per engine, for the subscribe links printed by --doctor. */
+const SITE_SLUG: Record<EngineId, string> = {
+  chatgpt: 'chatgpt',
+  gemini: 'gemini',
+  copilot: 'copilot',
+  'google-ai-mode': 'google-ai-mode',
+  'google-ai-overviews': 'ai-overviews',
+}
+
+/**
+ * --doctor: one raw call per engine, full provider response printed, charged to
+ * the day's ledger like any other attempt. The point is evidence: WHAT did the
+ * provider answer, verbatim, per engine — not our classification of it.
+ */
+export async function runDoctor(o: RunOptions): Promise<number> {
+  const dayDir = join(o.dataDir, o.day)
+  mkdirSync(dayDir, { recursive: true })
+  const budget = new Budget(join(dayDir, 'ledger.json'), o.capUsd - priorSpendUsd(o.dataDir, o.day), (engine) => (o.fixture ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+  let healthy = 0
+  for (const engine of o.engines) {
+    try {
+      budget.charge(engine)
+    } catch (e) {
+      o.log(`${engine}: not probed — ${(e as Error).message}`)
+      continue
+    }
+    const r = await probeEngine(engine, { apiKey: o.apiKey, plan: o.plan })
+    if (r.ok) healthy++
+    o.log(`${engine}: HTTP ${r.status} ${r.ok ? 'OK' : 'FAIL'} ${r.method} ${r.path}${r.requestId ? ` (request-id ${r.requestId})` : ''}`)
+    o.log(`  body: ${r.body.replace(/\s+/g, ' ').slice(0, 400)}`)
+    if (!r.ok) o.log(`  subscribe/manage: https://www.openwebninja.com/api/${SITE_SLUG[engine]}`)
+  }
+  o.log(`doctor: ${healthy}/${o.engines.length} engines healthy; $${budget.state.spentUsd.toFixed(4)} charged for the probes (day total). NOTE: a subscription made via "Connect on RapidAPI" attaches to your RapidAPI key, not to the api.openwebninja.com key this runner uses — subscribe on openwebninja.com itself.`)
+  return healthy === o.engines.length ? 0 : 1
+}
+
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
   const loadedKeys = loadDotEnv(REPO_ROOT)
@@ -388,5 +424,9 @@ if (isMain) {
     console.error('PREVIEW: gate satisfied and cost projected; no call made, nothing charged.')
     process.exit(0)
   }
-  runPilot(opts).then((r) => process.exit(r.exitCode))
+  if (process.argv.includes('--doctor')) {
+    runDoctor(opts).then((code) => process.exit(code))
+  } else {
+    runPilot(opts).then((r) => process.exit(r.exitCode))
+  }
 }
