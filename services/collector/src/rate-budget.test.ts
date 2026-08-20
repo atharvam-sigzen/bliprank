@@ -88,4 +88,18 @@ describe('LocalRateBudget', () => {
     expect(() => new LocalRateBudget({ bad: { rps: 0, burst: 1 } })).toThrow(RangeError)
     expect(() => new LocalRateBudget({ bad: { rps: 1, burst: 0 } })).toThrow(RangeError)
   })
+
+  it('penalize drains a shard for a window so siblings slow too', async () => {
+    const clock = fakeClock()
+    const rb = new LocalRateBudget({ api: { rps: 10, burst: 3, keys: ['k1', 'k2'] } }, clock)
+    rb.penalize('api', 5000, 'k1') // k1 throttled for 5s
+    const a = await rb.acquire('api') // k2 still has burst
+    expect(a.key).toBe('k2')
+    // drain k2's burst too, then everything must wait out k1's penalty window
+    await rb.acquire('api')
+    await rb.acquire('api')
+    const before = clock.t
+    await rb.acquire('api')
+    expect(clock.t - before).toBeGreaterThanOrEqual(100) // had to wait for a token, not instant
+  })
 })

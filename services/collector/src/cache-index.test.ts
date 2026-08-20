@@ -27,8 +27,14 @@ describe('AnswerIndex on MemoryKV', () => {
     expect((await idx.lookup([cell])).hits.size).toBe(1) // any-path: collected
     expect((await idx.lookup([cell], 'openwebninja:chatgpt')).hits.size).toBe(1) // primary path: collected
     expect((await idx.lookup([cell], 'stubsearch:chatgpt')).hits.size).toBe(0) // alternate path: must still collect
-    await idx.markCollected(cell, 'stubsearch:chatgpt', 10)
+    await idx.markCollected(cell, 'stubsearch:chatgpt', 7)
     expect((await idx.lookup([cell], 'stubsearch:chatgpt')).hits.size).toBe(1)
+    // the plain "collected at all?" entry keeps the FIRST writer's runs/adapter,
+    // not the alternate path's — only qualified entries are authoritative
+    const plain = (await idx.lookup([cell])).hits.get(cell.key)!
+    expect(plain.adapter).toBe('openwebninja:chatgpt')
+    expect(plain.runs).toBe(10)
+    expect((await idx.lookup([cell], 'stubsearch:chatgpt')).hits.get(cell.key)!.runs).toBe(7)
   })
 
   it('shared prompt-pool dedupe: identical prompts from different workspaces are one cell, one claim, one collection', async () => {

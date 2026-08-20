@@ -179,8 +179,14 @@ export class AnswerIndex {
   async markCollected(cell: CacheCell, adapterId: string, runs: number, r2Key: string = r2KeyFor(cell)): Promise<IndexEntry> {
     const entry: IndexEntry = { r2Key, adapter: adapterId, runs, storedAt: this.now().toISOString() }
     const value = JSON.stringify(entry)
+    // Path-qualified entry: authoritative for THIS adapter's runs/adapter.
     await this.kv.set(AnswerIndex.keyFor(cell.key, adapterId), value, { ttlSec: this.entryTtlSec })
-    await this.kv.set(AnswerIndex.keyFor(cell.key), value, { ttlSec: this.entryTtlSec })
+    // Plain "collected at all?" entry (the rule R6 spend-guard key): first writer
+    // wins so a later alternate-path collection (agreement monitor) does not
+    // clobber the primary's runs/adapter. Only the qualified entries are
+    // authoritative for runs/adapter; the plain one is presence + a valid pointer.
+    const plainKey = AnswerIndex.keyFor(cell.key)
+    if ((await this.kv.get(plainKey)) === null) await this.kv.set(plainKey, value, { ttlSec: this.entryTtlSec })
     return entry
   }
 

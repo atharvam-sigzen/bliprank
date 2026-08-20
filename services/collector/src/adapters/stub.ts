@@ -70,8 +70,21 @@ export function stubPayload(engine: EngineId, prompt: string, day: string, run: 
   }
 }
 
+const BLOCK_TAG = /<\/?(p|div|li|ul|ol|br|h[1-6]|tr|td|section|article)[^>]*>/gi
 const TAG = /<[^>]+>/g
+const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&nbsp;': ' ' }
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** HTML → plain text: block tags become spaces (never glue words), then strip inline tags and decode entities. */
+function htmlToText(html: string): string {
+  return html
+    .replace(BLOCK_TAG, ' ')
+    .replace(TAG, '')
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&[a-z]+;|&#39;/gi, (m) => ENTITIES[m.toLowerCase()] ?? m)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 /** Pure: the stub dialect → the provider-agnostic AnswerBody the scorer reads. */
 export function normaliseStub(payload: unknown): AnswerBody {
@@ -87,7 +100,7 @@ export function normaliseStub(payload: unknown): AnswerBody {
   if (!isObj(result) || typeof result['content_html'] !== 'string') {
     throw new AdapterError('unparseable', 'stub: no result.content_html', false)
   }
-  const text = result['content_html'].replace(TAG, '').replace(/\s+/g, ' ').trim()
+  const text = htmlToText(result['content_html'])
   const citations: Citation[] = []
   const sources = result['sources']
   if (Array.isArray(sources)) {

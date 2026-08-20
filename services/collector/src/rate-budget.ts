@@ -51,6 +51,14 @@ export interface RateBudget {
   /** Resolve when one request slot in `bucket` is available. Honours `signal`. */
   acquire(bucket: string, signal?: AbortSignal): Promise<Acquisition>
   state(bucket: string): BucketState
+  /**
+   * Feed a provider-observed rate-limit back into the bucket: drain a shard's
+   * tokens for `ms` so sibling workers slow down too, not just the job that was
+   * throttled. `key` targets one shard (a suspended key); omitted drains all.
+   * The P5 fleet implements this locally against its own slice — no interface
+   * break, which is the point (ADR-0002).
+   */
+  penalize(bucket: string, ms: number, key?: string | null): void
 }
 
 interface Shard {
@@ -146,7 +154,7 @@ export class LocalRateBudget implements RateBudget {
       let best: Shard | null = null
       for (let i = 0; i < b.shards.length; i++) {
         const s = b.shards[(i + b.rr) % b.shards.length]!
-        s.tokens = Math.min(b.cfg.burst, s.tokens + ((now - s.at) / 1000) * b.cfg.rps)
+        s.tokens = Math.min(b.cfg.burst, s.tokens + (Math.max(0, now - s.at) / 1000) * b.cfg.rps)
         s.at = now
         if (!best || s.tokens > best.tokens) best = s
       }
@@ -158,6 +166,18 @@ export class LocalRateBudget implements RateBudget {
       // Not enough anywhere: wait until the fullest shard has one whole token.
       const deficit = 1 - best!.tokens
       await this.clock.sleep(Math.max(1, Math.ceil((deficit / b.cfg.rps) * 1000)), signal)
+    }
+  }
+
+  penalize(bucket: string, ms: number, key?: string | null): void {
+    const b = this.mustGet(bucket)
+    const now = this.clock.now()
+    // Zero the shard and push its refill clock forward by `ms`: it earns no
+    // tokens until the penalty elapses.
+    for (const s of b.shards) {
+      if (key !== undefined && s.key !== key) continue
+      s.tokens = 0
+      s.at = now + Math.max(0, ms)
     }
   }
 

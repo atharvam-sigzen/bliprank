@@ -65,12 +65,17 @@ describeAdapterConformance({
         },
       },
       { payload: { api_version: 'v2', request: { surface: 'gemini', q: 'x' }, result: null }, expect: { text: '', citations: [] } },
+      {
+        // compact block markup with no literal newlines + an entity: must NOT glue words
+        payload: { api_version: 'v2', request: { surface: 'chatgpt', q: 'x' }, result: { content_html: '<ul><li>HubSpot &amp; Zoho</li><li>Salesforce</li></ul>', sources: [] } },
+        expect: { text: 'HubSpot & Zoho Salesforce', citations: [] },
+      },
       { payload: stubPayload('gemini', 'best crm for startups', '2026-08-20', 0), expect: (() => {
-          // self-consistency fixture: whatever the generator emits must round-trip;
-          // computed once here so the expectation is still literal data below.
+          // self-consistency: the generator's own output must round-trip through
+          // the same htmlToText the adapter uses (block tags → spaces), so use
+          // stubAdapter.normalise as the oracle rather than a re-implemented strip.
           const p = stubPayload('gemini', 'best crm for startups', '2026-08-20', 0)
-          const text = p.result!.content_html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
-          return { text, citations: p.result!.sources.map((s, i) => ({ url: s.target_url, title: s.display_name!, position: i })) }
+          return stubAdapter('gemini').normalise(p)
         })() },
     ],
     malformed: [

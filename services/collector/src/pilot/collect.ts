@@ -93,6 +93,19 @@ export function priorSpendUsd(dataDir: string, exceptDay: string): number {
   return total
 }
 
+/**
+ * The in-process half of rule R3: a real (non-offline) run may only touch the
+ * provider when COLLECTION_ENABLED=true in THIS process's environment. Called
+ * inside runPilot/runDoctor so importing them directly cannot bypass the gate
+ * that optionsFromEnv applies at the CLI boundary.
+ */
+export function assertSpendAllowed(o: { fixture: boolean; stub: boolean; adapterFactory?: unknown }, env: NodeJS.ProcessEnv = process.env): void {
+  if (o.fixture || o.stub || o.adapterFactory) return // offline: nothing can spend
+  if (env['COLLECTION_ENABLED'] !== 'true') {
+    throw new Error('refusing to collect: COLLECTION_ENABLED is not "true" (rule R3). This is the in-process guard; enable it deliberately for the run only.')
+  }
+}
+
 function pidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0)
@@ -130,6 +143,7 @@ function loadDone(file: string, dlq: DeadLetter, engine: string): { stored: Set<
 }
 
 export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats: Record<string, EngineStats>; ledgerFile: string }> {
+  assertSpendAllowed(o)
   const dayDir = join(o.dataDir, o.day)
   mkdirSync(dayDir, { recursive: true })
   const ledgerFile = join(dayDir, 'ledger.json')
@@ -147,7 +161,8 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
       /* already gone */
     }
   }
-  process.once('exit', releaseLock)
+  const onExit = () => releaseLock()
+  process.on('exit', onExit)
   writeFileSync(join(dayDir, 'meta.json'), JSON.stringify({ day: o.day, plan: o.plan, fixture: o.fixture, stub: o.stub, runs: o.runs, startedAt: new Date().toISOString() }, null, 2) + '\n')
 
   // The cap is for the whole pilot: what earlier days already spent comes off the top.
@@ -181,16 +196,19 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   }
 
   const stats: Record<string, EngineStats> = {}
+  const shutdown = new AbortController()
   let stopping = false
   let stopReason = ''
   const stopAll = (reason: string) => {
     if (!stopping) {
       stopping = true
       stopReason = reason
+      shutdown.abort() // wake any worker parked in rateBudget.acquire (e.g. a collection-window wait)
       o.log(`STOPPING: ${reason}`)
     }
   }
-  process.once('SIGINT', () => stopAll('SIGINT'))
+  const onSigint = () => stopAll('SIGINT')
+  process.on('SIGINT', onSigint) // removed in the finally below — no per-call listener leak
 
   const dlq = new JsonlDeadLetter(failuresFile)
   const t0 = Date.now()
@@ -240,7 +258,11 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
             }
             throw e
           }
-          await rateBudget.acquire(engine)
+          try {
+            await rateBudget.acquire(engine, shutdown.signal)
+          } catch {
+            return // shutdown aborted the wait
+          }
           if (stopping) return
           const ac = new AbortController()
           const timer = setTimeout(() => ac.abort(), o.timeoutMs)
@@ -299,10 +321,15 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
     const p = (q: number) => percentile(st.latencies, q)
     o.log(`${engine}: done=${st.done} failed=${st.failed} attempts=${st.attempts} parseFailures=${st.parseFailures} latency p50=${p(50)}ms p95=${p(95)}ms`)
   })
-  await Promise.all(enginePromises)
+  try {
+    await Promise.all(enginePromises)
+  } finally {
+    process.removeListener('SIGINT', onSigint)
+  }
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(0)
   releaseLock()
+  process.removeListener('exit', onExit)
   o.log(`finished in ${elapsed}s: $${budget.state.spentUsd.toFixed(4)} charged today, $${(prior + budget.state.spentUsd).toFixed(4)} across the pilot, cap $${o.capUsd} (${budget.state.calls} attempts today); ledger ${ledgerFile}`)
   if (stopping && stopReason !== 'SIGINT') return { exitCode: 3, stats, ledgerFile }
   return { exitCode: stopping ? 130 : 0, stats, ledgerFile }
@@ -313,7 +340,9 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
   const args = parseArgs(argv)
   const fixture = args.has('fixture')
   const stub = args.has('stub')
-  const offline = fixture || stub
+  // --doctor always calls the real provider, so it is never treated as offline:
+  // the COLLECTION_ENABLED / key / plan gate below applies to it too.
+  const offline = (fixture || stub) && !args.has('doctor')
   const day = String(args.get('day') ?? new Date().toISOString().slice(0, 10))
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { refuse: `--day must be YYYY-MM-DD, got ${day}` }
   const enginesArg = String(args.get('engines') ?? 'all')
@@ -346,12 +375,12 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
     apiKey: offline ? 'offline' : String(env['OPENWEBNINJA_API_KEY']),
     dataDir: String(args.get('data') ?? join(PILOT_DIR, 'data')),
     bank,
-    rpsScale: Number(args.get('rps-scale') ?? 0.6),
+    rpsScale: Math.min(1, Math.max(0.01, Number(args.get('rps-scale') ?? 0.6))), // never above the plan ceiling
     ...(args.has('limit-prompts') ? { limitPrompts: Number(args.get('limit-prompts')) } : {}),
     fixture,
     stub,
     timeoutMs: Number(args.get('timeout-ms') ?? 45_000),
-    maxAttempts: Number(args.get('max-attempts') ?? 3),
+    maxAttempts: Math.min(6, Math.max(1, Math.floor(Number(args.get('max-attempts') ?? 3)))),
     log,
   }
 }
@@ -374,9 +403,11 @@ const SITE_SLUG: Record<EngineId, string> = {
  * provider answer, verbatim, per engine — not our classification of it.
  */
 export async function runDoctor(o: RunOptions): Promise<number> {
+  if (o.fixture || o.stub) throw new Error('--doctor makes real provider calls; it has no offline mode. Drop --fixture/--stub.')
+  assertSpendAllowed(o) // doctor always hits the network — same R3 gate as a real run
   const dayDir = join(o.dataDir, o.day)
   mkdirSync(dayDir, { recursive: true })
-  const budget = new Budget(join(dayDir, 'ledger.json'), o.capUsd - priorSpendUsd(o.dataDir, o.day), (engine) => (o.fixture ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+  const budget = new Budget(join(dayDir, 'ledger.json'), o.capUsd - priorSpendUsd(o.dataDir, o.day), (engine) => PRICE_USD_PER_CALL[o.plan][engine as EngineId])
   let healthy = 0
   for (const engine of o.engines) {
     try {

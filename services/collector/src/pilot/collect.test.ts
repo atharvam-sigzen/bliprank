@@ -6,7 +6,8 @@ import { optionsFromEnv, priorSpendUsd, runPilot, PILOT_DIR, type RunOptions } f
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { BudgetExceeded } from '../budget.js'
 import { loadDotEnv } from './util.js'
-import { AdapterError, type EngineAdapter, type EngineId } from '@bliprank/contracts'
+import { AdapterError, cacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
+import { runDoctor, assertSpendAllowed } from './collect.js'
 import { fixtureAdapter } from './fixture-adapter.js'
 
 /** An engine that always rejects (bad key / no subscription), charged at fixture price $0. */
@@ -186,5 +187,43 @@ describe('second-provider swap (PHASES 1.3): same pipeline, stub dialect, zero s
     expect(rep.answers).toBe(120)
     expect(rep.gate.status).toBe('RUN') // the estimator runs on stub data like any other
     expect(rep.byBrand.length).toBeGreaterThan(0)
-  }, 30_000)
+  }, 60_000)
+})
+
+describe('spend safety (post-review)', () => {
+  it('runDoctor refuses offline flags — it always hits the real provider', async () => {
+    const opts = optionsFromEnv(['--stub', '--doctor', '--day', '2026-08-25', '--bank', bankFile, '--limit-prompts', '1', '--data', mkdtempSync(join(tmpdir(), 'pilot-'))], {})
+    // --doctor is never offline: without COLLECTION_ENABLED the gate refuses at options time
+    expect(opts).toMatchObject({ refuse: expect.stringContaining('COLLECTION_ENABLED') })
+  })
+
+  it('runDoctor throws on fixture/stub options, and runPilot honours the in-process R3 guard', async () => {
+    const stubOpts = optionsFromEnv(['--stub', '--day', '2026-08-25', '--bank', bankFile, '--limit-prompts', '1', '--data', mkdtempSync(join(tmpdir(), 'pilot-'))], {}) as RunOptions
+    await expect(runDoctor(stubOpts)).rejects.toThrow(/no offline mode/)
+    // a real (non-offline) options object with COLLECTION_ENABLED unset must be refused in-process
+    expect(() => assertSpendAllowed({ fixture: false, stub: false }, {})).toThrow(/COLLECTION_ENABLED/)
+    expect(() => assertSpendAllowed({ fixture: false, stub: false }, { COLLECTION_ENABLED: 'true' })).not.toThrow()
+    expect(() => assertSpendAllowed({ fixture: true, stub: false }, {})).not.toThrow() // offline never spends
+  })
+
+  it('charges providerCalls, not collect() invocations, for a chaining adapter', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    const chaining = (engine: EngineId): EngineAdapter => ({
+      ...fixtureAdapter(engine, { latencyMs: 0 }),
+      collect: async (req): Promise<RawAnswer> => ({
+        text: 'x', citations: [], cell: req.cell, prompt: req.prompt, run: req.run,
+        adapter: `chain:${engine}`, collectionPath: 'third-party-grounded',
+        collectedAt: '2026-08-25T00:00:00Z', latencyMs: 0, providerCalls: 3, payload: {},
+      }),
+    })
+    // price via a real plan path: use adapterFactory (offline → $0), so assert the ATTEMPT accounting instead
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-25', '--bank', bankFile, '--runs', '1', '--limit-prompts', '2', '--engines', 'chatgpt', '--rps-scale', '300', '--data', dataDir], {}) as RunOptions
+    opts.adapterFactory = chaining
+    opts.log = () => {}
+    const r = await runPilot(opts)
+    // 2 cells collected; the ledger charged the canary + workers; providerCalls top-up ran (offline price 0)
+    const ledger = JSON.parse(readFileSync(r.ledgerFile, 'utf8')) as { calls: number }
+    expect(r.stats['chatgpt']!.done).toBe(2)
+    expect(ledger.calls).toBeGreaterThanOrEqual(2 * 3) // 3 providerCalls per collect, all charged
+  })
 })

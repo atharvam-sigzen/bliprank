@@ -61,13 +61,30 @@ export function describeAdapterConformance(target: ConformanceTarget): void {
           expect.unreachable(`accepted malformed payload: ${JSON.stringify(payload)?.slice(0, 80)}`)
         } catch (e) {
           expect(e).toBeInstanceOf(AdapterError)
-          expect((e as AdapterError).kind).toBe('unparseable')
-          expect((e as AdapterError).retryable).toBe(false)
+          const err = e as AdapterError
+          expect(err.kind).toBe('unparseable')
+          // kind and retryable must agree — retryDecision trusts this blindly (a cost bug if wrong)
+          expect(err.retryable).toBe(false)
+          expect(['unparseable', 'rejected']).toContain(err.kind) // the non-retryable kinds
         }
       }
     })
 
     if (target.offlineCollect) {
+      it('collect() honours an already-aborted signal (the contract: abort promptly)', async () => {
+        const a = makeAdapter(ENGINES[0])
+        const cell = cacheCell({ prompt: 'best crm', engine: ENGINES[0], locale: 'en-US', geo: 'US', dateBucket: '2026-08-20' })
+        const ac = new AbortController()
+        ac.abort()
+        // A stub may legitimately ignore an abort (no I/O), but if it throws it must be a timeout AdapterError.
+        try {
+          await a.collect({ cell, prompt: 'best crm', run: 0, signal: ac.signal })
+        } catch (e) {
+          expect(e).toBeInstanceOf(AdapterError)
+          expect((e as AdapterError).kind).toBe('timeout')
+        }
+      })
+
       it('collect() returns a self-describing RawAnswer for every engine (offline)', async () => {
         for (const engine of ENGINES) {
           const a = makeAdapter(engine)
