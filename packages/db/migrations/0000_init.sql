@@ -29,6 +29,21 @@
 --
 -- Measurement is separate from tenancy (ARCHITECTURE §3.4): brands are global,
 -- the corpus carries no workspace column, visibility is a filtered join.
+--
+-- TWO INVARIANTS THIS SCHEMA ASSUMES AND CANNOT ITSELF ENFORCE — both need
+-- explicit human sign-off (they are the tenancy boundary, HUMAN-OWNED):
+--   (D) Trusted context. set_workspace(ws) performs NO principal->workspace
+--       binding: app_rw naming any workspace reads it. The web app is the
+--       authorization boundary — it must call set_workspace() with exactly the
+--       session's authorized workspace, and a single SQL-injection in the shared
+--       app_rw role is a full cross-tenant read. There is no DB-level identity
+--       (no auth.uid()) to bind against; if that is unacceptable, add one
+--       (e.g. a per-request JWT claim checked in the policy) before launch.
+--   (C) Role exclusivity. Each LOGIN role must be a member of exactly one of
+--       {app_rw, svc_scorer, svc_onboard}. Login roles are created at deploy
+--       time, outside this migration; a login role in two groups (e.g. app_rw +
+--       svc_onboard) defeats the role-based authority model. The rls suite
+--       asserts no role is in more than one group as a standing check.
 
 -- ---------------------------------------------------------------------------
 -- Roles (NOLOGIN; the app connects via login roles that are GRANTed these).
@@ -237,6 +252,14 @@ CREATE POLICY scorer_inserts_scores ON score_rows       FOR INSERT TO svc_scorer
 CREATE POLICY scorer_inserts_scores ON score_rows_2026_08 FOR INSERT TO svc_scorer WITH CHECK (true);
 CREATE POLICY scorer_inserts_scores ON score_rows_2026_09 FOR INSERT TO svc_scorer WITH CHECK (true);
 CREATE POLICY scorer_inserts_agg    ON score_aggregates  FOR INSERT TO svc_scorer WITH CHECK (true);
+-- The scorer is a trusted service and must read the corpus it writes (dedupe,
+-- INSERT ... RETURNING). Its SELECT is unscoped by workspace but role-restricted
+-- and not tenant-reachable. Without it, the entitlement SELECT policy would try to
+-- read workspace_brands (no grant) and crash the scorer.
+CREATE POLICY scorer_reads_scores ON score_rows       FOR SELECT TO svc_scorer USING (true);
+CREATE POLICY scorer_reads_scores ON score_rows_2026_08 FOR SELECT TO svc_scorer USING (true);
+CREATE POLICY scorer_reads_scores ON score_rows_2026_09 FOR SELECT TO svc_scorer USING (true);
+CREATE POLICY scorer_reads_agg    ON score_aggregates  FOR SELECT TO svc_scorer USING (true);
 
 -- Onboarding has full run of identity + entitlement tables (no tenant scoping —
 -- it is the trusted writer). Explicit ALL policy so FORCE RLS does not lock it out.
@@ -267,5 +290,8 @@ BEGIN
     EXECUTE format('GRANT SELECT ON %I TO app_rw', part);
     EXECUTE format('CREATE POLICY scores_via_entitlement ON %I FOR SELECT USING (EXISTS (SELECT 1 FROM workspace_brands wb WHERE wb.brand_id = %I.brand_id AND wb.workspace_id = current_workspace_id()))', part, part);
     EXECUTE format('CREATE POLICY scorer_inserts_scores ON %I FOR INSERT TO svc_scorer WITH CHECK (true)', part);
+    EXECUTE format('CREATE POLICY scorer_reads_scores ON %I FOR SELECT TO svc_scorer USING (true)', part);
   END IF;
 END $$;
+
+REVOKE ALL ON FUNCTION ensure_score_partition(date) FROM PUBLIC;  -- maintenance is not a tenant surface

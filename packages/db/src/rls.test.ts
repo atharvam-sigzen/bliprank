@@ -87,11 +87,48 @@ afterAll(async () => {
   await db.close()
 })
 
-describe('every table in public forces RLS (the sweep that catches the next migration)', () => {
-  it('no table has RLS unset', async () => {
+describe('the standing sweep that catches the next migration', () => {
+  it('every public table forces RLS', async () => {
     const r = await db.query(`
       SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname='public' AND c.relkind IN ('r','p') AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity)`)
+    expect(r.rows).toEqual([])
+  })
+
+  it('every table reachable by the tenant role scopes its reads on the workspace (RLS-on is not enough)', async () => {
+    // Genuinely shared, deliberately unscoped-for-tenant reads. Anything else that
+    // app_rw/PUBLIC can SELECT must reference current_workspace_id in its qual.
+    const SHARED = new Set(['prompt_banks'])
+    // Tables app_rw can SELECT from:
+    const readable = (await db.query(`
+      SELECT DISTINCT c.relname FROM pg_class c
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relkind IN ('r','p')
+        AND has_table_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
+    const badly: string[] = []
+    for (const { relname } of readable) {
+      if (SHARED.has(relname)) continue
+      // a SELECT/ALL policy applying to PUBLIC or app_rw must mention current_workspace_id
+      const pols = (await db.query(`
+        SELECT qual FROM pg_policies
+        WHERE schemaname='public' AND tablename=$1 AND cmd IN ('SELECT','ALL')
+          AND (roles = '{public}' OR 'app_rw' = ANY(roles))`, [relname])).rows as { qual: string | null }[]
+      const scoped = pols.length > 0 && pols.every((p) => (p.qual ?? '').includes('current_workspace_id'))
+      if (!scoped) badly.push(relname)
+    }
+    expect(badly).toEqual([])
+  })
+
+  it('no login-capable role is a member of more than one service group (MAJOR-C invariant)', async () => {
+    // In this migration there are no login roles; the assertion is the standing
+    // check that a deploy-time GRANT never puts one in two groups.
+    const r = await db.query(`
+      SELECT m.rolname, count(*)::int AS groups
+      FROM pg_auth_members am
+      JOIN pg_roles g ON g.oid = am.roleid
+      JOIN pg_roles m ON m.oid = am.member
+      WHERE g.rolname IN ('app_rw','svc_scorer','svc_onboard')
+      GROUP BY m.rolname HAVING count(*) > 1`)
     expect(r.rows).toEqual([])
   })
 })
@@ -137,6 +174,7 @@ describe('rule R7 — tenancy is mechanical and fails closed', () => {
   it('no tenant context = no rows anywhere', async () => {
     await as('app_rw', {}, async (q) => {
       for (const t of ['workspaces', 'workspace_members', 'workspace_brands', 'brands', 'score_rows', 'score_aggregates', 'accounts']) {
+        // prompt_banks is deliberately shared (category reference data), so it is excluded here.
         expect((await q(`SELECT count(*)::int n FROM ${t}`)).rows).toEqual([{ n: 0 }])
       }
     })
@@ -207,6 +245,37 @@ describe('authority is in roles, not GUCs', () => {
     } finally {
       await db.exec(`REVOKE SELECT ON score_rows_2026_08 FROM app_rw`)
     }
+  })
+})
+
+describe('ensure_score_partition builds a safe partition (MAJOR-B)', () => {
+  it('a newly provisioned month is forced-RLS, entitlement-scoped, and scorer-writable', async () => {
+    await db.exec(`SELECT ensure_score_partition('2026-10-01')`)
+    // the FORCE sweep still passes (new partition included)
+    const unforced = await db.query(`
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relkind IN ('r','p') AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity)`)
+    expect(unforced.rows).toEqual([])
+    // scorer writes October (persisted — not inside the auto-rollback helper); a wrong tenant reads nothing
+    await db.exec(`SET ROLE svc_scorer`)
+    await db.exec(`INSERT INTO score_rows (cell_key,day,engine,locale,geo,brand_id,algo_version,runs,mentions,citations) VALUES ('${k('a')}','2026-10-05','chatgpt','en-US','US','${ACME}','0.1.0',5,2,0)`)
+    await db.exec(`RESET ROLE`)
+    await as('app_rw', { workspace: WS2 }, async (q) => {
+      expect((await q(`SELECT * FROM score_rows WHERE day='2026-10-05'`)).rows).toEqual([])
+    })
+    await as('app_rw', { workspace: WS1 }, async (q) => {
+      expect((await q(`SELECT mentions FROM score_rows WHERE day='2026-10-05' AND brand_id='${ACME}'`)).rows).toEqual([{ mentions: 2 }])
+    })
+  })
+})
+
+describe('the scorer reads back what it writes (MINOR fix)', () => {
+  it('svc_scorer can SELECT score_rows without tripping the entitlement policy', async () => {
+    await as('svc_scorer', {}, async (q) => {
+      const r = await q(`INSERT INTO score_rows (cell_key,day,engine,locale,geo,brand_id,algo_version,runs,mentions,citations) VALUES ('${k('b')}','2026-08-15','copilot','en-US','US','${BRIT}','0.1.0',5,3,1) RETURNING mentions`)
+      expect(r.rows).toEqual([{ mentions: 3 }])
+      expect(((await q(`SELECT count(*)::int n FROM score_rows`)).rows[0] as { n: number }).n).toBeGreaterThan(0)
+    })
   })
 })
 
