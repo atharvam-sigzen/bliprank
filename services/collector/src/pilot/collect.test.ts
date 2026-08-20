@@ -154,3 +154,37 @@ describe('rejected engines cost one canary call, then nothing', () => {
     expect(healthy.stats['copilot']!.done).toBe(3)
   })
 })
+
+describe('second-provider swap (PHASES 1.3): same pipeline, stub dialect, zero spend', () => {
+  it('--stub runs the identical pipeline offline and stores stub-dialect RawAnswers', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    const opts = optionsFromEnv(['--stub', '--day', '2026-08-23', '--bank', bankFile, '--runs', '2', '--limit-prompts', '4', '--engines', 'chatgpt,google-ai-overviews', '--rps-scale', '500', '--data', dataDir], {}) as RunOptions
+    expect(opts).toMatchObject({ stub: true, fixture: false })
+    opts.log = () => {}
+    const r = await runPilot(opts)
+    expect(r.exitCode).toBe(0)
+    expect(r.stats['chatgpt']!.done).toBe(8)
+    const ledger = JSON.parse(readFileSync(r.ledgerFile, 'utf8')) as { spentUsd: number }
+    expect(ledger.spentUsd).toBe(0) // a stub never spends
+    const first = JSON.parse(readFileSync(join(dataDir, '2026-08-23', 'chatgpt.jsonl'), 'utf8').split('\n')[0]!) as { adapter: string; collectionPath: string; payload: { api_version?: string } }
+    expect(first.adapter).toBe('stubsearch:chatgpt')
+    expect(first.collectionPath).toBe('official-api') // the alternate disclosure value, end to end
+    expect(first.payload.api_version).toBe('v2') // verbatim stub payload stored, rule R4 shape intact
+  }, 20_000)
+
+  it('the analysis pipeline consumes stub answers unmodified', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    const base = ['--stub', '--bank', bankFile, '--runs', '4', '--limit-prompts', '30', '--engines', 'gemini', '--rps-scale', '500', '--data', dataDir]
+    for (const day of ['2026-08-23', '2026-08-24']) {
+      const o = optionsFromEnv([...base, '--day', day], {}) as RunOptions
+      o.log = () => {}
+      await runPilot(o)
+    }
+    const { analyseEngine, loadDay } = await import('./analyse.js')
+    const bank = JSON.parse(readFileSync(bankFile, 'utf8')) as { brands: never[]; prompts: string[] }
+    const rep = analyseEngine('gemini', loadDay(dataDir, '2026-08-23', 'gemini'), loadDay(dataDir, '2026-08-24', 'gemini'), bank, null, 4)
+    expect(rep.answers).toBe(120)
+    expect(rep.gate.status).toBe('RUN') // the estimator runs on stub data like any other
+    expect(rep.byBrand.length).toBeGreaterThan(0)
+  }, 30_000)
+})
