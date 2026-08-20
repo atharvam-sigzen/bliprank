@@ -48,6 +48,8 @@ export interface RunOptions {
   timeoutMs: number
   maxAttempts: number
   log: (line: string) => void
+  /** Test hook: overrides adapter construction (never set by the CLI). */
+  adapterFactory?: (engine: EngineId) => EngineAdapter
 }
 
 interface Job {
@@ -109,9 +111,10 @@ class Pacer {
   }
 }
 
-function loadDone(file: string, failuresFile: string, engine: string): { stored: Set<string>; failedSkipped: Set<string> } {
+function loadDone(file: string, failuresFile: string, engine: string): { stored: Set<string>; failedSkipped: Set<string>; rejectedPrior: number } {
   const stored = new Set<string>()
   const failedSkipped = new Set<string>()
+  let rejectedPrior = 0
   if (existsSync(file)) {
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       if (!line.trim()) continue
@@ -131,6 +134,7 @@ function loadDone(file: string, failuresFile: string, engine: string): { stored:
       try {
         const f = JSON.parse(line) as { engine: string; cellKey: string; run: number; kind: string }
         if (f.engine === engine && (f.kind === 'rejected' || f.kind === 'unparseable')) {
+          if (f.kind === 'rejected') rejectedPrior++
           const id = `${f.cellKey}#${f.run}`
           if (!stored.has(id)) failedSkipped.add(id)
         }
@@ -140,7 +144,7 @@ function loadDone(file: string, failuresFile: string, engine: string): { stored:
     }
   }
   // After fixing the cause (e.g. subscribing to the API), delete failures.jsonl to retry these.
-  return { stored, failedSkipped }
+  return { stored, failedSkipped, rejectedPrior }
 }
 
 export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats: Record<string, EngineStats>; ledgerFile: string }> {
@@ -179,7 +183,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   const prompts = o.limitPrompts ? o.bank.prompts.slice(0, o.limitPrompts) : o.bank.prompts
   const adapters = new Map<EngineId, EngineAdapter>()
   for (const engine of o.engines) {
-    adapters.set(engine, o.fixture ? fixtureAdapter(engine) : openWebNinjaAdapter(engine, { apiKey: o.apiKey, plan: o.plan }))
+    adapters.set(engine, o.adapterFactory ? o.adapterFactory(engine) : o.fixture ? fixtureAdapter(engine) : openWebNinjaAdapter(engine, { apiKey: o.apiKey, plan: o.plan }))
   }
 
   const stats: Record<string, EngineStats> = {}
@@ -200,7 +204,14 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
     const st: EngineStats = { done: 0, failed: 0, attempts: 0, latencies: [], parseFailures: 0 }
     stats[engine] = st
     const outFile = join(dayDir, `${engine}.jsonl`)
-    const { stored, failedSkipped } = loadDone(outFile, failuresFile, engine)
+    const { stored, failedSkipped, rejectedPrior } = loadDone(outFile, failuresFile, engine)
+    // A rejection (bad key, no subscription, quota) is engine-wide, not per prompt:
+    // until the human fixes the cause and clears failures.jsonl, re-running must
+    // cost $0 on this engine, not another concurrency window of attempts.
+    if (rejectedPrior > 0) {
+      o.log(`${engine}: SKIPPED — ${rejectedPrior} rejected attempt(s) already recorded for ${o.day}. Fix the cause (e.g. subscribe on the provider dashboard), then delete ${failuresFile} and re-run.`)
+      return
+    }
     // runs are the outer loop so every cell gets run 0 before any cell gets run 1:
     // repeats are spread across the whole cycle rather than fired back-to-back.
     const jobs: Job[] = []
@@ -221,9 +232,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
 
     let next = 0
     let gaveUp = false
-    const worker = async () => {
-      while (!stopping && next < jobs.length) {
-        const job = jobs[next++]!
+    const attemptJob = async (job: Job) => {
         let attempt = 0
         for (;;) {
           attempt++
@@ -278,15 +287,25 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
               }
               break
             }
-            const backoff = Math.min(MAX_RETRY_AFTER_MS, err.retryAfterMs ?? 1000 * 4 ** (attempt - 1))
+              const backoff = Math.min(MAX_RETRY_AFTER_MS, err.retryAfterMs ?? 1000 * 4 ** (attempt - 1))
             await sleep(backoff + Math.random() * 250)
           } finally {
             clearTimeout(timer)
           }
         }
+    }
+    const worker = async () => {
+      while (!stopping && !gaveUp && next < jobs.length) {
+        await attemptJob(jobs[next++]!)
       }
     }
-    await Promise.all(Array.from({ length: concurrency }, worker))
+    // Canary: the engine's first call goes out alone. If the engine rejects
+    // (bad key / no subscription), the day costs one attempt, not a window.
+    if (jobs.length > 0 && !stopping) {
+      next = 1
+      await attemptJob(jobs[0]!)
+    }
+    if (!gaveUp) await Promise.all(Array.from({ length: concurrency }, worker))
     const p = (q: number) => percentile(st.latencies, q)
     o.log(`${engine}: done=${st.done} failed=${st.failed} attempts=${st.attempts} parseFailures=${st.parseFailures} latency p50=${p(50)}ms p95=${p(95)}ms`)
   })

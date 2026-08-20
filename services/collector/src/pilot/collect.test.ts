@@ -6,6 +6,18 @@ import { optionsFromEnv, priorSpendUsd, runPilot, PILOT_DIR, type RunOptions } f
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { BudgetExceeded } from '../budget.js'
 import { loadDotEnv } from './util.js'
+import { AdapterError, type EngineAdapter, type EngineId } from '@bliprank/contracts'
+import { fixtureAdapter } from './fixture-adapter.js'
+
+/** An engine that always rejects (bad key / no subscription), charged at fixture price $0. */
+function rejectingAdapter(engine: EngineId): EngineAdapter {
+  return {
+    ...fixtureAdapter(engine, { latencyMs: 0 }),
+    collect: async () => {
+      throw new AdapterError('rejected', 'HTTP 403: You are not subscribed to this API', false)
+    },
+  }
+}
 
 const bankFile = join(PILOT_DIR, 'bank.json')
 
@@ -110,5 +122,35 @@ describe('dotenv loading', () => {
     const env2: NodeJS.ProcessEnv = {}
     loadDotEnv(root, env2) // default allowlist: none of these test keys qualify
     expect(Object.keys(env2)).toEqual([])
+  })
+})
+
+describe('rejected engines cost one canary call, then nothing', () => {
+  it('canary-first: a dead engine records exactly 1 attempt, not a concurrency window', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-22', '--bank', bankFile, '--runs', '2', '--limit-prompts', '5', '--engines', 'chatgpt,gemini', '--data', dataDir], {}) as RunOptions
+    opts.log = () => {}
+    opts.adapterFactory = (e) => (e === 'chatgpt' ? rejectingAdapter(e) : fixtureAdapter(e, { latencyMs: 0 }))
+    const r = await runPilot(opts)
+    expect(r.stats['chatgpt']!.attempts).toBe(1) // canary only — never the 64-wide window
+    expect(r.stats['chatgpt']!.failed).toBe(1)
+    expect(r.stats['gemini']!.done).toBe(10) // healthy engine unaffected
+  })
+
+  it('a re-run skips the rejected engine entirely until failures.jsonl is cleared', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-22', '--bank', bankFile, '--runs', '1', '--limit-prompts', '3', '--engines', 'copilot', '--data', dataDir], {}) as RunOptions
+    const logs: string[] = []
+    opts.log = (l) => logs.push(l)
+    opts.adapterFactory = rejectingAdapter
+    await runPilot(opts)
+    const again = await runPilot(opts)
+    expect(again.stats['copilot']!.attempts).toBe(0) // $0 on the second mistake
+    expect(logs.some((l) => l.includes('SKIPPED') && l.includes('rejected'))).toBe(true)
+    // clearing failures.jsonl re-arms the engine (cause assumed fixed): canary fires again
+    const { unlinkSync } = await import('node:fs')
+    unlinkSync(join(dataDir, '2026-08-22', 'failures.jsonl'))
+    const healthy = await runPilot({ ...opts, adapterFactory: (e) => fixtureAdapter(e, { latencyMs: 0 }) })
+    expect(healthy.stats['copilot']!.done).toBe(3)
   })
 })

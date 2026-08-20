@@ -101,12 +101,15 @@ claim.
 valid but has no subscription for that API. OpenWeb Ninja plans are **per API**:
 on the dashboard, subscribe the key to each of the five (ChatGPT, Gemini,
 Copilot, Google AI Mode, AI Overviews) on your plan, then delete the day's
-`failures.jsonl` (rejected pairs are deliberately not retried on resume) and
-re-run the same command. The ledger charges these attempts conservatively
-(bounded by the concurrency window, roughly $2 at PAYG for all five engines);
-the provider does not usually bill unsubscribed 403s — reconcile against the
-dashboard invoice. Verify cheaply before the full run: `--limit-prompts 1
---runs 1` is one call per engine (about $0.03).
+`failures.jsonl` and re-run. Two protections make this cheap: each engine's
+first call is a **canary** sent alone, so a dead engine costs one attempt
+(~$0.007), never a concurrency window; and an engine with a rejected attempt
+already recorded for the day is **SKIPPED at $0** on every re-run until
+`failures.jsonl` is deleted — deleting it is the "cause fixed, re-arm" signal.
+The provider does not usually bill unsubscribed 403s; reconcile the ledger
+(which charges every attempt by design) against the dashboard invoice. Verify
+cheaply before the full run: `--limit-prompts 1 --runs 1` is one call per
+engine (about $0.03).
 
 ## Known limitations of this pilot
 
