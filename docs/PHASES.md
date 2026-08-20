@@ -71,7 +71,7 @@ the product.
 | # | Deliverable |
 |---|---|
 | 1.1 | `services/collector` on **Vercel Fluid Compute + QStash** — concurrency, backoff, dead-letter (ADR-0002) |
-| 1.2 | OpenWeb Ninja adapter implementing the contract + fixture suite |
+| 1.2 | OpenWeb Ninja adapter implementing the contract + fixture suite — **normalisation preserves full citation metadata (video timestamps, community thread IDs), not just top-level domains** |
 | 1.3 | **Second provider stubbed** against the same contract (proves the abstraction) |
 | 1.4 | Cache key + Redis index; shared prompt-pool dedupe |
 | 1.5 | R2 storage, batched one object per cell (`prompt × engine × locale × geo × day`, ADR-0003) |
@@ -204,6 +204,7 @@ the product.
 | Functional | An agency runs 3 client workspaces with no cross-leak | verified by `tenancy-auditor` |
 | Functional | White-label report generates and sends unattended | 0 manual steps |
 | Functional | API + MCP return metrics with intervals intact | schema-validated |
+| Functional | `@bliprank/mcp-server` full tool suite | all tools pass integration tests |
 | Performance | White-label report generation | ≤ 60s for 15 clients |
 | **Cost** | Agency-tier COGS | ≤ 23% of $464 effective ARPA |
 | Functional | If migrated: same fixture suite passes on the new runner | 100%, zero collection-logic changes |
@@ -250,7 +251,7 @@ This is the business gate from the strategy plan, not just a technical one.
 | 7.2 | Difference-in-differences with CIs; category drift adjustment |
 | 7.3 | Category Benchmark Index in-product (percentile vs category) |
 | 7.4 | Public CBI programme — 12 verticals, `/cbi-publish` |
-| 7.5 | Earned-media module: forums/Reddit citation-source intelligence |
+| 7.5 | Earned-media module: source-class intelligence across community, video, review and PR surfaces |
 | 7.5b | **Sentiment drift monitoring** — multi-brand sentiment matrix over time, with drift flagged only when it exceeds the CI |
 | 7.6 | ClickHouse migration for corpus analytics |
 
