@@ -15,6 +15,7 @@ import {
   AdapterError,
   type AnswerBody,
   type Citation,
+  type CitationMeta,
   type CollectRequest,
   type EngineAdapter,
   type EngineId,
@@ -118,7 +119,33 @@ function citationsFromMarkdown(text: string): Citation[] {
   return out
 }
 
-/** `reference_links` / `citations` arrays → Citation[] (skips entries without a URL). */
+/** Map a provider citation field name to its provider-agnostic CitationMeta key. */
+const META_KEYS: Record<string, keyof CitationMeta> = {
+  publisher: 'publisher',
+  source: 'source',
+  date: 'date',
+  snippet: 'snippet',
+  timestamp: 'timestamp',
+  thread_id: 'threadId',
+}
+
+/** Structured hints beyond url/title, preserved for the source classifier (ADR-0005). */
+function citationMeta(item: Record<string, unknown>): CitationMeta | undefined {
+  const meta: Record<string, string | number> = {}
+  for (const [k, v] of Object.entries(item)) {
+    if (k === 'url' || k === 'link' || k === 'title') continue // url is the citation; title is top-level
+    if (typeof v === 'string' && v !== '') meta[META_KEYS[k] ?? k] = v
+    else if (typeof v === 'number') meta[META_KEYS[k] ?? k] = v
+  }
+  return Object.keys(meta).length ? meta : undefined
+}
+
+/**
+ * `reference_links` / `citations` arrays → Citation[] (skips entries without a
+ * URL). Provider-structured hints (publisher, source, date, snippet, …) are
+ * preserved on `meta`, not flattened away — ADR-0005 needs them for the
+ * deterministic source classifier.
+ */
 function citationsFromArray(v: unknown): Citation[] {
   if (!Array.isArray(v)) return []
   const out: Citation[] = []
@@ -127,7 +154,9 @@ function citationsFromArray(v: unknown): Citation[] {
     const url = str(item['link']) || str(item['url'])
     if (!url) continue
     const title = str(item['title'])
-    out.push(title ? { url, title, position: out.length } : { url, position: out.length })
+    const meta = citationMeta(item)
+    const c: Citation = { url, position: out.length }
+    out.push({ ...c, ...(title ? { title } : {}), ...(meta ? { meta } : {}) })
   }
   return out
 }

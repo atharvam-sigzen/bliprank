@@ -37,11 +37,42 @@ export interface CollectRequest {
   readonly signal?: AbortSignal
 }
 
+/**
+ * Structured hints a provider supplies about a cited source, preserved verbatim
+ * through `normalise` for the deterministic source classifier (ADR-0005).
+ * `normalise` must NOT flatten a citation to its top-level domain — a video's
+ * timestamp/chapter or a community thread id cannot be recovered downstream once
+ * dropped. Keys are provider-agnostic where a common meaning exists; unknown
+ * provider fields are carried under their own name. Absent when the provider
+ * gives nothing beyond the URL.
+ */
+export interface CitationMeta {
+  /** Publisher / outlet name (earned-media, review and reference classification). */
+  readonly publisher?: string
+  /** Provider's own source/host label, when distinct from the URL host. */
+  readonly source?: string
+  /** Publication date as the provider stated it (not normalised). */
+  readonly date?: string
+  /** Snippet / excerpt the provider attached to the citation. */
+  readonly snippet?: string
+  /** Video timestamp or chapter marker (seconds, or the provider's raw marker). */
+  readonly timestamp?: string | number
+  /** Community thread / post id. */
+  readonly threadId?: string
+  /** Any other provider field, carried through rather than dropped. */
+  readonly [key: string]: string | number | undefined
+}
+
 export interface Citation {
   readonly url: string
   readonly title?: string
   /** 0-based position in the engine's own citation/reference list. */
   readonly position: number
+  /**
+   * Provider-supplied structured hints preserved for source classification
+   * (ADR-0005). Set only when the provider gave more than a bare URL.
+   */
+  readonly meta?: CitationMeta
 }
 
 /** The provider-agnostic body of an answer: what the deterministic scorer reads. */

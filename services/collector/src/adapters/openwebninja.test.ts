@@ -19,17 +19,35 @@ describe('normaliseOwn — documented payload shapes', () => {
   it('copilot: message + citations[]', () => {
     const a = normaliseOwn('copilot', env({ message: 'Salesforce is popular.', citations: [{ title: 'SF', url: 'https://www.salesforce.com/', publisher: 'x' }], conversation_id: 'c', has_ads: false }))
     expect(a.text).toBe('Salesforce is popular.')
-    expect(a.citations).toEqual([{ url: 'https://www.salesforce.com/', title: 'SF', position: 0 }])
+    // publisher is preserved on meta for the source classifier (ADR-0005), not dropped
+    expect(a.citations).toEqual([{ url: 'https://www.salesforce.com/', title: 'SF', position: 0, meta: { publisher: 'x' } }])
   })
 
   it('google-ai-mode: reply_parts + reference_links', () => {
     const a = normaliseOwn('google-ai-mode', env({
       reply_parts: [{ type: 'heading', text: 'Top CRMs' }, { type: 'list', list: [{ title: 'HubSpot', text: 'free tier' }, { title: 'Zoho CRM', text: 'cheap' }] }],
-      reference_links: [{ title: 'HubSpot', link: 'https://www.hubspot.com/', snippet: '', source: 'hubspot.com' }],
+      reference_links: [{ title: 'HubSpot', link: 'https://www.hubspot.com/', snippet: 'free CRM', source: 'hubspot.com', date: '2026-08-01' }],
       session_token: 't',
     }))
     expect(a.text).toBe('Top CRMs\nHubSpot: free tier\nZoho CRM: cheap')
-    expect(a.citations).toEqual([{ url: 'https://www.hubspot.com/', title: 'HubSpot', position: 0 }])
+    // snippet/source/date preserved on meta for the classifier (ADR-0005); empty strings dropped
+    expect(a.citations).toEqual([{ url: 'https://www.hubspot.com/', title: 'HubSpot', position: 0, meta: { snippet: 'free CRM', source: 'hubspot.com', date: '2026-08-01' } }])
+  })
+
+  it('preserves structured citation metadata for the classifier — video timestamp, thread id (ADR-0005)', () => {
+    const a = normaliseOwn('google-ai-overviews', env({
+      text_parts: [{ type: 'paragraph', text: 'See the reviews.' }],
+      reference_links: [
+        { title: 'Demo', link: 'https://youtube.com/watch?v=abc', source: 'YouTube', timestamp: 214 },
+        { title: 'Thread', link: 'https://reddit.com/r/crm/x', source: 'reddit', thread_id: 't3_x' },
+        { title: 'Bare', link: 'https://example.com/a' },
+      ],
+      search_returned_ai_overviews: true,
+    }))
+    expect(a.citations[0]!.meta).toEqual({ source: 'YouTube', timestamp: 214 }) // full URL kept, timestamp preserved
+    expect(a.citations[1]!.meta).toEqual({ source: 'reddit', threadId: 't3_x' }) // thread_id → threadId
+    expect(a.citations[2]!.meta).toBeUndefined() // bare link: no meta, not an empty object
+    expect(a.citations[0]!.url).toBe('https://youtube.com/watch?v=abc') // not flattened to a domain
   })
 
   it('google-ai-overviews: text_parts, and "no overview" is parseable-but-empty', () => {
