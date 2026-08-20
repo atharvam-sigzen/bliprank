@@ -47,7 +47,7 @@ describe('runPilot in fixture mode — resumable, budgeted, day-bucketed', () =>
   it('collects prompts × runs per engine, skips already-stored pairs on resume, stops on the cap', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
     const logs: string[] = []
-    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-19', '--bank', bankFile, '--runs', '3', '--limit-prompts', '4', '--engines', 'chatgpt,gemini', '--data', dataDir], {}) as RunOptions
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-19', '--bank', bankFile, '--runs', '3', '--limit-prompts', '4', '--engines', 'chatgpt,gemini', '--rps-scale', '300', '--data', dataDir], {}) as RunOptions
     opts.log = (l) => logs.push(l)
     const r1 = await runPilot(opts)
     expect(r1.exitCode).toBe(0)
