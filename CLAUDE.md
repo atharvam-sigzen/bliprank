@@ -131,8 +131,10 @@ trust-positioned product.
 
 ### R8 — No metric without its interval
 A number rendered in the UI or returned by the API must carry `{value, ci_low,
-ci_high, n, algo_version}`. If a week-on-week movement falls inside the CI, the UI
-says **"no significant change"** — it does not draw a green arrow.
+ci_high, n, algo_version, collection_path}`. Provenance travels with the number,
+not only in a methodology page the customer may never open. If a week-on-week
+movement falls inside the CI, the UI says **"no significant change"** — it does
+not draw a green arrow.
 
 ---
 
