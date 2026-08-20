@@ -6,13 +6,16 @@
  * review (measurement-engineer F5) said must be the sole caller of
  * `adapter.collect()` in production. It enforces, in order:
  *
- *   R6  — Redis cache lookup BEFORE any provider call. A hit spends nothing.
+ *   R6  — Redis cache lookup BEFORE any provider call. A complete hit spends
+ *         nothing. A partial prior collection (n < requested) is NOT a hit — it
+ *         falls through so `n` is completed, never capped (rule R8).
+ *   R3  — COLLECTION_ENABLED gate for real adapters, then every attempt charged
+ *         to the Budget before it is made; the rate budget paces it; retries are
+ *         bounded and dead-lettered.
  *   —    Shared prompt-pool dedupe: one atomic claim per (cell, adapter), so 15
  *        agency clients on the same category cause one collection, not fifteen.
- *   R3  — every attempt is charged to the Budget before it is made; the rate
- *        budget paces it; retries are bounded and dead-lettered.
- *   R4  — all runs of the cell are written as ONE blob (one object per cell),
- *        never one per answer; Postgres is untouched here.
+ *   R4  — all runs of the cell are written as ONE blob (one object per cell per
+ *        collection path, ADR-0003), never one per answer; Postgres untouched.
  *
  * The P0 pilot (`pilot/collect.ts`) is a SEPARATE path: it deliberately
  * re-collects every day to measure variance, so it does not use the cache. This
@@ -41,6 +44,11 @@ export interface OrchestratorDeps {
   readonly timeoutMs?: number
   readonly sleep?: (ms: number) => Promise<void>
   readonly now?: () => Date
+  /**
+   * Rule R3 spend gate for real (non-offline) adapters. Defaults to
+   * `process.env.COLLECTION_ENABLED === 'true'`. Injected for tests.
+   */
+  readonly collectionEnabled?: () => boolean
 }
 
 export interface CollectCellRequest {
@@ -56,18 +64,38 @@ export type CollectOutcome =
   | { status: 'cache-hit'; entry: IndexEntry; providerCalls: 0 }
   | { status: 'claimed-elsewhere'; providerCalls: 0 }
   | { status: 'collected'; entry: IndexEntry; providerCalls: number; answers: RawAnswer[] }
-  | { status: 'budget-exhausted'; providerCalls: number; answers: RawAnswer[] }
+  | { status: 'budget-exhausted'; entry: IndexEntry | null; providerCalls: number; answers: RawAnswer[] }
+  | { status: 'aborted'; entry: IndexEntry | null; providerCalls: number; answers: RawAnswer[] }
   | { status: 'failed'; providerCalls: number }
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+const isAbort = (e: unknown): boolean => (e as { name?: string })?.name === 'AbortError'
 
 export class CollectionOrchestrator {
   constructor(private readonly d: OrchestratorDeps) {}
 
+  private spendAllowed(): boolean {
+    return this.d.collectionEnabled ? this.d.collectionEnabled() : process.env['COLLECTION_ENABLED'] === 'true'
+  }
+
+  /** Read an orphaned blob (crash between blob.put and markCollected) and re-index it. */
+  private async recoverOrphan(cell: CacheCell, adapterId: string, r2Key: string): Promise<IndexEntry | null> {
+    try {
+      const body = await this.d.blob.get(r2Key)
+      if (!body) return null
+      const runs = (JSON.parse(body) as { runs?: unknown[] }).runs
+      if (!Array.isArray(runs) || runs.length === 0) return null
+      return await this.d.index.markCollected(cell, adapterId, runs.length, r2Key)
+    } catch {
+      return null // unreadable orphan: fall through and re-collect (overwrites it)
+    }
+  }
+
   /**
-   * Collect one cell, cache-first. Never calls the provider on a cache hit or
-   * when another worker holds the claim. On a miss it collects `runs` answers,
-   * writes them as one blob, and records the index entry.
+   * Collect one cell, cache-first. Never calls the provider on a complete cache
+   * hit or when another worker holds the claim. On a miss it collects `runs`
+   * answers, writes them as one blob, and records the index entry. Always
+   * returns a typed outcome — an abort persists whatever was already collected.
    */
   async collectCell(req: CollectCellRequest): Promise<CollectOutcome> {
     const { cell, adapter } = req
@@ -76,51 +104,60 @@ export class CollectionOrchestrator {
     const retry = this.d.retry ?? DEFAULT_RETRY
     const sleep = this.d.sleep ?? defaultSleep
     const now = this.d.now ?? (() => new Date())
+    const r2Key = r2KeyFor(cell, adapterId) // B1: path-qualified so paths don't collide
 
-    // R6 — cache lookup before any spend. A path-qualified hit means this adapter
-    // already collected this cell; serve it, zero provider calls.
+    // R6 — cache lookup before any spend. A COMPLETE prior collection is a hit;
+    // a partial one (fewer runs than requested) falls through to be completed.
     const { hits } = await this.d.index.lookup([cell], adapterId)
     const cached = hits.get(cell.key)
-    if (cached) return { status: 'cache-hit', entry: cached, providerCalls: 0 }
+    if (cached && cached.runs >= req.runs) return { status: 'cache-hit', entry: cached, providerCalls: 0 }
 
-    // Dedupe — exactly one worker per (cell, adapter, lease) collects; the rest
-    // must wait for the winner's result rather than collecting again.
+    // R3 — a real adapter may only collect when collection is deliberately enabled.
+    if (!adapter.offline && !this.spendAllowed()) {
+      throw new Error('refusing to collect: COLLECTION_ENABLED is not "true" (rule R3, orchestrator guard). Enable it deliberately for the run.')
+    }
+
+    // Dedupe — exactly one worker per (cell, adapter, lease) collects.
     if (!(await this.d.index.claim(cell, adapterId, this.d.owner, this.d.claimLeaseSec ?? 1800))) {
       return { status: 'claimed-elsewhere', providerCalls: 0 }
     }
 
+    // Recover an orphaned blob left by a crash between blob.put and markCollected.
+    if (!cached && (await this.d.blob.has(r2Key))) {
+      const recovered = await this.recoverOrphan(cell, adapterId, r2Key)
+      if (recovered && recovered.runs >= req.runs) return { status: 'cache-hit', entry: recovered, providerCalls: 0 }
+    }
+
     const answers: RawAnswer[] = []
     let providerCalls = 0
-    let budgetExhausted = false
+    let stopped: 'budget' | 'abort' | null = null
 
-    for (let run = 0; run < req.runs && !budgetExhausted; run++) {
+    for (let run = 0; run < req.runs && !stopped; run++) {
       let attempt = 0
       for (;;) {
         attempt++
-        // R3 — charge before the call. A refusal stops the whole cell.
         try {
-          this.d.budget.charge(engine)
+          this.d.budget.charge(engine) // R3: charge before the call
         } catch (e) {
           if (e instanceof BudgetExceeded) {
-            budgetExhausted = true
+            stopped = 'budget'
             break
           }
           throw e
         }
         providerCalls++
-        await this.d.rateBudget.acquire(engine, req.signal)
         const ac = new AbortController()
         const timer = this.d.timeoutMs ? setTimeout(() => ac.abort(), this.d.timeoutMs) : undefined
         try {
+          await this.d.rateBudget.acquire(engine, req.signal) // inside try (M2): an abort here persists partial
           const answer = await adapter.collect({ cell, prompt: req.prompt, run, signal: req.signal ?? ac.signal })
-          // A chaining adapter reports >1 provider call; charge the extra ones.
           for (let extra = 1; extra < answer.providerCalls; extra++) {
             try {
               this.d.budget.charge(engine)
               providerCalls++
             } catch (e) {
               if (e instanceof BudgetExceeded) {
-                budgetExhausted = true
+                stopped = 'budget'
                 break
               }
               throw e
@@ -129,11 +166,15 @@ export class CollectionOrchestrator {
           answers.push(answer)
           break
         } catch (e) {
+          if (isAbort(e) && req.signal?.aborted) {
+            stopped = 'abort' // caller/deadline cancelled — stop, persist what we have
+            break
+          }
           const err = e instanceof AdapterError ? e : new AdapterError('provider', String(e), false)
           const decision = retryDecision(err, attempt, retry)
           if (!decision.retry) {
             this.d.deadLetter.record({ engine, cellKey: cell.key, prompt: req.prompt, run, kind: err.kind, message: err.message, attempts: attempt, at: now().toISOString() })
-            break // this run failed; move to the next run
+            break // this run failed; move on
           }
           await sleep(decision.delayMs)
         } finally {
@@ -143,14 +184,17 @@ export class CollectionOrchestrator {
     }
 
     if (answers.length === 0) {
-      return budgetExhausted ? { status: 'budget-exhausted', providerCalls, answers } : { status: 'failed', providerCalls }
+      if (stopped === 'budget') return { status: 'budget-exhausted', entry: null, providerCalls, answers }
+      if (stopped === 'abort') return { status: 'aborted', entry: null, providerCalls, answers }
+      return { status: 'failed', providerCalls }
     }
 
-    // R4 — one object per cell, holding all runs. Then record the index pointer.
-    const r2Key = r2KeyFor(cell)
-    await this.d.blob.put(r2Key, JSON.stringify({ cell, runs: answers }))
+    // R4 — one object per cell (per path), holding all runs collected so far.
+    await this.d.blob.put(r2Key, JSON.stringify({ cell, adapter: adapterId, runs: answers }))
     const entry = await this.d.index.markCollected(cell, adapterId, answers.length, r2Key)
 
-    return budgetExhausted ? { status: 'budget-exhausted', providerCalls, answers } : { status: 'collected', entry, providerCalls, answers }
+    if (stopped === 'budget') return { status: 'budget-exhausted', entry, providerCalls, answers }
+    if (stopped === 'abort') return { status: 'aborted', entry, providerCalls, answers }
+    return { status: 'collected', entry, providerCalls, answers }
   }
 }

@@ -155,6 +155,12 @@ export interface EngineAdapter {
   readonly engine: EngineId
   /** Required (ADR-0001). Published in docs/METHODOLOGY.md. */
   readonly collectionPath: CollectionPath
+  /**
+   * True for adapters that never touch a paid provider (fixtures, stubs). The
+   * collection orchestrator uses this to decide whether the COLLECTION_ENABLED
+   * spend gate (rule R3) applies. Omitted (falsy) = a real, spending adapter.
+   */
+  readonly offline?: boolean
 
   /**
    * Perform exactly one run — normally one provider call; report the true

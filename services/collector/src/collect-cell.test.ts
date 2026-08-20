@@ -24,17 +24,22 @@ function countingStub(engine: EngineId): EngineAdapter & { calls: number } {
   return a
 }
 
-function deps(over: Partial<OrchestratorDeps> = {}): OrchestratorDeps {
+function deps(over: Partial<OrchestratorDeps> = {}): OrchestratorDeps & { _advance: (ms: number) => void } {
   const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+  const clock = { ms: Date.parse('2026-08-20T00:00:00Z') }
   return {
-    index: new AnswerIndex(new MemoryKV()),
+    index: new AnswerIndex(new MemoryKV(() => clock.ms), 100 * 86_400, () => new Date(clock.ms)),
     blob: new MemoryBlobStore(),
     rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 }, gemini: { rps: 1000, burst: 1000 } }),
     budget: new Budget(ledger, 100, () => 0.002),
     deadLetter: new MemoryDeadLetter(),
     owner: 'worker-1',
     sleep: async () => {},
-    now: () => new Date('2026-08-20T00:00:00Z'),
+    now: () => new Date(clock.ms),
+    collectionEnabled: () => true, // offline tests still pass the gate; real-adapter tests override
+    _advance: (ms: number) => {
+      clock.ms += ms
+    },
     ...over,
   }
 }
@@ -52,7 +57,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     expect(adapter.calls).toBe(5)
     expect(r.providerCalls).toBe(5)
     expect((d.blob as MemoryBlobStore).size).toBe(1) // R4: one object per cell, not per answer
-    expect(await d.blob.has(r2KeyFor(cell))).toBe(true)
+    expect(await d.blob.has(r2KeyFor(cell, adapter.id))).toBe(true) // path-qualified (B1)
     expect(r.entry.runs).toBe(5)
     expect(d.budget.state.calls).toBe(5)
   })
@@ -104,6 +109,86 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     const r = await orch.collectCell({ cell, prompt: 'best crm', runs: 3, adapter: alt })
     expect(r.status).toBe('collected')
     expect(alt.calls).toBe(3)
+    // B1: the two paths write SEPARATE R2 objects — the alternate must not overwrite the primary's
+    expect((d.blob as MemoryBlobStore).size).toBe(2)
+    const primaryBlob = JSON.parse((await d.blob.get(r2KeyFor(cell, 'openwebninja:chatgpt')))!) as { adapter: string }
+    const altBlob = JSON.parse((await d.blob.get(r2KeyFor(cell, 'stubsearch:chatgpt')))!) as { adapter: string }
+    expect(primaryBlob.adapter).toBe('openwebninja:chatgpt')
+    expect(altBlob.adapter).toBe('stubsearch:chatgpt')
+  })
+
+  it('B2: a partial prior collection is NOT a permanent cache hit — a later call completes n', async () => {
+    const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+    // first call: budget for only 3 of 10 requested runs
+    const d = deps({ budget: new Budget(ledger, 0.006, () => 0.002) })
+    const orch = new CollectionOrchestrator(d)
+    const cell = cellOf('best crm')
+    const a1 = countingStub('chatgpt')
+    const r1 = await orch.collectCell({ cell, prompt: 'best crm', runs: 10, adapter: a1 })
+    expect(r1.status).toBe('budget-exhausted')
+    expect(a1.calls).toBe(3)
+    // a later cycle (claim lease expired) with a fresh, ample budget: the under-target
+    // cell must re-collect to complete n, not serve n=3 as a hit forever
+    d._advance(1_801_000) // past the 1800s claim lease
+    const ledger2 = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+    const orch2 = new CollectionOrchestrator({ ...d, budget: new Budget(ledger2, 100, () => 0.002) })
+    const a2 = countingStub('chatgpt')
+    const r2 = await orch2.collectCell({ cell, prompt: 'best crm', runs: 10, adapter: a2 })
+    expect(r2.status).toBe('collected') // NOT cache-hit
+    expect(a2.calls).toBe(10)
+    if (r2.status === 'collected') expect(r2.entry.runs).toBe(10)
+  })
+
+  it('M1: a real (spending) adapter refuses when COLLECTION_ENABLED is false; offline adapters run', async () => {
+    const d = deps({ collectionEnabled: () => false })
+    const orch = new CollectionOrchestrator(d)
+    const cell = cellOf('best crm')
+    const real = { ...stubAdapter('chatgpt'), offline: false } as EngineAdapter // pretend it spends
+    await expect(orch.collectCell({ cell, prompt: 'best crm', runs: 1, adapter: real })).rejects.toThrow(/COLLECTION_ENABLED/)
+    // an offline adapter (the stub) is unaffected by the gate
+    const r = await orch.collectCell({ cell, prompt: 'best crm', runs: 1, adapter: countingStub('chatgpt') })
+    expect(r.status).toBe('collected')
+  })
+
+  it('M2: an abort mid-cell persists the runs already collected and returns a typed outcome, not a throw', async () => {
+    const d = deps()
+    const orch = new CollectionOrchestrator(d)
+    const cell = cellOf('best crm')
+    const ac = new AbortController()
+    let n = 0
+    const adapter = { ...stubAdapter('chatgpt') } as EngineAdapter
+    adapter.collect = async (rq) => {
+      n++
+      if (n === 3) ac.abort() // cancel after two successful runs, during the third
+      if (rq.signal?.aborted) {
+        const e = new Error('aborted')
+        e.name = 'AbortError'
+        throw e
+      }
+      return stubAdapter('chatgpt').collect(rq)
+    }
+    const r = await orch.collectCell({ cell, prompt: 'best crm', runs: 10, adapter, signal: ac.signal })
+    expect(r.status).toBe('aborted')
+    if (r.status === 'aborted') {
+      expect(r.answers.length).toBeGreaterThanOrEqual(2) // the runs before the abort are kept
+      expect(r.entry).not.toBeNull() // partial persisted, not lost
+    }
+    expect((d.blob as MemoryBlobStore).size).toBe(1)
+  })
+
+  it('crash recovery: an orphaned complete blob (crash between put and mark) is re-indexed, not re-collected', async () => {
+    const d = deps()
+    const cell = cellOf('best crm')
+    const adapterId = 'stubsearch:chatgpt'
+    // simulate the crash: blob written, index never marked
+    const r2Key = r2KeyFor(cell, adapterId)
+    await d.blob.put(r2Key, JSON.stringify({ cell, adapter: adapterId, runs: [1, 2, 3, 4, 5] }))
+    expect((await d.index.lookup([cell], adapterId)).hits.size).toBe(0) // orphan: not indexed
+    const orch = new CollectionOrchestrator(d)
+    const adapter = countingStub('chatgpt') // id stubsearch:chatgpt
+    const r = await orch.collectCell({ cell, prompt: 'best crm', runs: 5, adapter })
+    expect(r.status).toBe('cache-hit') // recovered from the orphan
+    expect(adapter.calls).toBe(0) // nothing re-collected, nothing re-paid
   })
 
   it('a non-retryable rejection dead-letters the run and writes nothing; failed status, no index entry', async () => {

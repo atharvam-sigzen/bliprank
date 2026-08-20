@@ -68,9 +68,20 @@ and the qualifier is appended, never mixed into the hash. P1.4 implements it nex
 to `cacheCell()`.
 
 **R2 object unit.** The docs' shorthand "one object per `prompt × engine × day`"
-elides locale and geo. The object unit is the **cell** — one object per cache
-key, holding all n runs. Two cells that differ only in locale or geo are two
-objects; the shorthand must never be reimplemented literally.
+elides locale and geo. The object unit is the **cell per collection path** — one
+object per cache key per adapter, holding all n runs from that path. Two cells
+that differ only in locale or geo are two objects; the shorthand must never be
+reimplemented literally.
+
+The R2 object key is **path-qualified the same way the lookup key is**:
+`answers/<day>/<engine>/<cell.key>__<adapter.id>.json`. A single-path cell (the
+normal case — one provider) has one object. When the agreement monitor
+re-collects a cell through an alternate path (ADR-0001 §5), that path writes its
+*own* object rather than overwriting the primary's — without the qualifier the
+alternate provider's answers would silently replace the primary's and the index
+pointer would misattribute, which for an audited-numbers product is unacceptable.
+`r2KeyFor(cell, adapterId?)` implements this; the bare form (no adapter) is a
+convenience for callers that only ever collect one path.
 
 **Raw vs normalised prompt sent to the engine.** The engine receives the raw
 authored prompt; the key uses the normalised form; `RawAnswer` records both. Two

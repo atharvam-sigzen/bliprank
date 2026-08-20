@@ -49,6 +49,7 @@ export function fixtureAdapter(engine: EngineId, opts: FixtureOptions = {}): Eng
     id,
     provider: 'fixture',
     engine,
+    offline: true,
     collectionPath: 'third-party-grounded',
     rateLimit: () => ({ rps: 1000, burst: 1000 }),
     normalise: (payload): AnswerBody => {

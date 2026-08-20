@@ -132,6 +132,7 @@ export function stubAdapter(engine: EngineId): EngineAdapter {
     id,
     provider: STUB_PROVIDER,
     engine,
+    offline: true,
     collectionPath: 'official-api',
     normalise: normaliseStub,
     rateLimit: () => ({ rps: 5, burst: 5 }),

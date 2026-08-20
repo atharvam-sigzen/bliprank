@@ -124,9 +124,16 @@ export interface LookupResult {
 const ANSWER_PREFIX = 'answer:'
 const CLAIM_PREFIX = 'claim:'
 
-/** R2 object key for a cell — one object per cell (ADR-0003 "R2 object unit"). */
-export function r2KeyFor(cell: CacheCell): string {
-  return `answers/${cell.dateBucket}/${cell.engine}/${cell.key}.json`
+/**
+ * R2 object key for a cell — one object per cell PER collection path (ADR-0003
+ * "R2 object unit"). Without `adapterId` the bare cell key is used (single-path,
+ * the common case). With it, the key is path-qualified the same way the index is
+ * (`__${adapterId}`), so an alternate-path re-collection (agreement monitor,
+ * ADR-0001 §5) writes its own object instead of overwriting the primary's.
+ */
+export function r2KeyFor(cell: CacheCell, adapterId?: string): string {
+  const base = `answers/${cell.dateBucket}/${cell.engine}/${cell.key}`
+  return adapterId ? `${base}__${adapterId.replace(/[^a-z0-9:_-]/gi, '_')}.json` : `${base}.json`
 }
 
 export class AnswerIndex {
