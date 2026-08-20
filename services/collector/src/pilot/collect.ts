@@ -20,7 +20,11 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cacheCell, ENGINES, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, AdapterError } from '@bliprank/contracts'
 import { openWebNinjaAdapter, probeEngine, PRICE_USD_PER_CALL, RPS_CEILING, type OwnPlan } from '../adapters/openwebninja.js'
+import { stubAdapter } from '../adapters/stub.js'
 import { Budget, BudgetExceeded } from '../budget.js'
+import { JsonlDeadLetter, type DeadLetter } from '../dead-letter.js'
+import { LocalRateBudget, type BucketConfig } from '../rate-budget.js'
+import { DEFAULT_RETRY, retryDecision } from '../retry.js'
 import { fixtureAdapter } from './fixture-adapter.js'
 import { loadDotEnv, parseArgs, percentile, sleep } from './util.js'
 
@@ -45,6 +49,8 @@ export interface RunOptions {
   /** Cap on prompts (smoke tests). */
   limitPrompts?: number
   fixture: boolean
+  /** Use the offline second-provider stub (PHASES 1.3): same pipeline, different dialect, zero spend. */
+  stub: boolean
   timeoutMs: number
   maxAttempts: number
   log: (line: string) => void
@@ -70,9 +76,6 @@ const REPO_ROOT = resolve(fileURLToPath(new URL('../../../../', import.meta.url)
 export const PILOT_DIR = join(REPO_ROOT, 'services', 'collector', 'pilot')
 /** CLAUDE.md: one key, 15 req/s ceiling — per-engine ceilings are scaled so their sum stays under it. */
 export const KEY_RPS_CEILING = 15
-/** Retry-After from the provider is honoured but never beyond this. */
-const MAX_RETRY_AFTER_MS = 60_000
-
 /** Spend recorded by other days' ledgers under the same data dir: the cap is per pilot, not per day. */
 export function priorSpendUsd(dataDir: string, exceptDay: string): number {
   if (!existsSync(dataDir)) return 0
@@ -99,22 +102,8 @@ function pidAlive(pid: number): boolean {
   }
 }
 
-/** Simple per-engine rate limiter: at most one dispatch per interval, no burst. */
-class Pacer {
-  private next = 0
-  constructor(private readonly intervalMs: number) {}
-  async acquire(): Promise<void> {
-    const now = Date.now()
-    const at = Math.max(now, this.next)
-    this.next = at + this.intervalMs
-    if (at > now) await sleep(at - now)
-  }
-}
-
-function loadDone(file: string, failuresFile: string, engine: string): { stored: Set<string>; failedSkipped: Set<string>; rejectedPrior: number } {
+function loadDone(file: string, dlq: DeadLetter, engine: string): { stored: Set<string>; failedSkipped: Set<string>; rejectedPrior: number } {
   const stored = new Set<string>()
-  const failedSkipped = new Set<string>()
-  let rejectedPrior = 0
   if (existsSync(file)) {
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       if (!line.trim()) continue
@@ -128,22 +117,15 @@ function loadDone(file: string, failuresFile: string, engine: string): { stored:
   }
   // Non-retryable failures stay failed on resume: re-attempting a rejected key or an
   // unparseable shape only spends more. Retryable failures (timeouts, 5xx) are retried.
-  if (existsSync(failuresFile)) {
-    for (const line of readFileSync(failuresFile, 'utf8').split('\n')) {
-      if (!line.trim()) continue
-      try {
-        const f = JSON.parse(line) as { engine: string; cellKey: string; run: number; kind: string }
-        if (f.engine === engine && (f.kind === 'rejected' || f.kind === 'unparseable')) {
-          if (f.kind === 'rejected') rejectedPrior++
-          const id = `${f.cellKey}#${f.run}`
-          if (!stored.has(id)) failedSkipped.add(id)
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  }
   // After fixing the cause (e.g. subscribing to the API), delete failures.jsonl to retry these.
+  const failedSkipped = new Set<string>()
+  let rejectedPrior = 0
+  for (const f of dlq.list(engine)) {
+    if (f.kind !== 'rejected' && f.kind !== 'unparseable') continue
+    if (f.kind === 'rejected') rejectedPrior++
+    const id = `${f.cellKey}#${f.run}`
+    if (!stored.has(id)) failedSkipped.add(id)
+  }
   return { stored, failedSkipped, rejectedPrior }
 }
 
@@ -166,7 +148,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
     }
   }
   process.once('exit', releaseLock)
-  writeFileSync(join(dayDir, 'meta.json'), JSON.stringify({ day: o.day, plan: o.plan, fixture: o.fixture, runs: o.runs, startedAt: new Date().toISOString() }, null, 2) + '\n')
+  writeFileSync(join(dayDir, 'meta.json'), JSON.stringify({ day: o.day, plan: o.plan, fixture: o.fixture, stub: o.stub, runs: o.runs, startedAt: new Date().toISOString() }, null, 2) + '\n')
 
   // The cap is for the whole pilot: what earlier days already spent comes off the top.
   const prior = priorSpendUsd(o.dataDir, o.day)
@@ -176,14 +158,26 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
     throw new BudgetExceeded({ capUsd: o.capUsd, spentUsd: prior, calls: 0, byEngine: {}, updatedAt: new Date().toISOString() }, 0)
   }
   if (prior > 0) o.log(`earlier days under ${o.dataDir} already spent $${prior.toFixed(4)}; today's ceiling is $${capToday.toFixed(4)} of the $${o.capUsd} pilot cap`)
-  const budget = new Budget(ledgerFile, capToday, (engine) => (o.fixture ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+  const offline = o.fixture || o.stub || Boolean(o.adapterFactory)
+  const budget = new Budget(ledgerFile, capToday, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
   const planTotalRps = o.engines.reduce((sum, e) => sum + RPS_CEILING[o.plan][e], 0)
   const keyScale = Math.min(1, KEY_RPS_CEILING / planTotalRps)
+  // One bucket per engine (the provider's ceilings are per API), pre-scaled so the
+  // per-key sum stays under the shared key ceiling. The interface is what the P5
+  // fleet swap replaces — nothing below depends on the local implementation.
+  const rateBudget = new LocalRateBudget(
+    Object.fromEntries(
+      o.engines.map((e) => [e, { rps: Math.max(0.2, RPS_CEILING[o.plan][e] * keyScale * o.rpsScale), burst: 1 } satisfies BucketConfig]),
+    ),
+  )
 
   const prompts = o.limitPrompts ? o.bank.prompts.slice(0, o.limitPrompts) : o.bank.prompts
   const adapters = new Map<EngineId, EngineAdapter>()
   for (const engine of o.engines) {
-    adapters.set(engine, o.adapterFactory ? o.adapterFactory(engine) : o.fixture ? fixtureAdapter(engine) : openWebNinjaAdapter(engine, { apiKey: o.apiKey, plan: o.plan }))
+    adapters.set(
+      engine,
+      o.adapterFactory ? o.adapterFactory(engine) : o.fixture ? fixtureAdapter(engine) : o.stub ? stubAdapter(engine) : openWebNinjaAdapter(engine, { apiKey: o.apiKey, plan: o.plan }),
+    )
   }
 
   const stats: Record<string, EngineStats> = {}
@@ -198,13 +192,14 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   }
   process.once('SIGINT', () => stopAll('SIGINT'))
 
+  const dlq = new JsonlDeadLetter(failuresFile)
   const t0 = Date.now()
   const enginePromises = o.engines.map(async (engine) => {
     const adapter = adapters.get(engine)!
     const st: EngineStats = { done: 0, failed: 0, attempts: 0, latencies: [], parseFailures: 0 }
     stats[engine] = st
     const outFile = join(dayDir, `${engine}.jsonl`)
-    const { stored, failedSkipped, rejectedPrior } = loadDone(outFile, failuresFile, engine)
+    const { stored, failedSkipped, rejectedPrior } = loadDone(outFile, dlq, engine)
     // A rejection (bad key, no subscription, quota) is engine-wide, not per prompt:
     // until the human fixes the cause and clears failures.jsonl, re-running must
     // cost $0 on this engine, not another concurrency window of attempts.
@@ -223,8 +218,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
       }
     }
     const skipped = o.runs * prompts.length - jobs.length - failedSkipped.size
-    const rps = Math.max(0.2, RPS_CEILING[o.plan][engine] * keyScale * o.rpsScale)
-    const pacer = new Pacer(1000 / rps)
+    const rps = rateBudget.state(engine).rps
     const concurrency = Math.min(64, Math.max(2, Math.ceil(rps * (o.timeoutMs / 1000))))
     o.log(
       `${engine}: ${jobs.length} calls to make (${skipped} already stored${failedSkipped.size ? `; ${failedSkipped.size} previously rejected/unparseable NOT retried — delete ${failuresFile} after fixing the cause to retry them` : ''}), ${rps.toFixed(2)} rps, ${concurrency} in flight max`,
@@ -246,7 +240,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
             }
             throw e
           }
-          await pacer.acquire()
+          await rateBudget.acquire(engine)
           if (stopping) return
           const ac = new AbortController()
           const timer = setTimeout(() => ac.abort(), o.timeoutMs)
@@ -269,13 +263,10 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
           } catch (e) {
             const err = e instanceof AdapterError ? e : new AdapterError('provider', String(e), false)
             if (err.kind === 'unparseable') st.parseFailures++
-            const retry = err.retryable && attempt < o.maxAttempts && !stopping
-            if (!retry) {
+            const decision = retryDecision(err, attempt, { ...DEFAULT_RETRY, maxAttempts: o.maxAttempts })
+            if (!decision.retry || stopping) {
               st.failed++
-              appendFileSync(
-                failuresFile,
-                JSON.stringify({ engine, cellKey: job.cell.key, prompt: job.prompt, run: job.run, kind: err.kind, message: err.message, attempts: attempt, at: new Date().toISOString() }) + '\n',
-              )
+              dlq.record({ engine, cellKey: job.cell.key, prompt: job.prompt, run: job.run, kind: err.kind, message: err.message, attempts: attempt, at: new Date().toISOString() })
               // A rejected key/quota is not going to fix itself: stop spending on this engine.
               // In-flight workers still settle (bounded by the concurrency window); log once.
               if (err.kind === 'rejected') {
@@ -287,8 +278,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
               }
               break
             }
-              const backoff = Math.min(MAX_RETRY_AFTER_MS, err.retryAfterMs ?? 1000 * 4 ** (attempt - 1))
-            await sleep(backoff + Math.random() * 250)
+              await sleep(decision.delayMs)
           } finally {
             clearTimeout(timer)
           }
@@ -322,6 +312,8 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
 export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l: string) => console.error(l)): RunOptions | { refuse: string } {
   const args = parseArgs(argv)
   const fixture = args.has('fixture')
+  const stub = args.has('stub')
+  const offline = fixture || stub
   const day = String(args.get('day') ?? new Date().toISOString().slice(0, 10))
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { refuse: `--day must be YYYY-MM-DD, got ${day}` }
   const enginesArg = String(args.get('engines') ?? 'all')
@@ -335,28 +327,29 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
   if (!(plan in PRICE_USD_PER_CALL)) return { refuse: `unknown plan ${plan}` }
   const bank = JSON.parse(readFileSync(String(args.get('bank') ?? join(PILOT_DIR, 'bank.json')), 'utf8')) as Bank
 
-  if (!fixture) {
+  if (!offline) {
     if (env['COLLECTION_ENABLED'] !== 'true') {
       return { refuse: 'COLLECTION_ENABLED is not "true" (rule R3). Enable it deliberately for the duration of the run only.' }
     }
     if (!env['OPENWEBNINJA_API_KEY']) return { refuse: 'OPENWEBNINJA_API_KEY is not set (env or .env.local).' }
   }
   const capUsd = Number(args.get('cap') ?? env['COLLECTION_BUDGET_USD'])
-  if (!fixture && !(capUsd > 0)) return { refuse: 'COLLECTION_BUDGET_USD (or --cap) must be a positive number: no run without an explicit ceiling.' }
-  if (!fixture && !planArg) return { refuse: 'plan not set: pass --plan payg|pro|ultra|mega or set OPENWEBNINJA_PLAN. Not defaulted — it decides what every call is charged at.' }
+  if (!offline && !(capUsd > 0)) return { refuse: 'COLLECTION_BUDGET_USD (or --cap) must be a positive number: no run without an explicit ceiling.' }
+  if (!offline && !planArg) return { refuse: 'plan not set: pass --plan payg|pro|ultra|mega or set OPENWEBNINJA_PLAN. Not defaulted — it decides what every call is charged at.' }
 
   return {
     day,
     runs: Number(args.get('runs') ?? 10),
     engines,
     plan,
-    capUsd: fixture ? Number(args.get('cap') ?? 1) : capUsd,
-    apiKey: fixture ? 'fixture' : String(env['OPENWEBNINJA_API_KEY']),
+    capUsd: offline ? Number(args.get('cap') ?? 1) : capUsd,
+    apiKey: offline ? 'offline' : String(env['OPENWEBNINJA_API_KEY']),
     dataDir: String(args.get('data') ?? join(PILOT_DIR, 'data')),
     bank,
     rpsScale: Number(args.get('rps-scale') ?? 0.6),
     ...(args.has('limit-prompts') ? { limitPrompts: Number(args.get('limit-prompts')) } : {}),
     fixture,
+    stub,
     timeoutMs: Number(args.get('timeout-ms') ?? 45_000),
     maxAttempts: Number(args.get('max-attempts') ?? 3),
     log,
@@ -413,10 +406,10 @@ if (isMain) {
   }
   const { plan, engines, runs, day, capUsd, fixture } = opts
   const calls = opts.bank.prompts.length * engines.length * runs
-  const est = fixture ? 0 : engines.reduce((s, e) => s + PRICE_USD_PER_CALL[plan][e] * (opts.limitPrompts ?? opts.bank.prompts.length) * runs, 0)
+  const est = fixture || opts.stub ? 0 : engines.reduce((s, e) => s + PRICE_USD_PER_CALL[plan][e] * (opts.limitPrompts ?? opts.bank.prompts.length) * runs, 0)
   const prior = priorSpendUsd(opts.dataDir, day)
-  console.error(`pilot ${day}: ${calls} calls planned, plan=${plan}, projected $${est.toFixed(2)} (before retries); pilot cap $${capUsd}, already spent on other days $${prior.toFixed(2)}${fixture ? ' [FIXTURE MODE, no network]' : ''}`)
-  if (!fixture && est > capUsd - prior) {
+  console.error(`pilot ${day}: ${calls} calls planned, plan=${plan}, projected $${est.toFixed(2)} (before retries); pilot cap $${capUsd}, already spent on other days $${prior.toFixed(2)}${fixture ? ' [FIXTURE MODE, no network]' : opts.stub ? ' [STUB PROVIDER, no network]' : ''}`)
+  if (!fixture && !opts.stub && est > capUsd - prior) {
     console.error(`REFUSED: projected spend $${est.toFixed(2)} exceeds the remaining cap $${(capUsd - prior).toFixed(2)}; shrink --runs/--limit-prompts or raise the cap deliberately`)
     process.exit(2)
   }
