@@ -109,14 +109,15 @@ class Pacer {
   }
 }
 
-function loadDone(file: string, failuresFile: string, engine: string): Set<string> {
-  const done = new Set<string>()
+function loadDone(file: string, failuresFile: string, engine: string): { stored: Set<string>; failedSkipped: Set<string> } {
+  const stored = new Set<string>()
+  const failedSkipped = new Set<string>()
   if (existsSync(file)) {
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       if (!line.trim()) continue
       try {
         const r = JSON.parse(line) as RawAnswer
-        done.add(`${r.cell.key}#${r.run}`)
+        stored.add(`${r.cell.key}#${r.run}`)
       } catch {
         /* a torn last line from a crash is simply re-collected */
       }
@@ -129,13 +130,17 @@ function loadDone(file: string, failuresFile: string, engine: string): Set<strin
       if (!line.trim()) continue
       try {
         const f = JSON.parse(line) as { engine: string; cellKey: string; run: number; kind: string }
-        if (f.engine === engine && (f.kind === 'rejected' || f.kind === 'unparseable')) done.add(`${f.cellKey}#${f.run}`)
+        if (f.engine === engine && (f.kind === 'rejected' || f.kind === 'unparseable')) {
+          const id = `${f.cellKey}#${f.run}`
+          if (!stored.has(id)) failedSkipped.add(id)
+        }
       } catch {
         /* ignore */
       }
     }
   }
-  return done
+  // After fixing the cause (e.g. subscribing to the API), delete failures.jsonl to retry these.
+  return { stored, failedSkipped }
 }
 
 export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats: Record<string, EngineStats>; ledgerFile: string }> {
@@ -195,23 +200,27 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
     const st: EngineStats = { done: 0, failed: 0, attempts: 0, latencies: [], parseFailures: 0 }
     stats[engine] = st
     const outFile = join(dayDir, `${engine}.jsonl`)
-    const done = loadDone(outFile, failuresFile, engine)
+    const { stored, failedSkipped } = loadDone(outFile, failuresFile, engine)
     // runs are the outer loop so every cell gets run 0 before any cell gets run 1:
     // repeats are spread across the whole cycle rather than fired back-to-back.
     const jobs: Job[] = []
     for (let run = 0; run < o.runs; run++) {
       for (const prompt of prompts) {
         const cell = cacheCell({ prompt, engine, locale: o.bank.locale, geo: o.bank.geo, dateBucket: o.day })
-        if (!done.has(`${cell.key}#${run}`)) jobs.push({ cell, prompt, run })
+        const id = `${cell.key}#${run}`
+        if (!stored.has(id) && !failedSkipped.has(id)) jobs.push({ cell, prompt, run })
       }
     }
-    const skipped = o.runs * prompts.length - jobs.length
+    const skipped = o.runs * prompts.length - jobs.length - failedSkipped.size
     const rps = Math.max(0.2, RPS_CEILING[o.plan][engine] * keyScale * o.rpsScale)
     const pacer = new Pacer(1000 / rps)
     const concurrency = Math.min(64, Math.max(2, Math.ceil(rps * (o.timeoutMs / 1000))))
-    o.log(`${engine}: ${jobs.length} calls to make (${skipped} already stored), ${rps.toFixed(2)} rps, ${concurrency} in flight max`)
+    o.log(
+      `${engine}: ${jobs.length} calls to make (${skipped} already stored${failedSkipped.size ? `; ${failedSkipped.size} previously rejected/unparseable NOT retried — delete ${failuresFile} after fixing the cause to retry them` : ''}), ${rps.toFixed(2)} rps, ${concurrency} in flight max`,
+    )
 
     let next = 0
+    let gaveUp = false
     const worker = async () => {
       while (!stopping && next < jobs.length) {
         const job = jobs[next++]!
@@ -259,8 +268,12 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
                 JSON.stringify({ engine, cellKey: job.cell.key, prompt: job.prompt, run: job.run, kind: err.kind, message: err.message, attempts: attempt, at: new Date().toISOString() }) + '\n',
               )
               // A rejected key/quota is not going to fix itself: stop spending on this engine.
+              // In-flight workers still settle (bounded by the concurrency window); log once.
               if (err.kind === 'rejected') {
-                o.log(`${engine}: non-retryable rejection (${err.message}); giving up on this engine`)
+                if (!gaveUp) {
+                  gaveUp = true
+                  o.log(`${engine}: non-retryable rejection (${err.message}); giving up on this engine (in-flight attempts will still settle)`)
+                }
                 next = jobs.length
               }
               break

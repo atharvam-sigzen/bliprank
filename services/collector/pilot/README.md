@@ -95,6 +95,19 @@ and an ANOVA bound ≈ 0.25 — the reason the gate does not use the ANOVA figur
 The certified n_eff is bank-conditional (this bank, this engine), not a category
 claim.
 
+## Troubleshooting
+
+**`HTTP 403: You are not subscribed to this API` on every call** — the key is
+valid but has no subscription for that API. OpenWeb Ninja plans are **per API**:
+on the dashboard, subscribe the key to each of the five (ChatGPT, Gemini,
+Copilot, Google AI Mode, AI Overviews) on your plan, then delete the day's
+`failures.jsonl` (rejected pairs are deliberately not retried on resume) and
+re-run the same command. The ledger charges these attempts conservatively
+(bounded by the concurrency window, roughly $2 at PAYG for all five engines);
+the provider does not usually bill unsubscribed 403s — reconcile against the
+dashboard invoice. Verify cheaply before the full run: `--limit-prompts 1
+--runs 1` is one call per engine (about $0.03).
+
 ## Known limitations of this pilot
 
 - ChatGPT, Gemini and Copilot take no `gl`/`hl`: the cell records `en-US`/`US` as
