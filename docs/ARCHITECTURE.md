@@ -106,11 +106,41 @@ Two passes.
 | Citation | URL extraction, domain match against owned set |
 | Position | Character offset + structural position |
 | Competitor set | Alias match against category registry |
+| **Citation source class** | **Taxonomy match on the cited URL — see 4.2** |
 
 **Pass 2 — sampled model (25% of answers)**
 Sentiment and framing only. Haiku 4.5 via Batch API (50% off) with a 1-hour prompt
 cache on the rubric (cache reads at 0.1× base input). Result: **$0.000291** per
 gross answer against $0.003050 naive.
+
+#### 4.2 Citation source classification
+
+~82% of AI citations originate from earned media the customer does not own. A
+scorer that only answers "was this our domain?" measures the minority of the
+citation surface and cannot tell a customer *where* to act.
+
+Every cited URL is classified into a source class. This is deterministic — URL
+pattern plus a maintained publisher registry — so it costs nothing and stays
+reproducible.
+
+| Class | Extracted | Why it matters |
+|---|---|---|
+| `owned` | Domain match against the customer's registered domains | Baseline |
+| `video` | Platform, video ID, **timestamp / chapter marker where present** | Video transcripts are among the most-cited multimedia sources; chapter-level citation tells you which segment earned it |
+| `community` | Platform, sub-community, thread ID | Reddit / Quora / Stack Overflow — the decentralised-consensus grounding layer |
+| `review` | Platform, listing ID | G2, Trustpilot, Capterra — disproportionately trusted by answer engines |
+| `earned_media` | Publisher, match against an authority registry | Digital PR placements |
+| `competitor` | Alias match against the category registry | A competitor-owned source citing the category |
+| `reference` | Wikipedia, Wikidata, standards bodies, gov | Entity-graph anchors |
+| `other` | — | Never silently bucketed as `owned` |
+
+The class is stored on the score row, not derived at query time, so the corpus
+supports "which source classes cite our category" as a first-class question and
+the Category Benchmark Index can report source-mix by vertical.
+
+**Sentiment on community and review sources is sampled separately** from answer
+sentiment — a positive answer citing a hostile Reddit thread is a different
+finding from a positive answer citing your own docs.
 
 ### services/reconcile
 Six-factor variance decomposition — see `.claude/skills/reconciliation-formats/`.
