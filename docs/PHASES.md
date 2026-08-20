@@ -100,6 +100,7 @@ the product.
 | # | Deliverable |
 |---|---|
 | 2.1 | Deterministic scorer: mention, citation, position, competitor set |
+| 2.1b | **Citation source classifier** — owned / video / community / review / earned_media / competitor / reference (ADR-0005) |
 | 2.2 | Alias table + normalisation; category competitor registry |
 | 2.3 | Sampled LLM sentiment — Haiku 4.5, Batch API, 1h prompt cache, 25% sample |
 | 2.4 | Versioned algorithm registry; immutable score rows |
@@ -113,6 +114,7 @@ the product.
 |---|---|---|
 | Functional | Golden-set agreement, deterministic signals | ≥ 95% vs human labels |
 | Functional | Golden-set agreement, sampled sentiment | ≥ 85% vs human labels |
+| Functional | Citation source classification agreement | ≥ 97% vs human labels; **0% silently bucketed as `owned`** |
 | Functional | Score a fixture twice | byte-identical output (determinism) |
 | Functional | `/score-version` produces a correct diff report | flip list is complete |
 | Performance | Scoring throughput | ≥ 50k answers/hour on one worker |
@@ -187,11 +189,12 @@ the product.
 
 | # | Deliverable |
 |---|---|
-| 5.1 | Owned-surface Autopilot: gap pages, schema, `llms.txt`, internal linking |
+| 5.1 | Owned-surface Autopilot: gap pages, schema, `llms.txt`, internal linking, **FAQ schema generator, semantic gap identifier** |
 | 5.2 | AI crawler audit (GPTBot, ClaudeBot, PerplexityBot, Google-Extended) |
 | 5.3 | Agency workspaces — 15 clients, white-label reports, unlimited seats |
-| 5.4 | Public REST API + customer-facing MCP server |
+| 5.4 | Public REST API + **`@bliprank/mcp-server`** — terminal-native access from Claude Code, Cursor and agent workflows: run an audit, pull a reconciliation report, query visibility |
 | 5.5 | Entity consistency checks (Wikidata, Crunchbase, G2, Trustpilot, GBP) |
+| 5.5b | **Earned-media target list builder** — ranks publishers, communities and video channels actually being cited for the customer's prompts, from the source-class corpus |
 | 5.6 | **Collector runner migration** — Vercel → Hetzner CAX (ARM) fleet, if sustained throughput has crossed ~4 req/s (ADR-0002) |
 
 ### GATE G5 — the agency gate
@@ -248,6 +251,7 @@ This is the business gate from the strategy plan, not just a technical one.
 | 7.3 | Category Benchmark Index in-product (percentile vs category) |
 | 7.4 | Public CBI programme — 12 verticals, `/cbi-publish` |
 | 7.5 | Earned-media module: forums/Reddit citation-source intelligence |
+| 7.5b | **Sentiment drift monitoring** — multi-brand sentiment matrix over time, with drift flagged only when it exceeds the CI |
 | 7.6 | ClickHouse migration for corpus analytics |
 
 ### GATE G7 — the retention gate
