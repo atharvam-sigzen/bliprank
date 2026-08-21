@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { BudgetExceeded } from '../budget.js'
 import { loadDotEnv } from './util.js'
 import { AdapterError, cacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
-import { runDoctor, assertSpendAllowed } from './collect.js'
+import { runDoctor, assertSpendAllowed, projectSpend } from './collect.js'
 import { fixtureAdapter } from './fixture-adapter.js'
 
 /** An engine that always rejects (bad key / no subscription), charged at fixture price $0. */
@@ -225,5 +225,53 @@ describe('spend safety (post-review)', () => {
     const ledger = JSON.parse(readFileSync(r.ledgerFile, 'utf8')) as { calls: number }
     expect(r.stats['chatgpt']!.done).toBe(2)
     expect(ledger.calls).toBeGreaterThanOrEqual(2 * 3) // 3 providerCalls per collect, all charged
+  })
+})
+
+describe('cost projection is scoped to the mode, not to the bank', () => {
+  // The projection is what the operator approves a ceiling against, so it has to
+  // describe the work actually about to happen. --doctor probes once per engine
+  // (probeEngine issues exactly one request); projecting the full bank for that
+  // made a 5-call health check demand a full-pilot budget.
+  const argv = (extra: string[]) => ['--day', '2026-08-21', '--bank', bankFile, '--plan', 'pro', ...extra]
+  const env = { COLLECTION_ENABLED: 'true', OPENWEBNINJA_API_KEY: 'k', COLLECTION_BUDGET_USD: '75' }
+
+  it('--doctor projects one call per engine, not the whole bank', () => {
+    const o = optionsFromEnv(argv(['--doctor']), env) as RunOptions
+    expect(o.doctor).toBe(true)
+    const { calls, estUsd } = projectSpend(o)
+    expect(calls).toBe(5) // 5 engines x 1 probe
+    expect(estUsd).toBeCloseTo(0.023, 6) // 4 x $0.005 + $0.003 (AI Overviews) at pro
+    expect(estUsd).toBeLessThan(1)
+  })
+
+  it('the same argv without --doctor still projects the full pilot', () => {
+    const o = optionsFromEnv(argv([]), env) as RunOptions
+    expect(o.doctor).toBe(false)
+    const { calls, estUsd } = projectSpend(o)
+    expect(calls).toBe(5000) // 100 prompts x 5 engines x 10 runs
+    expect(estUsd).toBeCloseTo(23, 6)
+  })
+
+  it('a doctor probe fits under a cap that the full pilot would blow', () => {
+    const doctor = projectSpend(optionsFromEnv(argv(['--doctor']), env) as RunOptions)
+    const pilot = projectSpend(optionsFromEnv(argv([]), env) as RunOptions)
+    const remaining = 75 - 4.15 // the cap less what earlier days already spent
+    expect(doctor.estUsd).toBeLessThanOrEqual(remaining)
+    expect(pilot.estUsd).toBeLessThanOrEqual(remaining) // both fit at $75; the probe fits at $1 too
+    expect(doctor.estUsd).toBeLessThanOrEqual(1)
+    expect(pilot.estUsd).toBeGreaterThan(1)
+  })
+
+  it('--limit-prompts is reflected in the call count as well as the cost', () => {
+    const o = optionsFromEnv(argv(['--limit-prompts', '4', '--runs', '2']), env) as RunOptions
+    const { calls, estUsd } = projectSpend(o)
+    expect(calls).toBe(40) // 4 prompts x 5 engines x 2 runs — previously reported 5000
+    expect(estUsd).toBeCloseTo(4 * 2 * (0.005 * 4 + 0.003), 6)
+  })
+
+  it('offline modes project zero', () => {
+    const o = optionsFromEnv(['--fixture', '--day', '2026-08-21', '--bank', bankFile], {}) as RunOptions
+    expect(projectSpend(o).estUsd).toBe(0)
   })
 })

@@ -51,6 +51,8 @@ export interface RunOptions {
   fixture: boolean
   /** Use the offline second-provider stub (PHASES 1.3): same pipeline, different dialect, zero spend. */
   stub: boolean
+  /** `--doctor`: one probe call per engine instead of the full bank. Scopes the cost projection. */
+  doctor: boolean
   timeoutMs: number
   maxAttempts: number
   log: (line: string) => void
@@ -342,7 +344,8 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
   const stub = args.has('stub')
   // --doctor always calls the real provider, so it is never treated as offline:
   // the COLLECTION_ENABLED / key / plan gate below applies to it too.
-  const offline = (fixture || stub) && !args.has('doctor')
+  const doctor = args.has('doctor')
+  const offline = (fixture || stub) && !doctor
   const day = String(args.get('day') ?? new Date().toISOString().slice(0, 10))
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { refuse: `--day must be YYYY-MM-DD, got ${day}` }
   const enginesArg = String(args.get('engines') ?? 'all')
@@ -379,9 +382,32 @@ export function optionsFromEnv(argv: string[], env: NodeJS.ProcessEnv, log = (l:
     ...(args.has('limit-prompts') ? { limitPrompts: Number(args.get('limit-prompts')) } : {}),
     fixture,
     stub,
+    doctor,
     timeoutMs: Number(args.get('timeout-ms') ?? 45_000),
     maxAttempts: Math.min(6, Math.max(1, Math.floor(Number(args.get('max-attempts') ?? 3)))),
     log,
+  }
+}
+
+/**
+ * What this invocation will actually cost, before retries.
+ *
+ * Scope depends on the mode, and that is the whole point: `--doctor` issues one
+ * probe call per engine (`probeEngine` makes exactly one HTTP request), while a
+ * real run is prompts x runs per engine. Projecting the full bank for a 5-call
+ * probe makes the operator authorise a ceiling that has nothing to do with the
+ * work being approved, which is the opposite of what rule R3's cap is for.
+ *
+ * Pure and exported so the projection can be tested without running anything.
+ */
+export function projectSpend(o: RunOptions): { calls: number; estUsd: number } {
+  const prompts = o.doctor ? 1 : (o.limitPrompts ?? o.bank.prompts.length)
+  const runs = o.doctor ? 1 : o.runs
+  const perEngine = prompts * runs
+  return {
+    calls: perEngine * o.engines.length,
+    // fixture/stub never touch the network, so they are free by construction.
+    estUsd: o.fixture || o.stub ? 0 : o.engines.reduce((sum, e) => sum + PRICE_USD_PER_CALL[o.plan][e] * perEngine, 0),
   }
 }
 
@@ -435,20 +461,22 @@ if (isMain) {
     console.error(`REFUSED: ${opts.refuse}`)
     process.exit(2)
   }
-  const { plan, engines, runs, day, capUsd, fixture } = opts
-  const calls = opts.bank.prompts.length * engines.length * runs
-  const est = fixture || opts.stub ? 0 : engines.reduce((s, e) => s + PRICE_USD_PER_CALL[plan][e] * (opts.limitPrompts ?? opts.bank.prompts.length) * runs, 0)
+  const { plan, day, capUsd, fixture } = opts
+  const { calls, estUsd: est } = projectSpend(opts)
+  const usd = (n: number) => `$${n.toFixed(n > 0 && n < 1 ? 4 : 2)}`
   const prior = priorSpendUsd(opts.dataDir, day)
-  console.error(`pilot ${day}: ${calls} calls planned, plan=${plan}, projected $${est.toFixed(2)} (before retries); pilot cap $${capUsd}, already spent on other days $${prior.toFixed(2)}${fixture ? ' [FIXTURE MODE, no network]' : opts.stub ? ' [STUB PROVIDER, no network]' : ''}`)
+  const mode = opts.doctor ? `doctor probe (1 call/engine)` : 'pilot'
+  console.error(`${mode} ${day}: ${calls} calls planned, plan=${plan}, projected ${usd(est)} (before retries); pilot cap $${capUsd}, already spent on other days ${usd(prior)}${fixture ? ' [FIXTURE MODE, no network]' : opts.stub ? ' [STUB PROVIDER, no network]' : ''}`)
   if (!fixture && !opts.stub && est > capUsd - prior) {
-    console.error(`REFUSED: projected spend $${est.toFixed(2)} exceeds the remaining cap $${(capUsd - prior).toFixed(2)}; shrink --runs/--limit-prompts or raise the cap deliberately`)
+    const shrink = opts.doctor ? 'a probe is already the smallest run there is — raise the cap deliberately' : 'shrink --runs/--limit-prompts or raise the cap deliberately'
+    console.error(`REFUSED: projected spend ${usd(est)} exceeds the remaining cap ${usd(capUsd - prior)}; ${shrink}`)
     process.exit(2)
   }
   if (opts_preview(process.argv)) {
     console.error('PREVIEW: gate satisfied and cost projected; no call made, nothing charged.')
     process.exit(0)
   }
-  if (process.argv.includes('--doctor')) {
+  if (opts.doctor) {
     runDoctor(opts).then((code) => process.exit(code))
   } else {
     runPilot(opts).then((r) => process.exit(r.exitCode))
