@@ -56,7 +56,10 @@ async function db(opts: { legacyKey?: 'short' | 'long'; skip0002?: boolean } = {
     const secret = opts.legacyKey === 'short' ? 'short-0001-secret' : 'a-long-enough-0001-era-secret-value'
     await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
   }
-  if (!opts.skip0002) await d.exec(migration('0002_tenancy_context.sql'))
+  if (!opts.skip0002) {
+    await d.exec(migration('0002_tenancy_context.sql'))
+    await d.exec(migration('0003_tenancy_exposure_manifest.sql'))
+  }
   // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
   // assertion correctly refuses. A harness artifact, not a production shape —
   // managed Postgres gives you a privileged non-superuser. Named in the
@@ -101,7 +104,7 @@ describe('the migration must apply to the database production actually has', () 
     // It survives the migration (grandfathered), but it has no issuer/audience,
     // so it can never verify a token, and the gate refuses the deploy.
     expect((await d.query(`SELECT issuer, audience FROM auth_signing_keys WHERE kid='k0'`)).rows).toEqual([{ issuer: null, audience: null }])
-    await expect(check(d)).rejects.toThrow(/live signing keys are not fully configured/)
+    await expect(check(d)).rejects.toThrow(/live signing key\(s\) are not fully configured/)
   })
 
   it('a new key must be fully configured — the constraint binds what is written from here on', async () => {
@@ -160,35 +163,38 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
       await d.exec(`GRANT EXECUTE ON FUNCTION ${grant} TO web_prod`)
       // Both are SECURITY DEFINER owned by auth_verifier, so the grant IS the
       // authorization: web_prod could name any workspace and read it.
-      await expect(check(d)).rejects.toThrow(/reachable outside auth_verifier/)
+      await expect(check(d)).rejects.toThrow(/definer-function-exposed/)
     }
   })
 
   it('PUBLIC granted a context writer is caught as well', async () => {
     const d = await healthy()
     await d.exec(`GRANT EXECUTE ON FUNCTION set_workspace(uuid) TO PUBLIC`)
-    await expect(check(d)).rejects.toThrow(/reachable outside auth_verifier/)
+    await expect(check(d)).rejects.toThrow(/definer-function-exposed/)
   })
 
   it('any grant on the signing key or the context table is caught, including column-level', async () => {
     const d1 = await healthy()
     await d1.exec(`GRANT SELECT ON auth_signing_keys TO app_rw`)
-    await expect(check(d1)).rejects.toThrow(/can read the signing secret/)
+    await expect(check(d1)).rejects.toThrow(/undeclared-exposure[\s\S]*auth_signing_keys/)
 
     const d2 = await healthy()
     // has_table_privilege is FALSE for a column-only grant; has_any_column_privilege is not.
     await d2.exec(`GRANT SELECT (secret) ON auth_signing_keys TO app_rw`)
-    await expect(check(d2)).rejects.toThrow(/can read the signing secret/)
+    await expect(check(d2)).rejects.toThrow(/undeclared-exposure[\s\S]*auth_signing_keys/)
 
     const d3 = await healthy()
     await d3.exec(`GRANT INSERT ON auth_tenant_context TO app_rw`)
-    await expect(check(d3)).rejects.toThrow(/grant on auth_tenant_context/)
+    await expect(check(d3)).rejects.toThrow(/undeclared-exposure[\s\S]*auth_tenant_context/)
   })
 
   it('an over-broad policy on an auth table is caught even without a grant', async () => {
     const d = await healthy()
     await d.exec(`CREATE POLICY oops ON auth_signing_keys FOR SELECT USING (true)`)
-    await expect(check(d)).rejects.toThrow(/open an auth table beyond auth_verifier/)
+    // A policy alone confers nothing without a grant; the grant is what makes
+    // it reachable, and the manifest is what refuses it.
+    await d.exec(`GRANT SELECT ON auth_signing_keys TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure/)
   })
 
   it('THE FINDING: a new tenant-readable table with an unscoped policy must fail the deploy', async () => {
@@ -201,7 +207,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
     await d.exec(`GRANT SELECT ON recon_imports TO app_rw`)
     await d.exec(`CREATE POLICY recon_read ON recon_imports FOR SELECT USING (true)`)
-    await expect(check(d)).rejects.toThrow(/recon_imports reads unscoped/)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure[\s\S]*recon_imports/)
   })
 
   it('a tenant-readable table with NO policy at all is caught too', async () => {
@@ -210,20 +216,20 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await d.exec(`ALTER TABLE recon_imports ENABLE ROW LEVEL SECURITY`)
     await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
     await d.exec(`GRANT SELECT ON recon_imports TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/recon_imports reads unscoped/)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure[\s\S]*recon_imports/)
   })
 
   it('a materialized view granted to an application role is caught — it cannot carry RLS at all', async () => {
     const d = await healthy()
     await d.exec(`CREATE MATERIALIZED VIEW score_mv AS SELECT * FROM score_rows`)
     await d.exec(`GRANT SELECT ON score_mv TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/cannot carry tenant policies/)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure/)
   })
 
   it('a definer function that loses its pinned search_path is caught', async () => {
     const d = await healthy()
     await d.exec(`ALTER FUNCTION current_workspace_id() RESET search_path`)
-    await expect(check(d)).rejects.toThrow(/pinned search_path: current_workspace_id/)
+    await expect(check(d)).rejects.toThrow(/definer-function-unsafe/)
   })
 
   it('a context reader that stops being SECURITY DEFINER is caught', async () => {
@@ -235,13 +241,13 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
   it('a table that loses FORCE RLS is caught', async () => {
     const d = await healthy()
     await d.exec(`ALTER TABLE score_rows NO FORCE ROW LEVEL SECURITY`)
-    await expect(check(d)).rejects.toThrow(/RLS is not forced on: score_rows/)
+    await expect(check(d)).rejects.toThrow(/scoped-without-forced-rls/)
   })
 
   it('PUBLIC with CREATE on schema public is caught — it is what search_path pinning assumes', async () => {
     const d = await healthy()
     await d.exec(`GRANT CREATE ON SCHEMA public TO PUBLIC`)
-    await expect(check(d)).rejects.toThrow(/PUBLIC has CREATE on schema public/)
+    await expect(check(d)).rejects.toThrow(/public-can-create/)
   })
 })
 
@@ -379,7 +385,7 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     // Six lines, returned the plaintext secret to an app_rw-only login role,
     // which then forged a token for another tenant and entered through the
     // front door with every downstream control behaving correctly.
-    await expect(check(d)).rejects.toThrow(/executable outside auth_verifier/)
+    await expect(check(d)).rejects.toThrow(/definer-function-exposed/)
   })
 
   it('a definer function owned by the migration owner rather than auth_verifier is caught', async () => {
@@ -387,14 +393,14 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     await d.exec(`CREATE FUNCTION dashboard_rollup() RETURNS TABLE(brand_id uuid, mentions int)
                   LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
                     SELECT s.brand_id, s.mentions FROM score_rows s $fn$`)
-    await expect(check(d)).rejects.toThrow(/must be owned by auth_verifier/)
+    await expect(check(d)).rejects.toThrow(/definer-function-unsafe/)
   })
 
   it('a definer function without a pinned search_path is caught', async () => {
     const d = await healthy()
     await d.exec(`CREATE FUNCTION helper() RETURNS int LANGUAGE sql SECURITY DEFINER AS $fn$ SELECT 1 $fn$`)
     await d.exec(`ALTER FUNCTION helper() OWNER TO auth_verifier`)
-    await expect(check(d)).rejects.toThrow(/pinned search_path/)
+    await expect(check(d)).rejects.toThrow(/definer-function-unsafe/)
   })
 
   it('THE FINDING: a plain VIEW over the signing keys, granted to a tenant principal', async () => {
@@ -406,14 +412,17 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     // was true and useless. Whether it leaks depends on the view owner's RLS
     // posture — on Supabase the migration owner carries BYPASSRLS — and the
     // gate could not tell you either way, which is itself the problem.
-    await expect(check(d)).rejects.toThrow(/cannot carry tenant policies/)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure/)
   })
 
-  it('a security_invoker view is allowed — it runs the caller\'s policies', async () => {
+  it('a security_invoker view still has to be declared', async () => {
     const d = await healthy()
     await d.exec(`CREATE VIEW my_scores WITH (security_invoker = true) AS SELECT * FROM score_rows`)
     await d.exec(`GRANT SELECT ON my_scores TO app_rw`)
-    await expect(check(d)).resolves.toBeDefined()
+    // Still refused: reachable and undeclared. security_invoker makes a view
+    // safe to DECLARE, not exempt from declaring — the manifest is the record
+    // of what a tenant may reach, and a view is a thing a tenant reaches.
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure/)
   })
 
   it('THE FINDING: a grant made to the LOGIN role rather than to app_rw', async () => {
@@ -427,7 +436,7 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     await d.exec(`CREATE POLICY recon_read ON recon_imports FOR SELECT USING (true)`)
     // The replacement for a hardcoded list of three group roles was a hardcoded
     // list of one. Deploy-time grants land on login roles as often as groups.
-    await expect(check(d)).rejects.toThrow(/recon_imports reads unscoped/)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure[\s\S]*recon_imports/)
   })
 
   it('THE FINDING: a write policy with WITH CHECK (true) lets a WS1 session write into WS2', async () => {
@@ -443,16 +452,18 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     // into WS2 — invisible to the writer, read by the victim as its own
     // reconciliation data. On a product whose claim is that its numbers
     // reconcile, that is corruption of record, not merely a leak.
-    await expect(check(d)).rejects.toThrow(/recon_imports writes unscoped/)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure[\s\S]*recon_imports/)
   })
 
   it('THE FINDING: prompt_banks stops being shared the moment it gains a workspace column', async () => {
     const d = await healthy()
-    await d.exec(`ALTER TABLE prompt_banks ADD COLUMN workspace_id uuid REFERENCES workspaces(id)`)
+    // The FK test alone was evaded by exactly the mistake its own comment
+    // named: a workspace column with no REFERENCES clause.
+    await d.exec(`ALTER TABLE prompt_banks ADD COLUMN workspace_id uuid`)
     // 0000 says private banks go in a separate table. Nothing enforced it, and
     // prompt_banks is the one tenant-readable table that returns rows with no
     // context at all — so a private bank added here would be world-readable.
-    await expect(check(d)).rejects.toThrow(/prompt_banks reads unscoped/)
+    await expect(check(d)).rejects.toThrow(/shared-with-tenant-column/)
   })
 
   it('a live key that is not fully configured is caught even when a good one exists', async () => {
@@ -471,7 +482,7 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     await d.exec(`ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_lifetime_sane CHECK (max_lifetime_s BETWEEN 60 AND 604800) NOT VALID`)
     // 12 hours silently becomes 68 years. Not tenant-reachable, but a control
     // that nothing verifies is not a control.
-    await expect(check(d)).rejects.toThrow(/live signing keys are not fully configured/)
+    await expect(check(d)).rejects.toThrow(/live signing key\(s\) are not fully configured/)
   })
 
   it('the bare-GUC regression assertion actually bites', async () => {

@@ -304,6 +304,37 @@ the rule that an assertion with no failing case is indistinguishable from one
 that does nothing — including the two the audit flagged as having none, the
 bare-GUC regression and the pgcrypto resolution check.
 
+**Audit four found four more, and at that point the approach was the problem.**
+Every assertion in the gate pinned `schema = 'public'` — nine times — so a table
+in a new schema **with no RLS at all** passed and returned both tenants' rows.
+The policy *command* was named too, so `FOR DELETE USING (true)` and a `TRUNCATE`
+grant both passed, and each let a fully authenticated WS1 session destroy WS2's
+rows. `qual LIKE '%current_workspace_id%'` tests for a substring rather than a
+scope, so `USING (current_workspace_id() IS NOT NULL)` passed and returned every
+tenant. And the gate **could not pass on the production posture it prescribes**:
+it read `auth_signing_keys` directly, which FORCEs RLS, so a non-superuser
+deployer saw zero rows — the only way to make it pass was to deploy with
+`BYPASSRLS` and excuse that role, waiving the single most important assertion in
+the file.
+
+Three rounds of patching a check that keeps being incomplete is not bad luck.
+**Proving "no unsafe configuration exists" by listing unsafe configurations is
+unbounded by construction** — the catalog can always express one more thing than
+the list. So the enumeration inverted, into `0003_tenancy_exposure_manifest.sql`:
+everything a non-trusted role can reach — every schema, every relkind, every
+privilege, every `SECURITY DEFINER` function — must be **declared** in
+`tenancy_exposure_manifest` with a disposition and a reason. Reachable-and-
+undeclared is now the failure condition, so a new schema, object kind, verb or
+grantee fails by default rather than needing to be predicted. `check-deploy.sql`
+went from 380 lines to 130.
+
+The other half is behavioural, in `packages/db/src/tenant-isolation.test.ts`: two
+seeded tenants, real reads and writes across every scoped relation, asserting the
+row sets are disjoint. That is the half a catalog check structurally cannot do —
+a substring is not a scope, and no amount of inspecting `pg_policies` turns one
+into the other. All five of audit four's attacks now fail the gate, and the gate
+passes as a non-superuser deployer with no RLS bypass.
+
 **Accepted consequence, recorded rather than discovered later:** the tenant read
 path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
 `default_transaction_read_only`, and the context table is `UNLOGGED` and so does
