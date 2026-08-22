@@ -182,10 +182,18 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   // One bucket per engine (the provider's ceilings are per API), pre-scaled so the
   // per-key sum stays under the shared key ceiling. The interface is what the P5
   // fleet swap replaces — nothing below depends on the local implementation.
-  const rateBudget = new LocalRateBudget(
+  const rateBudget = LocalRateBudget.forSingleProcess(
     Object.fromEntries(
       o.engines.map((e) => [e, { rps: Math.max(0.2, RPS_CEILING[o.plan][e] * keyScale * o.rpsScale), burst: 1 } satisfies BucketConfig]),
     ),
+    {
+      iUnderstandThisBudgetIsPerProcess: true,
+      reason: 'pilot runner: holds an exclusive run.lock above, so a second concurrent run cannot exist',
+      // The lock IS the proof, so the pilot declares on its own behalf rather
+      // than requiring an operator to export COLLECTOR_TOPOLOGY before a manual
+      // run. Nothing else in this repo may do that (ADR-0006).
+      env: { ...process.env, COLLECTOR_TOPOLOGY: 'single-process' },
+    },
   )
 
   const prompts = o.limitPrompts ? o.bank.prompts.slice(0, o.limitPrompts) : o.bank.prompts

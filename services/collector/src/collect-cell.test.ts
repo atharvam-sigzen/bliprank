@@ -39,7 +39,7 @@ function deps(over: Partial<OrchestratorDeps> = {}): OrchestratorDeps & { _advan
   return {
     index: new AnswerIndex(new MemoryKV(() => clock.ms), 100 * 86_400, () => new Date(clock.ms)),
     blob: new MemoryBlobStore(),
-    rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 }, gemini: { rps: 1000, burst: 1000 } }),
+    rateBudget: LocalRateBudget.forSingleProcess({ chatgpt: { rps: 1000, burst: 1000 }, gemini: { rps: 1000, burst: 1000 } }, { iUnderstandThisBudgetIsPerProcess: true, reason: 'unit test: one process, no fleet', env: { COLLECTOR_TOPOLOGY: 'single-process' } }),
     budget: localLedger(new Budget(ledger, 100, () => 0.002)),
     deadLetter: new MemoryDeadLetter(),
     owner: 'worker-1',

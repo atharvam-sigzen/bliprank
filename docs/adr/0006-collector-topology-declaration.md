@@ -1,6 +1,6 @@
 # ADR-0006 — Collector topology is declared, not inferred
 
-**Status:** Proposed — awaiting sign-off (Atharva) · **Date:** 2026-08-22 · **Phase:** P0 (binds P1 and P5)
+**Status:** Accepted · **Date:** 2026-08-22 · **Phase:** P0 (binds P1 and P5)
 **Extends:** ADR-0002 (hosting topology and a phased collection runner)
 
 ## Context
@@ -81,12 +81,26 @@ shared high-water mark in `KvSpendLedger` (a stale window key is visible against
 the shared counter) and the collection heartbeat. The mitigation is that `fleet`
 should be baked into the machine image, not set per deploy.
 
-**Unresolved asymmetry.** `COLLECTOR_TOPOLOGY` is consumed by the spend ledger
-only. `LocalRateBudget`'s constructor is public and unguarded, so a fleet can be
-assembled today with a correct shared spend cap and per-process token buckets.
-That is still precisely the failure ADR-0002's migration exists to prevent; it
-just arrives as a provider 429 storm instead of an invoice. Extending this
-decision to `RateBudget` is a follow-up, not something this ADR has done.
+**Both per-process resources are guarded, not just the spend cap.** The draft of
+this ADR left `LocalRateBudget`'s constructor public, which meant a fleet could
+be assembled with a correct shared spend cap and twelve private token buckets —
+the same failure, arriving as a provider 429 storm and a suspended key instead of
+an invoice. On sign-off the same guard was extended to it:
+`LocalRateBudget.forSingleProcess()` demands a written reason and refuses on
+`fleet` and on `undeclared`.
+
+One asymmetry between the two is deliberate. The spend ledger's fleet answer is a
+*different implementation* (`KvSpendLedger`), so its refusal points there. The
+rate budget's fleet answer is the *same* implementation holding a **static slice**
+— rps divided across workers (ADR-0002) — so its refusal says so explicitly, and
+a declared fleet gets no override at all: a slice is a different construction,
+not this one with a waiver. That construction is not written yet; it belongs with
+the P5 runner, and refusing loudly until then is the correct interim state.
+
+The topology guard currently lives in `spend-ledger.ts` and is imported by
+`rate-budget.ts`. It is not a spend concept and belongs in its own module; the
+move is a one-line change deferred only because `spend-ledger.ts` is under human
+review.
 
 ## Rejected alternatives
 
@@ -118,10 +132,25 @@ sunk cost.
 
 ## Follow-ups
 
-- Extend the declaration to `RateBudget` before any P5 wiring — or delete both
-  local implementations per rejected alternative 4, whichever the Upstash
-  decision makes true.
-- Add `COLLECTOR_TOPOLOGY` to `.env.example` and to the doctor probe preflight.
+- ~~Extend the declaration to `RateBudget`~~ — done on sign-off, 2026-08-22.
+- ~~Add `COLLECTOR_TOPOLOGY` to `.env.example`~~ — done. **Still open:** the doctor
+  probe preflight, so a missing declaration is reported by a probe rather than
+  discovered by an outage.
+- Move `resolveTopology` out of `spend-ledger.ts` into its own module once that
+  file is off review.
+- Write the fleet rate budget (static slice per worker) with the P5 runner. Until
+  it exists, a declared fleet cannot construct a rate budget at all — deliberate.
 - Bake `COLLECTOR_TOPOLOGY=fleet` into the Hetzner machine image rather than
   setting it per deployment.
-- Re-open alternative 4 once Upstash free-tier credentials are wired.
+- **Open, contingent on Upstash credentials:** rejected alternative 4 — deleting
+  `LocalSpendLedger` and always using the shared ledger, which would delete
+  `resolveTopology`, `forSingleProcess` and this decision along with it. Left
+  open deliberately at sign-off rather than closed. Revisit when the free-tier
+  credentials land; if `MemoryKV` serves the tests and the free tier serves the
+  pilot, the guard is dead weight.
+
+**The pilot runner is the one place that declares on its own behalf.** It takes
+an exclusive `run.lock` before constructing anything, so it has machine-checkable
+proof it is alone and passes `COLLECTOR_TOPOLOGY=single-process` itself rather
+than requiring an operator to export it before a manual G0 run. Nothing else in
+the repo may do that.

@@ -7,11 +7,22 @@
  * the same budget. Callers depend on `RateBudget` only, so the migration is a
  * swap, not a rewrite (ADR-0002).
  *
+ * TOPOLOGY (ADR-0006). The bucket below lives in process memory, so N processes
+ * hold N full buckets aimed at one provider key. That is the same risk shape as
+ * a per-process spend cap, arriving as a 429 storm and a suspended key instead
+ * of an invoice, so it gets the same guard: the constructor is private and
+ * `forSingleProcess()` refuses unless the deployment has declared it is alone.
+ *
  * Model: one bucket per provider API (e.g. `openwebninja:chatgpt`), each with
  * a sustained rps, a burst allowance, one or more API-key shards (the provider
  * limit is per key — sharding multiplies throughput), and an optional UTC
  * collection window outside which acquisition simply waits.
  */
+
+// The topology guard is shared with the spend ledger rather than copied. It is
+// not a spend concept and belongs in its own module; moving it is a one-line
+// change deferred only because spend-ledger.ts is under human review.
+import { resolveTopology } from './spend-ledger.js'
 
 export interface WindowConfig {
   /** Hour of day, UTC, when the collection window opens (0–23). */
@@ -107,10 +118,25 @@ export function msUntilWindowOpen(w: WindowConfig | undefined, nowMs: number): n
   return startToday + DAY - nowMs
 }
 
+export class UnsafeRateBudgetError extends Error {
+  override readonly name = 'UnsafeRateBudgetError'
+}
+
+/**
+ * In-process token buckets. Correct for the pilot runner and for tests, and
+ * WRONG anywhere more than one process can run: each process would hold a full
+ * bucket, so twelve workers would issue twelve times the configured rps at a
+ * provider ceiling that is per key.
+ *
+ * The constructor is private for the reason ADR-0006 records — the P5 target is
+ * a Hetzner fleet, which sets no environment marker, so a guard that infers its
+ * topology fails open exactly where it matters. `forSingleProcess()` is the only
+ * way in, and it refuses unless the deployment has said what it is.
+ */
 export class LocalRateBudget implements RateBudget {
   private readonly buckets = new Map<string, { cfg: BucketConfig; shards: Shard[]; rr: number }>()
 
-  constructor(
+  private constructor(
     buckets: Record<string, BucketConfig>,
     private readonly clock: Clock = realClock,
   ) {
@@ -125,6 +151,51 @@ export class LocalRateBudget implements RateBudget {
         rr: 0,
       })
     }
+  }
+
+  /**
+   * @param ack.reason why a per-process rate budget is acceptable here. Quoted
+   *   back in the refusal, so the argument reaches whoever has to judge it.
+   *
+   * A fleet is refused outright and has no override: ADR-0002's P5 design is a
+   * local bucket holding a STATIC SLICE of the budget (rps divided across
+   * workers), which is a different construction, not this one with a waiver.
+   */
+  static forSingleProcess(
+    buckets: Record<string, BucketConfig>,
+    ack: {
+      readonly iUnderstandThisBudgetIsPerProcess: true
+      readonly reason: string
+      /** Last resort for a runtime that is one process but cannot set COLLECTOR_TOPOLOGY. Cannot override a detected fleet, and always alerts. */
+      readonly overrideUndeclaredTopology?: boolean
+      readonly env?: NodeJS.ProcessEnv
+      readonly clock?: Clock
+      readonly onAlert?: (message: string) => void
+    },
+  ): LocalRateBudget {
+    if (!ack.reason.trim()) {
+      throw new UnsafeRateBudgetError('LocalRateBudget.forSingleProcess requires a written reason: this budget is enforced per process, not globally.')
+    }
+    const { topology, because } = resolveTopology(ack.env)
+
+    if (topology === 'fleet') {
+      throw new UnsafeRateBudgetError(
+        `refusing a per-process rate budget: ${because}, so each instance would hold a full bucket and the fleet would issue N times the configured rps ` +
+          `at a per-key provider ceiling (ADR-0002). A fleet worker needs a static slice, not this. Stated reason was: "${ack.reason}".`,
+      )
+    }
+
+    if (topology === 'undeclared') {
+      const detail =
+        `refusing a per-process rate budget: ${because}, so this process cannot show it is the only one. ` +
+        `Set COLLECTOR_TOPOLOGY=single-process (ADR-0006). Stated reason was: "${ack.reason}".`
+      if (!ack.overrideUndeclaredTopology) throw new UnsafeRateBudgetError(detail)
+      // eslint-disable-next-line no-console -- an unreported topology waiver is worse than a log line
+      const alert = ack.onAlert ?? ((m: string) => console.error(`[rate:undeclared-topology-override] ${m}`))
+      alert(`per-process rate budget taken on an undeclared topology. ${because}. Reason given: "${ack.reason}".`)
+    }
+
+    return new LocalRateBudget(buckets, ack.clock ?? realClock)
   }
 
   state(bucket: string): BucketState {
