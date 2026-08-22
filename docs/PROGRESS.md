@@ -439,11 +439,11 @@ guard, `resolveTopology` and the ADR along with it, and becomes available the
 moment the free-tier Upstash credentials land.
 
 **Sign-offs recorded 2026-08-22.** `budget.ts`, `rate-budget.ts` and `retry.ts`
-accepted on their review history. `format.ts` and `spend-ledger.ts` remain under
-review. `wilson.ts` was put up for a considered decision rather than a
-formality — 1,023 statsmodels reference vectors at three alphas plus six
-property tests, and one documented assumption that outlives them: it takes an
-*effective* n, and nothing measures the design effect until G0.
+accepted on their review history. `wilson.ts` accepted after a full read,
+boundary special case included — 1,023 statsmodels reference vectors at three
+alphas plus six property tests, and one documented assumption that outlives
+them: it takes an *effective* n, and nothing measures the design effect until
+G0. `format.ts` and `spend-ledger.ts` remain under review.
 
 **Nothing past G0 counts as validated progress until G0 has a real pass/fail
 result.** Everything above is infrastructure whose correctness is established
