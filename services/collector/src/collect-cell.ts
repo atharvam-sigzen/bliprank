@@ -24,17 +24,23 @@
 
 import { AdapterError, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
 import type { BlobStore } from './blob-store.js'
-import { Budget, BudgetExceeded } from './budget.js'
+import { BudgetExceeded } from './budget.js'
 import { AnswerIndex, r2KeyFor, type IndexEntry } from './cache-index.js'
 import type { DeadLetter } from './dead-letter.js'
 import type { RateBudget } from './rate-budget.js'
+import type { SpendLedger } from './spend-ledger.js'
 import { DEFAULT_RETRY, retryDecision, type RetryConfig } from './retry.js'
 
 export interface OrchestratorDeps {
   readonly index: AnswerIndex
   readonly blob: BlobStore
   readonly rateBudget: RateBudget
-  readonly budget: Budget
+  /**
+   * The USD ceiling (R3). A SpendLedger, not a Budget: this orchestrator runs
+   * one instance per QStash delivery, and a file-backed in-memory Budget would
+   * enforce the cap per container rather than globally. See spend-ledger.ts.
+   */
+  readonly budget: SpendLedger
   readonly deadLetter: DeadLetter
   /** Identifies this worker/process in a claim, for debugging who is collecting. */
   readonly owner: string
@@ -91,6 +97,18 @@ export class CollectionOrchestrator {
     }
   }
 
+  /** The runs already stored in an orphaned blob, so they are not re-bought. */
+  private async orphanRuns(r2Key: string): Promise<RawAnswer[]> {
+    try {
+      const body = await this.d.blob.get(r2Key)
+      if (!body) return []
+      const runs = (JSON.parse(body) as { runs?: unknown[] }).runs
+      return Array.isArray(runs) ? (runs as RawAnswer[]) : []
+    } catch {
+      return []
+    }
+  }
+
   /**
    * Collect one cell, cache-first. Never calls the provider on a complete cache
    * hit or when another worker holds the claim. On a miss it collects `runs`
@@ -123,21 +141,24 @@ export class CollectionOrchestrator {
     }
 
     // Recover an orphaned blob left by a crash between blob.put and markCollected.
+    // A complete orphan is a hit; a PARTIAL one is carried forward rather than
+    // discarded — those runs were already paid for, and overwriting the blob
+    // with a fresh collection would buy them a second time.
+    const answers: RawAnswer[] = []
     if (!cached && (await this.d.blob.has(r2Key))) {
       const recovered = await this.recoverOrphan(cell, adapterId, r2Key)
       if (recovered && recovered.runs >= req.runs) return { status: 'cache-hit', entry: recovered, providerCalls: 0 }
+      if (recovered) answers.push(...(await this.orphanRuns(r2Key)))
     }
-
-    const answers: RawAnswer[] = []
     let providerCalls = 0
     let stopped: 'budget' | 'abort' | null = null
 
-    for (let run = 0; run < req.runs && !stopped; run++) {
+    for (let run = answers.length; run < req.runs && !stopped; run++) {
       let attempt = 0
       for (;;) {
         attempt++
         try {
-          this.d.budget.charge(engine) // R3: charge before the call
+          await this.d.budget.charge(engine) // R3: charge before the call
         } catch (e) {
           if (e instanceof BudgetExceeded) {
             stopped = 'budget'
@@ -153,7 +174,7 @@ export class CollectionOrchestrator {
           const answer = await adapter.collect({ cell, prompt: req.prompt, run, signal: req.signal ?? ac.signal })
           for (let extra = 1; extra < answer.providerCalls; extra++) {
             try {
-              this.d.budget.charge(engine)
+              await this.d.budget.charge(engine)
               providerCalls++
             } catch (e) {
               if (e instanceof BudgetExceeded) {

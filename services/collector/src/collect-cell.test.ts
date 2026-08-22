@@ -5,11 +5,15 @@ import { describe, expect, it } from 'vitest'
 import { AdapterError, cacheCell, type EngineAdapter, type EngineId } from '@bliprank/contracts'
 import { MemoryBlobStore } from './blob-store.js'
 import { Budget } from './budget.js'
+import { LocalSpendLedger } from './spend-ledger.js'
 import { AnswerIndex, MemoryKV, r2KeyFor } from './cache-index.js'
 import { MemoryDeadLetter } from './dead-letter.js'
 import { LocalRateBudget } from './rate-budget.js'
 import { stubAdapter } from './adapters/stub.js'
 import { CollectionOrchestrator, type OrchestratorDeps } from './collect-cell.js'
+
+/** The charge count behind a ledger — the local impl wraps a file-backed Budget. */
+const ledgerCalls = (d: { budget: unknown }) => (d.budget as LocalSpendLedger).budget.state.calls
 
 const cellOf = (prompt: string, engine: EngineId = 'chatgpt', day = '2026-08-20') => cacheCell({ prompt, engine, locale: 'en-US', geo: 'US', dateBucket: day })
 
@@ -31,7 +35,7 @@ function deps(over: Partial<OrchestratorDeps> = {}): OrchestratorDeps & { _advan
     index: new AnswerIndex(new MemoryKV(() => clock.ms), 100 * 86_400, () => new Date(clock.ms)),
     blob: new MemoryBlobStore(),
     rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 }, gemini: { rps: 1000, burst: 1000 } }),
-    budget: new Budget(ledger, 100, () => 0.002),
+    budget: new LocalSpendLedger(new Budget(ledger, 100, () => 0.002)),
     deadLetter: new MemoryDeadLetter(),
     owner: 'worker-1',
     sleep: async () => {},
@@ -59,7 +63,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     expect((d.blob as MemoryBlobStore).size).toBe(1) // R4: one object per cell, not per answer
     expect(await d.blob.has(r2KeyFor(cell, adapter.id))).toBe(true) // path-qualified (B1)
     expect(r.entry.runs).toBe(5)
-    expect(d.budget.state.calls).toBe(5)
+    expect(ledgerCalls(d)).toBe(5)
   })
 
   it('R6: a re-collect of the same cell serves from cache with ZERO provider calls', async () => {
@@ -67,13 +71,13 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     const orch = new CollectionOrchestrator(d)
     const cell = cellOf('best crm')
     await orch.collectCell({ cell, prompt: 'best crm', runs: 5, adapter: countingStub('chatgpt') })
-    const before = d.budget.state.calls
+    const before = ledgerCalls(d)
     const adapter2 = countingStub('chatgpt')
     const r = await orch.collectCell({ cell, prompt: 'best crm', runs: 5, adapter: adapter2 })
     expect(r.status).toBe('cache-hit')
     expect(r.providerCalls).toBe(0)
     expect(adapter2.calls).toBe(0) // nothing hit the provider
-    expect(d.budget.state.calls).toBe(before) // nothing charged
+    expect(ledgerCalls(d)).toBe(before) // nothing charged
   })
 
   it('shared prompt-pool dedupe: while a claim is held, a second worker does not collect', async () => {
@@ -120,7 +124,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
   it('B2: a partial prior collection is NOT a permanent cache hit — a later call completes n', async () => {
     const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
     // first call: budget for only 3 of 10 requested runs
-    const d = deps({ budget: new Budget(ledger, 0.006, () => 0.002) })
+    const d = deps({ budget: new LocalSpendLedger(new Budget(ledger, 0.006, () => 0.002)) })
     const orch = new CollectionOrchestrator(d)
     const cell = cellOf('best crm')
     const a1 = countingStub('chatgpt')
@@ -131,7 +135,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     // cell must re-collect to complete n, not serve n=3 as a hit forever
     d._advance(1_801_000) // past the 1800s claim lease
     const ledger2 = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
-    const orch2 = new CollectionOrchestrator({ ...d, budget: new Budget(ledger2, 100, () => 0.002) })
+    const orch2 = new CollectionOrchestrator({ ...d, budget: new LocalSpendLedger(new Budget(ledger2, 100, () => 0.002)) })
     const a2 = countingStub('chatgpt')
     const r2 = await orch2.collectCell({ cell, prompt: 'best crm', runs: 10, adapter: a2 })
     expect(r2.status).toBe('collected') // NOT cache-hit
@@ -204,7 +208,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     expect(d.deadLetter.count('chatgpt', 'rejected')).toBe(3) // one per run, no retries
     expect((d.blob as MemoryBlobStore).size).toBe(0) // nothing stored
     expect((await d.index.lookup([cell])).hits.size).toBe(0) // not marked collected
-    expect(d.budget.state.calls).toBe(3) // each attempt still charged (R3)
+    expect(ledgerCalls(d)).toBe(3) // each attempt still charged (R3)
   })
 
   it('retryable failures are retried per policy, then succeed', async () => {
@@ -227,14 +231,14 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
 
   it('budget exhaustion stops the cell before overspending; partial answers still stored', async () => {
     const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
-    const d = deps({ budget: new Budget(ledger, 0.006, () => 0.002) }) // room for exactly 3 charges
+    const d = deps({ budget: new LocalSpendLedger(new Budget(ledger, 0.006, () => 0.002)) }) // room for exactly 3 charges
     const orch = new CollectionOrchestrator(d)
     const cell = cellOf('best crm')
     const adapter = countingStub('chatgpt')
     const r = await orch.collectCell({ cell, prompt: 'best crm', runs: 10, adapter })
     expect(r.status).toBe('budget-exhausted')
     expect(adapter.calls).toBe(3) // cap stopped it at 3, not 10
-    expect(d.budget.state.spentUsd).toBeCloseTo(0.006, 9)
+    expect((d.budget as LocalSpendLedger).budget.state.spentUsd).toBeCloseTo(0.006, 9)
     if (r.status === 'budget-exhausted') expect(r.answers).toHaveLength(3) // the 3 that succeeded are kept
     expect((d.blob as MemoryBlobStore).size).toBe(1) // partial cell written
   })

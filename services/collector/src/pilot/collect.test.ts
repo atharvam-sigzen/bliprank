@@ -95,14 +95,24 @@ describe('the cap is per pilot, not per day', () => {
     expect(ok.exitCode).toBe(0)
     const ledger = JSON.parse(readFileSync(ok.ledgerFile, 'utf8')) as { capUsd: number }
     expect(ledger.capUsd).toBeCloseTo(1.75)
-    expect(existsSync(join(dataDir, '2026-08-20', 'run.lock'))).toBe(false)
+    expect(existsSync(join(dataDir, 'run.lock'))).toBe(false)
     expect(existsSync(join(dataDir, '2026-08-20', 'meta.json'))).toBe(true)
   })
   it('a live lock from another process refuses a second run', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
-    mkdirSync(join(dataDir, '2026-08-21'), { recursive: true })
-    writeFileSync(join(dataDir, '2026-08-21', 'run.lock'), String(process.pid)) // this very process is alive
+    writeFileSync(join(dataDir, 'run.lock'), String(process.pid)) // this very process is alive
     const opts = optionsFromEnv(['--fixture', '--day', '2026-08-21', '--bank', bankFile, '--runs', '1', '--limit-prompts', '1', '--engines', 'gemini', '--data', dataDir], {}) as RunOptions
+    opts.log = () => {}
+    await expect(runPilot(opts)).rejects.toThrow(/another run holds/)
+  })
+
+  it('the lock is pilot-wide, so a CONCURRENT run on a different day is refused too', async () => {
+    // The cap is per pilot. A day-scoped lock let two operators launch --day A
+    // and --day B at the same moment, each reading prior spend as $0 and each
+    // free to spend the whole cap.
+    const dataDir = mkdtempSync(join(tmpdir(), 'pilot-'))
+    writeFileSync(join(dataDir, 'run.lock'), String(process.pid))
+    const opts = optionsFromEnv(['--fixture', '--day', '2026-08-22', '--bank', bankFile, '--runs', '1', '--limit-prompts', '1', '--engines', 'gemini', '--data', dataDir], {}) as RunOptions
     opts.log = () => {}
     await expect(runPilot(opts)).rejects.toThrow(/another run holds/)
   })

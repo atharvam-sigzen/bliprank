@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { cacheCell, type EngineAdapter, type EngineId } from '@bliprank/contracts'
 import { MemoryBlobStore } from './blob-store.js'
 import { Budget } from './budget.js'
+import { LocalSpendLedger } from './spend-ledger.js'
 import { AnswerIndex, MemoryKV, r2KeyFor } from './cache-index.js'
 import { MemoryDeadLetter } from './dead-letter.js'
 import { LocalRateBudget } from './rate-budget.js'
@@ -39,7 +40,7 @@ function handlerDeps(over: Partial<Parameters<typeof handleCollectJob>[1]> = {})
     index: new AnswerIndex(new MemoryKV(), 100 * 86_400, () => NOW),
     blob: new MemoryBlobStore(),
     rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 } }),
-    budget: new Budget(ledger, 100, () => 0.002),
+    budget: new LocalSpendLedger(new Budget(ledger, 100, () => 0.002)),
     deadLetter,
     owner: 'worker-1',
     sleep: async () => {},
@@ -172,7 +173,7 @@ describe('handleCollectJob — spend-safe status mapping', () => {
       index: new AnswerIndex(new MemoryKV(), 100 * 86_400, () => NOW),
       blob: new MemoryBlobStore(),
       rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 } }),
-      budget: new Budget(join(mkdtempSync(join(tmpdir(), 'qstash-')), 'ledger.json'), 100, () => 0.002),
+      budget: new LocalSpendLedger(new Budget(join(mkdtempSync(join(tmpdir(), 'qstash-')), 'ledger.json'), 100, () => 0.002)),
       deadLetter: new MemoryDeadLetter(),
       owner: 'w',
       collectionEnabled: () => false, // R3 gate shut

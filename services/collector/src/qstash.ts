@@ -211,21 +211,30 @@ export async function handleCollectJob(req: IncomingRequest, d: HandlerDeps): Pr
   //    dead-lettered anything transient inside its own budget.
   try {
     const outcome = await d.orchestrator.collectCell({ cell: job.cell, prompt: job.prompt, runs: job.runs, adapter })
-    if (outcome.status === 'failed') {
-      // Attempts are spent. A QStash retry would spend more for the same result,
-      // so this is reported as handled and left in the dead-letter for a human.
+    // Any outcome that leaves the cell short of `runs` gets a durable record.
+    // Reviewers found two holes here. First, only 'failed' was recorded, so a
+    // cycle that exhausted its budget mid-morning returned ok:true for every
+    // remaining cell and the day's coverage shrank with no signal anywhere -
+    // an R8 problem, since `n` is part of every published number. Second, the
+    // 'failed' entry duplicated what collect-cell already records per run, with
+    // a wrong attempt count. So: record a single shortfall entry, only for the
+    // outcomes collect-cell does not already dead-letter itself.
+    const shortfall = outcome.status === 'budget-exhausted' || outcome.status === 'aborted'
+    if (shortfall) {
+      const got = 'answers' in outcome ? outcome.answers.length : 0
       d.deadLetter.record({
         engine: job.cell.engine,
         cellKey: job.cell.key,
         prompt: job.prompt,
-        run: -1,
-        kind: 'provider',
-        message: 'collect job exhausted its attempts',
-        attempts: job.runs,
+        run: got,
+        kind: outcome.status === 'budget-exhausted' ? 'rate-limited' : 'timeout',
+        message: `cell left short: ${got} of ${job.runs} runs (${outcome.status})`,
+        attempts: outcome.providerCalls,
         at: (d.now?.() ?? new Date()).toISOString(),
       })
     }
-    return { status: 200, body: { ok: outcome.status !== 'failed', outcome: outcome.status, providerCalls: outcome.providerCalls } }
+    const complete = outcome.status === 'collected' || outcome.status === 'cache-hit' || outcome.status === 'claimed-elsewhere'
+    return { status: 200, body: { ok: complete, outcome: outcome.status, providerCalls: outcome.providerCalls } }
   } catch (e) {
     // Reached only for a refusal *before* any call - the R3 gate, or a broken
     // dependency. Nothing was spent, so a retry is safe and 503 asks for one.

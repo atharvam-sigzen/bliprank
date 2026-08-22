@@ -150,7 +150,7 @@ export async function runPilot(o: RunOptions): Promise<{ exitCode: number; stats
   mkdirSync(dayDir, { recursive: true })
   const ledgerFile = join(dayDir, 'ledger.json')
   const failuresFile = join(dayDir, 'failures.jsonl')
-  const lockFile = join(dayDir, 'run.lock')
+  const lockFile = join(o.dataDir, 'run.lock') // pilot-wide, not per-day: the cap is per pilot, so two concurrent --day runs must not each see prior=0
   if (existsSync(lockFile)) {
     const pid = Number(readFileSync(lockFile, 'utf8').trim())
     if (pid && pidAlive(pid)) throw new Error(`another run holds ${lockFile} (pid ${pid}); two runs would each spend up to the cap`)

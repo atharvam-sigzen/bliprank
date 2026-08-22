@@ -26,6 +26,12 @@ export interface KV {
   set(key: string, value: string, opts?: { ttlSec?: number }): Promise<void>
   /** Atomic set-if-absent. Returns true when this caller won the key. */
   setnx(key: string, value: string, opts?: { ttlSec?: number }): Promise<boolean>
+  /**
+   * Atomic add, returning the value AFTER the increment. The post-increment
+   * read is the point: it is what lets a spend ledger decide, without a lock,
+   * whether *this* caller is the one that crossed the cap (spend-ledger.ts).
+   */
+  incrByFloat(key: string, delta: number, opts?: { ttlSec?: number }): Promise<number>
 }
 
 export class MemoryKV implements KV {
@@ -53,6 +59,11 @@ export class MemoryKV implements KV {
     if (this.live(key) !== null) return false
     await this.set(key, value, opts)
     return true
+  }
+  async incrByFloat(key: string, delta: number, opts?: { ttlSec?: number }): Promise<number> {
+    const next = Number(this.live(key) ?? 0) + delta
+    await this.set(key, String(next), opts ?? {})
+    return next
   }
 }
 
@@ -101,6 +112,14 @@ export class UpstashKV implements KV {
     if (opts?.ttlSec) cmd.push('EX', opts.ttlSec)
     // Redis returns OK when set, null when the key already existed.
     return this.one((await this.pipeline([cmd]))[0]) === 'OK'
+  }
+  async incrByFloat(key: string, delta: number, opts?: { ttlSec?: number }): Promise<number> {
+    // INCRBYFLOAT is atomic and returns the post-increment value. EXPIRE rides
+    // in the same pipeline so a counter cannot be created without a TTL.
+    const cmds: (string | number)[][] = [['INCRBYFLOAT', key, delta]]
+    if (opts?.ttlSec) cmds.push(['EXPIRE', key, opts.ttlSec])
+    const res = await this.pipeline(cmds)
+    return Number(this.one(res[0]))
   }
 }
 
