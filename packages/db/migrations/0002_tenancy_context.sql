@@ -347,7 +347,11 @@ BEGIN
         FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS grp
        WHERE pg_has_role(r.rolname, grp, 'MEMBER')
     ) g ON true
-   WHERE r.rolcanlogin AND NOT r.rolsuper AND g.n > 1;
+     -- NOT rolcanlogin: that lesson was applied to the BYPASSRLS scan below and
+     -- not to these two. A NOLOGIN role in two authority groups is a database
+     -- that is already wrong, and it goes live the moment any login role is
+     -- granted it — the same argument the group-to-group block already makes.
+   WHERE NOT r.rolsuper AND r.rolname NOT LIKE 'pg\_%' AND g.n > 1;
 
   IF offenders IS NOT NULL THEN
     RAISE EXCEPTION 'role exclusivity violated: %. Each login role must reach exactly one of app_rw / svc_scorer / svc_onboard.', offenders;
@@ -373,7 +377,15 @@ BEGIN
     -- name that does not exist.
     SELECT r.rolname AS name FROM pg_roles r
      CROSS JOIN LATERAL (SELECT p.rolname AS grp FROM pg_roles p WHERE p.rolname IN ('auth_verifier','deploy_check')) priv
-     WHERE r.rolcanlogin AND NOT r.rolsuper AND pg_has_role(r.rolname, priv.grp, 'MEMBER')
+     -- Reaching a privileged name is a violation only for a role that also
+     -- serves an application. A dedicated deploy principal reaching deploy_check
+     -- and nothing else is the intended posture, not a fault — and rolcanlogin
+     -- is not the discriminator, since a NOLOGIN role granted to a login role
+     -- later carries the same reach.
+     WHERE NOT r.rolsuper AND r.rolname NOT LIKE 'pg\_%' AND r.rolname <> priv.grp
+       AND pg_has_role(r.rolname, priv.grp, 'MEMBER')
+       AND EXISTS (SELECT 1 FROM unnest(ARRAY['app_rw','svc_scorer','svc_onboard']) AS ag(grp)
+                    WHERE pg_has_role(r.rolname, ag.grp, 'MEMBER'))
     UNION
     SELECT grp FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS grp
      CROSS JOIN LATERAL (SELECT p.rolname AS pgrp FROM pg_roles p WHERE p.rolname IN ('auth_verifier','deploy_check')) priv

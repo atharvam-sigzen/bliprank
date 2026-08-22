@@ -387,6 +387,25 @@ asserted the gate *tolerates* something — `manifest_root()`, the `deploy_check
 exemption, `assert_role_powers()` — were the three that were broken. Each now
 has a case requiring it to refuse.
 
+**Audit seven found three more, two of them again created by the previous fix.**
+The descendant sweep resolved the manifest on the *root's* schema while the two
+other loops resolve it on the *child's*, so `CREATE TABLE archive.accounts (LIKE
+public.accounts)` plus an `INHERIT` — a cold-storage move — shed the obligation
+while keeping the declaration, and returned every tenant's user emails. And a
+`scoped` declaration on a **view** carried no obligation at all: views have no
+policies, the RLS duty was filtered to ordinary tables, and a plain view runs
+with its owner's rights straight past RLS. The obligation is now derived from the
+relation kind rather than filtered to one.
+
+The third is the one worth remembering. **The gate could not pass the production
+posture at all.** Ownership confers every privilege implicitly; the sweeps
+excluded only superusers, which worked solely because PGlite's owner is one.
+Reassigning the tables to a non-superuser — what Supabase does by default, and
+what `0001` says the design exists to survive — produced 54 faults. The gate had
+never been run against the shape it was written for, and the predictable remedy
+(exempt the owner by name, or `|| true` in the pipeline) is what its own preamble
+warns against. Owners are excluded per relation and constrained instead.
+
 **Accepted consequence, recorded rather than discovered later:** the tenant read
 path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
 `default_transaction_read_only`, and the context table is `UNLOGGED` and so does

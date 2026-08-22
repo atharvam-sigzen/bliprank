@@ -372,7 +372,9 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     // No login role exists here, so a login-only scan passes a database that is
     // already wrong and stays wrong for every role created later.
     await d.exec(`GRANT svc_onboard TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/authority groups must not reach each other/)
+    // Caught by the first exclusivity scan now that it no longer filters on
+    // rolcanlogin: app_rw itself reaches two authority groups.
+    await expect(check(d)).rejects.toThrow(/role exclusivity violated: app_rw/)
   })
 
   it('THE FINDING: a new SECURITY DEFINER helper granted to an application role', async () => {
@@ -764,5 +766,150 @@ describe('audit 6 — the obligations follow the declaration down the tree', () 
     // The tolerance case is kept — a gate that fails on correct maintenance gets
     // `|| true`'d — but it is no longer the only case.
     await expect(check(d)).resolves.toBeDefined()
+  })
+})
+
+describe('audit 7 — one key for declaration and obligation, and the owner is a principal', () => {
+  it('THE FINDING: a same-named parent in another schema does not shed the obligation', async () => {
+    for (const rel of ['accounts', 'workspace_brands', 'score_aggregates']) {
+      const d = await healthy()
+      await d.exec(`CREATE SCHEMA archive`)
+      await d.exec(`CREATE TABLE archive.${rel} (LIKE public.${rel})`)
+      await d.exec(`ALTER TABLE public.${rel} INHERIT archive.${rel}`)
+      await d.exec(`ALTER TABLE public.${rel} DISABLE ROW LEVEL SECURITY`)
+      // The declaration resolved on the CHILD's schema and the obligation on the
+      // ROOT's, so `CREATE TABLE archive.x (LIKE public.x)` — a cold-storage or
+      // schema-reorg move — passed the gate and returned every tenant's rows.
+      await expect(check(d)).rejects.toThrow(new RegExp('scoped-without-forced-rls[^]*public[.]' + rel))
+    }
+  })
+
+  it('THE FINDING: a scoped VIEW must be security_invoker', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE VIEW my_scores AS SELECT brand_id, mentions FROM score_rows`)
+    await d.exec(`GRANT SELECT ON my_scores TO app_rw`)
+    await d.exec(`INSERT INTO tenancy_exposure_manifest VALUES ('public','my_scores','SELECT','scoped','dashboard read model')`)
+    // A view has no policies, so the policy loop never saw one, and the RLS
+    // obligation was filtered to relkind ('r','p'). A plain view runs with its
+    // OWNER's rights, straight past the base table's RLS — and a dashboard read
+    // model is the most likely next object in apps/web.
+    await expect(check(d)).rejects.toThrow(/scoped-view-not-invoker/)
+  })
+
+  it('a scoped security_invoker view is accepted', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE VIEW my_scores WITH (security_invoker = true) AS SELECT brand_id, mentions FROM score_rows`)
+    await d.exec(`GRANT SELECT ON my_scores TO app_rw`)
+    await d.exec(`INSERT INTO tenancy_exposure_manifest VALUES ('public','my_scores','SELECT','scoped','dashboard read model')`)
+    await expect(check(d)).resolves.toBeDefined()
+  })
+
+  it('a scoped matview or foreign table is refused outright — neither can carry a policy', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE MATERIALIZED VIEW score_mv AS SELECT brand_id, mentions FROM score_rows`)
+    await d.exec(`GRANT SELECT ON score_mv TO app_rw`)
+    await d.exec(`INSERT INTO tenancy_exposure_manifest VALUES ('public','score_mv','SELECT','scoped','rollup')`)
+    await expect(check(d)).rejects.toThrow(/scoped-kind-cannot-scope/)
+  })
+
+  it('THE FINDING: the gate passes with the tables owned by a NON-superuser', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE migrator NOLOGIN`)
+    await d.exec(`GRANT migrator TO postgres`)
+    for (const t of ['accounts', 'workspaces', 'workspace_members', 'workspace_brands', 'workspace_subscriptions', 'brands', 'prompt_banks', 'score_rows', 'score_aggregates']) {
+      await d.exec(`ALTER TABLE public.${t} OWNER TO migrator`)
+    }
+    // This is the posture 0001 says the design exists to survive, and the gate
+    // had never been run against it: ownership confers every privilege
+    // implicitly, the grantee sweep excluded only rolsuper, and reassigning
+    // ownership produced 54 faults. The predictable remedy — exempt the owner by
+    // name, or `|| true` — is what the file's own preamble warns against.
+    await expect(check(d)).resolves.toBeDefined()
+  })
+
+  it('but an owner that can log in, or that a tenant can reach, is refused', async () => {
+    const d1 = await healthy()
+    await d1.exec(`CREATE ROLE migrator LOGIN`)
+    await d1.exec(`GRANT migrator TO postgres`)
+    await d1.exec(`ALTER TABLE public.accounts OWNER TO migrator`)
+    await expect(check(d1)).rejects.toThrow(/owner-can-login/)
+
+    const d2 = await healthy()
+    await d2.exec(`CREATE ROLE migrator NOLOGIN`)
+    await d2.exec(`GRANT migrator TO postgres`)
+    await d2.exec(`ALTER TABLE public.accounts OWNER TO migrator`)
+    await d2.exec(`GRANT migrator TO app_rw`)
+    await expect(check(d2)).rejects.toThrow(/owner-reachable-by-tenant/)
+  })
+
+  it('THE FINDING: a shared relation may not reference a scoped one', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE recon_imports (id uuid PRIMARY KEY, workspace_id uuid NOT NULL REFERENCES workspaces(id), payload jsonb)`)
+    await d.exec(`ALTER TABLE recon_imports ENABLE ROW LEVEL SECURITY`)
+    await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
+    await d.exec(`GRANT SELECT ON recon_imports TO app_rw`)
+    await d.exec(`CREATE POLICY recon_read ON recon_imports FOR SELECT USING (true)`)
+    await d.exec(`INSERT INTO tenancy_exposure_manifest VALUES ('public','recon_imports','SELECT','shared','competitor export cache',
+                  ARRAY['id:uuid','payload:jsonb','workspace_id:uuid'])`)
+    // `shared` was an unconstrained escape hatch: a workspace column sat in the
+    // approved list and nothing objected. Naming the tenancy columns would be
+    // the unbounded shape again, so this derives it from the manifest.
+    await expect(check(d)).rejects.toThrow(/shared-references-scoped/)
+  })
+
+  it('a NOLOGIN role in two authority groups is refused, login or not', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE reporting NOLOGIN NOINHERIT`)
+    await d.exec(`GRANT app_rw TO reporting`)
+    await d.exec(`GRANT svc_onboard TO reporting`)
+    // rolcanlogin was still filtering both exclusivity scans. A NOLOGIN role in
+    // two groups is a database that is already wrong, and it goes live the
+    // moment any login role is granted it.
+    await expect(check(d)).rejects.toThrow(/role exclusivity violated: reporting/)
+  })
+
+  it('a NOINHERIT role reaching auth_verifier is refused even without a login role', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE reporting NOLOGIN NOINHERIT`)
+    await d.exec(`GRANT app_rw TO reporting`)
+    await d.exec(`GRANT auth_verifier TO reporting`)
+    // NOINHERIT defeats has_table_privilege, so the reachability sweep cannot
+    // see it; the exclusivity scan must, and it did not while it filtered on
+    // rolcanlogin.
+    await expect(check(d)).rejects.toThrow(/can reach auth_verifier or deploy_check/)
+  })
+
+  it('a tenant holding a temp table does not fail the deploy', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TEMP TABLE scratch (x int)`)
+    await d.exec(`CREATE TEMP SEQUENCE scratch_seq`)
+    // TEMP is granted to PUBLIC by default, so any tenant could break the deploy
+    // at will — and a gate that fails at an attacker's convenience converges on
+    // `|| true` in the pipeline, which is the outcome this file exists to avoid.
+    await expect(check(d)).resolves.toBeDefined()
+  })
+
+  it('shared-relation-writable fires on its own, not only alongside another fault', async () => {
+    const d = await healthy()
+    // No grant — so `undeclared-exposure` cannot fire and satisfy the assertion
+    // by the wrong branch. The policy alone is the fault.
+    await d.exec(`CREATE POLICY banks_editable ON prompt_banks FOR UPDATE USING (true) WITH CHECK (true)`)
+    await expect(check(d)).rejects.toThrow(/shared-relation-writable/)
+  })
+
+  it('a missing context function, and one owned by the wrong role, are both refused', async () => {
+    const d1 = await healthy()
+    await d1.exec(`DROP FUNCTION set_workspace(uuid)`)
+    await expect(check(d1)).rejects.toThrow(/must exist and be SECURITY DEFINER/)
+
+    const d2 = await healthy()
+    await d2.exec(`ALTER FUNCTION current_workspace_id() OWNER TO postgres`)
+    await expect(check(d2)).rejects.toThrow(/must exist and be SECURITY DEFINER|definer-function-unsafe/)
+  })
+
+  it('TRUNCATE held by PUBLIC is refused, not only by app_rw', async () => {
+    const d = await healthy()
+    await d.exec(`GRANT TRUNCATE ON score_rows TO PUBLIC`)
+    await expect(check(d)).rejects.toThrow(/truncate-granted/)
   })
 })

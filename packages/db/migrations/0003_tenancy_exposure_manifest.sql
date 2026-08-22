@@ -163,6 +163,15 @@ BEGIN
      ) g
      WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
        AND ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
+       -- A relation's OWNER holds every privilege on it implicitly. Excluding
+       -- only rolsuper worked because PGlite's owner is a superuser; production
+       -- owners are not, which is the exact difference this design exists to
+       -- survive (0001). With ownership reassigned to a non-superuser the gate
+       -- produced 54 faults and could not pass the posture it prescribes — the
+       -- failure mode of 3c7e78b, and the predictable remedy (exempt the owner
+       -- by name, or `|| true`) is what this file's preamble warns against.
+       -- Owners are constrained separately below instead.
+       AND g.rolname <> pg_get_userbyid(c.relowner)
        AND c.relkind IN ('r','p','v','m','f')
        AND (has_table_privilege(g.rolname, c.oid, p.priv)
             OR (p.priv NOT IN ('TRUNCATE','DELETE') AND has_any_column_privilege(g.rolname, c.oid, p.priv)))
@@ -187,6 +196,8 @@ BEGIN
        UNION ALL SELECT 'public'
      ) g
      WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+       AND ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
+       AND g.rolname <> pg_get_userbyid(c.relowner)
        AND c.relkind = 'S'
        AND (has_sequence_privilege(g.rolname, c.oid, 'SELECT') OR has_sequence_privilege(g.rolname, c.oid, 'USAGE'))
        AND NOT EXISTS (
@@ -211,6 +222,8 @@ BEGIN
        UNION ALL SELECT 'public'
      ) g
      WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+       AND ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
+       AND g.rolname <> pg_get_userbyid(c.relowner)
        AND c.relkind IN ('r','p') AND has_table_privilege(g.rolname, c.oid, 'TRUNCATE')
   LOOP
     kind := 'truncate-granted';
@@ -236,22 +249,89 @@ BEGIN
   -- If manifest_root() is good enough to confer the exemption, it is the only
   -- thing good enough to scope the requirement. So this iterates pg_class, not
   -- the manifest.
+  --
+  -- ONE KEY for declaration and obligation. The first version of this sweep
+  -- resolved the manifest on the ROOT's schema (`m.schema_name = rns.nspname`)
+  -- while `undeclared-exposure` and the policy loop resolve it on the CHILD's.
+  -- Giving a declared relation a same-named parent in another schema then made
+  -- the declaration resolve and the duty not:
+  --
+  --     CREATE TABLE archive.accounts (LIKE public.accounts);
+  --     ALTER TABLE public.accounts INHERIT archive.accounts;
+  --     ALTER TABLE public.accounts DISABLE ROW LEVEL SECURITY;
+  --
+  -- passed the gate and returned every tenant's user emails. That is exactly
+  -- what `CREATE TABLE archive.x (LIKE public.x)` produces — a cold-storage or
+  -- schema-reorg move — and it is the same bug as the commit that introduced
+  -- this sweep, one column over.
+  --
+  -- AND THE OBLIGATION IS DERIVED FROM THE RELKIND, not filtered to ('r','p').
+  -- A `scoped` VIEW carried no duty at all: views have no policies, so the
+  -- policy loop never saw one, and a plain view executes with its OWNER's
+  -- rights, straight past the base table's RLS. A dashboard read-model view is
+  -- the most likely next object in apps/web and `scoped` is the disposition its
+  -- author would reach for.
   FOR r IN
-    SELECT ns.nspname, c.relname
+    SELECT ns.nspname, c.relname, c.relkind,
+           coalesce((SELECT option_value FROM pg_options_to_table(c.reloptions)
+                      WHERE option_name = 'security_invoker'), 'false') AS invoker
       FROM pg_class c
       JOIN pg_namespace ns ON ns.oid = c.relnamespace
       JOIN pg_class root ON root.oid = manifest_root(c.oid)
-      JOIN pg_namespace rns ON rns.oid = root.relnamespace
-     WHERE c.relkind IN ('r','p')
+     WHERE c.relkind IN ('r','p','v','m','f')
        AND ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+       AND ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
        AND EXISTS (SELECT 1 FROM tenancy_exposure_manifest m
-                    WHERE m.schema_name = rns.nspname AND m.relation = root.relname
+                    WHERE m.schema_name = ns.nspname AND m.relation = root.relname
                       AND m.disposition = 'scoped')
-       AND NOT (c.relrowsecurity AND c.relforcerowsecurity)
   LOOP
-    kind := 'scoped-without-forced-rls';
-    detail := format('%s.%s inherits a scoped declaration but does not FORCE row level security', r.nspname, r.relname);
-    RETURN NEXT;
+    IF r.relkind IN ('r','p') AND NOT EXISTS (
+      SELECT 1 FROM pg_class c2 JOIN pg_namespace n2 ON n2.oid = c2.relnamespace
+       WHERE n2.nspname = r.nspname AND c2.relname = r.relname
+         AND c2.relrowsecurity AND c2.relforcerowsecurity)
+    THEN
+      kind := 'scoped-without-forced-rls';
+      detail := format('%s.%s inherits a scoped declaration but does not FORCE row level security', r.nspname, r.relname);
+      RETURN NEXT;
+    ELSIF r.relkind = 'v' AND lower(r.invoker) NOT IN ('true','on') THEN
+      kind := 'scoped-view-not-invoker';
+      detail := format('%s.%s is declared scoped but is not a security_invoker view, so it runs with its owner''s rights past RLS', r.nspname, r.relname);
+      RETURN NEXT;
+    ELSIF r.relkind IN ('m','f') THEN
+      kind := 'scoped-kind-cannot-scope';
+      detail := format('%s.%s is declared scoped but a %s can carry no policy at all', r.nspname, r.relname,
+                       CASE r.relkind WHEN 'm' THEN 'materialized view' ELSE 'foreign table' END);
+      RETURN NEXT;
+    END IF;
+  END LOOP;
+
+  -- ---- object owners are a principal, and must be constrained like one ------
+  -- Excluded from the grantee sweep above because ownership confers everything
+  -- implicitly. That exclusion is only safe while an owner cannot be reached by
+  -- anything that serves a tenant.
+  FOR r IN
+    SELECT DISTINCT o.rolname AS owner, o.rolcanlogin,
+           (SELECT string_agg(grp, ', ') FROM unnest(ARRAY['app_rw','svc_scorer','svc_onboard']) grp
+             WHERE pg_has_role(grp, o.rolname, 'MEMBER')) AS reached_by
+      FROM pg_class c
+      JOIN pg_namespace ns ON ns.oid = c.relnamespace
+      JOIN pg_roles o ON o.oid = c.relowner
+     WHERE c.relkind IN ('r','p','v','m','f','S')
+       AND EXISTS (SELECT 1 FROM tenancy_exposure_manifest m
+                    WHERE m.schema_name = ns.nspname
+                      AND m.relation = (SELECT rc.relname FROM pg_class rc WHERE rc.oid = manifest_root(c.oid)))
+       AND NOT o.rolsuper
+  LOOP
+    IF r.rolcanlogin THEN
+      kind := 'owner-can-login';
+      detail := format('%s owns declared relations and can log in; ownership confers every privilege implicitly', r.owner);
+      RETURN NEXT;
+    END IF;
+    IF r.reached_by IS NOT NULL THEN
+      kind := 'owner-reachable-by-tenant';
+      detail := format('%s owns declared relations and is reachable by %s', r.owner, r.reached_by);
+      RETURN NEXT;
+    END IF;
   END LOOP;
 
   -- ---- a shared relation must be a LEAF ------------------------------------
@@ -277,6 +357,30 @@ BEGIN
     RETURN NEXT;
   END LOOP;
 
+  -- ---- a shared relation may not be tied to tenancy ------------------------
+  -- `shared` means USING (true) for every tenant, and the only check on it was
+  -- drift. A new table declared shared with `workspace_id:uuid` in its approved
+  -- column list passed and returned both tenants' rows. Naming the tenancy
+  -- columns would be the unbounded shape again, so this derives it: a shared
+  -- relation may not carry a foreign key to anything declared `scoped`.
+  FOR r IN
+    SELECT m.schema_name, m.relation, tgt.relname AS target
+      FROM tenancy_exposure_manifest m
+      JOIN pg_class c ON c.relname = m.relation
+      JOIN pg_namespace ns ON ns.oid = c.relnamespace AND ns.nspname = m.schema_name
+      JOIN pg_constraint fk ON fk.conrelid = c.oid AND fk.contype = 'f'
+      JOIN pg_class tgt ON tgt.oid = fk.confrelid
+      JOIN pg_namespace tns ON tns.oid = tgt.relnamespace
+     WHERE m.disposition = 'shared'
+       AND EXISTS (SELECT 1 FROM tenancy_exposure_manifest m2
+                    WHERE m2.schema_name = tns.nspname AND m2.relation = tgt.relname
+                      AND m2.disposition = 'scoped')
+  LOOP
+    kind := 'shared-references-scoped';
+    detail := format('%s.%s is declared shared but references %s, which is tenant-scoped', r.schema_name, r.relation, r.target);
+    RETURN NEXT;
+  END LOOP;
+
   -- ---- multi-parent inheritance is refused ---------------------------------
   -- manifest_root() takes the first parent it finds. With two parents the
   -- declaration a child inherits would be decided by heap order rather than by
@@ -284,7 +388,8 @@ BEGIN
   FOR r IN
     SELECT ns.nspname, c.relname
       FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
-     WHERE (SELECT count(*) FROM pg_inherits i WHERE i.inhrelid = c.oid) > 1
+     WHERE ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
+       AND (SELECT count(*) FROM pg_inherits i WHERE i.inhrelid = c.oid) > 1
   LOOP
     kind := 'multi-parent-inheritance';
     detail := format('%s.%s has more than one parent; which manifest declaration governs it is undefined', r.nspname, r.relname);
