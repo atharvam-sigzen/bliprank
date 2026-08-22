@@ -19,3 +19,6 @@ services/collector/pilot/data/
 .next/
 out/
 next-env.d.ts
+
+# Personal local editor config (Obsidian vault settings — not project state)
+.obsidian/
