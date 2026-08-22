@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { AdapterError, cacheCell, type EngineAdapter, type EngineId } from '@bliprank/contracts'
-import { MemoryBlobStore, R2BlobStore } from './blob-store.js'
+import { MemoryBlobStore } from './blob-store.js'
 import { Budget } from './budget.js'
 import { AnswerIndex, MemoryKV, r2KeyFor } from './cache-index.js'
 import { MemoryDeadLetter } from './dead-letter.js'
@@ -237,12 +237,5 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     expect(d.budget.state.spentUsd).toBeCloseTo(0.006, 9)
     if (r.status === 'budget-exhausted') expect(r.answers).toHaveLength(3) // the 3 that succeeded are kept
     expect((d.blob as MemoryBlobStore).size).toBe(1) // partial cell written
-  })
-})
-
-describe('R2BlobStore is a marked stub (P1.5 not built)', () => {
-  it('throws rather than silently no-op', async () => {
-    const s = new R2BlobStore({ accountId: 'a', bucket: 'b', accessKeyId: 'k', secretAccessKey: 's' })
-    await expect(s.put('k', 'v')).rejects.toThrow(/not implemented/)
   })
 })
