@@ -1,7 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { confidenceGrade, formatInterval, formatProvenance, formatValue, wilson, type Metric } from '@bliprank/stats'
+import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue, wilson, type Metric } from '@bliprank/stats'
+
+// Module scope on purpose: the grade is only computed after a user submits, so
+// relying on confidenceGrade to throw would mean discovering the block in front
+// of a customer rather than at build time. This fails `next build` instead.
+assertProvisionalAllowed('The AI Visibility Grader')
 
 /**
  * The free Grader — P3.3, the acquisition path.

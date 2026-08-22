@@ -6,6 +6,11 @@ import { AdapterError, cacheCell, type EngineAdapter, type EngineId } from '@bli
 import { MemoryBlobStore } from './blob-store.js'
 import { Budget } from './budget.js'
 import { LocalSpendLedger } from './spend-ledger.js'
+
+/** The guarded factory, wrapped once so each test reads clearly. */
+const localLedger = (b: Budget) =>
+  LocalSpendLedger.forSingleProcess(b, { iUnderstandThisCapIsPerProcess: true, reason: 'unit test: one process, no fleet', env: {} })
+
 import { AnswerIndex, MemoryKV, r2KeyFor } from './cache-index.js'
 import { MemoryDeadLetter } from './dead-letter.js'
 import { LocalRateBudget } from './rate-budget.js'
@@ -35,7 +40,7 @@ function deps(over: Partial<OrchestratorDeps> = {}): OrchestratorDeps & { _advan
     index: new AnswerIndex(new MemoryKV(() => clock.ms), 100 * 86_400, () => new Date(clock.ms)),
     blob: new MemoryBlobStore(),
     rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 }, gemini: { rps: 1000, burst: 1000 } }),
-    budget: new LocalSpendLedger(new Budget(ledger, 100, () => 0.002)),
+    budget: localLedger(new Budget(ledger, 100, () => 0.002)),
     deadLetter: new MemoryDeadLetter(),
     owner: 'worker-1',
     sleep: async () => {},
@@ -124,7 +129,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
   it('B2: a partial prior collection is NOT a permanent cache hit — a later call completes n', async () => {
     const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
     // first call: budget for only 3 of 10 requested runs
-    const d = deps({ budget: new LocalSpendLedger(new Budget(ledger, 0.006, () => 0.002)) })
+    const d = deps({ budget: localLedger(new Budget(ledger, 0.006, () => 0.002)) })
     const orch = new CollectionOrchestrator(d)
     const cell = cellOf('best crm')
     const a1 = countingStub('chatgpt')
@@ -135,7 +140,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     // cell must re-collect to complete n, not serve n=3 as a hit forever
     d._advance(1_801_000) // past the 1800s claim lease
     const ledger2 = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
-    const orch2 = new CollectionOrchestrator({ ...d, budget: new LocalSpendLedger(new Budget(ledger2, 100, () => 0.002)) })
+    const orch2 = new CollectionOrchestrator({ ...d, budget: localLedger(new Budget(ledger2, 100, () => 0.002)) })
     const a2 = countingStub('chatgpt')
     const r2 = await orch2.collectCell({ cell, prompt: 'best crm', runs: 10, adapter: a2 })
     expect(r2.status).toBe('collected') // NOT cache-hit
@@ -231,7 +236,7 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
 
   it('budget exhaustion stops the cell before overspending; partial answers still stored', async () => {
     const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
-    const d = deps({ budget: new LocalSpendLedger(new Budget(ledger, 0.006, () => 0.002)) }) // room for exactly 3 charges
+    const d = deps({ budget: localLedger(new Budget(ledger, 0.006, () => 0.002)) }) // room for exactly 3 charges
     const orch = new CollectionOrchestrator(d)
     const cell = cellOf('best crm')
     const adapter = countingStub('chatgpt')

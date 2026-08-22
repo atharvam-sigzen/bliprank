@@ -30,14 +30,14 @@ subscription on the provider dashboard.
 `services/collector/pilot/data/2026-08-20/ledger.json` (last written
 2026-08-20T06:34:32Z):
 
-| Engine | Attempts | Charged (payg) |
-|---|---|---|
-| chatgpt | 130 | $0.910 |
-| gemini | 130 | $0.910 |
-| copilot | 130 | $0.910 |
-| google-ai-mode | 130 | $1.040 |
-| google-ai-overviews | 76 | $0.380 |
-| **Total** | **596** | **$4.150** |
+| Engine              | Attempts | Charged (payg) |
+| ------------------- | -------- | -------------- |
+| chatgpt             | 130      | $0.910         |
+| gemini              | 130      | $0.910         |
+| copilot             | 130      | $0.910         |
+| google-ai-mode      | 130      | $1.040         |
+| google-ai-overviews | 76       | $0.380         |
+| **Total**           | **596**  | **$4.150**     |
 
 Every one of those 596 attempts was a 403. **Zero answers were stored** — the
 day's data directory holds only `meta.json`, `ledger.json` and
@@ -140,15 +140,17 @@ Hand-merged, file by file, so it could not revert reviewed fixes (`8293d85`,
 
 ### P1 (fixture-only) — current status
 
-| # | Item | Status |
-|---|---|---|
-| 1.1 | QStash production runner | **Not started.** The orchestrator it will call now exists. |
-| 1.2 | OpenWeb Ninja adapter + fixtures | **Done** — five surfaces, `--doctor` probe, citation metadata preserved (ADR-0005). |
-| 1.3 | Second provider stubbed | **Done** (`f111d5e`). `stubsearch` speaks a deliberately different dialect (HTML body, rank-ordered sources, v2 envelope) and passes the same conformance suite as the real adapter. This is the proof ADR-0001 §2 demands: the abstraction is exercised, not asserted. |
-| 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Now wired into a `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel that P1.1 will call. |
-| 1.5 | R2 storage, one object per cell | **Interface done, transport not.** `BlobStore` + `MemoryBlobStore` are real; `R2BlobStore` is a single well-marked stub that throws — SigV4 signing is the outstanding work. Kept as an obvious stub rather than a half-signed client that looks finished. |
-| 1.6 | Rate-limit budget manager | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite. |
-| 1.7 | `packages/db` schema + RLS | **Built on branch `p1/db-schema`, not merged.** See below. |
+| #   | Item                                               | Status                                                                                                                                                                                                                                                                                                                             |     |
+| --- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| 1.1 | QStash production runner                           | **Not started.** The orchestrator it will call now exists.                                                                                                                                                                                                                                                                         |     |
+| 1.2 | OpenWeb Ninja adapter + fixtures                   | **Done** — five surfaces, `--doctor` probe, citation metadata preserved (ADR-0005).                                                                                                                                                                                                                                                |     |
+| 1.3 | Second provider stubbed                            | **Done** (`f111d5e`). `stubsearch` speaks a deliberately different dialect (HTML body, rank-ordered sources, v2 envelope) and passes the same conformance suite as the real adapter. This is the proof ADR-0001 §2 demands: the abstraction is exercised, not asserted.                                                            |     |
+| 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Now wired into a `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel that P1.1 will call. |     |
+| 1.5 | R2 storage, one object per cell                    | **Interface done, transport not.** `BlobStore` + `MemoryBlobStore` are real; `R2BlobStore` is a single well-marked stub that throws — SigV4 signing is the outstanding work. Kept as an obvious stub rather than a half-signed client that looks finished.                                                                         |     |
+| 1.6 | Rate-limit budget manager                          | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite.                                                                 |     |
+| 1.7 | `packages/db` schema + RLS                         | **Built on branch `p1/db-schema`, not merged.** See below.                                                                                                                                                                                                                                                                         |     |
+|     |                                                    |                                                                                                                                                                                                                                                                                                                                    |     |
+|     |                                                    |                                                                                                                                                                                                                                                                                                                                    |     |
 
 **Review findings that changed the code.** `measurement-engineer` returned two
 verified BLOCKERs on the orchestrator, both fixed in `27652c2`:

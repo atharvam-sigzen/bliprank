@@ -6,7 +6,13 @@ import { cacheCell, type EngineAdapter, type EngineId } from '@bliprank/contract
 import { MemoryBlobStore } from './blob-store.js'
 import { Budget } from './budget.js'
 import { LocalSpendLedger } from './spend-ledger.js'
+
+/** The guarded factory, wrapped once so each test reads clearly. */
+const localLedger = (b: Budget) =>
+  LocalSpendLedger.forSingleProcess(b, { iUnderstandThisCapIsPerProcess: true, reason: 'unit test: one process, no fleet', env: {} })
+
 import { AnswerIndex, MemoryKV, r2KeyFor } from './cache-index.js'
+import { CollectionHeartbeat } from './collection-heartbeat.js'
 import { MemoryDeadLetter } from './dead-letter.js'
 import { LocalRateBudget } from './rate-budget.js'
 import { stubAdapter } from './adapters/stub.js'
@@ -40,7 +46,7 @@ function handlerDeps(over: Partial<Parameters<typeof handleCollectJob>[1]> = {})
     index: new AnswerIndex(new MemoryKV(), 100 * 86_400, () => NOW),
     blob: new MemoryBlobStore(),
     rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 } }),
-    budget: new LocalSpendLedger(new Budget(ledger, 100, () => 0.002)),
+    budget: localLedger(new Budget(ledger, 100, () => 0.002)),
     deadLetter,
     owner: 'worker-1',
     sleep: async () => {},
@@ -173,7 +179,7 @@ describe('handleCollectJob — spend-safe status mapping', () => {
       index: new AnswerIndex(new MemoryKV(), 100 * 86_400, () => NOW),
       blob: new MemoryBlobStore(),
       rateBudget: new LocalRateBudget({ chatgpt: { rps: 1000, burst: 1000 } }),
-      budget: new LocalSpendLedger(new Budget(join(mkdtempSync(join(tmpdir(), 'qstash-')), 'ledger.json'), 100, () => 0.002)),
+      budget: localLedger(new Budget(join(mkdtempSync(join(tmpdir(), 'qstash-')), 'ledger.json'), 100, () => 0.002)),
       deadLetter: new MemoryDeadLetter(),
       owner: 'w',
       collectionEnabled: () => false, // R3 gate shut
@@ -249,5 +255,51 @@ describe('isCollectJob', () => {
     expect(isCollectJob({ ...jobFor(), runs: 2.5 })).toBe(false)
     expect(isCollectJob({ ...jobFor(), runs: -1 })).toBe(false)
     expect(isCollectJob(null)).toBe(false)
+  })
+})
+
+describe('the handler feeds the collection heartbeat', () => {
+  it('records a real collection, so silence becomes detectable', async () => {
+    const { deps } = handlerDeps()
+    const kv = new MemoryKV()
+    const hb = new CollectionHeartbeat({ kv, now: () => NOW })
+    const body = JSON.stringify(jobFor('best crm', 2))
+    await handleCollectJob({ body, signature: signed(body) }, { ...deps, heartbeat: hb })
+    const s = await hb.status()
+    expect(s.health).toBe('healthy')
+    expect(s.collectedInWindow).toBe(1)
+  })
+
+  it('does NOT count a cache hit — that proves the cache works, not collection', async () => {
+    const { deps } = handlerDeps()
+    const kv = new MemoryKV()
+    const hb = new CollectionHeartbeat({ kv, now: () => NOW })
+    const d = { ...deps, heartbeat: hb }
+    const body = JSON.stringify(jobFor('best crm', 2))
+    await handleCollectJob({ body, signature: signed(body) }, d) // collected
+    await handleCollectJob({ body, signature: signed(body) }, d) // cache hit
+    expect((await hb.status()).collectedInWindow).toBe(1)
+  })
+
+  it('a 401 storm leaves the heartbeat silent — which is the whole point', async () => {
+    const { deps } = handlerDeps()
+    const kv = new MemoryKV()
+    const hb = new CollectionHeartbeat({ kv, now: () => NOW })
+    const body = JSON.stringify(jobFor())
+    for (let i = 0; i < 5; i++) {
+      const res = await handleCollectJob({ body, signature: signed(body, 'wrong_key') }, { ...deps, heartbeat: hb })
+      expect(res.status).toBe(401)
+    }
+    // Nothing errored loudly enough to page anyone; only the absence shows it.
+    expect((await hb.status()).health).toBe('never-collected')
+  })
+
+  it('a failing heartbeat never fails the paid job', async () => {
+    const { deps } = handlerDeps()
+    const broken = { recordCollected: async () => { throw new Error('kv down') } } as unknown as CollectionHeartbeat
+    const body = JSON.stringify(jobFor('best crm', 2))
+    const res = await handleCollectJob({ body, signature: signed(body) }, { ...deps, heartbeat: broken })
+    expect(res.status).toBe(200)
+    expect(res.body.outcome).toBe('collected')
   })
 })

@@ -72,6 +72,28 @@ questions than avoid them.
    category corpus is more meaningful over long windows than an absolute score.
 5. **Coverage.** Our prompt banks are constructed, not exhaustive. A brand can be
    visible on queries we do not measure.
+6. **Our "no significant change" is stricter than it sounds — we will miss some
+   real changes.** When we compare this cycle against the last, we do not compare
+   the two headline percentages. We check whether their confidence intervals
+   overlap. If they do, we say *no significant change*, even when the two numbers
+   look different.
+
+   That test is deliberately conservative, and it is worth being precise about
+   what it costs. Two 95% intervals failing to overlap is a **stronger** result
+   than the usual "statistically significant at 95%" — it corresponds to roughly
+   a 1-in-160 chance rather than 1-in-20. So when we do report a change, the
+   evidence behind it is unusually strong. The flip side is that a change can be
+   real and we will still call it *no significant change*, because our test is
+   not sensitive enough to resolve it. We would rather tell you nothing happened
+   when something did, than tell you something happened when it did not.
+
+   Two consequences you should hold us to. First, "no significant change" means
+   *we cannot distinguish these two measurements*, not *your visibility is flat* —
+   the honest reading is that the sample was too small to tell, and more runs per
+   cycle would resolve it. Second, this is not the sharpest available test: the
+   correct one estimates the difference itself and puts an interval around that.
+   We are building it as part of the causal-experiment work, and when it ships
+   we will report both, note where they disagree, and change this page.
 
 ## Changelog
 

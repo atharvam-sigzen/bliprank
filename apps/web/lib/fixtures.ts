@@ -19,7 +19,8 @@ export const HEADLINE = {
   mentionRate: { current: metric(44, 150), previous: metric(37, 150) },
   // A genuinely separated pair.
   citationRate: { current: metric(90, 150), previous: metric(30, 150) },
-  // A thin cell: wide interval, must not invite a conclusion.
+  // A thin cell: below the minimum n, so the comparison is refused outright
+  // rather than reported as "no change" - a different and more honest statement.
   shareOfVoice: { current: metric(2, 5), previous: metric(1, 5) },
 }
 
@@ -38,6 +39,9 @@ export const BY_ENGINE = [
   { engine: 'Microsoft Copilot', current: metric(12, 150), previous: metric(31, 150) },
   { engine: 'Google AI Mode', current: metric(35, 150), previous: metric(33, 150) },
   { engine: 'Google AI Overviews', current: metric(3, 20), previous: metric(2, 20) },
+  // Previous cycle scored by an older algorithm: comparing across the bump
+  // would attribute a definition change to the brand, so compare() refuses.
+  { engine: 'ChatGPT (pre-v2 scoring)', current: metric(48, 150), previous: { ...metric(20, 150), algo_version: 'det-0' } },
 ]
 
 /**

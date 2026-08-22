@@ -32,6 +32,15 @@ export interface KV {
    * whether *this* caller is the one that crossed the cap (spend-ledger.ts).
    */
   incrByFloat(key: string, delta: number, opts?: { ttlSec?: number }): Promise<number>
+  /**
+   * Several atomic adds in ONE round-trip, returning each post-increment value
+   * in order. The spend ledger needs a total plus a per-engine breakdown per
+   * charge; done as three separate calls that would be three round-trips on
+   * every provider call, which at 20M calls/month is not a rounding error.
+   * Each individual increment is atomic; the batch is not a transaction, which
+   * is fine because only the total gates the cap.
+   */
+  incrManyByFloat(ops: readonly { key: string; delta: number }[], opts?: { ttlSec?: number }): Promise<number[]>
 }
 
 export class MemoryKV implements KV {
@@ -64,6 +73,11 @@ export class MemoryKV implements KV {
     const next = Number(this.live(key) ?? 0) + delta
     await this.set(key, String(next), opts ?? {})
     return next
+  }
+  async incrManyByFloat(ops: readonly { key: string; delta: number }[], opts?: { ttlSec?: number }): Promise<number[]> {
+    const out: number[] = []
+    for (const op of ops) out.push(await this.incrByFloat(op.key, op.delta, opts))
+    return out
   }
 }
 
@@ -120,6 +134,13 @@ export class UpstashKV implements KV {
     if (opts?.ttlSec) cmds.push(['EXPIRE', key, opts.ttlSec])
     const res = await this.pipeline(cmds)
     return Number(this.one(res[0]))
+  }
+  async incrManyByFloat(ops: readonly { key: string; delta: number }[], opts?: { ttlSec?: number }): Promise<number[]> {
+    if (ops.length === 0) return []
+    const cmds: (string | number)[][] = ops.map((o) => ['INCRBYFLOAT', o.key, o.delta])
+    if (opts?.ttlSec) for (const o of ops) cmds.push(['EXPIRE', o.key, opts.ttlSec])
+    const res = await this.pipeline(cmds)
+    return ops.map((_, i) => Number(this.one(res[i])))
   }
 }
 

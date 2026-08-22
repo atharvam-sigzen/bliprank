@@ -15,21 +15,44 @@
  * retry bug.
  *
  * Same seam as `RateBudget`: an interface with a local implementation for the
- * single-process paths and a shared-counter implementation for the fleet. The
- * orchestrator depends on the interface, so pointing it at production is a
- * constructor change rather than a rewrite.
+ * single-process paths and a shared-counter implementation for the fleet.
  *
- * THE ORDER MATTERS. Charge is increment-then-check, never check-then-increment:
- * two workers each increment atomically and each sees its own post-increment
- * total, so at most one of them can observe a total within the cap. A refused
- * charge decrements back. Check-then-increment would let both read $74.99 and
- * both proceed. A worker that dies between charging and calling leaves the money
- * counted but unspent — conservative, which is the correct direction to fail for
- * a ceiling.
+ * FOUR THINGS ARE DELIBERATE HERE, each closing a review finding:
+ *
+ * 1. Choosing the unsafe implementation is an explicit, argued act. The review
+ *    noted that nothing stopped a future wiring from passing `LocalSpendLedger`
+ *    and silently reinstating the bug. `LocalSpendLedger` therefore has no
+ *    public constructor: it is reached through `forSingleProcess()`, which
+ *    demands a written reason, and which REFUSES outright when it detects a
+ *    multi-instance runtime. A comment is not a guard.
+ *
+ * 2. Charge is increment-then-check, never check-then-increment. Two workers
+ *    each increment atomically and each sees its own post-increment total, so
+ *    at most one can observe a total within the cap. Check-then-increment would
+ *    let both read $74.99 and both proceed.
+ *
+ * 3. A failed refund is loud. It still fails toward under-spending — the money
+ *    stays counted, so collection stops early rather than overshooting — but
+ *    silently shrinking the day's budget after a transient blip is not
+ *    something anyone should have to infer from a low invoice.
+ *
+ * 4. The window is the ledger's business, not the caller's. Passing the date in
+ *    the key meant forgetting to roll it stopped collection (safe) and rolling
+ *    it wrongly reset the cap (not safe). The ledger derives the window from an
+ *    injected clock.
  */
 
-import { Budget, BudgetExceeded } from './budget.js'
+import { Budget, BudgetExceeded, type Ledger } from './budget.js'
 import type { KV } from './cache-index.js'
+
+/** Per-engine detail `/cost-audit` reconciles against the provider invoice. */
+export interface SpendBreakdown {
+  readonly spentUsd: number
+  readonly calls: number
+  readonly byEngine: Record<string, { calls: number; usd: number }>
+  /** Which window these totals belong to, e.g. `2026-08-21`. */
+  readonly window: string
+}
 
 export interface SpendLedger {
   /**
@@ -38,67 +61,255 @@ export interface SpendLedger {
    */
   charge(engine: string): Promise<void>
   spentUsd(): Promise<number>
+  /** Everything `/cost-audit` needs to reconcile against an invoice. */
+  breakdown(): Promise<SpendBreakdown>
   readonly capUsd: number
 }
 
+/** Emitted when spend control degrades. Wire to Sentry / Better Stack. */
+export interface SpendAlert {
+  readonly kind: 'refund-failed' | 'cap-reached' | 'local-ledger-on-fleet'
+  readonly engine: string
+  readonly usd: number
+  readonly window: string
+  readonly message: string
+}
+
+export type AlertSink = (alert: SpendAlert) => void
+
+const defaultAlertSink: AlertSink = (a) => {
+  // eslint-disable-next-line no-console -- an unreported spend fault is worse than a log line
+  console.error(`[spend:${a.kind}] ${a.message}`)
+}
+
+// ---------------------------------------------------------------------------
+// Window
+// ---------------------------------------------------------------------------
+
+export type SpendWindow = 'daily' | 'hourly' | 'total'
+
 /**
- * Single-process ledger over the existing file-backed `Budget`. Correct for the
- * pilot runner and for tests. NOT safe across concurrent processes — see the
- * header; use `KvSpendLedger` anywhere more than one worker can run.
+ * The window key, derived here so it cannot drift. UTC throughout, matching the
+ * cache key's `date_bucket` (ADR-0003) — a spend day and a collection day being
+ * different days would make the ledger impossible to reconcile.
+ */
+export function windowKey(window: SpendWindow, now: Date): string {
+  const iso = now.toISOString()
+  if (window === 'total') return 'total'
+  return window === 'hourly' ? iso.slice(0, 13) : iso.slice(0, 10)
+}
+
+// ---------------------------------------------------------------------------
+// Multi-instance detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Markers that mean "this process is one of many, and its local disk is not
+ * shared". Present in every runtime the collector is planned to run on
+ * (ADR-0002). Detection is best-effort by nature, which is why it only ever
+ * makes the guard STRICTER — it can refuse a local ledger, never permit one.
+ */
+const FLEET_MARKERS = ['VERCEL', 'VERCEL_ENV', 'AWS_LAMBDA_FUNCTION_NAME', 'AWS_EXECUTION_ENV', 'K_SERVICE', 'FUNCTIONS_WORKER_RUNTIME', 'FLY_ALLOC_ID', 'DYNO'] as const
+
+export function detectMultiInstanceRuntime(env: NodeJS.ProcessEnv = process.env): string | null {
+  for (const marker of FLEET_MARKERS) if (env[marker]) return marker
+  return null
+}
+
+export class UnsafeSpendLedgerError extends Error {
+  override readonly name = 'UnsafeSpendLedgerError'
+}
+
+// ---------------------------------------------------------------------------
+// Local (single process)
+// ---------------------------------------------------------------------------
+
+/**
+ * Single-process ledger over the file-backed `Budget`. Correct for the pilot
+ * runner and for tests, and WRONG anywhere more than one process can run.
+ *
+ * The constructor is private. `forSingleProcess()` is the only way in, it wants
+ * a reason in writing, and it throws when a fleet runtime is detected. Reaching
+ * for the unsafe version is meant to feel like a decision.
  */
 export class LocalSpendLedger implements SpendLedger {
-  /** Public so /cost-audit and tests can read the per-engine breakdown. */
-  constructor(readonly budget: Budget) {}
+  private constructor(readonly budget: Budget) {}
+
+  /**
+   * @param reason why a per-process cap is acceptable here. Recorded in the
+   *   error if the guard later fires, so the argument is available to whoever
+   *   has to judge it.
+   */
+  static forSingleProcess(
+    budget: Budget,
+    ack: {
+      readonly iUnderstandThisCapIsPerProcess: true
+      readonly reason: string
+      /** Escape hatch for a fleet runtime. Requires a reason and alerts. */
+      readonly overrideFleetDetection?: boolean
+      readonly env?: NodeJS.ProcessEnv
+      readonly onAlert?: AlertSink
+    },
+  ): LocalSpendLedger {
+    if (!ack.reason.trim()) {
+      throw new UnsafeSpendLedgerError('LocalSpendLedger.forSingleProcess requires a written reason: this cap is enforced per process, not globally.')
+    }
+    const marker = detectMultiInstanceRuntime(ack.env)
+    if (marker && !ack.overrideFleetDetection) {
+      throw new UnsafeSpendLedgerError(
+        `refusing a per-process spend cap: ${marker} indicates a multi-instance runtime, where each container would get its own full budget (rule R3). ` +
+          `Use KvSpendLedger. Stated reason for the local ledger was: "${ack.reason}".`,
+      )
+    }
+    if (marker && ack.overrideFleetDetection) {
+      ;(ack.onAlert ?? defaultAlertSink)({
+        kind: 'local-ledger-on-fleet',
+        engine: '-',
+        usd: 0,
+        window: 'n/a',
+        message: `per-process spend cap deliberately used on ${marker}: "${ack.reason}". The USD ceiling is NOT global.`,
+      })
+    }
+    return new LocalSpendLedger(budget)
+  }
+
   async charge(engine: string): Promise<void> {
     this.budget.charge(engine)
   }
   async spentUsd(): Promise<number> {
     return this.budget.state.spentUsd
   }
+  async breakdown(): Promise<SpendBreakdown> {
+    const l: Ledger = this.budget.state
+    return { spentUsd: l.spentUsd, calls: l.calls, byEngine: l.byEngine, window: 'process' }
+  }
   get capUsd(): number {
     return this.budget.state.capUsd
   }
 }
 
+// ---------------------------------------------------------------------------
+// Shared counter (fleet)
+// ---------------------------------------------------------------------------
+
 export interface KvSpendLedgerOptions {
   readonly kv: KV
   readonly capUsd: number
   readonly priceUsd: (engine: string) => number
-  /**
-   * Ledger identity. Include the window (e.g. `spend:2026-08-21`) so a daily cap
-   * resets by construction rather than by a cleanup job that might not run.
-   */
-  readonly key: string
-  /** Expiry for the counter; should outlive the window comfortably. */
+  /** Key prefix only. The window suffix is derived here, never passed in. */
+  readonly keyPrefix?: string
+  readonly window?: SpendWindow
+  readonly now?: () => Date
+  /** Engines to report in the breakdown even when they have spent nothing. */
+  readonly engines?: readonly string[]
   readonly ttlSec?: number
+  readonly onAlert?: AlertSink
 }
 
 /**
- * Fleet-safe ledger over an atomic shared counter (Upstash Redis in production).
- * Every charge is one round-trip — that is the cost of a ceiling that actually
- * holds across instances, and it is the same trade ADR-0002 accepts for the rate
- * budget until the fixed worker fleet lands.
+ * Fleet-safe ledger over atomic shared counters (Upstash Redis in production).
+ *
+ * One round-trip per charge, carrying three increments: the authoritative
+ * total, the per-engine USD, and the per-engine call count. Only the total
+ * gates the cap, so the batch does not need to be a transaction.
  */
 export class KvSpendLedger implements SpendLedger {
-  constructor(private readonly o: KvSpendLedgerOptions) {}
+  private readonly prefix: string
+  private readonly window: SpendWindow
+  private readonly now: () => Date
+  private readonly ttl: number
+  private readonly alert: AlertSink
+
+  constructor(private readonly o: KvSpendLedgerOptions) {
+    this.prefix = o.keyPrefix ?? 'spend'
+    this.window = o.window ?? 'daily'
+    this.now = o.now ?? (() => new Date())
+    this.ttl = o.ttlSec ?? 172_800
+    this.alert = o.onAlert ?? defaultAlertSink
+  }
 
   get capUsd(): number {
     return this.o.capUsd
   }
 
+  /** The current window, recomputed on every call so a long-lived worker rolls. */
+  currentWindow(): string {
+    return windowKey(this.window, this.now())
+  }
+
+  private totalKey(w: string): string {
+    return `${this.prefix}:${w}:total`
+  }
+  private engineUsdKey(w: string, engine: string): string {
+    return `${this.prefix}:${w}:e:${engine}:usd`
+  }
+  private engineCallsKey(w: string, engine: string): string {
+    return `${this.prefix}:${w}:e:${engine}:calls`
+  }
+
   async spentUsd(): Promise<number> {
-    const raw = await this.o.kv.get(this.o.key)
+    const raw = await this.o.kv.get(this.totalKey(this.currentWindow()))
     return raw === null ? 0 : Number(raw)
+  }
+
+  async breakdown(): Promise<SpendBreakdown> {
+    const w = this.currentWindow()
+    const engines = [...new Set(this.o.engines ?? [])]
+    const keys = [this.totalKey(w), ...engines.flatMap((e) => [this.engineUsdKey(w, e), this.engineCallsKey(w, e)])]
+    const values = await this.o.kv.mget(keys)
+    const byEngine: Record<string, { calls: number; usd: number }> = {}
+    let calls = 0
+    engines.forEach((e, i) => {
+      const usd = Number(values[1 + i * 2] ?? 0)
+      const c = Number(values[2 + i * 2] ?? 0)
+      byEngine[e] = { calls: c, usd }
+      calls += c
+    })
+    return { spentUsd: Number(values[0] ?? 0), calls, byEngine, window: w }
   }
 
   async charge(engine: string): Promise<void> {
     const price = this.o.priceUsd(engine)
-    const after = await this.o.kv.incrByFloat(this.o.key, price, { ttlSec: this.o.ttlSec ?? 172_800 })
-    if (after > this.o.capUsd) {
-      // Put it back. A failed refund would over-count, which stops collection
-      // early rather than overspending, so it is not retried.
-      await this.o.kv.incrByFloat(this.o.key, -price, { ttlSec: this.o.ttlSec ?? 172_800 }).catch(() => undefined)
-      throw new BudgetExceeded({ capUsd: this.o.capUsd, spentUsd: after - price, calls: 0, byEngine: {}, updatedAt: new Date().toISOString() }, price)
+    const w = this.currentWindow()
+    const totalKey = this.totalKey(w)
+
+    const [after] = await this.o.kv.incrManyByFloat(
+      [
+        { key: totalKey, delta: price },
+        { key: this.engineUsdKey(w, engine), delta: price },
+        { key: this.engineCallsKey(w, engine), delta: 1 },
+      ],
+      { ttlSec: this.ttl },
+    )
+    const total = after ?? 0
+
+    if (total > this.o.capUsd) {
+      // Refund all three. Failing to refund over-counts, which stops collection
+      // early rather than overspending — the right direction, but it silently
+      // shrinks the remaining budget, so it is reported rather than swallowed.
+      try {
+        await this.o.kv.incrManyByFloat(
+          [
+            { key: totalKey, delta: -price },
+            { key: this.engineUsdKey(w, engine), delta: -price },
+            { key: this.engineCallsKey(w, engine), delta: -1 },
+          ],
+          { ttlSec: this.ttl },
+        )
+      } catch (e) {
+        this.alert({
+          kind: 'refund-failed',
+          engine,
+          usd: price,
+          window: w,
+          message:
+            `refund of $${price.toFixed(4)} (${engine}) failed after a refused charge: ${(e as Error).message}. ` +
+            `The ledger for window ${w} now over-counts by that amount, so the remaining cap is smaller than it should be. ` +
+            `Fails safe (under-spend), but the ceiling is no longer the configured one.`,
+        })
+      }
+      this.alert({ kind: 'cap-reached', engine, usd: price, window: w, message: `spend cap $${this.o.capUsd} reached for window ${w}; refusing further calls.` })
+      throw new BudgetExceeded({ capUsd: this.o.capUsd, spentUsd: total - price, calls: 0, byEngine: {}, updatedAt: this.now().toISOString() }, price)
     }
   }
 }

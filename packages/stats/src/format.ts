@@ -30,7 +30,20 @@ export interface Metric {
   readonly collection_path: CollectionPath
 }
 
-export type Significance = 'higher' | 'lower' | 'no-significant-change' | 'insufficient-data'
+export type Significance = 'higher' | 'lower' | 'no-significant-change' | 'insufficient-data' | 'not-comparable'
+
+/**
+ * Minimum disclosed sample before two measurements may be compared at all.
+ *
+ * ⚠️ PROVISIONAL. 30 is a placeholder chosen to be conservative, not derived.
+ * The real floor comes out of G0: once the pilot reports DEFF per engine, the
+ * minimum is the n whose effective size n/DEFF still supports a usable
+ * interval. Until that number exists, inventing a "better" one would be the
+ * same error the G0 criterion was rewritten to avoid — arithmetic dressed as
+ * evidence. Tracked against PHASES.md 0.6.
+ */
+export const MIN_N_FOR_COMPARISON = 30
+export const MIN_N_STATUS = 'PROVISIONAL: placeholder pending G0 design-effect data' as const
 
 export interface Comparison {
   readonly significance: Significance
@@ -90,8 +103,35 @@ export function intervalWidth(m: Metric): number {
 export function compare(current: Metric, previous: Metric): Comparison {
   const delta = current.value - previous.value
 
-  if (current.n <= 0 || previous.n <= 0) {
-    return { significance: 'insufficient-data', delta, label: 'not enough data' }
+  // R5: a score row is stamped with the algorithm that produced it, and rows
+  // from different algorithms are answers to different questions. Comparing
+  // across a version bump would silently attribute a definition change to the
+  // brand's behaviour, which is precisely the rebasing competitors do and we
+  // do not. Same for collection path: an official-API number and a
+  // third-party-grounded number are not measurements of the same thing.
+  if (current.algo_version !== previous.algo_version) {
+    return {
+      significance: 'not-comparable',
+      delta,
+      label: `not comparable: scored by ${previous.algo_version} then ${current.algo_version}`,
+    }
+  }
+  if (current.collection_path !== previous.collection_path) {
+    return {
+      significance: 'not-comparable',
+      delta,
+      label: `not comparable: collected via ${previous.collection_path} then ${current.collection_path}`,
+    }
+  }
+
+  // Below the floor there is no interval worth testing — see MIN_N_FOR_COMPARISON.
+  const smallest = Math.min(current.n, previous.n)
+  if (smallest < MIN_N_FOR_COMPARISON) {
+    return {
+      significance: 'insufficient-data',
+      delta,
+      label: smallest <= 0 ? 'not enough data' : `not enough data (n=${smallest}, need ${MIN_N_FOR_COMPARISON})`,
+    }
   }
 
   const separated = current.ci_low > previous.ci_high || current.ci_high < previous.ci_low
@@ -108,14 +148,71 @@ export function compare(current: Metric, previous: Metric): Comparison {
 }
 
 /**
+ * ⚠️ PROVISIONAL — these four numbers have no empirical basis.
+ *
+ * 0.1 / 0.2 / 0.35 interval width were picked by hand to feel about right. They
+ * decide what a prospect is told about their own data on the free surface, so
+ * "about right" is not good enough. The real thresholds get derived from G0
+ * pilot output: the interval width actually achieved at each tier's runs-per-
+ * cell, once DEFF is known per engine.
+ *
+ * Deliberately NOT replaced with a different invented number in the meantime —
+ * a second guess would look more considered while being exactly as unfounded.
+ */
+export const CONFIDENCE_GRADE_THRESHOLDS = { A: 0.1, B: 0.2, C: 0.35 } as const
+export const CONFIDENCE_GRADE_STATUS = 'PROVISIONAL: hand-picked, pending G0 pilot data' as const
+
+/** True when this build is customer-facing, so provisional numbers must not ship. */
+export function isLiveFacingBuild(env: Record<string, string | undefined> = process.env): boolean {
+  return (env['BLIPRANK_ENV'] ?? env['NEXT_PUBLIC_BLIPRANK_ENV']) === 'live'
+}
+
+export class ProvisionalMetricError extends Error {
+  override readonly name = 'ProvisionalMetricError'
+}
+
+/**
+ * Module-scope guard for any page that renders a provisional number.
+ *
+ * `confidenceGrade` throwing is not enough on its own: in a client component it
+ * only runs when a user interacts, so a live build would compile happily and
+ * fail in front of the customer instead. Called at module scope, this fails the
+ * BUILD, which is where a shipping-blocker belongs.
+ */
+export function assertProvisionalAllowed(what: string, env: Record<string, string | undefined> = process.env): void {
+  if (isLiveFacingBuild(env)) {
+    throw new ProvisionalMetricError(
+      `${what} depends on provisional numbers (${CONFIDENCE_GRADE_STATUS}) and cannot be part of a live build. ` +
+        `Derive the thresholds from G0 pilot data (PHASES.md 0.6) first.`,
+    )
+  }
+}
+
+/**
  * Confidence grade A–D from the interval width — the Grader's headline.
  * A wide interval is not a bad brand, it is a small sample, and the grade says
  * so rather than letting the reader mistake noise for a finding.
+ *
+ * REFUSES in a live-facing build. The thresholds are provisional, and a
+ * provisional grade shown to a customer is indistinguishable from a real one.
+ * Failing the build is the point: it cannot be forgotten, and there is no
+ * configuration that quietly re-enables it — the block lifts when the numbers
+ * are derived from G0 and this guard is removed deliberately.
  */
-export function confidenceGrade(m: Metric): { grade: 'A' | 'B' | 'C' | 'D'; note: string } {
+export function confidenceGrade(
+  m: Metric,
+  opts: { allowProvisional?: boolean; env?: Record<string, string | undefined> } = {},
+): { grade: 'A' | 'B' | 'C' | 'D'; note: string; provisional: true } {
+  if (isLiveFacingBuild(opts.env) && !opts.allowProvisional) {
+    throw new ProvisionalMetricError(
+      `confidenceGrade is ${CONFIDENCE_GRADE_STATUS} and must not reach a customer. ` +
+        `Derive the thresholds from G0 pilot data (PHASES.md 0.6) before shipping, or pass allowProvisional for an internal preview.`,
+    )
+  }
   const w = intervalWidth(m)
-  if (w <= 0.1) return { grade: 'A', note: `±${pct(w / 2, 1)} — tight enough to act on` }
-  if (w <= 0.2) return { grade: 'B', note: `±${pct(w / 2, 1)} — directional` }
-  if (w <= 0.35) return { grade: 'C', note: `±${pct(w / 2, 1)} — indicative only` }
-  return { grade: 'D', note: `±${pct(w / 2, 1)} — too few runs to conclude anything` }
+  const t = CONFIDENCE_GRADE_THRESHOLDS
+  if (w <= t.A) return { grade: 'A', note: `±${pct(w / 2, 1)} — tight enough to act on`, provisional: true }
+  if (w <= t.B) return { grade: 'B', note: `±${pct(w / 2, 1)} — directional`, provisional: true }
+  if (w <= t.C) return { grade: 'C', note: `±${pct(w / 2, 1)} — indicative only`, provisional: true }
+  return { grade: 'D', note: `±${pct(w / 2, 1)} — too few runs to conclude anything`, provisional: true }
 }

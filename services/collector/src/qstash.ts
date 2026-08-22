@@ -19,6 +19,7 @@
 
 import type { CacheCell, EngineAdapter } from '@bliprank/contracts'
 import type { CollectionOrchestrator, CollectOutcome } from './collect-cell.js'
+import type { CollectionHeartbeat } from './collection-heartbeat.js'
 import type { DeadLetter } from './dead-letter.js'
 import { r2KeyFor } from './cache-index.js'
 import { verifyQStashRequest } from './qstash-verify.js'
@@ -163,6 +164,12 @@ export interface HandlerDeps {
   readonly nextSigningKey?: string
   /** The absolute URL QStash delivers to; must match the token's `sub`. */
   readonly url: string
+  /**
+   * Records successful collections so an outage that fails closed - the shape
+   * both transports are designed to have - is visible as silence rather than
+   * invisible as an absence of errors.
+   */
+  readonly heartbeat?: CollectionHeartbeat
   readonly now?: () => Date
 }
 
@@ -219,6 +226,12 @@ export async function handleCollectJob(req: IncomingRequest, d: HandlerDeps): Pr
     // 'failed' entry duplicated what collect-cell already records per run, with
     // a wrong attempt count. So: record a single shortfall entry, only for the
     // outcomes collect-cell does not already dead-letter itself.
+    // Only a real collection counts: a cache hit proves the cache works, not
+    // that collection does, so counting it would mask a total provider outage.
+    if (outcome.status === 'collected' && d.heartbeat) {
+      await d.heartbeat.recordCollected(1).catch(() => undefined) // never fail a paid job on telemetry
+    }
+
     const shortfall = outcome.status === 'budget-exhausted' || outcome.status === 'aborted'
     if (shortfall) {
       const got = 'answers' in outcome ? outcome.answers.length : 0

@@ -51,14 +51,35 @@ export function MetricCard({ label, metric, previous }: { label: string; metric:
  */
 export function DeltaBadge({ comparison }: { comparison: ReturnType<typeof compare> }) {
   const significant = comparison.significance === 'higher' || comparison.significance === 'lower'
-  const glyph = comparison.significance === 'higher' ? '▲' : comparison.significance === 'lower' ? '▼' : '–'
+  const glyph =
+    comparison.significance === 'higher' ? '▲' : comparison.significance === 'lower' ? '▼' : comparison.significance === 'not-comparable' ? '≠' : '–'
 
   return (
-    <p className={`delta${significant ? ' delta--significant' : ''}`}>
+    <p className={`delta${significant ? ' delta--significant' : ''}`} title={hint(comparison.significance)}>
       <span className="delta__glyph" aria-hidden="true">
         {glyph}
       </span>
       <span>{comparison.label}</span>
     </p>
   )
+}
+
+/**
+ * The three non-significant verdicts mean genuinely different things, and a
+ * reader who conflates them draws the wrong conclusion:
+ *   no significant change  — measured, and the sample cannot resolve a change
+ *   not enough data        — not enough runs to attempt the comparison at all
+ *   not comparable         — the two numbers answer different questions (R5)
+ */
+function hint(s: ReturnType<typeof compare>['significance']): string | undefined {
+  switch (s) {
+    case 'no-significant-change':
+      return 'The two confidence intervals overlap, so this sample cannot tell the cycles apart. See the methodology page.'
+    case 'insufficient-data':
+      return 'Too few runs in one of the cycles to compare them.'
+    case 'not-comparable':
+      return 'These measurements were produced by different scoring versions or collection paths, so comparing them would attribute a definition change to the brand.'
+    default:
+      return undefined
+  }
 }

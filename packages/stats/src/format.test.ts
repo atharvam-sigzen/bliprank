@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { compare, confidenceGrade, formatInterval, formatMetric, formatProvenance, formatValue, intervalWidth, type Metric } from './format.js'
+import {
+  compare,
+  confidenceGrade,
+  CONFIDENCE_GRADE_STATUS,
+  formatInterval,
+  formatMetric,
+  formatProvenance,
+  formatValue,
+  intervalWidth,
+  isLiveFacingBuild,
+  MIN_N_FOR_COMPARISON,
+  ProvisionalMetricError,
+  type Metric,
+} from './format.js'
 import { wilson } from './wilson.js'
 
 const metric = (over: Partial<Metric> = {}): Metric => ({
@@ -80,12 +93,17 @@ describe('the significance rule — no green arrow on noise', () => {
     expect(down.label).toMatch(/^−20\.0%/)
   })
 
-  it('a real 5-run cell can never claim significance against itself — the point of the rule', () => {
+  it('a real 5-run cell is refused before the interval test even runs', () => {
     // At n=5 the interval is enormous whatever the engine does, so week-on-week
-    // movement is uninterpretable. The UI must say so.
+    // movement is uninterpretable. It now fails the minimum-n floor first.
     const w1 = fromWilson(1, 5) // 20%
     const w2 = fromWilson(4, 5) // 80% — a 4x "increase"
-    expect(compare(w2, w1).significance).toBe('no-significant-change')
+    expect(compare(w2, w1).significance).toBe('insufficient-data')
+    expect(compare(w2, w1).label).toContain(`need ${MIN_N_FOR_COMPARISON}`)
+  })
+
+  it('a large-n pair with overlapping intervals is still "no significant change"', () => {
+    expect(compare(fromWilson(310, 1000), fromWilson(300, 1000)).significance).toBe('no-significant-change')
   })
 
   it('touching-but-not-crossing intervals are still not significant', () => {
@@ -106,23 +124,70 @@ describe('the significance rule — no green arrow on noise', () => {
     expect(compare(metric(), metric({ n: 0 })).significance).toBe('insufficient-data')
     expect(compare(metric({ n: 0 }), metric()).label).toBe('not enough data')
   })
+
+  it('refuses below the minimum n, so n=1 does not compare normally', () => {
+    const tiny = metric({ n: 1, ci_low: 0.01, ci_high: 0.9 })
+    expect(compare(metric(), tiny).significance).toBe('insufficient-data')
+    expect(compare(metric({ n: MIN_N_FOR_COMPARISON - 1 }), metric()).significance).toBe('insufficient-data')
+    expect(compare(metric({ n: MIN_N_FOR_COMPARISON }), metric()).significance).not.toBe('insufficient-data')
+  })
+
+  it('REFUSES across a scoring version bump — that would be rebasing history (R5)', () => {
+    const c = compare(metric({ value: 0.6, ci_low: 0.52, ci_high: 0.68, algo_version: 'det-2' }), metric())
+    expect(c.significance).toBe('not-comparable')
+    expect(c.label).toContain('det-1')
+    expect(c.label).toContain('det-2')
+    // The delta is still reported; we simply refuse to call it a change.
+    expect(c.delta).toBeCloseTo(0.35, 9)
+  })
+
+  it('REFUSES across collection paths — they are not measurements of the same thing', () => {
+    const c = compare(metric({ value: 0.6, ci_low: 0.52, ci_high: 0.68, collection_path: 'official-api' }), metric())
+    expect(c.significance).toBe('not-comparable')
+    expect(c.label).toContain('official-api')
+  })
 })
 
 describe('confidence grade reflects sample size, not brand performance', () => {
   it('grades on interval width', () => {
-    expect(confidenceGrade(metric({ ci_low: 0.22, ci_high: 0.28 })).grade).toBe('A')
-    expect(confidenceGrade(metric({ ci_low: 0.18, ci_high: 0.33 })).grade).toBe('B')
-    expect(confidenceGrade(metric({ ci_low: 0.12, ci_high: 0.42 })).grade).toBe('C')
-    expect(confidenceGrade(metric({ ci_low: 0.05, ci_high: 0.66 })).grade).toBe('D')
+    expect(confidenceGrade(metric({ ci_low: 0.22, ci_high: 0.28 }), { env: {} }).grade).toBe('A')
+    expect(confidenceGrade(metric({ ci_low: 0.18, ci_high: 0.33 }), { env: {} }).grade).toBe('B')
+    expect(confidenceGrade(metric({ ci_low: 0.12, ci_high: 0.42 }), { env: {} }).grade).toBe('C')
+    expect(confidenceGrade(metric({ ci_low: 0.05, ci_high: 0.66 }), { env: {} }).grade).toBe('D')
   })
 
   it('a 5-run cell grades D no matter how good the number looks', () => {
-    expect(confidenceGrade(fromWilson(4, 5)).grade).toBe('D')
-    expect(confidenceGrade(fromWilson(4, 5)).note).toMatch(/too few runs/)
+    expect(confidenceGrade(fromWilson(4, 5), { env: {} }).grade).toBe('D')
+    expect(confidenceGrade(fromWilson(4, 5), { env: {} }).note).toMatch(/too few runs/)
   })
 
   it('the same p̂ at a larger n grades better — the grade is about evidence', () => {
-    expect(confidenceGrade(fromWilson(80, 100)).grade).not.toBe('D')
+    expect(confidenceGrade(fromWilson(80, 100), { env: {} }).grade).not.toBe('D')
     expect(intervalWidth(fromWilson(80, 100))).toBeLessThan(intervalWidth(fromWilson(4, 5)))
+  })
+})
+
+describe('provisional numbers cannot reach a customer', () => {
+  const LIVE = { BLIPRANK_ENV: 'live' }
+
+  it('confidenceGrade throws in a live-facing build', () => {
+    expect(() => confidenceGrade(metric(), { env: LIVE })).toThrow(ProvisionalMetricError)
+    expect(() => confidenceGrade(metric(), { env: { NEXT_PUBLIC_BLIPRANK_ENV: 'live' } })).toThrow(/PROVISIONAL/)
+  })
+
+  it('works in a non-live build, and says it is provisional', () => {
+    const g = confidenceGrade(metric(), { env: {} })
+    expect(g.provisional).toBe(true)
+    expect(CONFIDENCE_GRADE_STATUS).toMatch(/^PROVISIONAL/)
+  })
+
+  it('an internal preview can opt in explicitly', () => {
+    expect(confidenceGrade(metric(), { env: LIVE, allowProvisional: true }).grade).toBeDefined()
+  })
+
+  it('isLiveFacingBuild only fires on the exact marker', () => {
+    expect(isLiveFacingBuild({ BLIPRANK_ENV: 'live' })).toBe(true)
+    expect(isLiveFacingBuild({ BLIPRANK_ENV: 'preview' })).toBe(false)
+    expect(isLiveFacingBuild({})).toBe(false)
   })
 })
