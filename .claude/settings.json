@@ -29,7 +29,9 @@
       "Read(./.env*)",
       "Read(./**/*.pem)",
       "Bash(curl *api.openwebninja.com*)",
-      "Bash(node services/collector/**)"
+      "Bash(node services/collector/**)",
+      "Bash(npx ruflo*)",
+      "Bash(npx -y ruflo*)"
     ],
     "ask": [
       "Bash(git push *)",
