@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-21 · **master:** `47a5e75` · **First commit:** 2026-08-18 · **Tests:** 332 passing, 20 files, all offline
+**As of:** 2026-08-22 · **master:** `af9fa1a` · **First commit:** 2026-08-18 · **Tests:** 377 passing, 21 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -157,7 +157,7 @@ Hand-merged, file by file, so it could not revert reviewed fixes (`8293d85`,
 | 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Wired into `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel. |
 | 1.5 | R2 storage, one object per cell | **Done** (`1d80396`). Hand-rolled SigV4 over R2's S3 REST API, no AWS SDK: three verbs against one bucket does not justify that dependency, and a signer checked against AWS's own published vectors is easier to trust than an SDK we cannot see into. `assertSafeKey` refuses keys containing dot segments, because `new URL()` resolves them *before* signing — such a key would be signed and sent for a different object, the same wrong object both times, so it would succeed silently. **Never exercised against a real bucket.** |
 | 1.6 | Rate-limit budget manager | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite. |
-| 1.7 | `packages/db` schema + RLS                         | **Built on branch `p1/db-schema`, not merged.** See below.                                                                                                                                                                                                                                                                         |     |
+| 1.7 | `packages/db` schema + RLS                         | **Done** (`af9fa1a`). Merged 2026-08-22 after the three open decisions were taken. See below.                                                                                                                                                                                                                                                                         |     |
 
 **Review findings that changed the code.** `measurement-engineer` returned two
 verified BLOCKERs on the orchestrator, both fixed in `27652c2`:
@@ -172,7 +172,7 @@ verified BLOCKERs on the orchestrator, both fixed in `27652c2`:
   permanently capped `n`: a silent R8 violation. A partial cell now falls
   through and completes on a later cycle.
 
-**`p1/db-schema` (branch `18cde63`, not merged).** 821 insertions across
+**`p1/db-schema` — merged 2026-08-22 (`af9fa1a`).** 821 insertions across
 `packages/db/{migrations/0000_init.sql, src/schema.ts, src/rls.test.ts}`:
 partitioned score tables, FORCE ROW LEVEL SECURITY on every table and
 partition, transaction-stamped workspace context, no default partition, and
@@ -188,14 +188,39 @@ Pass 2 verdict: *no cross-tenant leak reachable through the product path; the
 three BLOCKERs and five MAJORs are genuinely fixed.* Durability fixes from that
 second pass are in `18cde63`.
 
-**Two decisions remain open for a human** and are why this branch is not
-merged:
+**The three decisions that blocked the merge, taken 2026-08-22** and
+implemented in `0001_tenancy_identity.sql` (`f658900`):
 
-1. `set_workspace()` performs no principal → workspace binding. The web app is
-   currently the authorization boundary. Whether to add database-level identity
-   (a JWT claim) before launch is a deliberate architectural choice, not a bug.
-2. The entitlement business rule — how `svc_onboard` authorizes a brand add,
-   and where the billing hook sits.
+1. **DB-level tenancy identity, not app-level-only.** `set_workspace()` did no
+   principal → workspace binding, so the web app was the authorization boundary
+   and one SQL injection in the shared `app_rw` role was a full cross-tenant
+   read. `app_rw` now has no EXECUTE on it at all. It presents an HS256 token;
+   `set_workspace_jwt()` verifies the signature *inside Postgres* against a
+   secret in a table no application role can read, pins the algorithm (so
+   `alg:none` and RS256-as-HMAC are refused), checks `kid`/`exp`/`nbf`, and then
+   requires the subject to actually be a member of the workspace the token
+   names. The signature proves who; membership decides what.
+2. **Role exclusivity is checked where the roles are.** It was an assertion
+   about a fixture database, which proves nothing about a deployment — login
+   roles are created outside every migration. `assert_role_exclusivity()` plus
+   `packages/db/scripts/check-deploy.sql` now run in the deploy pipeline, and a
+   bad GRANT fails the deploy loudly. It also refuses any application role that
+   can borrow `auth_verifier` and read the signing secret.
+3. **Billing blocks before it creates.** A BEFORE INSERT trigger on
+   `workspace_brands` refuses an entitlement with no subscription, a cancelled
+   or lapsed one, or one over the plan's brand limit, so an unpaid entitlement
+   never exists — not for a concurrent reader, not in the WAL, and not if the
+   process dies mid-cleanup. An advisory lock serialises inserts per workspace,
+   because count-then-insert is a read-modify-write and two concurrent claims on
+   the last seat would otherwise both pass.
+
+The RLS suite went from 17 tests to 34 and now drives `app_rw` through the token
+path, so every pre-existing tenancy test is exercised against verified identity
+rather than a named workspace.
+
+⚠️ **HUMAN REVIEW REQUIRED: tenancy.** The JWT verifier is new attack surface at
+the tenancy boundary, written in plpgsql, and has **not** been through a
+`tenancy-auditor` pass — the two audits on this branch predate it.
 
 ### Spend control, reworked twice under review
 
@@ -276,8 +301,8 @@ demonstrate R8. Both fixed.
 recorded formally as **ADR-0003 Amendment 1**, and CLAUDE.md R4's shorthand was
 corrected to match. The flag is closed.
 
-⚠️ **HUMAN REVIEW REQUIRED** still stands on `p1/db-schema` (tenancy model),
-now with decisions given — see §5.
+⚠️ **HUMAN REVIEW REQUIRED** stands on the JWT verifier merged with
+`p1/db-schema` — see above.
 
 ---
 
@@ -396,9 +421,8 @@ write path, and every "valid" QStash token in the tests is minted by our own
 signer. Both fail *closed*, so the risk is silent inaction rather than
 corruption — which is what the collection heartbeat now watches for.
 
-**`p1/db-schema` merge (Atharva).** Reviewed twice and clean; blocked on two
-decisions recorded in §2 — whether `set_workspace()` gains DB-level identity
-before launch, and where the billing check sits in `svc_onboard`.
+**`p1/db-schema` — merged 2026-08-22.** No longer a blocker. What it leaves
+behind is a `tenancy-auditor` pass on the JWT verifier, which no audit has seen.
 
 **Three provisional numbers, all awaiting G0 data**: the A–D confidence-grade
 thresholds (blocked from live builds), `MIN_N_FOR_COMPARISON`, and the choice of
@@ -406,9 +430,20 @@ an overlap test for significance. None were replaced with a better guess, becaus
 a second invented number would look more considered while being exactly as
 unfounded.
 
-**`COLLECTOR_TOPOLOGY` (Atharva, before P5 wiring).** Whether declaring topology
-in deployment config is the right mechanism is a deployment decision, and it is
-the specific thing to settle before anyone writes the Hetzner runner.
+**`COLLECTOR_TOPOLOGY` — decided 2026-08-22, ADR-0006 accepted.** Declaring
+topology in deployment config is the mechanism; undeclared is refused rather than
+defaulted. Extended at sign-off to `LocalRateBudget`, which had the same risk
+shape and none of the guard. One thing stays deliberately open: deleting
+`LocalSpendLedger` entirely and always using the shared ledger would remove the
+guard, `resolveTopology` and the ADR along with it, and becomes available the
+moment the free-tier Upstash credentials land.
+
+**Sign-offs recorded 2026-08-22.** `budget.ts`, `rate-budget.ts` and `retry.ts`
+accepted on their review history. `format.ts` and `spend-ledger.ts` remain under
+review. `wilson.ts` was put up for a considered decision rather than a
+formality — 1,023 statsmodels reference vectors at three alphas plus six
+property tests, and one documented assumption that outlives them: it takes an
+*effective* n, and nothing measures the design effect until G0.
 
 **Nothing past G0 counts as validated progress until G0 has a real pass/fail
 result.** Everything above is infrastructure whose correctness is established
