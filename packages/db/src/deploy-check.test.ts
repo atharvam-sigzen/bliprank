@@ -101,7 +101,7 @@ describe('the migration must apply to the database production actually has', () 
     // It survives the migration (grandfathered), but it has no issuer/audience,
     // so it can never verify a token, and the gate refuses the deploy.
     expect((await d.query(`SELECT issuer, audience FROM auth_signing_keys WHERE kid='k0'`)).rows).toEqual([{ issuer: null, audience: null }])
-    await expect(check(d)).rejects.toThrow(/no live, fully configured row in auth_signing_keys/)
+    await expect(check(d)).rejects.toThrow(/live signing keys are not fully configured/)
   })
 
   it('a new key must be fully configured — the constraint binds what is written from here on', async () => {
@@ -201,7 +201,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
     await d.exec(`GRANT SELECT ON recon_imports TO app_rw`)
     await d.exec(`CREATE POLICY recon_read ON recon_imports FOR SELECT USING (true)`)
-    await expect(check(d)).rejects.toThrow(/without a tenant-scoped policy: recon_imports/)
+    await expect(check(d)).rejects.toThrow(/recon_imports reads unscoped/)
   })
 
   it('a tenant-readable table with NO policy at all is caught too', async () => {
@@ -210,14 +210,14 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await d.exec(`ALTER TABLE recon_imports ENABLE ROW LEVEL SECURITY`)
     await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
     await d.exec(`GRANT SELECT ON recon_imports TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/without a tenant-scoped policy/)
+    await expect(check(d)).rejects.toThrow(/recon_imports reads unscoped/)
   })
 
   it('a materialized view granted to an application role is caught — it cannot carry RLS at all', async () => {
     const d = await healthy()
     await d.exec(`CREATE MATERIALIZED VIEW score_mv AS SELECT * FROM score_rows`)
     await d.exec(`GRANT SELECT ON score_mv TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/materialized views cannot have RLS/)
+    await expect(check(d)).rejects.toThrow(/cannot carry tenant policies/)
   })
 
   it('a definer function that loses its pinned search_path is caught', async () => {
@@ -229,7 +229,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
   it('a context reader that stops being SECURITY DEFINER is caught', async () => {
     const d = await healthy()
     await d.exec(`ALTER FUNCTION current_account_id() SECURITY INVOKER`)
-    await expect(check(d)).rejects.toThrow(/SECURITY DEFINER, owned by auth_verifier/)
+    await expect(check(d)).rejects.toThrow(/must exist and be SECURITY DEFINER/)
   })
 
   it('a table that loses FORCE RLS is caught', async () => {
@@ -305,5 +305,195 @@ describe('the attacks hold for a real non-superuser LOGIN principal', () => {
       await expect(d.query(`SELECT stamp_tenant_context('${WS1}','${USER1}')`)).rejects.toThrow(/permission denied/)
       await expect(d.query(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
     })
+  })
+})
+
+describe('audit 3 — every assertion names only the object it is about', () => {
+  it('THE FINDING: a NOINHERIT login role in all three groups plus auth_verifier', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE web_prod LOGIN NOINHERIT`)
+    await d.exec(`GRANT app_rw TO web_prod`)
+    await d.exec(`GRANT svc_onboard TO web_prod`)
+    await d.exec(`GRANT auth_verifier TO web_prod`)
+    // pg_has_role(..., 'USAGE') asks whether privileges are INHERITED and is
+    // false for all three here; 'MEMBER' asks whether the role can SET ROLE to
+    // them, which is the attack. Verified before the fix: this passed the whole
+    // gate, then `SET ROLE auth_verifier` returned the plaintext secret.
+    expect((await d.query(`SELECT pg_has_role('web_prod','auth_verifier','USAGE') AS usage,
+                                  pg_has_role('web_prod','auth_verifier','MEMBER') AS member`)).rows).toEqual([
+      { usage: false, member: true },
+    ])
+    // The exclusivity assertion fires first here (two authority groups); the
+    // auth_verifier reach is asserted on its own below.
+    await expect(check(d)).rejects.toThrow(/role exclusivity violated: web_prod/)
+
+    const d2 = await healthy()
+    await d2.exec(`CREATE ROLE only_verifier LOGIN NOINHERIT`)
+    await d2.exec(`GRANT app_rw TO only_verifier`)
+    await d2.exec(`GRANT auth_verifier TO only_verifier`)
+    await expect(check(d2)).rejects.toThrow(/can reach auth_verifier/)
+  })
+
+  it('a NOINHERIT login role in two authority groups is caught', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE web_prod LOGIN NOINHERIT`)
+    await d.exec(`GRANT app_rw TO web_prod`)
+    await d.exec(`GRANT svc_scorer TO web_prod`)
+    await expect(check(d)).rejects.toThrow(/role exclusivity violated: web_prod/)
+  })
+
+  it('THE FINDING: BYPASSRLS on a NOLOGIN role, reached by SET ROLE', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE reporting NOLOGIN BYPASSRLS`)
+    await d.exec(`GRANT app_rw TO reporting`)
+    // Not login-capable, so the old rolcanlogin scan never looked at it. RLS
+    // bypass is evaluated against the CURRENT user after SET ROLE, not the
+    // authenticated one. Verified: the gate passed and one SET ROLE read
+    // every tenant's accounts, workspaces and subscriptions.
+    await expect(check(d)).rejects.toThrow(/reporting\(BYPASSRLS\)/)
+  })
+
+  it('BYPASSRLS on an authority group itself is caught', async () => {
+    const d = await healthy()
+    // The blunt variant, needing no extra role: the plausible reaction to
+    // "RLS is blocking my job".
+    await d.exec(`ALTER ROLE app_rw BYPASSRLS`)
+    await expect(check(d)).rejects.toThrow(/app_rw\(BYPASSRLS\)/)
+  })
+
+  it('the authority groups must not reach each other', async () => {
+    const d = await healthy()
+    // No login role exists here, so a login-only scan passes a database that is
+    // already wrong and stays wrong for every role created later.
+    await d.exec(`GRANT svc_onboard TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/authority groups must not reach each other/)
+  })
+
+  it('THE FINDING: a new SECURITY DEFINER helper granted to an application role', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE FUNCTION auth_key_status() RETURNS TABLE(kid text, secret text)
+                  LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+                    SELECT k.kid, k.secret FROM auth_signing_keys k WHERE k.retired_at IS NULL $fn$`)
+    await d.exec(`ALTER FUNCTION auth_key_status() OWNER TO auth_verifier`)
+    await d.exec(`GRANT EXECUTE ON FUNCTION auth_key_status() TO app_rw`)
+    // Six lines, returned the plaintext secret to an app_rw-only login role,
+    // which then forged a token for another tenant and entered through the
+    // front door with every downstream control behaving correctly.
+    await expect(check(d)).rejects.toThrow(/executable outside auth_verifier/)
+  })
+
+  it('a definer function owned by the migration owner rather than auth_verifier is caught', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE FUNCTION dashboard_rollup() RETURNS TABLE(brand_id uuid, mentions int)
+                  LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+                    SELECT s.brand_id, s.mentions FROM score_rows s $fn$`)
+    await expect(check(d)).rejects.toThrow(/must be owned by auth_verifier/)
+  })
+
+  it('a definer function without a pinned search_path is caught', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE FUNCTION helper() RETURNS int LANGUAGE sql SECURITY DEFINER AS $fn$ SELECT 1 $fn$`)
+    await d.exec(`ALTER FUNCTION helper() OWNER TO auth_verifier`)
+    await expect(check(d)).rejects.toThrow(/pinned search_path/)
+  })
+
+  it('THE FINDING: a plain VIEW over the signing keys, granted to a tenant principal', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE VIEW key_health AS SELECT kid, secret, issuer, audience FROM auth_signing_keys`)
+    await d.exec(`GRANT SELECT ON key_health TO app_rw`)
+    // Every sweep filtered relkind IN ('r','p') or = 'm'. A view confers no
+    // privilege on the base table, so the "can read the signing secret" check
+    // was true and useless. Whether it leaks depends on the view owner's RLS
+    // posture — on Supabase the migration owner carries BYPASSRLS — and the
+    // gate could not tell you either way, which is itself the problem.
+    await expect(check(d)).rejects.toThrow(/cannot carry tenant policies/)
+  })
+
+  it('a security_invoker view is allowed — it runs the caller\'s policies', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE VIEW my_scores WITH (security_invoker = true) AS SELECT * FROM score_rows`)
+    await d.exec(`GRANT SELECT ON my_scores TO app_rw`)
+    await expect(check(d)).resolves.toBeDefined()
+  })
+
+  it('THE FINDING: a grant made to the LOGIN role rather than to app_rw', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE web_prod LOGIN`)
+    await d.exec(`GRANT app_rw TO web_prod`)
+    await d.exec(`CREATE TABLE recon_imports (id serial primary key, workspace_id uuid NOT NULL REFERENCES workspaces(id), payload jsonb)`)
+    await d.exec(`ALTER TABLE recon_imports ENABLE ROW LEVEL SECURITY`)
+    await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
+    await d.exec(`GRANT SELECT ON recon_imports TO web_prod`) // not to app_rw
+    await d.exec(`CREATE POLICY recon_read ON recon_imports FOR SELECT USING (true)`)
+    // The replacement for a hardcoded list of three group roles was a hardcoded
+    // list of one. Deploy-time grants land on login roles as often as groups.
+    await expect(check(d)).rejects.toThrow(/recon_imports reads unscoped/)
+  })
+
+  it('THE FINDING: a write policy with WITH CHECK (true) lets a WS1 session write into WS2', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE recon_imports (id serial primary key, workspace_id uuid NOT NULL REFERENCES workspaces(id), payload jsonb)`)
+    await d.exec(`ALTER TABLE recon_imports ENABLE ROW LEVEL SECURITY`)
+    await d.exec(`ALTER TABLE recon_imports FORCE  ROW LEVEL SECURITY`)
+    await d.exec(`GRANT SELECT, INSERT ON recon_imports TO app_rw`)
+    await d.exec(`CREATE POLICY recon_read  ON recon_imports FOR SELECT USING (workspace_id = current_workspace_id())`)
+    await d.exec(`CREATE POLICY recon_write ON recon_imports FOR INSERT WITH CHECK (true)`)
+    // The sweep read only `qual` on SELECT/ALL policies, so `with_check` was
+    // never examined. A legitimately authenticated WS1 session inserted a row
+    // into WS2 — invisible to the writer, read by the victim as its own
+    // reconciliation data. On a product whose claim is that its numbers
+    // reconcile, that is corruption of record, not merely a leak.
+    await expect(check(d)).rejects.toThrow(/recon_imports writes unscoped/)
+  })
+
+  it('THE FINDING: prompt_banks stops being shared the moment it gains a workspace column', async () => {
+    const d = await healthy()
+    await d.exec(`ALTER TABLE prompt_banks ADD COLUMN workspace_id uuid REFERENCES workspaces(id)`)
+    // 0000 says private banks go in a separate table. Nothing enforced it, and
+    // prompt_banks is the one tenant-readable table that returns rows with no
+    // context at all — so a private bank added here would be world-readable.
+    await expect(check(d)).rejects.toThrow(/prompt_banks reads unscoped/)
+  })
+
+  it('a live key that is not fully configured is caught even when a good one exists', async () => {
+    const d = await healthy()
+    await d.exec(`ALTER TABLE auth_signing_keys DROP CONSTRAINT auth_signing_keys_live_is_configured`)
+    await d.exec(`INSERT INTO auth_signing_keys (kid,secret,issuer,audience) VALUES ('weak','a','iss','aud')`)
+    // The assertion was EXISTS(good key) where the property is NOT EXISTS(bad
+    // key): a one-character secret sat alongside a good one and verified tokens.
+    await expect(check(d)).rejects.toThrow(/constraint has been dropped/)
+  })
+
+  it('an unbounded token lifetime is caught', async () => {
+    const d = await healthy()
+    await d.exec(`ALTER TABLE auth_signing_keys DROP CONSTRAINT auth_signing_keys_lifetime_sane`)
+    await d.exec(`UPDATE auth_signing_keys SET max_lifetime_s = 2147483647`)
+    await d.exec(`ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_lifetime_sane CHECK (max_lifetime_s BETWEEN 60 AND 604800) NOT VALID`)
+    // 12 hours silently becomes 68 years. Not tenant-reachable, but a control
+    // that nothing verifies is not a control.
+    await expect(check(d)).rejects.toThrow(/live signing keys are not fully configured/)
+  })
+
+  it('the bare-GUC regression assertion actually bites', async () => {
+    const d = await healthy()
+    // Flagged as having no failing case: by this file's own rule that makes it
+    // decoration, and it is the regression test for the original BLOCKER.
+    // Restore the pre-0002 reader and require the gate to notice.
+    await d.exec(`CREATE OR REPLACE FUNCTION current_workspace_id() RETURNS uuid
+                  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+                    SELECT CASE
+                      WHEN current_setting('app.workspace_at', true) = transaction_timestamp()::text
+                      THEN NULLIF(current_setting('app.workspace_id', true), '')::uuid
+                      ELSE NULL END $fn$`)
+    await expect(check(d)).rejects.toThrow(/honoured a GUC/)
+  })
+
+  it('the pgcrypto assertion actually bites', async () => {
+    const d = await healthy()
+    await d.exec(`DROP EXTENSION pgcrypto CASCADE`)
+    // On Supabase pgcrypto conventionally lives in `extensions`, where
+    // CREATE EXTENSION IF NOT EXISTS is a silent no-op and set_workspace_jwt()
+    // would fail to resolve hmac()/digest() at call time.
+    await expect(check(d)).rejects.toThrow(/pgcrypto is not resolvable/)
   })
 })

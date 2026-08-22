@@ -82,13 +82,19 @@ export const workspaceSubscriptions = pgTable('workspace_subscriptions', {
  *
  * `issuer` and `audience` are properties OF THE KEY rather than global config,
  * so a token minted for staging cannot verify in production even where a secret
- * is shared. Both are NOT NULL with no default (migration 0002).
+ * is shared. Both are NULLABLE by design: making them NOT NULL is what made
+ * migration 0002 impossible to apply to a database that had already run 0001
+ * with a key in it. A NOT VALID constraint binds rows written from 0002 onward
+ * and grandfathers what existed; an unconfigured legacy key is inert, because
+ * every claim comparison in set_workspace_jwt() is IS DISTINCT FROM.
  */
 export const authSigningKeys = pgTable('auth_signing_keys', {
   kid: text('kid').primaryKey(),
   secret: text('secret').notNull(),
-  issuer: text('issuer').notNull(),
-  audience: text('audience').notNull(),
+  issuer: text('issuer'),
+  audience: text('audience'),
+  /** Ceiling on `exp - now` for tokens this key may mint. Default 12h. */
+  maxLifetimeS: integer('max_lifetime_s').notNull().default(43200),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   retiredAt: timestamp('retired_at', { withTimezone: true }),
 })

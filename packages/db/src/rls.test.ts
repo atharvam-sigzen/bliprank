@@ -160,7 +160,7 @@ describe('the standing sweep that catches the next migration', () => {
       SELECT DISTINCT c.relname FROM pg_class c
       JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname='public' AND c.relkind IN ('r','p')
-        AND has_table_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
+        AND has_any_column_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
     const badly: string[] = []
     for (const { relname } of readable) {
       if (SHARED.has(relname)) continue

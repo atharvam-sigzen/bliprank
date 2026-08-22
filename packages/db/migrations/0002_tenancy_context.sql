@@ -145,10 +145,15 @@ ALTER TABLE auth_signing_keys ADD COLUMN audience text;
 -- MINOR-4. Defaulted rather than nullable: an unbounded default would be the
 -- wrong direction to fail, and 12 hours is short enough to matter.
 ALTER TABLE auth_signing_keys ADD COLUMN max_lifetime_s integer NOT NULL DEFAULT 43200;
+-- Without a bound, `UPDATE ... SET max_lifetime_s = 2147483647` silently turns a
+-- 12-hour ceiling into 68 years. Not tenant-reachable, but a control nothing
+-- verified is not a control.
+ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_lifetime_sane
+  CHECK (max_lifetime_s BETWEEN 60 AND 604800) NOT VALID;
 
 ALTER TABLE auth_signing_keys
   ADD CONSTRAINT auth_signing_keys_live_is_configured CHECK (
-    retired_at IS NOT NULL OR (
+    (retired_at IS NOT NULL AND retired_at <= now()) OR (
       length(kid) > 0 AND length(secret) >= 32
       AND issuer   IS NOT NULL AND length(issuer)   > 0
       AND audience IS NOT NULL AND length(audience) > 0
@@ -194,7 +199,10 @@ BEGIN
   IF header->>'alg' IS DISTINCT FROM 'HS256' THEN RAISE EXCEPTION 'auth: unsupported alg'; END IF;
   IF jsonb_typeof(header->'kid') IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'auth: token has no kid'; END IF;
 
-  SELECT * INTO k FROM auth_signing_keys s WHERE s.kid = header->>'kid' AND s.retired_at IS NULL;
+  -- One definition of "live", shared with the CHECK constraint: not retired, or
+  -- retired at a future time. Scheduling a rotation must not kill the key now.
+  SELECT * INTO k FROM auth_signing_keys s
+   WHERE s.kid = header->>'kid' AND (s.retired_at IS NULL OR s.retired_at > now());
   IF NOT FOUND THEN RAISE EXCEPTION 'auth: unknown or retired key id'; END IF;
 
   -- Compare digests rather than the signatures themselves. NOT constant time —
@@ -322,13 +330,22 @@ DECLARE
   offenders text;
   supers    text;
 BEGIN
+  -- 'MEMBER', never 'USAGE'. pg_has_role(..., 'USAGE') asks whether privileges
+  -- are AUTOMATICALLY INHERITED, and returns false for a NOINHERIT member. The
+  -- attack is SET ROLE, not passive inheritance, and 'MEMBER' is the predicate
+  -- for that. Verified: a NOINHERIT login role granted app_rw, svc_onboard AND
+  -- auth_verifier scored false on all three under USAGE, passed this function
+  -- and the whole deploy check, then ran `SET ROLE auth_verifier` and read the
+  -- signing secret in plaintext. NOINHERIT is not exotic — it is the
+  -- recommended posture for admin and service login roles, precisely so that
+  -- privilege is opt-in per SET ROLE.
   SELECT string_agg(format('%s in {%s}', r.rolname, g.groups), '; ' ORDER BY r.rolname)
     INTO offenders
     FROM pg_roles r
     JOIN LATERAL (
       SELECT string_agg(grp, ', ' ORDER BY grp) AS groups, count(*) AS n
         FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS grp
-       WHERE pg_has_role(r.rolname, grp, 'USAGE')
+       WHERE pg_has_role(r.rolname, grp, 'MEMBER')
     ) g ON true
    WHERE r.rolcanlogin AND NOT r.rolsuper AND g.n > 1;
 
@@ -344,14 +361,27 @@ BEGIN
   -- one. Checking only login roles would pass a database that is already wrong.
   SELECT string_agg(name, ', ' ORDER BY name) INTO offenders FROM (
     SELECT r.rolname AS name FROM pg_roles r
-     WHERE r.rolcanlogin AND NOT r.rolsuper AND pg_has_role(r.rolname, 'auth_verifier', 'USAGE')
+     WHERE r.rolcanlogin AND NOT r.rolsuper AND pg_has_role(r.rolname, 'auth_verifier', 'MEMBER')
     UNION
     SELECT grp FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS grp
-     WHERE pg_has_role(grp, 'auth_verifier', 'USAGE')
+     WHERE pg_has_role(grp, 'auth_verifier', 'MEMBER')
   ) reachers;
 
   IF offenders IS NOT NULL THEN
     RAISE EXCEPTION 'role exclusivity violated: % can reach auth_verifier and therefore read the JWT signing secret and write tenant context.', offenders;
+  END IF;
+
+  -- The authority groups must not reach each other either. The scan above only
+  -- has the login half, so `GRANT svc_onboard TO app_rw` passed in a database
+  -- whose login roles had not been created yet — and then applied to every login
+  -- role created afterwards.
+  SELECT string_agg(format('%s -> %s', a, b), ', ' ORDER BY a, b) INTO offenders
+    FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS a,
+         unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS b
+   WHERE a <> b AND pg_has_role(a, b, 'MEMBER');
+
+  IF offenders IS NOT NULL THEN
+    RAISE EXCEPTION 'role exclusivity violated: authority groups must not reach each other: %', offenders;
   END IF;
 
   -- A role that bypasses RLS reads every tenant with no token and no context,
@@ -374,16 +404,25 @@ BEGIN
   -- the roles you actually decided about:
   --
   --   SET bliprank.rls_bypass_allowed = 'postgres, breakglass_ro';
+  --
+  -- EVERY role, not only rolcanlogin. RLS bypass is evaluated against the
+  -- CURRENT user after SET ROLE, not the authenticated one, so a NOLOGIN role
+  -- with BYPASSRLS is reachable and was invisible to the previous scan.
+  -- Verified: `CREATE ROLE reporting NOLOGIN BYPASSRLS; GRANT app_rw TO
+  -- reporting; GRANT reporting TO web_prod;` passed the whole deploy check, and
+  -- web_prod read every tenant after one SET ROLE. So did the blunter
+  -- `ALTER ROLE app_rw BYPASSRLS`, which needs no extra role at all and is the
+  -- plausible reaction to "RLS is blocking my job".
   SELECT string_agg(format('%s(%s)', r.rolname, CASE WHEN r.rolsuper THEN 'SUPERUSER' ELSE 'BYPASSRLS' END), ', ' ORDER BY r.rolname)
     INTO supers
     FROM pg_roles r
-   WHERE r.rolcanlogin AND (r.rolsuper OR r.rolbypassrls)
+   WHERE (r.rolsuper OR r.rolbypassrls) AND r.rolname NOT LIKE 'pg\_%'
      AND r.rolname <> ALL (
            SELECT btrim(x) FROM unnest(string_to_array(
              coalesce(current_setting('bliprank.rls_bypass_allowed', true), ''), ',')) AS x);
 
   IF supers IS NOT NULL THEN
-    RAISE EXCEPTION 'these login roles bypass RLS entirely and read every tenant: %. Remove the attribute, or name them in bliprank.rls_bypass_allowed to accept them deliberately.', supers;
+    RAISE EXCEPTION 'these roles bypass RLS entirely and read every tenant: %. Remove the attribute, or name them in bliprank.rls_bypass_allowed to accept them deliberately.', supers;
   END IF;
 END $$;
 
@@ -494,4 +533,30 @@ CREATE TRIGGER workspace_brands_billing_gate_move
 -- OPERATIONAL NOTE: every ALTER FUNCTION ... OWNER TO above must happen BEFORE
 -- this revoke. A future migration that CREATE OR REPLACEs any auth_verifier-
 -- owned function must re-grant, do the work, and revoke again — as this one does.
+-- MINOR: ensure_score_partition() tested `pg_class.relname = part` with no
+-- namespace qualification, so a temp table with a partition's name made the
+-- helper silently skip creation and the scorer then failed with "no partition of
+-- relation score_rows found for row". Availability, not tenancy, but free to fix.
+CREATE OR REPLACE FUNCTION ensure_score_partition(month_start date) RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE
+  part text := 'score_rows_' || to_char(month_start, 'YYYY_MM');
+  nxt  date := (month_start + interval '1 month')::date;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE c.relname = part AND n.nspname = 'public'
+  ) THEN
+    EXECUTE format('CREATE TABLE public.%I PARTITION OF score_rows FOR VALUES FROM (%L) TO (%L)', part, month_start, nxt);
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', part);
+    EXECUTE format('ALTER TABLE public.%I FORCE  ROW LEVEL SECURITY', part);
+    EXECUTE format('GRANT SELECT, INSERT ON public.%I TO svc_scorer', part);
+    EXECUTE format('GRANT SELECT ON public.%I TO app_rw', part);
+    EXECUTE format('CREATE POLICY scores_via_entitlement ON public.%I FOR SELECT USING (EXISTS (SELECT 1 FROM workspace_brands wb WHERE wb.brand_id = %I.brand_id AND wb.workspace_id = current_workspace_id()))', part, part);
+    EXECUTE format('CREATE POLICY scorer_inserts_scores ON public.%I FOR INSERT TO svc_scorer WITH CHECK (true)', part);
+    EXECUTE format('CREATE POLICY scorer_reads_scores ON public.%I FOR SELECT TO svc_scorer USING (true)', part);
+  END IF;
+END $$;
+REVOKE ALL ON FUNCTION ensure_score_partition(date) FROM PUBLIC;
+
 DO $$ BEGIN EXECUTE format('REVOKE auth_verifier FROM %I', current_user); END $$;

@@ -275,10 +275,34 @@ in the test suite, so a new table with `USING (true)` passed the deploy and
 served every tenant's rows.
 
 The through-line in all three is the same as the original bug: **an assertion
-that names a specific list rather than deriving the property**. `check-deploy.sql`
-now enumerates from the catalog, and `deploy-check.test.ts` builds a
-deliberately-broken database per assertion, on the rule that an assertion with
-no failing case is indistinguishable from one that does nothing.
+that names a specific list rather than deriving the property**.
+
+**Audit three found four more of exactly that**, each with a working
+proof-of-concept ending in the plaintext HMAC signing secret: `pg_has_role(...,
+'USAGE')` is blind to a `NOINHERIT` member, who reaches everything through
+`SET ROLE` — a role granted all three authority groups *and* `auth_verifier`
+passed the whole gate and read the secret; `rolcanlogin` is blind to `BYPASSRLS`
+on a `NOLOGIN` role, and to `ALTER ROLE app_rw BYPASSRLS`, which needs no extra
+role at all; the `SECURITY DEFINER` assertion named five functions, so a
+six-line helper granted to `app_rw` returned the secret and the tenant then
+forged a token and entered through the front door; and `relkind IN ('r','p')`
+is blind to plain views. A fifth, `MAJOR`: write policies were never swept at
+all — `with_check` was not read — so a legitimately authenticated WS1 session
+inserted a row into WS2, invisible to the writer and read by the victim as its
+own reconciliation data. On a product whose claim is that its numbers
+reconcile, that is corruption of record rather than a leak.
+
+The gate now derives every *subject* from the catalog — which roles, which
+relkinds, which functions — and names only the objects an assertion is about.
+Where a list is unavoidable it is **default-deny**: every `SECURITY DEFINER`
+function is refused unless it is one of the three that form the intended
+surface, so the next one fails the deploy the day it is written. The earlier
+lists were default-allow, which is the bug.
+
+`deploy-check.test.ts` builds a deliberately-broken database per assertion, on
+the rule that an assertion with no failing case is indistinguishable from one
+that does nothing — including the two the audit flagged as having none, the
+bare-GUC regression and the pgcrypto resolution check.
 
 **Accepted consequence, recorded rather than discovered later:** the tenant read
 path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
