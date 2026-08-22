@@ -1,0 +1,13 @@
+{
+  "name": "@bliprank/scorer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@bliprank/contracts": "workspace:*",
+    "@bliprank/stats": "workspace:*"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}

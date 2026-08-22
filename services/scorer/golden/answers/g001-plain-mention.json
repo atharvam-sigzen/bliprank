@@ -1,0 +1,75 @@
+{
+  "id": "g001-plain-mention",
+  "covers": "baseline: subject mentioned first, own domain cited, one competitor present",
+  "source": {
+    "engine": "chatgpt",
+    "note": "hand-built fixture"
+  },
+  "brand": {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "aliases": [
+      "HubSpot",
+      "Hub Spot",
+      "HubSpot CRM"
+    ],
+    "domains": [
+      "hubspot.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce",
+        "Sales Force"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho CRM",
+      "aliases": [
+        "Zoho",
+        "Zoho CRM"
+      ],
+      "domains": [
+        "zoho.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techcrunch.com": "TechCrunch",
+    "forbes.com": "Forbes"
+  },
+  "answer": {
+    "text": "For a small business, HubSpot is usually the easiest CRM to start with because the free tier is genuinely usable. Salesforce is more powerful but takes longer to configure.",
+    "citations": [
+      {
+        "url": "https://www.hubspot.com/products/crm",
+        "title": "HubSpot CRM",
+        "position": 0
+      },
+      {
+        "url": "https://www.g2.com/products/hubspot-crm/reviews",
+        "title": "HubSpot reviews",
+        "position": 1
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "cited": true,
+    "position": 1,
+    "competitorsMentioned": [
+      "Salesforce"
+    ],
+    "citationClasses": {
+      "0": "owned",
+      "1": "review"
+    }
+  }
+}

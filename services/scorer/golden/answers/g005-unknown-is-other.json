@@ -1,0 +1,74 @@
+{
+  "id": "g005-unknown-is-other",
+  "covers": "ADR-0005 constraint 2: an unrecognised domain is `other`, never promoted to `owned`",
+  "source": {
+    "engine": "google-ai-overviews",
+    "note": "hand-built fixture"
+  },
+  "brand": {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "aliases": [
+      "HubSpot",
+      "Hub Spot",
+      "HubSpot CRM"
+    ],
+    "domains": [
+      "hubspot.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce",
+        "Sales Force"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho CRM",
+      "aliases": [
+        "Zoho",
+        "Zoho CRM"
+      ],
+      "domains": [
+        "zoho.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techcrunch.com": "TechCrunch",
+    "forbes.com": "Forbes"
+  },
+  "answer": {
+    "text": "HubSpot is a common recommendation.",
+    "citations": [
+      {
+        "url": "https://some-affiliate-blog.example/best-crm-2026",
+        "position": 0,
+        "meta": {
+          "publisher": "Best CRM Guide"
+        }
+      },
+      {
+        "url": "https://hubspot-review-scam.example/hubspot",
+        "position": 1
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other"
+    }
+  }
+}

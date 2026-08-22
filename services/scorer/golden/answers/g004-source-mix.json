@@ -1,0 +1,89 @@
+{
+  "id": "g004-source-mix",
+  "covers": "video/community/review/earned_media/reference classification with provider metadata",
+  "source": {
+    "engine": "google-ai-mode",
+    "note": "hand-built fixture"
+  },
+  "brand": {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "aliases": [
+      "HubSpot",
+      "Hub Spot",
+      "HubSpot CRM"
+    ],
+    "domains": [
+      "hubspot.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce",
+        "Sales Force"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho CRM",
+      "aliases": [
+        "Zoho",
+        "Zoho CRM"
+      ],
+      "domains": [
+        "zoho.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techcrunch.com": "TechCrunch",
+    "forbes.com": "Forbes"
+  },
+  "answer": {
+    "text": "HubSpot comes up most often in small-business CRM discussions.",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s",
+        "position": 0,
+        "meta": {
+          "publisher": "CRM Weekly"
+        }
+      },
+      {
+        "url": "https://www.reddit.com/r/smallbusiness/comments/abc123/best_crm/",
+        "position": 1
+      },
+      {
+        "url": "https://www.capterra.com/p/135464/HubSpot-CRM/",
+        "position": 2
+      },
+      {
+        "url": "https://techcrunch.com/2026/01/02/crm-market/",
+        "position": 3
+      },
+      {
+        "url": "https://en.wikipedia.org/wiki/Customer_relationship_management",
+        "position": 4
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "video",
+      "1": "community",
+      "2": "review",
+      "3": "earned_media",
+      "4": "reference"
+    }
+  }
+}

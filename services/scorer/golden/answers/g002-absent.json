@@ -1,0 +1,69 @@
+{
+  "id": "g002-absent",
+  "covers": "subject absent: mentioned false, position null, competitors still ranked",
+  "source": {
+    "engine": "gemini",
+    "note": "hand-built fixture"
+  },
+  "brand": {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "aliases": [
+      "HubSpot",
+      "Hub Spot",
+      "HubSpot CRM"
+    ],
+    "domains": [
+      "hubspot.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce",
+        "Sales Force"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho CRM",
+      "aliases": [
+        "Zoho",
+        "Zoho CRM"
+      ],
+      "domains": [
+        "zoho.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techcrunch.com": "TechCrunch",
+    "forbes.com": "Forbes"
+  },
+  "answer": {
+    "text": "Zoho CRM and Salesforce are the two most common picks for small teams in India.",
+    "citations": [
+      {
+        "url": "https://www.zoho.com/crm/",
+        "position": 0
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Zoho CRM",
+      "Salesforce"
+    ],
+    "citationClasses": {
+      "0": "competitor"
+    }
+  }
+}

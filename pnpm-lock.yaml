@@ -38,6 +38,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/stats
 
+  services/scorer:
+    dependencies:
+      '@bliprank/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@bliprank/stats':
+        specifier: workspace:*
+        version: link:../../packages/stats
+
 packages:
 
   '@esbuild/aix-ppc64@0.28.2':

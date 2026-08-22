@@ -1,0 +1,68 @@
+{
+  "id": "g003-url-only",
+  "covers": "brand appears ONLY inside a URL in the prose: cited, but not a text mention",
+  "source": {
+    "engine": "copilot",
+    "note": "hand-built fixture; guards the URL-masking rule in normaliseForMatch"
+  },
+  "brand": {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "aliases": [
+      "HubSpot",
+      "Hub Spot",
+      "HubSpot CRM"
+    ],
+    "domains": [
+      "hubspot.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce",
+        "Sales Force"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho CRM",
+      "aliases": [
+        "Zoho",
+        "Zoho CRM"
+      ],
+      "domains": [
+        "zoho.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techcrunch.com": "TechCrunch",
+    "forbes.com": "Forbes"
+  },
+  "answer": {
+    "text": "A good starting point is https://hubspot.com/products/crm which explains the free tier. Zoho is a cheaper alternative.",
+    "citations": [
+      {
+        "url": "https://hubspot.com/products/crm",
+        "position": 0
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "cited": true,
+    "position": null,
+    "competitorsMentioned": [
+      "Zoho CRM"
+    ],
+    "citationClasses": {
+      "0": "owned"
+    }
+  }
+}

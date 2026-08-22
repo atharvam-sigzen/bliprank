@@ -1,0 +1,62 @@
+{
+  "id": "g006-position-second",
+  "covers": "position ranking when a competitor appears first in the text",
+  "source": {
+    "engine": "chatgpt",
+    "note": "hand-built fixture"
+  },
+  "brand": {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "aliases": [
+      "HubSpot",
+      "Hub Spot",
+      "HubSpot CRM"
+    ],
+    "domains": [
+      "hubspot.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce",
+        "Sales Force"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho CRM",
+      "aliases": [
+        "Zoho",
+        "Zoho CRM"
+      ],
+      "domains": [
+        "zoho.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techcrunch.com": "TechCrunch",
+    "forbes.com": "Forbes"
+  },
+  "answer": {
+    "text": "Salesforce dominates the enterprise end. HubSpot owns the small-business end, and Zoho competes on price.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  }
+}
