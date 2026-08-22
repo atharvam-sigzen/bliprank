@@ -40,13 +40,25 @@ export const BY_ENGINE = [
   { engine: 'Google AI Overviews', current: metric(3, 20), previous: metric(2, 20) },
 ]
 
-/** Source mix from the ADR-0005 classifier, as the corpus would report it. */
+/**
+ * Source mix from the ADR-0005 classifier.
+ *
+ * These are Metrics, not bare shares. The first draft of this file had them as
+ * `{label, share}` and the page rendered `31%` directly — which is exactly the
+ * bare point estimate R8 exists to forbid, shipped in the scaffold that is
+ * supposed to demonstrate the rule. Classification being deterministic does not
+ * make the share certain: the corpus is a sample of answers, so the proportion
+ * of citations in a class carries the same sampling uncertainty as any other
+ * proportion, and R8 lists no exemption for "deterministic".
+ */
+const CITATIONS_OBSERVED = 412
+
 export const SOURCE_MIX = [
-  { label: 'Community', share: 0.31 },
-  { label: 'Earned media', share: 0.24 },
-  { label: 'Review', share: 0.18 },
-  { label: 'Video', share: 0.11 },
-  { label: 'Owned', share: 0.09 },
-  { label: 'Reference', share: 0.04 },
-  { label: 'Other', share: 0.03 },
+  { label: 'Community', metric: metric(128, CITATIONS_OBSERVED) },
+  { label: 'Earned media', metric: metric(99, CITATIONS_OBSERVED) },
+  { label: 'Review', metric: metric(74, CITATIONS_OBSERVED) },
+  { label: 'Video', metric: metric(45, CITATIONS_OBSERVED) },
+  { label: 'Owned', metric: metric(37, CITATIONS_OBSERVED) },
+  { label: 'Reference', metric: metric(17, CITATIONS_OBSERVED) },
+  { label: 'Other', metric: metric(12, CITATIONS_OBSERVED) },
 ]

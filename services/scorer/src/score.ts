@@ -54,6 +54,8 @@ export interface BrandMention {
   readonly count: number
   /** Which alias matched first — recorded so a surprising match is explainable. */
   readonly matchedAlias: string
+  /** Length of that first match, used to rank nested brands at the same offset. */
+  readonly matchLength: number
 }
 
 export interface ScoreRow {
@@ -110,31 +112,50 @@ const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  * or `.`, so an alias like `C++` or `Node.js` would never match, and it treats
  * a digit as a word character so `Zoho1` would match `Zoho`. Explicit
  * boundaries are used instead: the match must not be flanked by a letter or
- * digit.
+ * digit or underscore - `HubSpot_alt` and `#HubSpot_CRM` are handles, not mentions.
  */
 function aliasRegex(alias: string): RegExp {
   const a = escapeRe(alias.normalize('NFKC').toLowerCase().trim()).replace(/\\?\s+/g, '\\s+')
-  return new RegExp(`(?<![\\p{L}\\p{N}])${a}(?![\\p{L}\\p{N}])`, 'giu')
+  return new RegExp(`(?<![\\p{L}\\p{N}_])${a}(?![\\p{L}\\p{N}_])`, 'giu')
 }
 
-/** All matches of any alias, cheapest-explanation first: earliest offset wins. */
+/**
+ * All occurrences of any alias, as non-overlapping spans.
+ *
+ * Overlap resolution is the whole job. Aliases nest — a brand listing both
+ * `Zoho` and `Zoho CRM` is the normal case, not a corner case — and matching
+ * each alias independently counted "Zoho CRM is affordable" as TWO mentions.
+ * `mentionCount` feeds frequency and share-of-voice, so that silently inflated
+ * every brand whose alias table contains a name plus a "name + product line"
+ * form, which is most of them.
+ *
+ * Longest match wins at any given position: `Zoho CRM` is a more specific
+ * reading of the same text than `Zoho`, and reporting the specific one makes
+ * the recorded `matchedAlias` explain what a human actually sees.
+ */
 export function findMentions(normalisedText: string, brand: BrandSpec): BrandMention | null {
-  let firstOffset = Infinity
-  let matchedAlias = ''
-  let count = 0
+  const spans: { start: number; end: number; alias: string }[] = []
   for (const alias of brand.aliases) {
     if (!alias.trim()) continue
-    const re = aliasRegex(alias)
-    for (const m of normalisedText.matchAll(re)) {
-      count++
-      if (m.index !== undefined && m.index < firstOffset) {
-        firstOffset = m.index
-        matchedAlias = alias
-      }
+    for (const m of normalisedText.matchAll(aliasRegex(alias))) {
+      if (m.index !== undefined) spans.push({ start: m.index, end: m.index + m[0].length, alias })
     }
   }
-  if (count === 0) return null
-  return { brandId: brand.id, name: brand.name, firstOffset, count, matchedAlias }
+  if (spans.length === 0) return null
+
+  // Earliest first; at equal start the longer span wins; then alias name, so
+  // the ordering is total and never depends on alias array order.
+  spans.sort((a, b) => a.start - b.start || b.end - a.end || (a.alias < b.alias ? -1 : 1))
+
+  const kept: typeof spans = []
+  for (const span of spans) {
+    const last = kept[kept.length - 1]
+    if (last && span.start < last.end) continue // overlaps an accepted span
+    kept.push(span)
+  }
+
+  const first = kept[0]!
+  return { brandId: brand.id, name: brand.name, firstOffset: first.start, count: kept.length, matchedAlias: first.alias, matchLength: first.end - first.start }
 }
 
 /**
@@ -157,12 +178,28 @@ export function scoreAnswer(input: ScoreInput): ScoreRow {
 
   // Rank by first appearance across everything detected. Ties break on brand id
   // so the ordering is total and reproducible rather than insertion-dependent.
-  const all = [...(subject ? [subject] : []), ...competitorHits].sort((a, b) => a.firstOffset - b.firstOffset || (a.brandId < b.brandId ? -1 : 1))
+  // At the same offset the longer match is the more specific brand ("Microsoft
+  // Copilot" over "Microsoft"), which is a meaningful rank rather than an
+  // alphabetical accident. Brand id only breaks a genuine tie, keeping the
+  // ordering total and reproducible (R5).
+  const all = [...(subject ? [subject] : []), ...competitorHits].sort(
+    (a, b) => a.firstOffset - b.firstOffset || b.matchLength - a.matchLength || (a.brandId < b.brandId ? -1 : 1),
+  )
   const position = subject ? all.findIndex((m) => m.brandId === brand.id) + 1 : null
 
   const registry: ClassifierRegistry = {
     ownedDomains: brand.domains,
-    competitorDomains: Object.fromEntries((input.competitors ?? []).filter((c) => c.id !== brand.id).map((c) => [c.name, c.domains])),
+    // Sorted by name: two competitors can legitimately share a domain (sister
+    // brands, a rebrand, a shared parent site), and without a stable order the
+    // recorded `competitor` label would depend on how the caller happened to
+    // build the array — a stored field changing with no change to the answer.
+    competitorDomains: Object.fromEntries(
+      (input.competitors ?? [])
+        .filter((c) => c.id !== brand.id)
+        .slice()
+        .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+        .map((c) => [c.name, c.domains]),
+    ),
     ...(input.publishers ? { publishers: input.publishers } : {}),
   }
   const citations = classifyCitations(answer.citations, registry)

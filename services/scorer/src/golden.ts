@@ -33,6 +33,15 @@ export interface GoldenCase {
   /** What a human says the correct output is. */
   readonly label: {
     readonly mentioned: boolean
+    /**
+     * Occurrences a human counts. Labelled because the harness previously
+     * checked mentioned/cited/position/competitors only — so a bug that
+     * double-counted every "Brand + product line" alias pair was structurally
+     * invisible and would have passed G2 at 300/300.
+     */
+    readonly mentionCount: number
+    /** Total brands (subject + competitors) a human finds in the text. */
+    readonly brandsDetected: number
     readonly cited: boolean
     /** 1-based rank among detected brands, or null. */
     readonly position: number | null
@@ -78,6 +87,8 @@ const eqArray = (a: readonly string[], b: readonly string[]): boolean => a.lengt
 export function runGoldenSet(cases: readonly GoldenCase[]): GoldenReport {
   const fields: Record<string, { agreed: number; total: number; disagreements: { caseId: string; expected: unknown; actual: unknown }[] }> = {
     mentioned: { agreed: 0, total: 0, disagreements: [] },
+    mentionCount: { agreed: 0, total: 0, disagreements: [] },
+    brandsDetected: { agreed: 0, total: 0, disagreements: [] },
     cited: { agreed: 0, total: 0, disagreements: [] },
     position: { agreed: 0, total: 0, disagreements: [] },
     competitorsMentioned: { agreed: 0, total: 0, disagreements: [] },
@@ -100,6 +111,8 @@ export function runGoldenSet(cases: readonly GoldenCase[]): GoldenReport {
       else f.disagreements.push({ caseId: c.id, expected, actual })
     }
     check('mentioned', c.label.mentioned, row.mentioned, c.label.mentioned === row.mentioned)
+    check('mentionCount', c.label.mentionCount, row.mentionCount, c.label.mentionCount === row.mentionCount)
+    check('brandsDetected', c.label.brandsDetected, row.brandsDetected, c.label.brandsDetected === row.brandsDetected)
     check('cited', c.label.cited, row.cited, c.label.cited === row.cited)
     check('position', c.label.position, row.position, c.label.position === row.position)
     check(
@@ -161,6 +174,17 @@ export function validateGoldenCase(c: GoldenCase): string[] {
   if (typeof c.answer?.text !== 'string') errs.push(`${c.id}: answer.text must be a string`)
   if (!Array.isArray(c.answer?.citations)) errs.push(`${c.id}: answer.citations must be an array`)
   if (c.label?.mentioned === false && c.label?.position !== null) errs.push(`${c.id}: not mentioned but position is not null`)
+  if (typeof c.label?.mentionCount !== 'number') errs.push(`${c.id}: label.mentionCount is required`)
+  if (typeof c.label?.brandsDetected !== 'number') errs.push(`${c.id}: label.brandsDetected is required`)
+  if (c.label?.mentioned === false && c.label?.mentionCount !== 0) errs.push(`${c.id}: not mentioned but mentionCount is not 0`)
+  if (c.label?.mentioned === true && (c.label?.mentionCount ?? 0) < 1) errs.push(`${c.id}: mentioned but mentionCount is 0`)
+  // Every citation must be labelled or explicitly skipped. A partially-labelled
+  // case silently shrinks the citation-class denominator as the set grows.
+  for (const cit of c.answer?.citations ?? []) {
+    if (c.label?.citationClasses?.[String(cit.position)] === undefined) {
+      errs.push(`${c.id}: citation at position ${cit.position} has no label`)
+    }
+  }
   if (c.label?.mentioned === true && c.label?.position === null) errs.push(`${c.id}: mentioned but position is null`)
   for (const [pos, cls] of Object.entries(c.label?.citationClasses ?? {})) {
     if (!c.answer.citations.some((x) => String(x.position) === pos)) errs.push(`${c.id}: label for citation position ${pos} which does not exist`)

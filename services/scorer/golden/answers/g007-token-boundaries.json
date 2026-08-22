@@ -51,6 +51,8 @@
   },
   "label": {
     "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
     "cited": false,
     "position": null,
     "competitorsMentioned": [],

@@ -73,13 +73,39 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
         ))}
       </svg>
 
+      {/* A screen reader cannot navigate a concatenated aria-label point by
+          point, so the same data is offered as a real table. */}
+      <table className="visually-hidden">
+        <caption>{title}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Cycle</th>
+            <th scope="col">Estimate</th>
+            <th scope="col">95% interval</th>
+            <th scope="col">Sample size</th>
+          </tr>
+        </thead>
+        <tbody>
+          {points.map((p) => (
+            <tr key={p.cycle}>
+              <th scope="row">{p.cycle}</th>
+              <td>{formatValue(p.metric)}</td>
+              <td>{formatInterval(p.metric)}</td>
+              <td>{p.metric.n}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
       <figcaption className="chart__legend">
         <span>
           <span className="chart__swatch" style={{ background: 'var(--color-primary)' }} aria-hidden="true" />
           Estimate
         </span>
         <span>
-          <span className="chart__swatch" style={{ background: 'var(--color-secondary)', opacity: 0.3 }} aria-hidden="true" />
+          {/* Matches the band's actual fill-opacity. The key previously showed
+              0.3 for a band drawn at 0.16 — a legend that misdescribes the chart. */}
+          <span className="chart__swatch" style={{ background: 'var(--color-secondary)', opacity: 0.45, outline: '1px solid var(--color-secondary)' }} aria-hidden="true" />
           95% confidence interval
         </span>
         <span>Scale fixed 0–100%, never auto-fitted.</span>

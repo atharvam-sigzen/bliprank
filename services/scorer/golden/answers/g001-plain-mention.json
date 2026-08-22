@@ -62,6 +62,8 @@
   },
   "label": {
     "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 2,
     "cited": true,
     "position": 1,
     "competitorsMentioned": [

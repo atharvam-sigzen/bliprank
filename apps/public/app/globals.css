@@ -115,7 +115,9 @@ a {
 .grid {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  /* Capped: uncapped 1fr tracks stretched three cards across an
+     ultra-wide viewport and read as a marketing layout. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 360px));
 }
 
 .card {
@@ -196,14 +198,19 @@ a {
 }
 
 /*
- * A significant move is marked with weight and a glyph, never colour alone —
- * and the palette stays sober. Amber, not green: "this changed" is a prompt to
- * look, not a congratulation.
+ * A significant move is marked with weight and a glyph, never colour alone.
+ * Never green either: "this changed" is a prompt to look, not a congratulation,
+ * and a green arrow is the exact reflex this product refuses.
  */
 .delta--significant {
-  border-color: var(--color-accent);
-  background: #fef3c7;
-  color: #713f12;
+  /*
+   * Not amber. Amber is the scaffold/attention notice, and one colour doing two
+   * unrelated jobs on the same page makes both weaker. A significant movement
+   * is a data statement, so it takes the data colour.
+   */
+  border-color: var(--color-primary);
+  background: #dbeafe;
+  color: #14306e;
   font-weight: 600;
 }
 
@@ -215,14 +222,30 @@ a {
 
 .chart {
   width: 100%;
+  /*
+   * Capped at the viewBox width. Without this the SVG scales fluidly, so at a
+   * 375px viewport the 10px tick text rendered at about 5px and the 3px dots at
+   * 1.5px. Text in a fixed viewBox does not get to be responsive for free.
+   */
+  max-width: 600px;
   height: auto;
   display: block;
   overflow: visible;
 }
 
 .chart__band {
+  /*
+   * 0.16 was effectively invisible: 1.20:1 against the white card and 1.02:1
+   * against the gridlines it sits on top of, i.e. it merged with them. WCAG
+   * 1.4.11 wants 3:1 for a graphical object needed to understand the content,
+   * and this band IS the content. The stroke guarantees the edges read even
+   * where the fill is thin, which is exactly where a narrow interval lives.
+   */
   fill: var(--color-secondary);
-  opacity: 0.16;
+  fill-opacity: 0.45;
+  stroke: var(--color-secondary);
+  stroke-width: 1;
+  stroke-opacity: 0.85;
 }
 
 .chart__line {

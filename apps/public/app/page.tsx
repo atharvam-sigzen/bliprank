@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { confidenceGrade, formatInterval, formatValue, wilson, type Metric } from '@bliprank/stats'
+import { confidenceGrade, formatInterval, formatProvenance, formatValue, wilson, type Metric } from '@bliprank/stats'
 
 /**
  * The free Grader — P3.3, the acquisition path.
@@ -33,8 +33,11 @@ export default function Grader() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    const value = domain.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '')
-    if (!value || !value.includes('.')) {
+    const value = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
+    // A '.' test accepted 'hello.txt'. Weak input here eventually costs a real
+    // collection call, so the shape is checked properly before it can.
+    const looksLikeDomain = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(value)
+    if (!looksLikeDomain) {
       setError('Enter a domain, for example acme.com')
       return
     }
@@ -143,6 +146,10 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
         <span className="visually-hidden">95% confidence interval: </span>
         {formatInterval(metric)} · n={metric.n} answers
       </p>
+      {/* The free surface is the one most likely to be screenshotted and
+          compared against another tool, so it is the last place provenance
+          should be missing. */}
+      <p className="metric__provenance">{formatProvenance(metric)}</p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
         <span
@@ -158,12 +165,18 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
             fontFamily: 'var(--font-mono)',
             fontSize: '1.75rem',
             fontWeight: 600,
+            lineHeight: 1,
+            flexDirection: 'column',
           }}
         >
+          {/* Labelled, because a bare A-D badge is the PageSpeed/security-score
+              pattern and reads as "you scored B". This grades how much the
+              sample knows, not how the brand is doing. */}
+          <span style={{ fontSize: '0.5rem', letterSpacing: '0.08em', fontWeight: 500 }}>PRECISION</span>
           {grade}
         </span>
         <div>
-          <p style={{ margin: 0, fontWeight: 600 }}>Confidence grade {grade}</p>
+          <p style={{ margin: 0, fontWeight: 600 }}>Precision {grade}</p>
           <p className="metric__interval" style={{ marginTop: 2 }}>{note}</p>
         </div>
       </div>
@@ -171,8 +184,8 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
       {/* The honest caveat, on the acquisition surface rather than buried in a
           methodology page nobody opens. */}
       <p className="notice" style={{ marginTop: 'var(--space-4)', marginBottom: 0 }}>
-        A free grade samples {metric.n} answers, so the interval is wide. It tells you roughly where you stand, not whether you moved. Anyone showing you a precise
-        number off a sample this size is guessing.
+        This is a measure of how much {metric.n} answers can tell us, not a mark out of ten. At this sample the interval is wide: it places you in a range, and
+        cannot separate you from a competitor whose range overlaps yours. Anyone quoting a precise number off a sample this size is guessing.
       </p>
 
       <button

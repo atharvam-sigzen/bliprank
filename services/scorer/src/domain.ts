@@ -44,12 +44,35 @@ const MULTI_LABEL_SUFFIXES = new Set([
   'com.tw',
   'com.cn',
   'com.vn',
+  // "Private" suffixes: each site under these is a distinct publisher, and
+  // grouping them under one registrable domain would merge every Blogspot or
+  // GitHub Pages author into a single row of the source mix.
+  'blogspot.com',
+  'github.io',
+  'gitlab.io',
+  'wordpress.com',
+  'substack.com',
+  'medium.com',
+  'wixsite.com',
+  'webflow.io',
+  'notion.site',
+  'pages.dev',
+  'vercel.app',
+  'netlify.app',
 ])
 
-/** Lowercased host with a leading `www.` removed. Empty string if unparseable. */
+/**
+ * Lowercased host, leading `www.` and the root-zone trailing dot removed.
+ * Empty string if unparseable.
+ *
+ * The trailing dot matters: some canonicalisers emit `hubspot.com.`, which is
+ * DNS-identical to `hubspot.com` but a different string. Left in, it made an
+ * owned citation classify as `other` (undercounting the customer's own domain)
+ * and made registrableDomain return the nonsense `com.`.
+ */
 export function hostOf(url: string): string {
   try {
-    return new URL(url).hostname.toLowerCase().replace(/^www\./, '')
+    return new URL(url).hostname.toLowerCase().replace(/\.$/, '').replace(/^www\./, '')
   } catch {
     return ''
   }
@@ -69,9 +92,20 @@ export function registrableDomain(url: string): string {
   return lastTwo
 }
 
-/** True when `url` is on `domain` or any subdomain of it. */
+/**
+ * True when `url` is on `domain` or any subdomain of it.
+ *
+ * Both sides must be non-empty. An empty `domain` — a trailing comma in an
+ * imported domain list is enough — previously matched every unparseable URL,
+ * because `hostOf` returns '' for those and '' === ''. That made `cited` true
+ * for arbitrary third-party URLs: the ADR-0005 failure mode (inflating the
+ * customer's own number) reached through the citation path instead of the
+ * classifier.
+ */
 export function isOnDomain(url: string, domain: string): boolean {
+  const d = domain.trim().toLowerCase().replace(/\.$/, '').replace(/^www\./, '')
+  if (!d) return false
   const host = hostOf(url)
-  const d = domain.toLowerCase().replace(/^www\./, '')
+  if (!host) return false
   return host === d || host.endsWith(`.${d}`)
 }

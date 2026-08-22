@@ -165,3 +165,65 @@ describe('the invariants rules R1, R5 and R8 depend on', () => {
     expect(scoreAnswer({ answer: answer('we use CCCC CRM here'), brand: weird }).mentioned).toBe(false)
   })
 })
+
+describe('review findings — regressions that were shipped and are now pinned', () => {
+  const ZOHO_NESTED: BrandSpec = { id: 'zoho', name: 'Zoho CRM', aliases: ['Zoho', 'Zoho CRM'], domains: ['zoho.com'] }
+
+  it('BLOCKER: nested aliases count one mention, not one per alias', () => {
+    // 'Zoho CRM' matched both 'Zoho' and 'Zoho CRM' and reported 2. Every brand
+    // whose alias table holds a name plus a "name + product line" form — most
+    // of them — had its frequency silently inflated.
+    const r = scoreAnswer({ answer: answer('Zoho CRM is affordable.'), brand: ZOHO_NESTED })
+    expect(r.mentionCount).toBe(1)
+    expect(scoreAnswer({ answer: answer('HubSpot CRM is best.'), brand: HUBSPOT }).mentionCount).toBe(1)
+    // and genuinely separate occurrences still count separately
+    expect(scoreAnswer({ answer: answer('Zoho CRM is cheap. Zoho is popular.'), brand: ZOHO_NESTED }).mentionCount).toBe(2)
+  })
+
+  it('BLOCKER: the more specific alias is the one reported', () => {
+    const m = findMentions(normaliseForMatch('Zoho CRM is affordable.'), ZOHO_NESTED)
+    expect(m?.matchedAlias).toBe('Zoho CRM')
+  })
+
+  it('BLOCKER: an empty entry in domains never makes an unrelated URL "cited"', () => {
+    // A trailing comma in an imported domain list was enough: isOnDomain('', ...)
+    // matched every unparseable URL, so `cited` — the primary visibility signal —
+    // went true for arbitrary third-party links.
+    const r = scoreAnswer({
+      answer: answer('HubSpot is fine.', ['not a url at all', 'https://evil.example/x']),
+      brand: { ...HUBSPOT, domains: ['hubspot.com', ''] },
+    })
+    expect(r.cited).toBe(false)
+    expect(r.citedAtPositions).toEqual([])
+    // and `cited` now agrees with what the classifier says about the same URLs
+    expect(r.citations.every((c) => c.sourceClass !== 'owned')).toBe(true)
+  })
+
+  it('BLOCKER: two competitors sharing a domain classify the same way in any order', () => {
+    const A: BrandSpec = { id: 'a', name: 'BrandA', aliases: ['BrandA'], domains: ['shared.example'] }
+    const B: BrandSpec = { id: 'b', name: 'BrandB', aliases: ['BrandB'], domains: ['shared.example'] }
+    const forward = scoreAnswer({ answer: answer('x', ['https://shared.example/x']), brand: HUBSPOT, competitors: [A, B] })
+    const reversed = scoreAnswer({ answer: answer('x', ['https://shared.example/x']), brand: HUBSPOT, competitors: [B, A] })
+    expect(forward.citations[0]?.detail.competitor).toBe(reversed.citations[0]?.detail.competitor)
+    expect(JSON.stringify(forward)).toBe(JSON.stringify(reversed))
+  })
+
+  it('a trailing-dot FQDN is the same site, for citation and classification alike', () => {
+    const r = scoreAnswer({ answer: answer('HubSpot', ['https://hubspot.com./crm']), brand: HUBSPOT })
+    expect(r.cited).toBe(true)
+    expect(r.citations[0]?.sourceClass).toBe('owned')
+  })
+
+  it('nested brands rank by specificity at the same offset, not alphabetically', () => {
+    const MS: BrandSpec = { id: 'microsoft', name: 'Microsoft', aliases: ['Microsoft'], domains: [] }
+    const COPILOT: BrandSpec = { id: 'ms-copilot', name: 'Microsoft Copilot', aliases: ['Microsoft Copilot'], domains: [] }
+    const text = 'Microsoft Copilot is built into Windows.'
+    // Whichever is the subject, the longer match ranks first.
+    expect(scoreAnswer({ answer: answer(text), brand: COPILOT, competitors: [MS] }).position).toBe(1)
+    expect(scoreAnswer({ answer: answer(text), brand: MS, competitors: [COPILOT] }).position).toBe(2)
+  })
+
+  it('an underscore is a token boundary — handles are not mentions', () => {
+    expect(scoreAnswer({ answer: answer('follow HubSpot_alt for updates'), brand: HUBSPOT }).mentioned).toBe(false)
+  })
+})

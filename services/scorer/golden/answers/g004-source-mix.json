@@ -75,6 +75,8 @@
   },
   "label": {
     "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
     "cited": false,
     "position": 1,
     "competitorsMentioned": [],
