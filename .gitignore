@@ -14,3 +14,8 @@ coverage/
 
 # Pilot raw payloads (rule R4: raw answers do not belong in git or Postgres)
 services/collector/pilot/data/
+
+# Next.js build output
+.next/
+out/
+next-env.d.ts

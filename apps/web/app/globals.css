@@ -1,0 +1,328 @@
+/*
+ * BlipRank design tokens — Minimalism / Swiss, dense dashboard scale.
+ *
+ * This is an instrument panel, not a marketing site. Generic AI-startup
+ * gradients would actively undermine a product selling measurement rigour, so
+ * the palette is deliberately flat: blue for data, amber reserved for the one
+ * thing that needs attention, and nothing decorative competing with a number.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --color-primary: #1e40af;
+  --color-on-primary: #ffffff;
+  --color-secondary: #3b82f6;
+  --color-accent: #d97706;
+  --color-on-accent: #000000;
+
+  --color-background: #f8fafc;
+  --color-foreground: #1e3a8a;
+  --color-card: #ffffff;
+  --color-card-foreground: #1e3a8a;
+  --color-muted: #e9eef6;
+  --color-muted-foreground: #475569;
+  --color-border: #dbeafe;
+  --color-destructive: #dc2626;
+  --color-ring: #1e40af;
+
+  /* Neutral by design: a movement inside the interval gets NO colour cue. */
+  --color-neutral-ink: #475569;
+
+  /* Dense dashboard scale (8–32px). */
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+
+  --radius: 6px;
+  --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, 'SF Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Never remove the focus ring; make it unmistakable instead. */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+button,
+a {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- layout ------------------------------------------------------------- */
+
+.shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.masthead h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.masthead .cycle {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+
+.card {
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.card h2,
+.card h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+.section {
+  margin-top: var(--space-5);
+}
+
+.section > h2 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+}
+
+/* --- metric ------------------------------------------------------------- */
+
+.metric__value {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.1;
+  margin: var(--space-2) 0 0;
+  letter-spacing: -0.02em;
+}
+
+/*
+ * The interval is NOT small print. It sits directly under the value at a size
+ * that reads as part of the same number, because a customer who never notices
+ * it has been misled by our layout rather than by our arithmetic.
+ */
+.metric__interval {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+  margin: 2px 0 0;
+}
+
+.metric__provenance {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-1);
+  border-top: 1px dashed var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+/* --- delta -------------------------------------------------------------- */
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  background: var(--color-muted);
+  color: var(--color-neutral-ink);
+}
+
+/*
+ * A significant move is marked with weight and a glyph, never colour alone —
+ * and the palette stays sober. Amber, not green: "this changed" is a prompt to
+ * look, not a congratulation.
+ */
+.delta--significant {
+  border-color: var(--color-accent);
+  background: #fef3c7;
+  color: #713f12;
+  font-weight: 600;
+}
+
+.delta__glyph {
+  font-family: var(--font-mono);
+}
+
+/* --- chart -------------------------------------------------------------- */
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.chart__band {
+  fill: var(--color-secondary);
+  opacity: 0.16;
+}
+
+.chart__line {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart__dot {
+  fill: var(--color-primary);
+}
+
+.chart__axis {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.chart__tick {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--color-muted-foreground);
+}
+
+.chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  margin-top: var(--space-2);
+}
+
+.chart__swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* --- table -------------------------------------------------------------- */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+th {
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+td.num {
+  font-family: var(--font-mono);
+}
+
+/* --- notices ------------------------------------------------------------ */
+
+.notice {
+  border: 1px solid var(--color-accent);
+  border-left-width: 3px;
+  background: #fffbeb;
+  color: #713f12;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  margin-bottom: var(--space-4);
+}
+
+.notice strong {
+  font-weight: 600;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
