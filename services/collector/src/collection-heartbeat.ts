@@ -90,8 +90,13 @@ export class CollectionHeartbeat {
   async recordCollected(cells = 1): Promise<void> {
     const now = this.now()
     const day = now.toISOString().slice(0, 10)
-    await this.o.kv.set(this.lastKey, now.toISOString(), { ttlSec: this.ttl })
-    await this.o.kv.incrByFloat(this.countKey(day), cells, { ttlSec: this.ttl })
+    // Concurrent, not sequential: two ops per collected cell is ~6.8M extra
+    // round-trips/month at target scale (~$14/mo — immaterial in money, but
+    // there is no reason to pay the latency serially).
+    await Promise.all([
+      this.o.kv.set(this.lastKey, now.toISOString(), { ttlSec: this.ttl }),
+      this.o.kv.incrByFloat(this.countKey(day), cells, { ttlSec: this.ttl }),
+    ])
   }
 
   async status(): Promise<HeartbeatStatus> {

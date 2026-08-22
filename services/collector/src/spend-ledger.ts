@@ -68,7 +68,7 @@ export interface SpendLedger {
 
 /** Emitted when spend control degrades. Wire to Sentry / Better Stack. */
 export interface SpendAlert {
-  readonly kind: 'refund-failed' | 'cap-reached' | 'local-ledger-on-fleet'
+  readonly kind: 'refund-failed' | 'cap-reached' | 'undeclared-topology-override' | 'charge-failed' | 'clock-skew'
   readonly engine: string
   readonly usd: number
   readonly window: string
@@ -104,16 +104,45 @@ export function windowKey(window: SpendWindow, now: Date): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Markers that mean "this process is one of many, and its local disk is not
- * shared". Present in every runtime the collector is planned to run on
- * (ADR-0002). Detection is best-effort by nature, which is why it only ever
- * makes the guard STRICTER — it can refuse a local ledger, never permit one.
+ * Topology is DECLARED, not guessed.
+ *
+ * The first version of this guard inferred "am I in a fleet?" from a list of
+ * PaaS environment markers. A review killed it: the P5 target is a Hetzner CAX
+ * fleet (ADR-0002), and a bare ARM VM sets none of those markers — so
+ * `detectMultiInstanceRuntime` returned null, null read as "safe", and worker 7
+ * of 12 would have sailed through with a full private budget. That is the exact
+ * bug this file exists to close, reinstated on the one topology it was written
+ * for, by a guard that fails OPEN.
+ *
+ * So the default is now `undeclared`, and `undeclared` is refused. A deployment
+ * has to say what it is. The marker list survives only as an override-proof
+ * veto: it can force `fleet`, it can never grant `single-process`.
  */
+export type RuntimeTopology = 'single-process' | 'fleet' | 'undeclared'
+
+/** Markers that PROVE a fleet. Absence proves nothing — see above. */
 const FLEET_MARKERS = ['VERCEL', 'VERCEL_ENV', 'AWS_LAMBDA_FUNCTION_NAME', 'AWS_EXECUTION_ENV', 'K_SERVICE', 'FUNCTIONS_WORKER_RUNTIME', 'FLY_ALLOC_ID', 'DYNO'] as const
+
+/** The env var a deployment sets to declare itself. */
+export const TOPOLOGY_ENV = 'COLLECTOR_TOPOLOGY'
 
 export function detectMultiInstanceRuntime(env: NodeJS.ProcessEnv = process.env): string | null {
   for (const marker of FLEET_MARKERS) if (env[marker]) return marker
   return null
+}
+
+/**
+ * Resolve the topology. A detected PaaS marker wins over any declaration —
+ * a process cannot declare its way out of being on Lambda.
+ */
+export function resolveTopology(env: NodeJS.ProcessEnv = process.env): { topology: RuntimeTopology; because: string } {
+  const marker = detectMultiInstanceRuntime(env)
+  if (marker) return { topology: 'fleet', because: `${marker} is set` }
+  const declared = env[TOPOLOGY_ENV]
+  if (declared === 'single-process') return { topology: 'single-process', because: `${TOPOLOGY_ENV}=single-process` }
+  if (declared === 'fleet') return { topology: 'fleet', because: `${TOPOLOGY_ENV}=fleet` }
+  if (declared) return { topology: 'undeclared', because: `${TOPOLOGY_ENV}="${declared}" is not a recognised value` }
+  return { topology: 'undeclared', because: `${TOPOLOGY_ENV} is not set` }
 }
 
 export class UnsafeSpendLedgerError extends Error {
@@ -140,13 +169,21 @@ export class LocalSpendLedger implements SpendLedger {
    *   error if the guard later fires, so the argument is available to whoever
    *   has to judge it.
    */
+  /**
+   * @param ack.reason why a per-process cap is acceptable here. Quoted back in
+   *   the refusal, so the argument reaches whoever has to judge it.
+   */
   static forSingleProcess(
     budget: Budget,
     ack: {
       readonly iUnderstandThisCapIsPerProcess: true
       readonly reason: string
-      /** Escape hatch for a fleet runtime. Requires a reason and alerts. */
-      readonly overrideFleetDetection?: boolean
+      /**
+       * Last resort for a runtime that genuinely is one process but cannot set
+       * COLLECTOR_TOPOLOGY. Cannot override a detected PaaS marker, and always
+       * alerts — this is meant to leave a trail, not to be convenient.
+       */
+      readonly overrideUndeclaredTopology?: boolean
       readonly env?: NodeJS.ProcessEnv
       readonly onAlert?: AlertSink
     },
@@ -154,22 +191,35 @@ export class LocalSpendLedger implements SpendLedger {
     if (!ack.reason.trim()) {
       throw new UnsafeSpendLedgerError('LocalSpendLedger.forSingleProcess requires a written reason: this cap is enforced per process, not globally.')
     }
-    const marker = detectMultiInstanceRuntime(ack.env)
-    if (marker && !ack.overrideFleetDetection) {
+    const alert = ack.onAlert ?? defaultAlertSink
+    const { topology, because } = resolveTopology(ack.env)
+
+    if (topology === 'fleet') {
       throw new UnsafeSpendLedgerError(
-        `refusing a per-process spend cap: ${marker} indicates a multi-instance runtime, where each container would get its own full budget (rule R3). ` +
+        `refusing a per-process spend cap: ${because}, so each instance would get its own full budget (rule R3). ` +
           `Use KvSpendLedger. Stated reason for the local ledger was: "${ack.reason}".`,
       )
     }
-    if (marker && ack.overrideFleetDetection) {
-      ;(ack.onAlert ?? defaultAlertSink)({
-        kind: 'local-ledger-on-fleet',
+
+    if (topology === 'undeclared') {
+      if (!ack.overrideUndeclaredTopology) {
+        // Fails CLOSED. A self-hosted worker looks exactly like a laptop from
+        // in here, and guessing wrong costs a full cap per worker.
+        throw new UnsafeSpendLedgerError(
+          `refusing a per-process spend cap: ${because}, so this process cannot show it is the only one. ` +
+            `Set ${TOPOLOGY_ENV}=single-process on a runtime that really is one process, or use KvSpendLedger. ` +
+            `A bare VM or container sets no PaaS marker, so absence of one is not evidence. Stated reason was: "${ack.reason}".`,
+        )
+      }
+      alert({
+        kind: 'undeclared-topology-override',
         engine: '-',
         usd: 0,
         window: 'n/a',
-        message: `per-process spend cap deliberately used on ${marker}: "${ack.reason}". The USD ceiling is NOT global.`,
+        message: `per-process spend cap used with ${because}: "${ack.reason}". If more than one instance runs this, the USD ceiling is NOT global.`,
       })
     }
+
     return new LocalSpendLedger(budget)
   }
 
@@ -219,6 +269,8 @@ export class KvSpendLedger implements SpendLedger {
   private readonly now: () => Date
   private readonly ttl: number
   private readonly alert: AlertSink
+  /** Last window this instance verified against the shared high-water mark. */
+  private verifiedWindow: string | null = null
 
   constructor(private readonly o: KvSpendLedgerOptions) {
     this.prefix = o.keyPrefix ?? 'spend'
@@ -239,6 +291,45 @@ export class KvSpendLedger implements SpendLedger {
 
   private totalKey(w: string): string {
     return `${this.prefix}:${w}:total`
+  }
+  private get highWaterKey(): string {
+    return `${this.prefix}:window-high-water`
+  }
+
+  /**
+   * Guard against a worker whose clock is wrong.
+   *
+   * On self-managed infrastructure there is no managed NTP. A worker whose
+   * clock is stuck or drifts backwards keeps writing to a stale window key,
+   * which is isolated from the counter every correctly-clocked sibling shares —
+   * so it quietly gets its own private cap, and gets a fresh one every time the
+   * stale key expires. The shared high-water mark is what makes that visible.
+   *
+   * Checked once per window transition, not per charge: the failure mode is a
+   * clock, which does not change between two calls a millisecond apart, and a
+   * round-trip on every charge would be real money at 20M calls/month.
+   *
+   * Windows are ISO-prefixed, so string order is time order.
+   */
+  private async verifyWindow(w: string): Promise<string> {
+    if (this.verifiedWindow === w) return w
+    const seen = await this.o.kv.get(this.highWaterKey)
+    if (seen && seen > w) {
+      this.alert({
+        kind: 'clock-skew',
+        engine: '-',
+        usd: 0,
+        window: w,
+        message:
+          `this process derived window ${w} but the shared ledger has already reached ${seen} — its clock is behind. ` +
+          `Charging against ${seen} instead, so it shares the real cap rather than getting a private one. Fix NTP on this host.`,
+      })
+      this.verifiedWindow = seen
+      return seen
+    }
+    if (!seen || w > seen) await this.o.kv.set(this.highWaterKey, w, { ttlSec: this.ttl })
+    this.verifiedWindow = w
+    return w
   }
   private engineUsdKey(w: string, engine: string): string {
     return `${this.prefix}:${w}:e:${engine}:usd`
@@ -270,17 +361,36 @@ export class KvSpendLedger implements SpendLedger {
 
   async charge(engine: string): Promise<void> {
     const price = this.o.priceUsd(engine)
-    const w = this.currentWindow()
+    const w = await this.verifyWindow(this.currentWindow())
     const totalKey = this.totalKey(w)
 
-    const [after] = await this.o.kv.incrManyByFloat(
-      [
-        { key: totalKey, delta: price },
-        { key: this.engineUsdKey(w, engine), delta: price },
-        { key: this.engineCallsKey(w, engine), delta: 1 },
-      ],
-      { ttlSec: this.ttl },
-    )
+    let after: number | undefined
+    try {
+      ;[after] = await this.o.kv.incrManyByFloat(
+        [
+          { key: totalKey, delta: price },
+          { key: this.engineUsdKey(w, engine), delta: price },
+          { key: this.engineCallsKey(w, engine), delta: 1 },
+        ],
+        { ttlSec: this.ttl },
+      )
+    } catch (e) {
+      // The batch is not a transaction, so the total may already have been
+      // incremented server-side before the failure. That can only over-count,
+      // never breach the cap — but the refund path in this same file is loud
+      // and this one was silent, which is inconsistent. Alert, then rethrow so
+      // the caller still refuses the call.
+      this.alert({
+        kind: 'charge-failed',
+        engine,
+        usd: price,
+        window: w,
+        message:
+          `charge of $${price.toFixed(4)} (${engine}) failed mid-batch: ${(e as Error).message}. ` +
+          `Part of it may have applied, so window ${w} can over-count by up to that amount. Fails safe (under-spend); self-corrects at the next window roll.`,
+      })
+      throw e
+    }
     const total = after ?? 0
 
     if (total > this.o.capUsd) {

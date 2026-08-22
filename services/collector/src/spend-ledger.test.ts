@@ -8,6 +8,7 @@ import {
   detectMultiInstanceRuntime,
   KvSpendLedger,
   LocalSpendLedger,
+  resolveTopology,
   UnsafeSpendLedgerError,
   windowKey,
   type AlertSink,
@@ -17,7 +18,8 @@ import {
 
 const ledgerFile = () => join(mkdtempSync(join(tmpdir(), 'spend-')), 'ledger.json')
 const PRICE = 0.002
-const ACK = { iUnderstandThisCapIsPerProcess: true, reason: 'unit test: one process', env: {} } as const
+const SINGLE = { COLLECTOR_TOPOLOGY: 'single-process' }
+const ACK = { iUnderstandThisCapIsPerProcess: true, reason: 'unit test: one process', env: SINGLE } as const
 
 /** A KV whose batched increments interleave, so a check-then-increment bug shows. */
 class InterleavingKV extends MemoryKV {
@@ -50,7 +52,7 @@ describe('choosing the per-process ledger is a deliberate act', () => {
 
   it('demands a written reason', () => {
     expect(() =>
-      LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), { iUnderstandThisCapIsPerProcess: true, reason: '   ', env: {} }),
+      LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), { iUnderstandThisCapIsPerProcess: true, reason: '   ', env: SINGLE }),
     ).toThrow(UnsafeSpendLedgerError)
   })
 
@@ -61,10 +63,10 @@ describe('choosing the per-process ledger is a deliberate act', () => {
           LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), {
             iUnderstandThisCapIsPerProcess: true,
             reason: 'wiring the QStash handler',
-            env: { [marker]: '1' },
+            env: { ...SINGLE, [marker]: '1' },
           }),
         marker,
-      ).toThrow(/multi-instance runtime/)
+      ).toThrow(/own full budget/)
     }
   })
 
@@ -87,13 +89,13 @@ describe('choosing the per-process ledger is a deliberate act', () => {
     const l = LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), {
       iUnderstandThisCapIsPerProcess: true,
       reason: 'single dedicated worker on this host',
-      overrideFleetDetection: true,
-      env: { DYNO: 'worker.1' },
+      overrideUndeclaredTopology: true,
+      env: {},
       onAlert: sink,
     })
     expect(l).toBeInstanceOf(LocalSpendLedger)
     expect(seen).toHaveLength(1)
-    expect(seen[0]?.kind).toBe('local-ledger-on-fleet')
+    expect(seen[0]?.kind).toBe('undeclared-topology-override')
     expect(seen[0]?.message).toContain('NOT global')
   })
 
@@ -101,7 +103,7 @@ describe('choosing the per-process ledger is a deliberate act', () => {
     const l = LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), {
       iUnderstandThisCapIsPerProcess: true,
       reason: 'G0 pilot runner: a single operator-launched script',
-      env: {},
+      env: SINGLE,
     })
     expect(l.capUsd).toBe(1)
   })
@@ -314,5 +316,109 @@ describe('KV increments', () => {
       ]),
     ).toEqual([1, 2, 4])
     expect(await kv.incrManyByFloat([])).toEqual([])
+  })
+})
+
+describe('topology is declared, never assumed', () => {
+  it('THE REVIEW FINDING: an undeclared runtime is REFUSED, not assumed safe', () => {
+    // A bare Hetzner VM — the actual P5 target — sets no PaaS marker. The first
+    // guard read that absence as "not a fleet", so worker 7 of 12 would have
+    // sailed through with a full private budget: the exact bug this file exists
+    // to close, reinstated on the one topology it was written for.
+    expect(() =>
+      LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), {
+        iUnderstandThisCapIsPerProcess: true,
+        reason: 'one worker on this box',
+        env: {}, // no marker, no declaration: indistinguishable from a fleet
+      }),
+    ).toThrow(/cannot show it is the only one/)
+  })
+
+  it('resolveTopology: a PaaS marker overrules any declaration', () => {
+    expect(resolveTopology({ COLLECTOR_TOPOLOGY: 'single-process', VERCEL: '1' }).topology).toBe('fleet')
+    expect(resolveTopology({ COLLECTOR_TOPOLOGY: 'single-process' }).topology).toBe('single-process')
+    expect(resolveTopology({ COLLECTOR_TOPOLOGY: 'fleet' }).topology).toBe('fleet')
+    expect(resolveTopology({ COLLECTOR_TOPOLOGY: 'probably-fine' }).topology).toBe('undeclared')
+    expect(resolveTopology({}).topology).toBe('undeclared')
+  })
+
+  it('a declared fleet is refused even with no marker present', () => {
+    expect(() =>
+      LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), {
+        iUnderstandThisCapIsPerProcess: true,
+        reason: 'hetzner worker',
+        env: { COLLECTOR_TOPOLOGY: 'fleet' },
+      }),
+    ).toThrow(/own full budget/)
+  })
+
+  it('the undeclared override cannot rescue a DETECTED fleet', () => {
+    expect(() =>
+      LocalSpendLedger.forSingleProcess(new Budget(ledgerFile(), 1, () => PRICE), {
+        iUnderstandThisCapIsPerProcess: true,
+        reason: 'trying to force it',
+        overrideUndeclaredTopology: true,
+        env: { VERCEL: '1' },
+      }),
+    ).toThrow(UnsafeSpendLedgerError)
+  })
+})
+
+describe('a wrong clock cannot buy a private budget', () => {
+  it('a worker whose clock is behind charges against the real window, loudly', async () => {
+    const kv = new MemoryKV()
+    const { sink, seen } = collectAlerts()
+    // A correctly-clocked worker establishes the high-water mark.
+    const ontime = new KvSpendLedger({ kv, capUsd: 0.005, priceUsd: () => PRICE, now: () => new Date('2026-08-22T09:00:00Z') })
+    await ontime.charge('chatgpt')
+    await ontime.charge('chatgpt') // 0.004 of 0.005
+
+    // A stuck worker still thinks it is yesterday. Without the guard it would
+    // write to a key nobody else shares and get a whole fresh cap.
+    const skewed = new KvSpendLedger({ kv, capUsd: 0.005, priceUsd: () => PRICE, now: () => new Date('2026-08-21T09:00:00Z'), onAlert: sink })
+    await expect(skewed.charge('chatgpt')).rejects.toThrow(BudgetExceeded)
+    expect(seen.some((a) => a.kind === 'clock-skew')).toBe(true)
+    expect(seen.find((a) => a.kind === 'clock-skew')?.message).toMatch(/clock is behind/)
+  })
+
+  it('the high-water check costs one round-trip per window, not per charge', async () => {
+    const kv = new MemoryKV()
+    let gets = 0
+    const orig = kv.get.bind(kv)
+    kv.get = async (k) => {
+      gets++
+      return orig(k)
+    }
+    const l = new KvSpendLedger({ kv, capUsd: 1, priceUsd: () => PRICE, now: () => new Date('2026-08-21T09:00:00Z') })
+    for (let i = 0; i < 20; i++) await l.charge('chatgpt')
+    expect(gets).toBe(1)
+  })
+
+  it('a clock that is AHEAD advances the window, which is not a fault', async () => {
+    const kv = new MemoryKV()
+    const { sink, seen } = collectAlerts()
+    await new KvSpendLedger({ kv, capUsd: 1, priceUsd: () => PRICE, now: () => new Date('2026-08-21T09:00:00Z') }).charge('chatgpt')
+    const ahead = new KvSpendLedger({ kv, capUsd: 1, priceUsd: () => PRICE, now: () => new Date('2026-08-22T09:00:00Z'), onAlert: sink })
+    await ahead.charge('chatgpt')
+    expect(seen.filter((a) => a.kind === 'clock-skew')).toHaveLength(0)
+  })
+})
+
+describe('a failed charge is as loud as a failed refund', () => {
+  class ChargeFailsKV extends MemoryKV {
+    override async incrManyByFloat(): Promise<number[]> {
+      throw new Error('upstash 500')
+    }
+  }
+
+  it('alerts and rethrows, rather than failing silently', async () => {
+    const { sink, seen } = collectAlerts()
+    const l = new KvSpendLedger({ kv: new ChargeFailsKV(), capUsd: 1, priceUsd: () => PRICE, now: () => new Date('2026-08-21T09:00:00Z'), onAlert: sink })
+    await expect(l.charge('chatgpt')).rejects.toThrow('upstash 500')
+    const a = seen.find((x) => x.kind === 'charge-failed')
+    expect(a).toBeDefined()
+    // The batch is not a transaction, so part of it may have landed.
+    expect(a?.message).toMatch(/may have applied/)
+    expect(a?.message).toMatch(/under-spend/)
   })
 })

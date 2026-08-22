@@ -9,7 +9,7 @@ import { LocalSpendLedger } from './spend-ledger.js'
 
 /** The guarded factory, wrapped once so each test reads clearly. */
 const localLedger = (b: Budget) =>
-  LocalSpendLedger.forSingleProcess(b, { iUnderstandThisCapIsPerProcess: true, reason: 'unit test: one process, no fleet', env: {} })
+  LocalSpendLedger.forSingleProcess(b, { iUnderstandThisCapIsPerProcess: true, reason: 'unit test: one process, no fleet', env: { COLLECTOR_TOPOLOGY: 'single-process' } })
 
 import { AnswerIndex, MemoryKV, r2KeyFor } from './cache-index.js'
 import { CollectionHeartbeat } from './collection-heartbeat.js'
