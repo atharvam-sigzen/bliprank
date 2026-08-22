@@ -79,12 +79,39 @@ export const workspaceSubscriptions = pgTable('workspace_subscriptions', {
  * grant: the tenant role cannot read the secret it would need to forge a token,
  * and only the auth_verifier role that owns the verifier function can. Mirrored
  * here for migrations and key rotation tooling, never for application queries.
+ *
+ * `issuer` and `audience` are properties OF THE KEY rather than global config,
+ * so a token minted for staging cannot verify in production even where a secret
+ * is shared. Both are NOT NULL with no default (migration 0002).
  */
 export const authSigningKeys = pgTable('auth_signing_keys', {
   kid: text('kid').primaryKey(),
   secret: text('secret').notNull(),
+  issuer: text('issuer').notNull(),
+  audience: text('audience').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   retiredAt: timestamp('retired_at', { withTimezone: true }),
+})
+
+/**
+ * Where a verified tenant context lives — migration 0002.
+ *
+ * Mirrored for completeness and for nothing else. **No application code may
+ * read or write this table**, and no application role has a grant on it: it is
+ * written only by auth_verifier-owned functions and read only by
+ * current_workspace_id() / current_account_id(), both SECURITY DEFINER.
+ *
+ * It is a table rather than a GUC because a GUC was the 2026-08-22 BLOCKER —
+ * customised GUCs are USERSET, so any role could set `app.workspace_id` with a
+ * bare `SET LOCAL` and read another tenant. The `(backendPid, xactId)` key is
+ * what stops a row outliving its transaction on a pooled connection.
+ */
+export const authTenantContext = pgTable('auth_tenant_context', {
+  backendPid: integer('backend_pid').primaryKey(),
+  xactId: text('xact_id').notNull(), // xid8; no Drizzle type, and nothing here should read it
+  workspaceId: uuid('workspace_id').notNull(),
+  accountId: uuid('account_id').notNull(),
+  stampedAt: timestamp('stamped_at', { withTimezone: true }).notNull(),
 })
 
 export const promptBanks = pgTable('prompt_banks', {

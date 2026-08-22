@@ -3,6 +3,16 @@
 --
 -- HUMAN-OWNED (CLAUDE.md §4: RLS policies and the tenancy model).
 --
+-- >>> CORRECTION, 2026-08-22. The paragraph below was WRONG when it was
+-- >>> written, reviewed, approved and merged. It claims the tenant role can no
+-- >>> longer name a workspace. It could: current_workspace_id(), not
+-- >>> set_workspace(), was the authority, and it read a USERSET GUC that any
+-- >>> role sets with a bare `SET LOCAL` — no function, no grant. The verifier
+-- >>> built here was an OPTIONAL path around an open door. Fixed in
+-- >>> 0002_tenancy_context.sql; read that file with this one. The text is kept
+-- >>> unedited below because a migration is a record, and because the specific
+-- >>> way it was wrong is the reason the adversarial-path test category exists.
+--
 -- (D) DB-LEVEL TENANCY IDENTITY. 0000 left set_workspace(ws) unbound: app_rw
 --     naming any workspace read it, so the web app was the authorization
 --     boundary and one SQL injection in the shared app_rw role was a full

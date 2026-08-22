@@ -191,15 +191,15 @@ second pass are in `18cde63`.
 **The three decisions that blocked the merge, taken 2026-08-22** and
 implemented in `0001_tenancy_identity.sql` (`f658900`):
 
-1. **DB-level tenancy identity, not app-level-only.** `set_workspace()` did no
-   principal → workspace binding, so the web app was the authorization boundary
-   and one SQL injection in the shared `app_rw` role was a full cross-tenant
-   read. `app_rw` now has no EXECUTE on it at all. It presents an HS256 token;
-   `set_workspace_jwt()` verifies the signature *inside Postgres* against a
-   secret in a table no application role can read, pins the algorithm (so
-   `alg:none` and RS256-as-HMAC are refused), checks `kid`/`exp`/`nbf`, and then
-   requires the subject to actually be a member of the workspace the token
-   names. The signature proves who; membership decides what.
+1. **DB-level tenancy identity, not app-level-only.** The tenant presents an
+   HS256 token; `set_workspace_jwt()` verifies the signature *inside Postgres*
+   against a secret in a table no application role can read, pins the algorithm
+   (so `alg:none` and RS256-as-HMAC are refused), checks
+   `kid`/`iss`/`aud`/`exp`/`nbf`, and requires the subject to actually be a
+   member of the workspace the token names. The signature proves who; membership
+   decides what. The verified context is written to `auth_tenant_context`, keyed
+   on `(backend_pid, xact_id)`, which no application role has any grant on —
+   **see the incident below for why it is a table and not a GUC.**
 2. **Role exclusivity is checked where the roles are.** It was an assertion
    about a fixture database, which proves nothing about a deployment — login
    roles are created outside every migration. `assert_role_exclusivity()` plus
@@ -218,9 +218,40 @@ The RLS suite went from 17 tests to 34 and now drives `app_rw` through the token
 path, so every pre-existing tenancy test is exercised against verified identity
 rather than a named workspace.
 
-⚠️ **HUMAN REVIEW REQUIRED: tenancy.** The JWT verifier is new attack surface at
-the tenancy boundary, written in plpgsql, and has **not** been through a
-`tenancy-auditor` pass — the two audits on this branch predate it.
+#### Incident, 2026-08-22 — a claim was approved and merged before it was found false
+
+`0001` shipped the JWT verifier above and stated, in the migration header, in
+`check-deploy.sql`, in a passing test titled *"app_rw has no way to call the
+unverified setter at all"*, and in the report that obtained sign-off, that the
+tenant role could no longer name a workspace. **It could.** `set_workspace()`
+was never the authority — `current_workspace_id()` was, and it read a customised
+GUC. Postgres classifies those USERSET: any role sets one with a bare
+`SET LOCAL`, no function call and no grant involved, and the transaction stamp
+guarding it is not a secret. Two statements read another tenant's workspaces,
+member accounts, entitlements, plan and corpus slice, and the whole corpus by
+re-issuing `set_config()` per workspace id in the same transaction.
+
+Reproduced on a non-superuser login role whose only membership is `app_rw`. The
+hole was inherited from `0000`, so it had survived **two** prior
+`tenancy-auditor` passes, and it survived them for the same reason it survived
+review: every test established context through the sanctioned path and none
+tried the unsanctioned one. **The test asserted a proxy for the property, the
+proxy held, and the property did not.**
+
+Fixed in `0002_tenancy_context.sql`: context moved into a table no application
+role can write, keyed on `(backend_pid, xact_id)` so it cannot outlive its
+transaction on a pooled connection. Nothing is deployed and no customer data
+exists, so this was a fix-forward, not a breach.
+
+**What it leaves behind is a standing test category**, documented at the top of
+`packages/db/src/rls.test.ts`: for every policy that scopes on tenant context,
+a test that establishes context by a *non-sanctioned* path and asserts zero
+rows. Extended in the same commit as any new tenancy-relevant table. It is the
+only part of that suite whose job is to be wrong.
+
+The same pass closed a second real break: `assert_role_exclusivity()` passed a
+login role granted both `app_rw` and `auth_verifier`, which then read the HS256
+signing secret in plaintext and could forge a token for any workspace.
 
 ### Spend control, reworked twice under review
 
@@ -421,8 +452,10 @@ write path, and every "valid" QStash token in the tests is minted by our own
 signer. Both fail *closed*, so the risk is silent inaction rather than
 corruption — which is what the collection heartbeat now watches for.
 
-**`p1/db-schema` — merged 2026-08-22.** No longer a blocker. What it leaves
-behind is a `tenancy-auditor` pass on the JWT verifier, which no audit has seen.
+**`p1/db-schema` — merged 2026-08-22, then repaired the same day.** The
+`tenancy-auditor` pass on the JWT verifier returned a BLOCKER: the verifier was
+an optional path around a GUC any role could set. See the incident note in §2.
+Fixed in `0002_tenancy_context.sql` and re-audited.
 
 **Three provisional numbers, all awaiting G0 data**: the A–D confidence-grade
 thresholds (blocked from live builds), `MIN_N_FOR_COMPARISON`, and the choice of
