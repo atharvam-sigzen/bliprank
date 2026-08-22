@@ -1,6 +1,6 @@
 # ADR-0002 — Hosting topology and a phased collection runner
 
-**Status:** Accepted · **Date:** [DATE] · **Phase:** P0
+**Status:** Accepted · **Date:** 2026-08-18 · **Phase:** P0
 **Supersedes:** the "ARM workers from day one" position in the Technology Stack &
 Cost Roadmap document (v1.0, §3.3)
 

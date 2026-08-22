@@ -5,7 +5,7 @@
 > no evidence and only 6 publish a checkable method. This page is why we are in the
 > second group.
 
-*Scoring algorithm version: `0.1.0` · Last updated: [DATE]*
+*Scoring algorithm version: `0.1.0` · Last updated: 2026-08-22*
 
 ---
 
@@ -117,7 +117,7 @@ questions than avoid them.
 
 | Version | Date | Change | Effect on historical comparison |
 |---|---|---|---|
-| 0.1.0 | [DATE] | Initial release | n/a |
+| 0.1.0 | 2026-08-18 | Initial release | n/a |
 
 Historical scores are never recomputed. When the algorithm changes, new rows are
 written and charts show a version boundary.

@@ -272,8 +272,12 @@ invisible (1.20:1 against the card, 1.02:1 against the gridlines it overlays),
 and a metric rendered without its interval — in the scaffold built to
 demonstrate R8. Both fixed.
 
-⚠️ **HUMAN REVIEW REQUIRED** stands on `p1/db-schema` (tenancy model) and on
-`27652c2` (ADR-0003 R2 object identity + the `EngineAdapter` contract).
+**`27652c2` — signed off 2026-08-22.** The R2 object identity change is now
+recorded formally as **ADR-0003 Amendment 1**, and CLAUDE.md R4's shorthand was
+corrected to match. The flag is closed.
+
+⚠️ **HUMAN REVIEW REQUIRED** still stands on `p1/db-schema` (tenancy model),
+now with decisions given — see §5.
 
 ---
 

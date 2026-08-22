@@ -1,6 +1,8 @@
 # ADR-0003 — Cache key schema
 
 **Status:** Accepted · **Date:** 2026-08-18 · **Phase:** P0
+**Amended:** 2026-08-20 (`27652c2`), approved 2026-08-22 — Amendment 1, R2 object
+identity is per cell **per collection path**. See the Amendments section.
 
 ## Context
 
@@ -103,3 +105,61 @@ English settings, Indian egress). Both stay.
   cache miss on the bump, only for prompts containing aliased brand names.
 - Any change to field set, order, canonicalisation or hash is a new ADR and a
   migration plan, and the golden keys in `cache-key.test.ts` will fail first.
+
+---
+
+## Amendments
+
+### Amendment 1 — R2 object identity is per cell *per collection path*
+
+**Raised:** 2026-08-20 by `measurement-engineer` review of the collection
+orchestrator (verified BLOCKER). **Fixed:** `27652c2`. **Approved:** 2026-08-22.
+
+**What was wrong.** The original text fixed the cache key correctly and then let
+the *R2 object key* be cell-only, while the Redis index key was already
+path-qualified (`${cell.key}:${adapter.id}`). The two identities disagreed. When
+the agreement monitor re-collected a cell through the alternate path (ADR-0001
+§5), that path wrote to the same object as the primary provider — silently
+overwriting the primary’s stored answers, while the index pointer still
+attributed them to the primary. Both reads then returned the same wrong object.
+
+**What changed.** The R2 object key is now path-qualified the same way the lookup
+key is:
+
+```
+answers/<day>/<engine>/<cell.key>__<adapter.id>.json
+```
+
+`r2KeyFor(cell, adapterId?)` implements it. A single-path cell — the normal case,
+one provider — still has exactly one object; the bare form is a convenience for
+callers that only ever collect one path.
+
+**Why this is an R6 amendment and not a bug fix.** The cache key itself is
+unchanged: no field was added, removed or recanonicalised, and `cache-key.test.ts`
+golden keys still pass. What changed is one of the four things R6 says the key
+*is* — "the R2 object identity". The cell remains provider-agnostic, as the
+"Provider / collection path: excluded on purpose" trade-off requires; the
+qualifier is **appended to the object path, never mixed into the hash**. Those two
+statements have to be read together, which is exactly why this is recorded
+formally rather than left as a paragraph in the trade-off list.
+
+**Consequences.**
+
+- Storage: unchanged for single-path cells. Cross-path agreement monitoring costs
+  one extra object per re-collected cell, which is the point of collecting it.
+- A cell’s answers are no longer addressable by cache key alone. Anything
+  enumerating a cell’s stored answers must enumerate by prefix, not construct a
+  single key.
+- CLAUDE.md R4’s shorthand ("one object per cell") was updated in the same change
+  to say "per cell per collection path".
+- Any future collection path — a second provider, a direct-API fallback — is
+  additive: it writes its own object and cannot displace an existing one.
+
+**Second finding from the same review, fixed in the same commit** (recorded here
+because it shares the cache semantics, though it does not amend the key): any
+under-target collection — a budget stop *or* ordinary retry attrition — marked
+the cell collected forever, and the cache check never compared stored runs
+against requested runs. The cell would then be served as a hit with a permanently
+capped `n`: a silent R8 violation, because the disclosed sample size would be
+whatever the failure happened to leave behind. A partial cell now falls through
+and completes on a later cycle.

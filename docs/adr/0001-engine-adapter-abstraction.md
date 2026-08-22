@@ -1,6 +1,6 @@
 # ADR-0001 — Engine Adapter abstraction with a second provider stubbed
 
-**Status:** Accepted · **Date:** [DATE] · **Phase:** P0
+**Status:** Accepted · **Date:** 2026-08-18 · **Phase:** P0
 
 ## Context
 
