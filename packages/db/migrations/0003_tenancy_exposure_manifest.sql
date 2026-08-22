@@ -113,7 +113,7 @@ INSERT INTO tenancy_exposure_manifest (schema_name, relation, privilege, disposi
 INSERT INTO tenancy_exposure_manifest (schema_name, relation, privilege, disposition, reason, shared_columns) VALUES
   ('public','prompt_banks','SELECT','shared',
    'category-keyed reference data with no tenant column; private banks go in a separate RLS table (0000)',
-   ARRAY['id','category','locale','geo','prompts','version']);
+   ARRAY['id:uuid','category:text','locale:text','geo:text','prompts:jsonb','version:integer']);
 
 -- Partitions are NOT seeded. Seeding them once at migration time meant
 -- ensure_score_partition() — a correct, scheduled maintenance job — created a
@@ -218,19 +218,77 @@ BEGIN
     RETURN NEXT;
   END LOOP;
 
-  -- ---- declared-scoped relations must actually force RLS -------------------
+  -- ---- every DESCENDANT of a scoped relation must force RLS ----------------
+  -- manifest_root() lets a descendant inherit its parent's declaration, so a
+  -- partition is never `undeclared-exposure`. The first version then checked the
+  -- obligation only against the relation NAMED in the manifest, so the
+  -- declaration propagated downward and none of the duties did: a partition
+  -- created without RLS, an existing partition with RLS switched off, a table
+  -- staged with `LIKE ... INCLUDING ALL` (which does not copy RLS) and then
+  -- ATTACHed, and a legacy INHERITS child all passed the gate and returned
+  -- another tenant's rows to a legitimately authenticated session.
+  --
+  -- Worse, it was sticky: ensure_score_partition() short-circuits on the
+  -- relation already existing, so a partition pre-created without RLS stays that
+  -- way forever — and that helper's normal behaviour is to GRANT SELECT to
+  -- app_rw, so every partition is tenant-readable by design.
+  --
+  -- If manifest_root() is good enough to confer the exemption, it is the only
+  -- thing good enough to scope the requirement. So this iterates pg_class, not
+  -- the manifest.
   FOR r IN
-    SELECT DISTINCT m.schema_name, m.relation FROM tenancy_exposure_manifest m WHERE m.disposition = 'scoped'
+    SELECT ns.nspname, c.relname
+      FROM pg_class c
+      JOIN pg_namespace ns ON ns.oid = c.relnamespace
+      JOIN pg_class root ON root.oid = manifest_root(c.oid)
+      JOIN pg_namespace rns ON rns.oid = root.relnamespace
+     WHERE c.relkind IN ('r','p')
+       AND ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+       AND EXISTS (SELECT 1 FROM tenancy_exposure_manifest m
+                    WHERE m.schema_name = rns.nspname AND m.relation = root.relname
+                      AND m.disposition = 'scoped')
+       AND NOT (c.relrowsecurity AND c.relforcerowsecurity)
   LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
-       WHERE ns.nspname = r.schema_name AND c.relname = r.relation
-         AND c.relrowsecurity AND c.relforcerowsecurity)
-    THEN
-      kind := 'scoped-without-forced-rls';
-      detail := format('%s.%s is declared scoped but does not FORCE row level security', r.schema_name, r.relation);
-      RETURN NEXT;
-    END IF;
+    kind := 'scoped-without-forced-rls';
+    detail := format('%s.%s inherits a scoped declaration but does not FORCE row level security', r.nspname, r.relname);
+    RETURN NEXT;
+  END LOOP;
+
+  -- ---- a shared relation must be a LEAF ------------------------------------
+  -- Reading a parent applies the PARENT's policy to the child's rows, and a
+  -- shared relation's policy is USING (true). So a child of prompt_banks — even
+  -- one carrying a correct `workspace_id = current_workspace_id()` policy of its
+  -- own, which is exactly what 0000 instructs ("private banks go in a separate
+  -- RLS'd table") — returns [] when read directly and every tenant's private
+  -- bank when read through the parent. The child's correct policy is never
+  -- consulted. No column-list comparison on the parent can ever see this.
+  FOR r IN
+    SELECT m.schema_name, m.relation, child.relname AS childname
+      FROM tenancy_exposure_manifest m
+      JOIN pg_class p ON p.relname = m.relation
+      JOIN pg_namespace ns ON ns.oid = p.relnamespace AND ns.nspname = m.schema_name
+      JOIN pg_inherits i ON i.inhparent = p.oid
+      JOIN pg_class child ON child.oid = i.inhrelid
+     WHERE m.disposition = 'shared'
+  LOOP
+    kind := 'shared-relation-has-descendant';
+    detail := format('%s.%s is declared shared (policy USING (true)) and has descendant %s, whose rows are readable through the parent',
+                     r.schema_name, r.relation, r.childname);
+    RETURN NEXT;
+  END LOOP;
+
+  -- ---- multi-parent inheritance is refused ---------------------------------
+  -- manifest_root() takes the first parent it finds. With two parents the
+  -- declaration a child inherits would be decided by heap order rather than by
+  -- a rule, so the answer is to refuse rather than to pick.
+  FOR r IN
+    SELECT ns.nspname, c.relname
+      FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+     WHERE (SELECT count(*) FROM pg_inherits i WHERE i.inhrelid = c.oid) > 1
+  LOOP
+    kind := 'multi-parent-inheritance';
+    detail := format('%s.%s has more than one parent; which manifest declaration governs it is undefined', r.nspname, r.relname);
+    RETURN NEXT;
   END LOOP;
 
   -- ---- every tenant-facing policy ------------------------------------------
@@ -279,7 +337,9 @@ BEGIN
   -- ---- declared-shared relations expose exactly the declared columns -------
   FOR r IN
     SELECT m.schema_name, m.relation, m.shared_columns,
-           array_agg(a.attname::text ORDER BY a.attname) AS actual
+           -- name AND type: `ALTER COLUMN version TYPE text` changed what the
+           -- column can carry while leaving the name list identical.
+           array_agg(a.attname::text || ':' || format_type(a.atttypid, NULL) ORDER BY a.attname) AS actual
       FROM tenancy_exposure_manifest m
       JOIN pg_class c ON c.relname = m.relation
       JOIN pg_namespace ns ON ns.oid = c.relnamespace AND ns.nspname = m.schema_name
@@ -310,9 +370,13 @@ BEGIN
   -- ---- CREATE on a schema the pinned search_path depends on ----------------
   -- Any untrusted role, not only the PUBLIC pseudo-role.
   FOR r IN
+    -- Every schema in the database, not the manifest's ∪ 'public'. A definer
+    -- function's pinned search_path is only one of the reasons this matters, and
+    -- naming the schemas is the shape that failed nine times elsewhere.
     SELECT DISTINCT x.sch, g.rolname FROM (
-      SELECT schema_name AS sch FROM tenancy_exposure_manifest
-      UNION SELECT 'public'
+      SELECT nspname AS sch FROM pg_namespace
+       WHERE nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+         AND nspname NOT LIKE 'pg\_temp%' AND nspname NOT LIKE 'pg\_toast%'
     ) x
     CROSS JOIN LATERAL (
       SELECT rolname FROM pg_roles
@@ -365,8 +429,14 @@ BEGIN
        -- and reachability is MEMBER, not the literal role name: `deployer` holds
        -- the grant through deploy_check, and excluding the name alone repeated
        -- the same mistake one level down.
+       -- `g.rolname <> 'public'` first: has_table_privilege accepts the PUBLIC
+       -- pseudo-role, pg_has_role raises on it. Without the guard a PUBLIC grant
+       -- killed the gate with "role public does not exist" instead of reporting
+       -- the fault — fail-closed, but it misdiagnoses, and the obvious fix
+       -- (dropping the 'public' row) would blind the whole scan to PUBLIC grants.
        AND NOT (ns.nspname = 'public'
                 AND p.oid::regprocedure::text IN ('tenancy_exposure_faults()', 'auth_key_health()')
+                AND g.rolname <> 'public'
                 AND pg_has_role(g.rolname, 'deploy_check', 'MEMBER'))
        AND has_function_privilege(g.rolname, p.oid, 'EXECUTE')
   LOOP
@@ -395,8 +465,21 @@ CREATE OR REPLACE FUNCTION assert_role_powers() RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE
   offenders text;
-  dangerous constant text[] := ARRAY['pg_execute_server_program','pg_read_server_files','pg_write_server_files'];
+  dangerous constant text[] := ARRAY['pg_execute_server_program','pg_read_server_files',
+                                     'pg_write_server_files','pg_maintain','pg_signal_backend'];
+  streamers text;
 BEGIN
+  -- REPLICATION is an ATTRIBUTE, like BYPASSRLS, whose omission was a BLOCKER in
+  -- audit 3. A replication connection streams the WAL, and RLS is not consulted
+  -- on the WAL — so it is a total tenancy bypass that appears in no table ACL.
+  -- rds_replication and Supabase's replication grant make it the realistic form
+  -- on the hosting target.
+  SELECT string_agg(r.rolname, ', ' ORDER BY r.rolname) INTO streamers
+    FROM pg_roles r
+   WHERE r.rolreplication AND NOT r.rolsuper AND r.rolname NOT LIKE 'pg\_%';
+  IF streamers IS NOT NULL THEN
+    RAISE EXCEPTION 'these roles hold REPLICATION and can stream the whole database past RLS: %', streamers;
+  END IF;
   SELECT string_agg(format('%s in %s', r.rolname, d.grp), '; ' ORDER BY r.rolname) INTO offenders
     FROM pg_roles r
    CROSS JOIN LATERAL unnest(dangerous) AS d(grp)

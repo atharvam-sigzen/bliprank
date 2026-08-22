@@ -359,16 +359,29 @@ BEGIN
   -- web_prod`, and the group scan catches `GRANT auth_verifier TO app_rw`, which
   -- has no offending login role today but hands the capability to every future
   -- one. Checking only login roles would pass a database that is already wrong.
+  -- deploy_check is checked alongside auth_verifier. It confers an exemption
+  -- from the definer-function scan, and a name that confers an exemption must
+  -- itself be constrained — `GRANT deploy_check TO app_rw` otherwise passed
+  -- silently and handed every tenant the gate's own fault list, which is a map
+  -- of exactly where the database is unreviewed. Same shape as
+  -- `GRANT auth_verifier TO web_prod` in audit 3, one level down.
   SELECT string_agg(name, ', ' ORDER BY name) INTO offenders FROM (
+    -- The privileged group list is drawn FROM pg_roles rather than from a
+    -- literal, so a role a later migration has not created yet simply does not
+    -- appear. Guarding a literal with `AND EXISTS (...)` is not enough: SQL does
+    -- not promise to evaluate AND operands in order, and pg_has_role raises on a
+    -- name that does not exist.
     SELECT r.rolname AS name FROM pg_roles r
-     WHERE r.rolcanlogin AND NOT r.rolsuper AND pg_has_role(r.rolname, 'auth_verifier', 'MEMBER')
+     CROSS JOIN LATERAL (SELECT p.rolname AS grp FROM pg_roles p WHERE p.rolname IN ('auth_verifier','deploy_check')) priv
+     WHERE r.rolcanlogin AND NOT r.rolsuper AND pg_has_role(r.rolname, priv.grp, 'MEMBER')
     UNION
     SELECT grp FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS grp
-     WHERE pg_has_role(grp, 'auth_verifier', 'MEMBER')
+     CROSS JOIN LATERAL (SELECT p.rolname AS pgrp FROM pg_roles p WHERE p.rolname IN ('auth_verifier','deploy_check')) priv
+     WHERE pg_has_role(grp, priv.pgrp, 'MEMBER')
   ) reachers;
 
   IF offenders IS NOT NULL THEN
-    RAISE EXCEPTION 'role exclusivity violated: % can reach auth_verifier and therefore read the JWT signing secret and write tenant context.', offenders;
+    RAISE EXCEPTION 'role exclusivity violated: % can reach auth_verifier or deploy_check, and therefore read the signing secret, write tenant context, or read the gate''s own fault list.', offenders;
   END IF;
 
   -- The authority groups must not reach each other either. The scan above only

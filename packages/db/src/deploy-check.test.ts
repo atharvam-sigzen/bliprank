@@ -637,3 +637,132 @@ describe('audit 5 — every assertion has a failing case, including the ones tha
     await d.exec(`RESET ROLE`)
   })
 })
+
+describe('audit 6 — the obligations follow the declaration down the tree', () => {
+  // The audit observed, for the third time, that the mechanisms with only
+  // PASSING tests were the broken ones. manifest_root(), the deploy_check
+  // exemption and assert_role_powers() each had cases asserting the gate
+  // TOLERATES something and none asserting it REFUSES anything. All three were
+  // broken. These are the missing halves.
+
+  it('THE FINDING: a partition created without RLS is refused', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE score_rows_2026_10 PARTITION OF score_rows FOR VALUES FROM ('2026-10-01') TO ('2026-11-01')`)
+    await d.exec(`GRANT SELECT ON score_rows_2026_10 TO app_rw`)
+    // Exactly what ensure_score_partition() does, minus the RLS. Verified before
+    // the fix: gate passed, and a WS2 session read WS1's corpus straight out of
+    // the partition while the parent correctly returned nothing.
+    await expect(check(d)).rejects.toThrow(/scoped-without-forced-rls[\s\S]*score_rows_2026_10/)
+  })
+
+  it('an existing partition with RLS switched off is refused', async () => {
+    const d = await healthy()
+    await d.exec(`ALTER TABLE score_rows_2026_08 DISABLE ROW LEVEL SECURITY`)
+    // "RLS is blocking my job", applied one level down from where the file
+    // already anticipates it.
+    await expect(check(d)).rejects.toThrow(/scoped-without-forced-rls[\s\S]*score_rows_2026_08/)
+  })
+
+  it('a table staged with LIKE ... INCLUDING ALL and then ATTACHed is refused', async () => {
+    const d = await healthy()
+    // INCLUDING ALL does not copy RLS. This is standard partition maintenance.
+    await d.exec(`CREATE TABLE score_rows_import (LIKE score_rows INCLUDING ALL)`)
+    await d.exec(`ALTER TABLE score_rows ATTACH PARTITION score_rows_import FOR VALUES FROM ('2026-11-01') TO ('2026-12-01')`)
+    await d.exec(`GRANT SELECT ON score_rows_import TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/scoped-without-forced-rls[\s\S]*score_rows_import/)
+  })
+
+  it('a legacy INHERITS child of a scoped relation is refused', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE recon_imports (payload jsonb) INHERITS (workspace_brands)`)
+    await d.exec(`GRANT SELECT ON recon_imports TO app_rw`)
+    // manifest_root() resolved it to workspace_brands, so it was never
+    // undeclared — and nothing required it to carry RLS.
+    await expect(check(d)).rejects.toThrow(/scoped-without-forced-rls[\s\S]*recon_imports/)
+  })
+
+  it('THE FINDING: a child of the shared relation is refused, even with a correct policy', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE prompt_banks_private (workspace_id uuid NOT NULL) INHERITS (prompt_banks)`)
+    await d.exec(`ALTER TABLE prompt_banks_private ENABLE ROW LEVEL SECURITY`)
+    await d.exec(`ALTER TABLE prompt_banks_private FORCE  ROW LEVEL SECURITY`)
+    await d.exec(`CREATE POLICY pbp ON prompt_banks_private FOR SELECT USING (workspace_id = current_workspace_id())`)
+    await d.exec(`GRANT SELECT ON prompt_banks_private TO app_rw`)
+    // This is a good-faith implementation of 0000's own instruction that private
+    // banks go in a separate RLS'd table. Verified before the fix: reading the
+    // CHILD returned [] — the child's policy works — and reading the PARENT
+    // returned every tenant's private bank, because a parent applies the
+    // parent's policy to its children's rows and the shared policy is
+    // USING (true). No column-list comparison on the parent can see this.
+    await expect(check(d)).rejects.toThrow(/shared-relation-has-descendant/)
+  })
+
+  it('multi-parent inheritance is refused rather than resolved arbitrarily', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE mixed () INHERITS (workspace_brands, prompt_banks)`)
+    // manifest_root() takes the first parent it finds, so which declaration
+    // governs would be decided by heap order rather than by a rule.
+    await expect(check(d)).rejects.toThrow(/multi-parent-inheritance/)
+  })
+
+  it('THE FINDING: deploy_check granted to an application role is refused', async () => {
+    const d = await healthy()
+    await d.exec(`GRANT deploy_check TO app_rw`)
+    // A name that confers an exemption must itself be constrained. Verified
+    // before the fix: this passed silently and handed every tenant the gate's
+    // own fault list — a map of exactly where the database is unreviewed.
+    await expect(check(d)).rejects.toThrow(/can reach auth_verifier or deploy_check/)
+  })
+
+  it('THE FINDING: a REPLICATION login role is refused', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE web_prod LOGIN REPLICATION`)
+    await d.exec(`GRANT app_rw TO web_prod`)
+    // An ATTRIBUTE, like BYPASSRLS, whose omission was a BLOCKER in audit 3. A
+    // replication connection streams the WAL, and RLS is not consulted on the
+    // WAL. rds_replication and Supabase's replication grant make it the
+    // realistic form on the hosting target.
+    await expect(check(d)).rejects.toThrow(/REPLICATION and can stream/)
+  })
+
+  it('pg_maintain and pg_signal_backend are refused too', async () => {
+    for (const grp of ['pg_maintain', 'pg_signal_backend']) {
+      const d = await healthy()
+      await d.exec(`CREATE ROLE web_prod LOGIN`)
+      await d.exec(`GRANT app_rw TO web_prod`)
+      await d.exec(`GRANT ${grp} TO web_prod`)
+      await expect(check(d)).rejects.toThrow(/server-level powers/)
+    }
+  })
+
+  it('a PUBLIC grant on a gate function reports the fault rather than killing the gate', async () => {
+    const d = await healthy()
+    await d.exec(`GRANT EXECUTE ON FUNCTION tenancy_exposure_faults() TO PUBLIC`)
+    // has_table_privilege accepts the PUBLIC pseudo-role; pg_has_role raises on
+    // it. Without the guard this died with `role "public" does not exist` —
+    // fail-closed, but it misdiagnoses, and the obvious fix (dropping the
+    // 'public' grantee row) would blind the whole scan to PUBLIC grants.
+    await expect(check(d)).rejects.toThrow(/definer-function-exposed/)
+  })
+
+  it('a shared column changing TYPE is a change, not just its name', async () => {
+    const d = await healthy()
+    await d.exec(`ALTER TABLE prompt_banks ALTER COLUMN version TYPE text`)
+    await expect(check(d)).rejects.toThrow(/shared-columns-changed/)
+  })
+
+  it('CREATE on a schema outside the manifest is refused', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE SCHEMA recon`)
+    await d.exec(`GRANT CREATE ON SCHEMA recon TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/schema-create-granted[\s\S]*recon/)
+  })
+
+  it('and a correctly provisioned partition still passes', async () => {
+    const d = await healthy()
+    await d.exec(`SELECT ensure_score_partition('2026-10-01')`)
+    // The tolerance case is kept — a gate that fails on correct maintenance gets
+    // `|| true`'d — but it is no longer the only case.
+    await expect(check(d)).resolves.toBeDefined()
+  })
+})

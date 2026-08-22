@@ -362,6 +362,31 @@ no privilege derivation could see it; and the gate's own functions were granted
 to PUBLIC, handing a tenant a ranked list of exactly which relations are
 reachable-and-unreviewed. They now go to a `deploy_check` role.
 
+**Audit six found that the fix for the partition churn had opened a hole.**
+Resolving a partition to its parent's declaration through `pg_inherits` stopped
+the monthly false failure, and propagated the *declaration* downward while
+leaving every *obligation* attached to the relation named in the manifest. A
+partition created without RLS, an existing partition with RLS switched off, a
+table staged with `LIKE ... INCLUDING ALL` (which does not copy RLS) and then
+attached, and a legacy `INHERITS` child all passed the gate and returned another
+tenant's rows to a legitimately authenticated session. Sticky, too:
+`ensure_score_partition()` short-circuits on the relation already existing, so a
+partition pre-created without RLS stays that way forever, and that helper's
+normal behaviour is to grant every partition to `app_rw`.
+
+The second was sharper. A **child of the shared relation** — carrying a correct
+`workspace_id = current_workspace_id()` policy of its own, which is exactly what
+`0000` instructs — reads nothing through itself and every tenant's private
+prompt bank when read through the parent, because a parent applies the
+*parent's* policy to its children's rows and a shared relation's policy is
+`USING (true)`. A shared relation must be a leaf; no column-list comparison on
+the parent can ever see this.
+
+**And the correlation held a third time.** The three mechanisms whose only tests
+asserted the gate *tolerates* something — `manifest_root()`, the `deploy_check`
+exemption, `assert_role_powers()` — were the three that were broken. Each now
+has a case requiring it to refuse.
+
 **Accepted consequence, recorded rather than discovered later:** the tenant read
 path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
 `default_transaction_read_only`, and the context table is `UNLOGGED` and so does
