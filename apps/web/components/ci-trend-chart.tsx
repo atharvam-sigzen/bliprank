@@ -36,7 +36,17 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
   const x = (i: number) => PAD.left + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW)
   const y = (v: number) => PAD.top + (1 - v) * plotH
 
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.metric.value).toFixed(1)}`).join(' ')
+  // R5: charts show a version boundary. compare() refuses across a scoring bump
+  // or a changed measurement basis, so drawing those same points as one
+  // continuous line would reassert on the chart exactly the comparison the
+  // number below it declines to make. The path breaks instead.
+  const continuous = (a: TrendPoint, b: TrendPoint) =>
+    a.metric.algo_version === b.metric.algo_version &&
+    a.metric.collection_path === b.metric.collection_path &&
+    a.metric.comparison_basis === b.metric.comparison_basis
+  const line = points
+    .map((p, i) => `${i === 0 || !continuous(points[i - 1]!, p) ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.metric.value).toFixed(1)}`)
+    .join(' ')
   const band = [
     ...points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.metric.ci_high).toFixed(1)}`),
     ...[...points].reverse().map((p, i) => `L${x(points.length - 1 - i).toFixed(1)},${y(p.metric.ci_low).toFixed(1)}`),

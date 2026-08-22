@@ -79,21 +79,39 @@ questions than avoid them.
    look different.
 
    That test is deliberately conservative, and it is worth being precise about
-   what it costs. Two 95% intervals failing to overlap is a **stronger** result
-   than the usual "statistically significant at 95%" — it corresponds to roughly
-   a 1-in-160 chance rather than 1-in-20. So when we do report a change, the
-   evidence behind it is unusually strong. The flip side is that a change can be
-   real and we will still call it *no significant change*, because our test is
-   not sensitive enough to resolve it. We would rather tell you nothing happened
+   what it costs — and about when the strength we claim actually holds.
+
+   **When the two cycles are measured to similar precision**, two 95% intervals
+   failing to overlap is a *stronger* result than the usual "significant at 95%":
+   roughly a 1-in-180 chance of arising from noise, rather than 1-in-20. So when
+   we report a change on comparable cycles, the evidence behind it is unusually
+   strong.
+
+   **When they are not**, that advantage disappears. If one cycle rests on far
+   fewer answers than the other, the test degrades toward an ordinary 1-in-20 —
+   at 30 answers against 1,000 it is about 1-in-44. We therefore do not report a
+   change at all when the two cycles differ too much in precision; you will see
+   *not comparable* instead of a number we cannot stand behind.
+
+   The flip side of the conservatism is that a change can be real and we will
+   still call it *no significant change*, because the test is not sensitive
+   enough to resolve it. At 150 answers per cycle we would detect a 25%→30% move
+   only about 3.5% of the time, and reliably detecting a 5-point move needs
+   roughly 2,000 answers per cycle. We would rather tell you nothing happened
    when something did, than tell you something happened when it did not.
 
-   Two consequences you should hold us to. First, "no significant change" means
-   *we cannot distinguish these two measurements*, not *your visibility is flat* —
-   the honest reading is that the sample was too small to tell, and more runs per
-   cycle would resolve it. Second, this is not the sharpest available test: the
-   correct one estimates the difference itself and puts an interval around that.
-   We are building it as part of the causal-experiment work, and when it ships
-   we will report both, note where they disagree, and change this page.
+   Three consequences you should hold us to. First, "no significant change"
+   means *we cannot distinguish these two measurements*, not *your visibility is
+   flat* — the honest reading is that the sample was too small to tell, and the
+   numbers above say how much larger it would need to be. Second, a comparison
+   is only ever between like and like: if the engines measured, the locale, the
+   geography, the prompt bank or the window length changed between cycles, we
+   report *not comparable* rather than a movement, because a change in what we
+   measured is not a change in how you performed. Third, this is not the
+   sharpest available test — the correct one estimates the difference itself and
+   puts an interval around that. We are building it as part of the
+   causal-experiment work, and when it ships we will report both, note where
+   they disagree, and change this page.
 
 ## Changelog
 

@@ -28,6 +28,21 @@ export interface Metric {
   readonly n: number
   readonly algo_version: string
   readonly collection_path: CollectionPath
+  /**
+   * What this number is a measurement OF — everything that must match before
+   * two of them can be compared: engine set, locale, geo, prompt-bank version,
+   * window length. Any string, as long as the producer derives it the same way
+   * every time.
+   *
+   * Required, and that is the point. A review found that five engines at
+   * 50/30/5/20/20% with one going dark produces 25.0% -> 30.0% with separated
+   * intervals and a SIGNIFICANT verdict, while **no engine's rate changed at
+   * all**. Version-stamping alone could not see it: the composition of the
+   * denominator moved, not the algorithm. That is R8's false arrow, produced by
+   * the code that exists to prevent it, so the basis travels with the number
+   * exactly as the interval does.
+   */
+  readonly comparison_basis: string
 }
 
 export type Significance = 'higher' | 'lower' | 'no-significant-change' | 'insufficient-data' | 'not-comparable'
@@ -44,6 +59,47 @@ export type Significance = 'higher' | 'lower' | 'no-significant-change' | 'insuf
  */
 export const MIN_N_FOR_COMPARISON = 30
 export const MIN_N_STATUS = 'PROVISIONAL: placeholder pending G0 design-effect data' as const
+
+/**
+ * Largest effective false-positive rate we will still call a change at.
+ *
+ * ⚠️ PROVISIONAL. The overlap test's real type I error is not a constant: it is
+ * ~1-in-180 when the two cycles have similar precision and degrades toward the
+ * ordinary 1-in-20 as their sample sizes diverge (verified by exact
+ * enumeration: n=30 vs n=1000 at p=0.25 gives 1-in-44). Rather than assume the
+ * best case, `compare()` computes the actual rate for the pair in front of it
+ * and refuses above this line. 0.01 is the point at which the claim "materially
+ * stronger than a conventional 95% test" stops being true; the number itself is
+ * a judgement, not a derivation.
+ */
+export const MAX_EFFECTIVE_ALPHA = 0.01
+
+/** Normal CDF, Abramowitz & Stegun 7.1.26 via erf. Accurate to ~1.5e-7. */
+function phi(x: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x))
+  const d = 0.3989422804014327 * Math.exp((-x * x) / 2)
+  const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
+  return x >= 0 ? 1 - p : p
+}
+
+/**
+ * The overlap test's ACTUAL false-positive rate for this pair of measurements.
+ *
+ * Two intervals separate when their gap exceeds z(s1 + s2); under the null the
+ * difference has SD sqrt(s1^2 + s2^2). So the effective critical value is
+ * z(s1+s2)/sqrt(s1^2+s2^2), which is maximised at s1 = s2 (giving z*sqrt(2),
+ * i.e. ~1-in-180) and falls to z as the standard errors diverge (~1-in-20).
+ * Half-widths stand in for the standard errors; Wilson is asymmetric, so this
+ * is an approximation, and it is used only to decide whether to trust the
+ * comparison at all.
+ */
+export function effectiveAlpha(a: Metric, b: Metric): number {
+  const s1 = intervalWidth(a) / 2
+  const s2 = intervalWidth(b) / 2
+  if (s1 <= 0 || s2 <= 0) return 0.05
+  const crit = 1.9599639845400545 * ((s1 + s2) / Math.sqrt(s1 * s1 + s2 * s2))
+  return 2 * (1 - phi(crit))
+}
 
 export interface Comparison {
   readonly significance: Significance
@@ -123,6 +179,16 @@ export function compare(current: Metric, previous: Metric): Comparison {
       label: `not comparable: collected via ${previous.collection_path} then ${current.collection_path}`,
     }
   }
+  if (current.comparison_basis !== previous.comparison_basis) {
+    // The denominator changed shape. An engine dropping out moves the aggregate
+    // with no engine's rate moving at all, and separated intervals would render
+    // that as a significant rise.
+    return {
+      significance: 'not-comparable',
+      delta,
+      label: 'not comparable: measured over a different engine set, locale, geo or window',
+    }
+  }
 
   // Below the floor there is no interval worth testing — see MIN_N_FOR_COMPARISON.
   const smallest = Math.min(current.n, previous.n)
@@ -137,6 +203,19 @@ export function compare(current: Metric, previous: Metric): Comparison {
   const separated = current.ci_low > previous.ci_high || current.ci_high < previous.ci_low
   if (!separated) {
     return { significance: 'no-significant-change', delta, label: 'no significant change' }
+  }
+
+  // The intervals separate — but separation only carries the strength we claim
+  // when the two cycles are similarly precise. Mismatched precision makes this
+  // an ordinary 95% test wearing a 99.4% badge, so it is refused rather than
+  // reported at a confidence we did not earn.
+  const alpha = effectiveAlpha(current, previous)
+  if (alpha > MAX_EFFECTIVE_ALPHA) {
+    return {
+      significance: 'not-comparable',
+      delta,
+      label: `not comparable: the two cycles differ too much in precision (n=${previous.n} then ${current.n})`,
+    }
   }
 
   const direction: Significance = delta > 0 ? 'higher' : 'lower'
@@ -211,8 +290,12 @@ export function confidenceGrade(
   }
   const w = intervalWidth(m)
   const t = CONFIDENCE_GRADE_THRESHOLDS
-  if (w <= t.A) return { grade: 'A', note: `±${pct(w / 2, 1)} — tight enough to act on`, provisional: true }
-  if (w <= t.B) return { grade: 'B', note: `±${pct(w / 2, 1)} — directional`, provisional: true }
-  if (w <= t.C) return { grade: 'C', note: `±${pct(w / 2, 1)} — indicative only`, provisional: true }
-  return { grade: 'D', note: `±${pct(w / 2, 1)} — too few runs to conclude anything`, provisional: true }
+  // Signed distances, never "±". A Wilson interval is asymmetric, and printing
+  // ±19.1% beside an interval of 7.0–45.2% states two different things about
+  // the same number - the Wald symmetry this package exists to avoid.
+  const spread = `${pct(m.value - m.ci_low, 1).replace(/^/, '−')} / +${pct(m.ci_high - m.value, 1)}`
+  if (w <= t.A) return { grade: 'A', note: `${spread} — tight enough to act on`, provisional: true }
+  if (w <= t.B) return { grade: 'B', note: `${spread} — directional`, provisional: true }
+  if (w <= t.C) return { grade: 'C', note: `${spread} — indicative only`, provisional: true }
+  return { grade: 'D', note: `${spread} — too few runs to conclude anything`, provisional: true }
 }

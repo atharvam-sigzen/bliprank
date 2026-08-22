@@ -9,6 +9,8 @@ import {
   formatValue,
   intervalWidth,
   isLiveFacingBuild,
+  effectiveAlpha,
+  MAX_EFFECTIVE_ALPHA,
   MIN_N_FOR_COMPARISON,
   ProvisionalMetricError,
   type Metric,
@@ -22,13 +24,14 @@ const metric = (over: Partial<Metric> = {}): Metric => ({
   n: 150,
   algo_version: 'det-1',
   collection_path: 'third-party-grounded',
+  comparison_basis: 'engines=5|en-US|US|bank-1|cycle',
   ...over,
 })
 
 /** Build a Metric the way production will: straight off a Wilson interval. */
 function fromWilson(successes: number, trials: number): Metric {
   const w = wilson(successes, trials)
-  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded' }
+  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded', comparison_basis: 'engines=5|en-US|US|bank-1|cycle' }
 }
 
 describe('formatting always carries the interval (R8)', () => {
@@ -189,5 +192,51 @@ describe('provisional numbers cannot reach a customer', () => {
     expect(isLiveFacingBuild({ BLIPRANK_ENV: 'live' })).toBe(true)
     expect(isLiveFacingBuild({ BLIPRANK_ENV: 'preview' })).toBe(false)
     expect(isLiveFacingBuild({})).toBe(false)
+  })
+})
+
+describe('review findings — the two blockers, pinned', () => {
+  it('B2: a composition change is NOT a rise (verified: no engine rate changed)', () => {
+    // Five engines at 50/30/5/20/20% over 300 runs each. Copilot goes dark.
+    // Every surviving engine's rate is identical. The aggregate moves anyway.
+    const A = { ...metric({ value: 0.25, ci_low: 0.229, ci_high: 0.273, n: 1500 }), comparison_basis: 'engines=5' }
+    const B = { ...metric({ value: 0.3, ci_low: 0.275, ci_high: 0.327, n: 1200 }), comparison_basis: 'engines=4' }
+    // The intervals genuinely separate — this is not caught by the interval test.
+    expect(B.ci_low > A.ci_high).toBe(true)
+    const c = compare(B, A)
+    expect(c.significance).toBe('not-comparable')
+    expect(c.label).toMatch(/engine set/)
+  })
+
+  it('B2: an identical basis still compares normally', () => {
+    const c = compare(metric({ value: 0.6, ci_low: 0.52, ci_high: 0.68 }), metric())
+    expect(c.significance).toBe('higher')
+  })
+
+  it('B1: effectiveAlpha is ~1-in-180 at equal precision and degrades as it diverges', () => {
+    const equal = effectiveAlpha(metric({ ci_low: 0.2, ci_high: 0.3 }), metric({ ci_low: 0.2, ci_high: 0.3 }))
+    expect(equal).toBeCloseTo(0.00557, 4) // 2(1-Φ(1.96√2))
+    const lopsided = effectiveAlpha(metric({ ci_low: 0.24, ci_high: 0.26 }), metric({ ci_low: 0.05, ci_high: 0.65 }))
+    expect(lopsided).toBeGreaterThan(0.04) // toward the ordinary 1-in-20
+    expect(lopsided).toBeLessThanOrEqual(0.05)
+  })
+
+  it('B1: separated intervals at mismatched precision are refused, not reported', () => {
+    // n=30 against n=1000 — the case where the real rate is ~1-in-44, not 1-in-180.
+    const thin = metric({ value: 0.6, ci_low: 0.42, ci_high: 0.75, n: 30 })
+    const thick = metric({ value: 0.25, ci_low: 0.225, ci_high: 0.277, n: 1000 })
+    expect(thin.ci_low > thick.ci_high).toBe(true) // they DO separate
+    const c = compare(thin, thick)
+    expect(c.significance).toBe('not-comparable')
+    expect(c.label).toMatch(/differ too much in precision/)
+    expect(effectiveAlpha(thin, thick)).toBeGreaterThan(MAX_EFFECTIVE_ALPHA)
+  })
+
+  it('M4: the grade note reports signed distances, matching the interval printed beside it', () => {
+    const m = fromWilson(3, 15) // 20.0% (7.0–45.2%)
+    const note = confidenceGrade(m, { env: {} }).note
+    expect(note).not.toContain('±')
+    expect(note).toContain('−13.0%')
+    expect(note).toContain('+25.2%')
   })
 })

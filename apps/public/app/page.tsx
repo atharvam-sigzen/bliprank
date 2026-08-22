@@ -28,7 +28,7 @@ type State = { phase: 'idle' } | { phase: 'scanning'; domain: string } | { phase
 
 const metricFor = (k: number, n: number): Metric => {
   const w = wilson(k, n)
-  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded' }
+  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded', comparison_basis: 'grader|engines=5|en-GB|GB|auto-bank' }
 }
 
 export default function Grader() {

@@ -6,9 +6,13 @@
 
 import { wilson, type Metric } from '@bliprank/stats'
 
+/** What these numbers are a measurement of. Two metrics may only be compared
+ *  when this matches — see Metric.comparison_basis. */
+const BASIS = 'engines=chatgpt,gemini,copilot,ai-mode,aio|en-US|US|bank-crm-1|14d'
+
 const metric = (k: number, n: number): Metric => {
   const w = wilson(k, n)
-  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded' }
+  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded', comparison_basis: BASIS }
 }
 
 export const ENGINES = ['ChatGPT', 'Google Gemini', 'Microsoft Copilot', 'Google AI Mode', 'Google AI Overviews'] as const
@@ -42,6 +46,9 @@ export const BY_ENGINE = [
   // Previous cycle scored by an older algorithm: comparing across the bump
   // would attribute a definition change to the brand, so compare() refuses.
   { engine: 'ChatGPT (pre-v2 scoring)', current: metric(48, 150), previous: { ...metric(20, 150), algo_version: 'det-0' } },
+  // Previous cycle covered a different engine set, so the denominator changed
+  // shape. Separated intervals here would render a composition change as a rise.
+  { engine: 'All engines (set changed)', current: metric(360, 1200), previous: { ...metric(375, 1500), comparison_basis: 'engines=4|en-US|US|bank-crm-1|14d' } },
 ]
 
 /**
