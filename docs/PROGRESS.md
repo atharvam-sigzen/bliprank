@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-21 · **master:** `27652c2` · **First commit:** 2026-08-18 · **Tests:** 156 passing, 11 files, all offline
+**As of:** 2026-08-21 · **master:** `47a5e75` · **First commit:** 2026-08-18 · **Tests:** 332 passing, 20 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -53,6 +53,15 @@ implementation agrees with statsmodels to ≤ 1e-9 (PASS). The other eight are
 `NOT RUN`, not `PASS`.
 
 **No gate — G0, G1 or any later gate — has been passed.**
+
+Since this record was first written, a parallel fixture-and-free-tier track has
+built a good deal more (§2): the real R2 transport, the QStash runner, the
+deterministic scorer and citation classifier, both UI scaffolds, a fleet-safe
+spend ledger and a collection heartbeat. **None of it changes the line above.**
+Every one of those is verified against fixtures or published test vectors, not
+against a live service or a collected answer, and several carry explicitly
+provisional numbers awaiting G0. The test count going up is not evidence about
+the product.
 
 ---
 
@@ -142,15 +151,13 @@ Hand-merged, file by file, so it could not revert reviewed fixes (`8293d85`,
 
 | #   | Item                                               | Status                                                                                                                                                                                                                                                                                                                             |     |
 | --- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
-| 1.1 | QStash production runner                           | **Not started.** The orchestrator it will call now exists.                                                                                                                                                                                                                                                                         |     |
-| 1.2 | OpenWeb Ninja adapter + fixtures                   | **Done** — five surfaces, `--doctor` probe, citation metadata preserved (ADR-0005).                                                                                                                                                                                                                                                |     |
-| 1.3 | Second provider stubbed                            | **Done** (`f111d5e`). `stubsearch` speaks a deliberately different dialect (HTML body, rank-ordered sources, v2 envelope) and passes the same conformance suite as the real adapter. This is the proof ADR-0001 §2 demands: the abstraction is exercised, not asserted.                                                            |     |
-| 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Now wired into a `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel that P1.1 will call. |     |
-| 1.5 | R2 storage, one object per cell                    | **Interface done, transport not.** `BlobStore` + `MemoryBlobStore` are real; `R2BlobStore` is a single well-marked stub that throws — SigV4 signing is the outstanding work. Kept as an obvious stub rather than a half-signed client that looks finished.                                                                         |     |
-| 1.6 | Rate-limit budget manager                          | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite.                                                                 |     |
+| 1.1 | QStash production runner | **Done** (`1619447`, `38a0667`). A cron fans a cycle into one message per cell; QStash delivers each to an HTTP endpoint that verifies an HS256 token (issuer, destination, expiry, and the body hash — without which a valid token could be reattached to a job asking for 5000 runs) and hands the cell to the orchestrator. The status mapping IS the spend control: QStash retries any non-2xx, so a job that failed after burning its attempts returns 200 and dead-letters; non-2xx is reserved for "nothing was spent". **Never exercised against real QStash.** |
+| 1.2 | OpenWeb Ninja adapter + fixtures | **Done** — five surfaces, `--doctor` probe, citation metadata preserved (ADR-0005). |
+| 1.3 | Second provider stubbed | **Done** (`f111d5e`). `stubsearch` speaks a deliberately different dialect (HTML body, rank-ordered sources, v2 envelope) and passes the same conformance suite as the real adapter. This is the proof ADR-0001 §2 demands: the abstraction is exercised, not asserted. |
+| 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Wired into `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel. |
+| 1.5 | R2 storage, one object per cell | **Done** (`1d80396`). Hand-rolled SigV4 over R2's S3 REST API, no AWS SDK: three verbs against one bucket does not justify that dependency, and a signer checked against AWS's own published vectors is easier to trust than an SDK we cannot see into. `assertSafeKey` refuses keys containing dot segments, because `new URL()` resolves them *before* signing — such a key would be signed and sent for a different object, the same wrong object both times, so it would succeed silently. **Never exercised against a real bucket.** |
+| 1.6 | Rate-limit budget manager | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite. |
 | 1.7 | `packages/db` schema + RLS                         | **Built on branch `p1/db-schema`, not merged.** See below.                                                                                                                                                                                                                                                                         |     |
-|     |                                                    |                                                                                                                                                                                                                                                                                                                                    |     |
-|     |                                                    |                                                                                                                                                                                                                                                                                                                                    |     |
 
 **Review findings that changed the code.** `measurement-engineer` returned two
 verified BLOCKERs on the orchestrator, both fixed in `27652c2`:
@@ -189,6 +196,81 @@ merged:
    (a JWT claim) before launch is a deliberate architectural choice, not a bug.
 2. The entitlement business rule — how `svc_onboard` authorizes a brand add,
    and where the billing hook sits.
+
+### Spend control, reworked twice under review
+
+`services/collector/src/spend-ledger.ts` (`6c41ce3`, `47a5e75`). ⚠️ HUMAN-OWNED.
+
+The P1.1 runner made an old assumption dangerous. `Budget` reads its ledger once
+at construction and charges in memory — correct for the one-process pilot, wrong
+for a fan-out to auto-scaling instances, where each cold container gets its own
+ledger and `COLLECTION_BUDGET_USD_DAILY` silently becomes a ceiling *per
+container*. `SpendLedger` is the seam; `KvSpendLedger` holds the cap in an atomic
+shared counter, charging increment-then-check so two concurrent workers cannot
+both take the last slot.
+
+Two review passes reshaped the guard around it:
+
+1. `LocalSpendLedger` lost its public constructor — reaching for the unsafe
+   implementation now requires a written reason.
+2. That guard **failed open**. It inferred "am I in a fleet?" from a list of PaaS
+   environment markers, and a bare Hetzner CAX VM — the actual P5 target — sets
+   none of them, so absence read as safety. Topology is now **declared**
+   (`COLLECTOR_TOPOLOGY`), undeclared is refused, and the marker list survives
+   only as a veto that can force `fleet` and never grant `single-process`.
+
+Also from those passes: a shared high-water mark so a worker with a stuck clock
+cannot write to a private stale window and collect a second cap; alerts on a
+failed refund and a failed charge, both of which fail toward under-spending but
+were previously silent about it.
+
+### Collection heartbeat
+
+`services/collector/src/collection-heartbeat.ts` (`6c41ce3`). Alarms on the
+**absence of success**, not the presence of errors — because both transports
+fail closed by design. A wrong QStash signing key or an expired R2 credential
+produces no errors and no collection, and an error-rate alert cannot see a queue
+that stopped being delivered. States: healthy / stale / dark / never-collected,
+with never-collected deliberately not paging (a new deployment has never
+collected, and paging on day one teaches everyone to ignore the alarm). Cache
+hits are excluded: a hit proves the cache works, not that collection does.
+
+### P2 — scoring (fixture-only, `f4f18d1`, `6378c92`)
+
+| # | Item | Status |
+| --- | --- | --- |
+| 2.1 | Deterministic scorer | **Done, fixture-only.** No model call on any path (R1). URL masking so a brand appearing only in a link is cited but not *mentioned*; `position` is a rank among detected brands, not a character offset; explicit letter/digit/underscore boundaries rather than ``, which does not fire around `+` or `.`. A test pins that a score row carries **no** interval — one answer is one Bernoulli trial. |
+| 2.1b | Citation source classifier | **Done, fixture-only.** ADR-0005 classes, identity before platform. The hard constraint has its own tests: no input reaches `owned` for an unlisted domain, including a provider-supplied publisher name — acting on that would make the class depend on which provider collected the run. |
+| 2.5 | Golden set | **Skeleton only.** Harness plus 7 hand-built seed cases. Returns `NOT_RUN` below the 300-case target: agreement over a dozen answers is noise wearing a gate's clothes. |
+
+`measurement-engineer` found **three BLOCKERs**, all reproduced before fixing:
+nested aliases double-counted mentions (`Zoho` + `Zoho CRM` scored one
+occurrence as two, inflating frequency for most brands); an empty string in
+`brand.domains` made `cited` true for arbitrary URLs; and competitor labels
+depended on array order, so an unordered query could change a stored field with
+no change to the answer (R5). The harness gap that let the first one through —
+`mentionCount` was not a labelled field, so a bug corrupting it was invisible
+and would have passed G2 at 300/300 — is closed too.
+
+### UI scaffolds (`56e8c53`, `6378c92`, `6c41ce3`)
+
+`apps/web` (dashboard) and `apps/public` (Grader). Both build clean and static.
+All data is fixture data, and both pages say so on the page.
+
+`packages/stats/src/format.ts` is where R8 stops being a review comment: the
+`Metric` type has no optional fields, so rendering a bare point estimate is a
+compile error. `compare()` tests interval *overlap*, so a movement the sample
+cannot resolve reads as "no significant change" with no colour, no arrow and no
+emphasis. ⚠️ HUMAN-OWNED, and three things in it are explicitly **PROVISIONAL**:
+the A–D grade thresholds (blocked from any live build — `BLIPRANK_ENV=live`
+fails `next build`), `MIN_N_FOR_COMPARISON`, and the overlap test itself, which
+is documented for customers in `METHODOLOGY.md` Known Limitations §6. All three
+get their real values from G0 data.
+
+`frontend-designer` found two CRITICALs: the confidence band was effectively
+invisible (1.20:1 against the card, 1.02:1 against the gridlines it overlays),
+and a metric rendered without its interval — in the scaffold built to
+demonstrate R8. Both fixed.
 
 ⚠️ **HUMAN REVIEW REQUIRED** stands on `p1/db-schema` (tenancy model) and on
 `27652c2` (ADR-0003 R2 object identity + the `EngineAdapter` contract).
@@ -266,38 +348,67 @@ fresh session: 38.2k tokens, of which the four enabled plugins cost ≈ 3k.
 
 ## 5. What's next, in order
 
-This is a dependency chain, not a list of parallel tracks.
+Two tracks now, deliberately. The gate chain is unchanged and still governs what
+counts as validated; alongside it a parallel fixture-and-free-tier track has run
+ahead, on the explicit understanding that **none of it is gate-validated
+progress**.
+
+### The gate chain
 
 **(a) Restore OpenWeb Ninja API access.** Atharva, on the provider dashboard.
-Nothing downstream can start until the five surfaces stop returning 403.
-Two preconditions to clear at the same time: `.env.example` currently holds a
-live-looking API key in the working tree (unstaged, not gitignored) — it needs
-rotating and blanking before any broad `git add`; and `OPENWEBNINJA_PLAN` must
-be set explicitly, since the pay-as-you-go default is the wrong rate at scale.
+Nothing downstream can start until the five surfaces stop returning 403. Two
+preconditions at the same time: `.env.example` still needs its key rotated (it
+was never committed — the only committed version has zero non-empty values — but
+it sat in a non-ignored file), and `OPENWEBNINJA_PLAN` must be set explicitly,
+since the pay-as-you-go default is the wrong rate at scale. Note the runner now
+refuses to start without an explicit `--plan`.
 
 **(b) Run the G0 pilot for real.** 100 prompts × 5 engines × 10 runs × 3 known
-brands, **Day 1 and Day 2** — the second day is not optional, because without
-it the design-effect and precision rows cannot be estimated and stay `NOT RUN`.
-Hard cap $75, collection enabled deliberately for the duration of the run and
-switched back off afterwards. Then run the analysis for $/answer at Mega
-marginal, p95 latency, ρ̂_u, DEFF and n_eff per engine, and a pass/fail per
-engine. The runbook is `services/collector/pilot/README.md`.
+brands, **Day 1 and Day 2** — the second day is not optional, because without it
+the design-effect and precision rows cannot be estimated and stay `NOT RUN`.
+Hard cap $75 (the cap is per pilot; the runner subtracts what earlier days
+spent). Then the analysis for $/answer at Mega marginal, p95 latency, ρ̂_u, DEFF
+and n_eff per engine, and a pass/fail per engine. Runbook:
+`services/collector/pilot/README.md`.
 
-**(c) Only after G0 returns a real verdict:** resume non-fixture P1 work — the
-QStash production runner (1.1) calling the existing orchestrator, and the R2
-SigV4 transport (1.5) — then G1's pipeline criteria, which require 10,000
-durably stored answers and a ≥ 90% cache hit rate on a repeat cycle and
-therefore cannot be evaluated on fixtures at all.
+**(c) After G0 returns a verdict:** G1's pipeline criteria, which require 10,000
+durably stored answers and a ≥ 90% cache hit rate on a repeat cycle and so
+cannot be evaluated on fixtures at all. The code G1 tests already exists (1.1,
+1.4, 1.5) — what is missing is real data flowing through it.
 
-**(d) P2 — scoring**, including the new citation source classifier (2.1b,
-ADR-0005) and its G2 criterion of ≥ 97% agreement with human labels and 0%
-silently bucketed as `owned`.
+**(d) G2 — scoring correctness.** Needs the golden set populated to 300–500
+hand-labelled answers, which needs real collected answers, which needs G0.
 
-**(e) P3 — the public Grader.**
+**(e) G3 — the public Grader**, including the category classifier, competitor
+head-to-head and email gate that the current scaffold does not have.
+
+### The parallel track, and what it is waiting on
+
+**Free-tier credentials (Atharva).** R2 and Upstash accounts, so one signed
+PUT/GET and one real QStash delivery can close the verification gap. Both
+transports are currently pinned only by self-consistency: the three AWS SigV4
+vectors are all bodyless GETs, so nothing independently verifies the actual
+write path, and every "valid" QStash token in the tests is minted by our own
+signer. Both fail *closed*, so the risk is silent inaction rather than
+corruption — which is what the collection heartbeat now watches for.
+
+**`p1/db-schema` merge (Atharva).** Reviewed twice and clean; blocked on two
+decisions recorded in §2 — whether `set_workspace()` gains DB-level identity
+before launch, and where the billing check sits in `svc_onboard`.
+
+**Three provisional numbers, all awaiting G0 data**: the A–D confidence-grade
+thresholds (blocked from live builds), `MIN_N_FOR_COMPARISON`, and the choice of
+an overlap test for significance. None were replaced with a better guess, because
+a second invented number would look more considered while being exactly as
+unfounded.
+
+**`COLLECTOR_TOPOLOGY` (Atharva, before P5 wiring).** Whether declaring topology
+in deployment config is the right mechanism is a deployment decision, and it is
+the specific thing to settle before anyone writes the Hetzner runner.
 
 **Nothing past G0 counts as validated progress until G0 has a real pass/fail
-result.** Everything built so far is infrastructure whose correctness is
-established against fixtures; that is a different and much weaker claim than
-"the unit economics hold". If measured $/answer lands materially above $0.002,
-or the design effect makes the Starter unit's effective n useless, the pricing
-is reworked before anything else is built. G0 exists to be able to fail.
+result.** Everything above is infrastructure whose correctness is established
+against fixtures; that is a different and much weaker claim than "the unit
+economics hold". If measured $/answer lands materially above $0.002, or the
+design effect makes the Starter unit's effective n useless, the pricing is
+reworked before anything else is built. G0 exists to be able to fail.
