@@ -335,6 +335,33 @@ a substring is not a scope, and no amount of inspecting `pg_policies` turns one
 into the other. All five of audit four's attacks now fail the gate, and the gate
 passes as a non-superuser deployer with no RLS bypass.
 
+**Audit five found one assertion left in the old style, and it was the one with
+no test.** The policy-scoping check exempted any policy whose role list mentioned
+a service role, so `CREATE POLICY p ON score_rows FOR SELECT TO app_rw,
+svc_scorer USING (true)` — one statement — passed the gate and returned every
+tenant's corpus to an authenticated session. RLS ORs permissive policies, so
+naming a service role alongside `app_rw` changes nothing about what `app_rw`
+reads. The predicate asked whether *any* named role was trusted; the property is
+whether *every* one is.
+
+**Those two facts are the same fact.** The only assertion in the file without a
+failing case was the only one that did not work. Every assertion now has one,
+and the five it was missing are the reason this is worth writing down rather
+than just fixing.
+
+Audit five also closed: the manifest match ignored the grantee, so a privilege
+declared `service` silently authorised it for tenants too; the `shared` column
+test was a five-word case-sensitive regex that `brand_id`, `org_id`, `agency`,
+`owner_id` and `"WorkspaceId"` all passed — and in this schema brand identity
+*is* tenant identity, so shared columns are now declared rather than guessed;
+partitions were seeded once at migration time, so `ensure_score_partition()` — a
+correct maintenance job — failed the deploy on the 1st of every month, and a gate
+that fails routinely gets `|| true`'d; predefined-role membership
+(`pg_execute_server_program`) confers power that never appears in a table ACL, so
+no privilege derivation could see it; and the gate's own functions were granted
+to PUBLIC, handing a tenant a ranked list of exactly which relations are
+reachable-and-unreviewed. They now go to a `deploy_check` role.
+
 **Accepted consequence, recorded rather than discovered later:** the tenant read
 path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
 `default_transaction_read_only`, and the context table is `UNLOGGED` and so does

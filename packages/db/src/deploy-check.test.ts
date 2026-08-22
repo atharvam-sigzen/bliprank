@@ -247,7 +247,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
   it('PUBLIC with CREATE on schema public is caught — it is what search_path pinning assumes', async () => {
     const d = await healthy()
     await d.exec(`GRANT CREATE ON SCHEMA public TO PUBLIC`)
-    await expect(check(d)).rejects.toThrow(/public-can-create/)
+    await expect(check(d)).rejects.toThrow(/schema-create-granted/)
   })
 })
 
@@ -463,7 +463,7 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     // 0000 says private banks go in a separate table. Nothing enforced it, and
     // prompt_banks is the one tenant-readable table that returns rows with no
     // context at all — so a private bank added here would be world-readable.
-    await expect(check(d)).rejects.toThrow(/shared-with-tenant-column/)
+    await expect(check(d)).rejects.toThrow(/shared-columns-changed/)
   })
 
   it('a live key that is not fully configured is caught even when a good one exists', async () => {
@@ -506,5 +506,134 @@ describe('audit 3 — every assertion names only the object it is about', () => 
     // CREATE EXTENSION IF NOT EXISTS is a silent no-op and set_workspace_jwt()
     // would fail to resolve hmac()/digest() at call time.
     await expect(check(d)).rejects.toThrow(/pgcrypto is not resolvable/)
+  })
+})
+
+describe('audit 5 — every assertion has a failing case, including the ones that did not', () => {
+  // The correlation the audit named: the ONE assertion with no test was the one
+  // that did not work. These close that.
+
+  it('THE FINDING: a mixed role list does not exempt a policy from scoping', async () => {
+    for (const roles of ['app_rw, svc_scorer', 'app_rw, auth_verifier', 'svc_scorer, app_rw', 'app_rw']) {
+      const d = await healthy()
+      await d.exec(`CREATE POLICY p ON score_rows FOR SELECT TO ${roles} USING (true)`)
+      // RLS ORs permissive policies, so naming a service role alongside app_rw
+      // changes nothing about what app_rw can read. The old predicate asked
+      // whether ANY named role was trusted; the property is whether EVERY one is.
+      await expect(check(d)).rejects.toThrow(/scoped-policy-unbounded/)
+    }
+  })
+
+  it('a policy naming ONLY trusted roles is correctly exempt', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE POLICY p ON score_rows FOR SELECT TO svc_scorer, svc_onboard USING (true)`)
+    await expect(check(d)).resolves.toBeDefined()
+  })
+
+  it('a service-declared privilege does not authorise it for a tenant', async () => {
+    const d = await healthy()
+    // score_rows INSERT is declared `service`. The manifest match used to ignore
+    // the grantee, so this passed and RLS was the only thing left.
+    await d.exec(`GRANT INSERT ON score_rows TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure[\s\S]*score_rows INSERT/)
+  })
+
+  it('a tenant-facing write policy on shared reference data is refused', async () => {
+    const d = await healthy()
+    await d.exec(`GRANT INSERT, UPDATE ON prompt_banks TO app_rw`)
+    await d.exec(`CREATE POLICY banks_editable ON prompt_banks FOR ALL USING (true) WITH CHECK (true)`)
+    // Cross-tenant corruption of the shared benchmark corpus by a legitimately
+    // authenticated tenant — not a leak, but worse for a product whose claim is
+    // that its numbers reconcile.
+    await expect(check(d)).rejects.toThrow(/shared-relation-writable|undeclared-exposure/)
+  })
+
+  it('THE FINDING: the shared column list is declared, not guessed from names', async () => {
+    // Every one of these passed a five-word case-sensitive regex. `brand_id` is
+    // the sharpest: in this schema brand identity IS tenant identity.
+    for (const col of ['"WorkspaceId" uuid', 'org_id uuid', 'brand_id uuid', 'agency uuid', 'owner_id uuid', 'wsid uuid']) {
+      const d = await healthy()
+      await d.exec(`ALTER TABLE prompt_banks ADD COLUMN ${col}`)
+      await expect(check(d)).rejects.toThrow(/shared-columns-changed/)
+    }
+  })
+
+  it('THE FINDING: a routine partition provision does not break the gate', async () => {
+    const d = await healthy()
+    await d.exec(`SELECT ensure_score_partition('2026-10-01')`)
+    // Seeding partitions once at migration time meant a correct maintenance job
+    // failed the deploy on the 1st of every month. A gate that fails routinely
+    // gets `|| true` in the pipeline, and then a real fault ships behind it.
+    await expect(check(d)).resolves.toBeDefined()
+  })
+
+  it('a dropped partition leaves nothing stale, and a dropped declared table does', async () => {
+    const d = await healthy()
+    await d.exec(`DROP TABLE score_rows_2026_09`)
+    await expect(check(d)).resolves.toBeDefined() // resolved through pg_inherits, not enumerated
+
+    const d2 = await healthy()
+    await d2.exec(`DROP TABLE workspace_subscriptions CASCADE`)
+    await expect(check(d2)).rejects.toThrow(/stale-manifest-row/)
+  })
+
+  it('THE FINDING: predefined-role membership is not invisible', async () => {
+    for (const grp of ['pg_execute_server_program', 'pg_read_server_files', 'pg_write_server_files']) {
+      const d = await healthy()
+      await d.exec(`CREATE ROLE web_prod LOGIN`)
+      await d.exec(`GRANT app_rw TO web_prod`)
+      await d.exec(`GRANT ${grp} TO web_prod`)
+      // These confer power that never appears in a table ACL, so no amount of
+      // privilege derivation can see them. pg_execute_server_program is
+      // arbitrary command execution as the database OS user.
+      await expect(check(d)).rejects.toThrow(/server-level powers/)
+    }
+  })
+
+  it('TRUNCATE is refused for any untrusted role, declared or not', async () => {
+    const d = await healthy()
+    await d.exec(`GRANT TRUNCATE ON score_rows TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/truncate-granted/)
+  })
+
+  it('a sequence readable by a tenant is refused — it leaks volume across tenants', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE SEQUENCE recon_seq`)
+    await d.exec(`GRANT USAGE ON SEQUENCE recon_seq TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/sequence public\.recon_seq/)
+  })
+
+  it('a database with no live signing key is refused', async () => {
+    const d = await healthy()
+    await d.exec(`UPDATE auth_signing_keys SET retired_at = now() - interval '1 day'`)
+    await expect(check(d)).rejects.toThrow(/no live row in auth_signing_keys/)
+  })
+
+  it('the gate functions are not readable by a tenant — they are a targeting list', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE web_prod LOGIN`)
+    await d.exec(`GRANT app_rw TO web_prod`)
+    await d.exec(`SET SESSION AUTHORIZATION web_prod`)
+    // tenancy_exposure_faults() returns a ranked list of exactly which relations
+    // are reachable-and-unreviewed, plus definer signatures in schemas the caller
+    // cannot enter. No tenant data — but a map of where to attack.
+    for (const fn of ['tenancy_exposure_faults()', 'auth_key_health()', 'assert_role_exclusivity()']) {
+      await expect(d.query(`SELECT * FROM ${fn}`)).rejects.toThrow(/permission denied/)
+    }
+    // No teardown needed: the instance is closed in afterEach.
+  })
+
+  it('the gate runs as a deploy principal that is neither superuser nor auth_verifier', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE ROLE deployer NOLOGIN`)
+    await d.exec(`GRANT deploy_check TO deployer`)
+    await d.exec(`GRANT deployer TO postgres`)
+    expect((await d.query(`SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname='deployer'`)).rows).toEqual([
+      { rolsuper: false, rolbypassrls: false },
+    ])
+    expect((await d.query(`SELECT pg_has_role('deployer','auth_verifier','MEMBER') AS m`)).rows).toEqual([{ m: false }])
+    await d.exec(`SET ROLE deployer`)
+    await expect(check(d)).resolves.toBeDefined()
+    await d.exec(`RESET ROLE`)
   })
 })

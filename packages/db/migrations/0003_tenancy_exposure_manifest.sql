@@ -5,8 +5,8 @@
 --
 -- WHY THIS EXISTS, AND WHY IT IS NOT ANOTHER PATCH.
 --
--- Four independent audits have now found the same bug in check-deploy.sql, and
--- it was fixed three times without the fix holding:
+-- Five independent audits found the same bug in the deploy gate, and it was
+-- fixed four times without the fix holding:
 --
 --   1. it asserted a PROXY (EXECUTE on set_workspace) for a property (can the
 --      tenant name a workspace);
@@ -17,8 +17,15 @@
 --      literal grantee 'app_rw';
 --   4. it named the SCHEMA, nine times, and the policy COMMAND — so a table in
 --      a new schema with no RLS at all passed, and so did FOR DELETE USING
---      (true) and a TRUNCATE grant, both of which destroy another tenant's rows
---      from a fully authenticated session.
+--      (true) and a TRUNCATE grant, each of which destroys another tenant's rows
+--      from a fully authenticated session;
+--   5. after the inversion below, ONE assertion was left in the old style — the
+--      policy-scoping check exempted any policy whose role list mentioned a
+--      service role, so `CREATE POLICY p ON score_rows FOR SELECT TO app_rw,
+--      svc_scorer USING (true)` passed the gate and returned every tenant's
+--      corpus to an authenticated session. It was also the one assertion in the
+--      file with no failing case in the test suite. Those two facts are the
+--      same fact.
 --
 -- Each round enumerated more shapes; each audit found a shape not enumerated.
 -- That is not bad luck. Proving "no unsafe configuration exists" by listing
@@ -32,9 +39,10 @@
 -- default, because the failure condition is "reachable and undeclared" rather
 -- than "matches one of the shapes we listed".
 --
--- This does not replace the row-level checks, which still catch a declared-
--- scoped table whose policy does not actually scope. It replaces the part that
--- kept being incomplete.
+-- WHERE A NAME STILL APPEARS, it is default-deny: the three trusted service
+-- roles are named so that everything NOT named is treated as tenant-facing.
+-- That is the safe direction. Naming things so that everything not named is
+-- treated as safe is the direction that failed five times.
 
 -- ---------------------------------------------------------------------------
 -- 1. The manifest
@@ -44,14 +52,23 @@ CREATE TABLE tenancy_exposure_manifest (
   schema_name text NOT NULL,
   relation    text NOT NULL,
   privilege   text NOT NULL CHECK (privilege IN ('SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','USAGE')),
-  -- scoped  : tenant-reachable, and every policy on it must bound rows by the
-  --           tenant context. Behavioural isolation is asserted in the suite.
-  -- shared   : deliberately visible to every tenant. Adding one is a tenancy
-  --           decision and should be reviewed as one.
-  -- service  : reachable only by a trusted service role, never by a tenant.
+  -- scoped  : tenant-reachable, and every tenant-facing policy on it must bound
+  --           rows by the tenant context. Disjointness is asserted behaviourally
+  --           in packages/db/src/tenant-isolation.test.ts.
+  -- shared  : deliberately visible to every tenant, read-only, with a declared
+  --           column list.
+  -- service : reachable by a trusted service role, and by nothing else.
   disposition text NOT NULL CHECK (disposition IN ('scoped','shared','service')),
   reason      text NOT NULL CHECK (length(reason) > 0),
-  PRIMARY KEY (schema_name, relation, privilege)
+  -- `shared` rows only: the exact columns approved for universal exposure.
+  -- Guessing tenant-ness from column NAMES was tried and is unbounded in the
+  -- same way as everything else here — `brand_id`, `org_id`, `agency`,
+  -- `owner_id` and `"WorkspaceId"` all passed a five-word case-sensitive regex,
+  -- and in this schema brand identity IS tenant identity. So the inversion
+  -- applies one level down: declare the columns, and any difference is a fault.
+  shared_columns text[],
+  PRIMARY KEY (schema_name, relation, privilege),
+  CHECK ((disposition = 'shared') = (shared_columns IS NOT NULL))
 );
 -- RLS is enabled at the FOOT of this file, after the seed rows. FORCE binds the
 -- owner and the only policy is TO auth_verifier, so enabling it here would make
@@ -68,9 +85,9 @@ INSERT INTO tenancy_exposure_manifest (schema_name, relation, privilege, disposi
   ('public','brands',                 'SELECT','scoped', 'entitled brands only; an unentitled brand is invisible'),
   ('public','score_rows',             'SELECT','scoped', 'filtered join through workspace_brands'),
   ('public','score_aggregates',       'SELECT','scoped', 'filtered join through workspace_brands'),
-  ('public','prompt_banks',           'SELECT','shared', 'category-keyed reference data with no tenant column; private banks go in a separate RLS table (0000)'),
   -- The scorer and onboarding services. Declared so the surface is complete,
-  -- not because a tenant can reach them.
+  -- and matched against the GRANTEE, so a `service` row does not silently
+  -- authorise the same privilege for a tenant role.
   ('public','score_rows',             'INSERT','service','svc_scorer appends the corpus'),
   ('public','score_aggregates',       'INSERT','service','svc_scorer appends rollups'),
   ('public','accounts',               'INSERT','service','svc_onboard writes identity'),
@@ -93,38 +110,51 @@ INSERT INTO tenancy_exposure_manifest (schema_name, relation, privilege, disposi
   ('public','prompt_banks',           'INSERT','service','svc_onboard curates prompt banks'),
   ('public','prompt_banks',           'UPDATE','service','svc_onboard curates prompt banks');
 
--- The partitions inherit the parent's exposure. Enumerated rather than special-
--- cased, so a new month provisioned by ensure_score_partition() is declared too.
-INSERT INTO tenancy_exposure_manifest (schema_name, relation, privilege, disposition, reason)
-SELECT 'public', c.relname, p.priv, CASE WHEN p.priv = 'SELECT' THEN 'scoped' ELSE 'service' END,
-       'partition of score_rows; carries its own FORCE RLS and entitlement policy'
-  FROM pg_class c
-  JOIN pg_namespace n ON n.oid = c.relnamespace
- CROSS JOIN unnest(ARRAY['SELECT','INSERT']) AS p(priv)
- WHERE n.nspname = 'public' AND c.relkind IN ('r','p')   -- relations, not their indexes
-   AND c.relname LIKE 'score\_rows\_%';
+INSERT INTO tenancy_exposure_manifest (schema_name, relation, privilege, disposition, reason, shared_columns) VALUES
+  ('public','prompt_banks','SELECT','shared',
+   'category-keyed reference data with no tenant column; private banks go in a separate RLS table (0000)',
+   ARRAY['id','category','locale','geo','prompts','version']);
+
+-- Partitions are NOT seeded. Seeding them once at migration time meant
+-- ensure_score_partition() — a correct, scheduled maintenance job — created a
+-- relation nobody could declare, and the gate then failed on the 1st of every
+-- month for a benign reason. A gate that fails routinely gets `|| true` in the
+-- pipeline, and then a real fault ships behind it. `manifest_root()` resolves a
+-- partition to its root instead, so a new month inherits the parent's
+-- disposition and a dropped month leaves nothing stale.
+CREATE OR REPLACE FUNCTION manifest_root(rel oid) RETURNS oid
+LANGUAGE plpgsql STABLE SET search_path = pg_catalog, pg_temp AS $$
+DECLARE cur oid := rel; parent oid;
+BEGIN
+  LOOP
+    SELECT i.inhparent INTO parent FROM pg_inherits i WHERE i.inhrelid = cur LIMIT 1;
+    EXIT WHEN parent IS NULL;
+    cur := parent;
+  END LOOP;
+  RETURN cur;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. The assertion
 -- ---------------------------------------------------------------------------
 
--- Definer-owned, because it reads the manifest, which no application role can.
--- It returns a fault list rather than raising, so check-deploy.sql can report
--- everything at once instead of one line per deploy attempt.
 CREATE OR REPLACE FUNCTION tenancy_exposure_faults()
 RETURNS TABLE(kind text, detail text)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   r record;
+  trusted constant text[] := ARRAY['svc_scorer','svc_onboard','auth_verifier'];
 BEGIN
-  -- Reachable but undeclared. The subject is derived three ways at once — every
-  -- schema, every relation kind, every privilege — so nothing here names an
-  -- arrangement. `pg_%` roles are Postgres's own; auth_verifier is the trusted
-  -- owner; superusers bypass RLS entirely and are asserted separately.
+  -- ---- reachable but undeclared -------------------------------------------
+  -- The subject is derived three ways at once — every schema, every relation
+  -- kind, every privilege — and matched against the manifest INCLUDING the
+  -- disposition, so a row declared `service` does not silently authorise the
+  -- same privilege for a tenant role.
   FOR r IN
-    SELECT DISTINCT ns.nspname, c.relname, p.priv, g.rolname
+    SELECT DISTINCT ns.nspname, c.relname, root.relname AS rootname, p.priv, g.rolname
       FROM pg_class c
       JOIN pg_namespace ns ON ns.oid = c.relnamespace
+      JOIN pg_class root ON root.oid = manifest_root(c.oid)
      CROSS JOIN unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES']) AS p(priv)
      CROSS JOIN LATERAL (
        SELECT rolname FROM pg_roles
@@ -134,42 +164,19 @@ BEGIN
      WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
        AND ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
        AND c.relkind IN ('r','p','v','m','f')
-       AND has_table_privilege(g.rolname, c.oid, p.priv)
+       AND (has_table_privilege(g.rolname, c.oid, p.priv)
+            OR (p.priv NOT IN ('TRUNCATE','DELETE') AND has_any_column_privilege(g.rolname, c.oid, p.priv)))
        AND NOT EXISTS (
          SELECT 1 FROM tenancy_exposure_manifest m
-          WHERE m.schema_name = ns.nspname AND m.relation = c.relname AND m.privilege = p.priv)
+          WHERE m.schema_name = ns.nspname AND m.relation = root.relname AND m.privilege = p.priv
+            AND (m.disposition <> 'service' OR g.rolname = ANY (trusted)))
   LOOP
     kind := 'undeclared-exposure';
-    detail := format('%s.%s %s is reachable by %s and is not in the manifest', r.nspname, r.relname, r.priv, r.rolname);
+    detail := format('%s.%s %s is reachable by %s and is not declared for it', r.nspname, r.relname, r.priv, r.rolname);
     RETURN NEXT;
   END LOOP;
 
-  -- Column-level grants do not register in has_table_privilege. Same rule.
-  FOR r IN
-    SELECT DISTINCT ns.nspname, c.relname, p.priv, g.rolname
-      FROM pg_class c
-      JOIN pg_namespace ns ON ns.oid = c.relnamespace
-     CROSS JOIN unnest(ARRAY['SELECT','INSERT','UPDATE','REFERENCES']) AS p(priv)
-     CROSS JOIN LATERAL (
-       SELECT rolname FROM pg_roles
-        WHERE rolname NOT LIKE 'pg\_%' AND rolname <> 'auth_verifier' AND NOT rolsuper
-       UNION ALL SELECT 'public'
-     ) g
-     WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
-       AND ns.nspname NOT LIKE 'pg\_temp%' AND ns.nspname NOT LIKE 'pg\_toast%'
-       AND c.relkind IN ('r','p','v','m','f')
-       AND has_any_column_privilege(g.rolname, c.oid, p.priv)
-       AND NOT EXISTS (
-         SELECT 1 FROM tenancy_exposure_manifest m
-          WHERE m.schema_name = ns.nspname AND m.relation = c.relname AND m.privilege = p.priv)
-  LOOP
-    kind := 'undeclared-exposure';
-    detail := format('%s.%s %s (column-level) is reachable by %s and is not in the manifest', r.nspname, r.relname, r.priv, r.rolname);
-    RETURN NEXT;
-  END LOOP;
-
-  -- Sequences leak volume, not rows — a competitor's insert count is still
-  -- signal for an agency product.
+  -- ---- sequences -----------------------------------------------------------
   FOR r IN
     SELECT DISTINCT ns.nspname, c.relname, g.rolname
       FROM pg_class c
@@ -191,15 +198,16 @@ BEGIN
     RETURN NEXT;
   END LOOP;
 
-  -- TRUNCATE can never be scoped: RLS does not apply to it in any form, so a
-  -- grant is unconditional destruction of every tenant's rows. Declared or not.
+  -- ---- TRUNCATE ------------------------------------------------------------
+  -- Never scopeable: RLS does not apply to it in any form, so a grant is
+  -- unconditional destruction of every tenant's rows. Declared or not.
   FOR r IN
     SELECT DISTINCT ns.nspname, c.relname, g.rolname
       FROM pg_class c
       JOIN pg_namespace ns ON ns.oid = c.relnamespace
      CROSS JOIN LATERAL (
        SELECT rolname FROM pg_roles
-        WHERE rolname NOT LIKE 'pg\_%' AND rolname NOT IN ('auth_verifier','svc_scorer','svc_onboard') AND NOT rolsuper
+        WHERE rolname NOT LIKE 'pg\_%' AND NOT (rolname = ANY (trusted)) AND NOT rolsuper
        UNION ALL SELECT 'public'
      ) g
      WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
@@ -210,12 +218,9 @@ BEGIN
     RETURN NEXT;
   END LOOP;
 
-  -- A declared-scoped relation must carry RLS, forced, with at least one policy,
-  -- and EVERY policy on it — for every command, including DELETE, which the
-  -- previous gate never swept — must mention the tenant context. Mentioning it
-  -- is necessary and not sufficient; the suite asserts the row sets behave.
+  -- ---- declared-scoped relations must actually force RLS -------------------
   FOR r IN
-    SELECT m.schema_name, m.relation FROM tenancy_exposure_manifest m WHERE m.disposition = 'scoped'
+    SELECT DISTINCT m.schema_name, m.relation FROM tenancy_exposure_manifest m WHERE m.disposition = 'scoped'
   LOOP
     IF NOT EXISTS (
       SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
@@ -226,45 +231,73 @@ BEGIN
       detail := format('%s.%s is declared scoped but does not FORCE row level security', r.schema_name, r.relation);
       RETURN NEXT;
     END IF;
+  END LOOP;
 
-    IF EXISTS (
-      SELECT 1 FROM pg_policies pol
-       WHERE pol.schemaname = r.schema_name AND pol.tablename = r.relation
-         AND (pol.roles = '{public}' OR NOT EXISTS (
-               SELECT 1 FROM unnest(pol.roles) rr WHERE rr::text IN ('svc_scorer','svc_onboard','auth_verifier')))
-         AND coalesce(pol.qual, '') || coalesce(pol.with_check, '') NOT LIKE '%current_workspace_id%')
-    THEN
+  -- ---- every tenant-facing policy ------------------------------------------
+  -- A policy is TENANT-FACING unless EVERY role it names is trusted. The
+  -- previous form asked whether ANY named role was trusted, which exempted
+  -- `TO app_rw, svc_scorer USING (true)` — RLS ORs permissive policies, so that
+  -- one statement returned every tenant's corpus to an authenticated session
+  -- and passed the gate. Default-deny: not-named means tenant-facing.
+  --
+  -- Partitions resolve to their root, so a partition's own policy is held to
+  -- the parent's declaration.
+  FOR r IN
+    SELECT pol.schemaname, pol.tablename, pol.policyname, pol.cmd,
+           coalesce(pol.qual, '') || ' ' || coalesce(pol.with_check, '') AS expr,
+           m.disposition
+      FROM pg_policies pol
+      JOIN pg_class c ON c.relname = pol.tablename
+      JOIN pg_namespace ns ON ns.oid = c.relnamespace AND ns.nspname = pol.schemaname
+      JOIN pg_class root ON root.oid = manifest_root(c.oid)
+      JOIN LATERAL (
+        SELECT DISTINCT mm.disposition FROM tenancy_exposure_manifest mm
+         WHERE mm.schema_name = pol.schemaname AND mm.relation = root.relname
+           AND mm.disposition IN ('scoped','shared')
+      ) m ON true
+     WHERE pol.roles = '{public}'::name[]
+        OR EXISTS (SELECT 1 FROM unnest(pol.roles) rr WHERE NOT (rr::text = ANY (trusted)))
+  LOOP
+    IF r.disposition = 'scoped' AND r.expr NOT LIKE '%current_workspace_id%' THEN
       kind := 'scoped-policy-unbounded';
-      detail := format('%s.%s has a tenant-facing policy that never mentions current_workspace_id', r.schema_name, r.relation);
+      detail := format('%s.%s policy %s (%s) is tenant-facing and never mentions current_workspace_id',
+                       r.schemaname, r.tablename, r.policyname, r.cmd);
+      RETURN NEXT;
+    END IF;
+    -- A shared relation is READ-only to tenants. Its write privileges are
+    -- declared `service`, but a policy is what makes a grant usable, and a
+    -- tenant-facing write policy on shared reference data is cross-tenant
+    -- corruption of the benchmark corpus rather than a leak.
+    IF r.disposition = 'shared' AND r.cmd <> 'SELECT' THEN
+      kind := 'shared-relation-writable';
+      detail := format('%s.%s policy %s (%s) lets a tenant write shared reference data',
+                       r.schemaname, r.tablename, r.policyname, r.cmd);
       RETURN NEXT;
     END IF;
   END LOOP;
 
-  -- A declared-shared relation must have no column that could carry a tenant
-  -- identity. Testing for a foreign key was tried and is not enough: a column
-  -- can be `workspace_id uuid NOT NULL` with no constraint, which is exactly
-  -- how prompt_banks acquired two tenants' private banks while passing.
+  -- ---- declared-shared relations expose exactly the declared columns -------
   FOR r IN
-    SELECT m.schema_name, m.relation, a.attname
+    SELECT m.schema_name, m.relation, m.shared_columns,
+           array_agg(a.attname::text ORDER BY a.attname) AS actual
       FROM tenancy_exposure_manifest m
       JOIN pg_class c ON c.relname = m.relation
       JOIN pg_namespace ns ON ns.oid = c.relnamespace AND ns.nspname = m.schema_name
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
      WHERE m.disposition = 'shared'
-       AND (a.attname ~ '(workspace|account|tenant|customer|client)'
-            OR EXISTS (SELECT 1 FROM pg_constraint fk
-                        WHERE fk.conrelid = c.oid AND fk.contype = 'f'
-                          AND a.attnum = ANY (fk.conkey)))
+     GROUP BY m.schema_name, m.relation, m.shared_columns
   LOOP
-    kind := 'shared-with-tenant-column';
-    detail := format('%s.%s is declared shared but column %s can carry a tenant identity', r.schema_name, r.relation, r.attname);
-    RETURN NEXT;
+    IF (SELECT array_agg(x ORDER BY x) FROM unnest(r.shared_columns) x) IS DISTINCT FROM r.actual THEN
+      kind := 'shared-columns-changed';
+      detail := format('%s.%s is declared shared with %s but has %s; a new column may carry tenant identity',
+                       r.schema_name, r.relation, r.shared_columns, r.actual);
+      RETURN NEXT;
+    END IF;
   END LOOP;
 
-  -- Manifest rows for objects that no longer exist. A stale manifest is a
-  -- manifest nobody is reading.
+  -- ---- stale manifest rows -------------------------------------------------
   FOR r IN
-    SELECT m.schema_name, m.relation FROM tenancy_exposure_manifest m
+    SELECT DISTINCT m.schema_name, m.relation FROM tenancy_exposure_manifest m
      WHERE NOT EXISTS (
        SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
         WHERE ns.nspname = m.schema_name AND c.relname = m.relation)
@@ -274,10 +307,28 @@ BEGIN
     RETURN NEXT;
   END LOOP;
 
-  -- SECURITY DEFINER functions, in EVERY schema. The previous check pinned
-  -- public, so the same helper one schema over returned the signing secret.
+  -- ---- CREATE on a schema the pinned search_path depends on ----------------
+  -- Any untrusted role, not only the PUBLIC pseudo-role.
   FOR r IN
-    SELECT ns.nspname, p.oid::regprocedure::text AS sig, o.rolname AS owner,
+    SELECT DISTINCT x.sch, g.rolname FROM (
+      SELECT schema_name AS sch FROM tenancy_exposure_manifest
+      UNION SELECT 'public'
+    ) x
+    CROSS JOIN LATERAL (
+      SELECT rolname FROM pg_roles
+       WHERE rolname NOT LIKE 'pg\_%' AND NOT (rolname = ANY (trusted)) AND NOT rolsuper
+      UNION ALL SELECT 'public'
+    ) g
+    WHERE has_schema_privilege(g.rolname, x.sch, 'CREATE')
+  LOOP
+    kind := 'schema-create-granted';
+    detail := format('%s has CREATE on schema %s; a definer function''s search_path can be shadowed', r.rolname, r.sch);
+    RETURN NEXT;
+  END LOOP;
+
+  -- ---- SECURITY DEFINER functions, in every schema -------------------------
+  FOR r IN
+    SELECT p.oid::regprocedure::text AS sig, o.rolname AS owner,
            EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}')) cf WHERE cf LIKE 'search\_path=%') AS pinned
       FROM pg_proc p
       JOIN pg_namespace ns ON ns.oid = p.pronamespace
@@ -291,39 +342,32 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- PUBLIC must not be able to create objects in any schema the model depends
-  -- on: that is the remaining assumption behind `SET search_path = public`.
-  -- Derived from the manifest, so a schema added to it is covered automatically.
-  -- Lives here rather than in check-deploy.sql because it reads the manifest,
-  -- which the deploy role cannot — the same contradiction that made the gate
-  -- require a BYPASSRLS deployer.
   FOR r IN
-    SELECT DISTINCT sch FROM (
-      SELECT schema_name AS sch FROM tenancy_exposure_manifest
-      UNION SELECT 'public'
-    ) x WHERE has_schema_privilege('public', sch, 'CREATE')
-  LOOP
-    kind := 'public-can-create';
-    detail := format('PUBLIC has CREATE on schema %s; a definer function''s search_path can be shadowed', r.sch);
-    RETURN NEXT;
-  END LOOP;
-
-  FOR r IN
-    SELECT ns.nspname || '.' || p.oid::regprocedure::text AS sig, g.rolname
+    -- regprocedure already schema-qualifies anything off the search_path, so it
+    -- is not concatenated again.
+    SELECT p.oid::regprocedure::text AS sig, g.rolname
       FROM pg_proc p
       JOIN pg_namespace ns ON ns.oid = p.pronamespace
      CROSS JOIN LATERAL (
        SELECT rolname FROM pg_roles
         WHERE rolname NOT LIKE 'pg\_%' AND rolname <> 'auth_verifier' AND NOT rolsuper
-       UNION ALL SELECT 'public'
+        UNION ALL SELECT 'public'
      ) g
      WHERE p.prosecdef AND ns.nspname NOT IN ('pg_catalog','information_schema')
-       -- DEFAULT-DENY: the intended surface, by name. A new definer function is
-       -- refused the day it is written, which is the opposite of the list that
-       -- said "check only these five" and left the sixth unexamined.
+       -- DEFAULT-DENY: the intended tenant surface, by name. A new definer
+       -- function is refused the day it is written, which is the opposite of the
+       -- list that said "check only these five" and left the sixth unexamined.
+       -- deploy_check is a deploy principal, not a tenant, and is excluded above
+       -- only by being granted the gate's own functions explicitly.
        AND NOT (ns.nspname = 'public' AND p.oid::regprocedure::text IN (
-              'set_workspace_jwt(text)', 'current_workspace_id()', 'current_account_id()',
-              'auth_key_health()', 'tenancy_exposure_faults()'))
+              'set_workspace_jwt(text)', 'current_workspace_id()', 'current_account_id()'))
+       -- The gate's own functions are permitted for the DEPLOY principal only,
+       -- and reachability is MEMBER, not the literal role name: `deployer` holds
+       -- the grant through deploy_check, and excluding the name alone repeated
+       -- the same mistake one level down.
+       AND NOT (ns.nspname = 'public'
+                AND p.oid::regprocedure::text IN ('tenancy_exposure_faults()', 'auth_key_health()')
+                AND pg_has_role(g.rolname, 'deploy_check', 'MEMBER'))
        AND has_function_privilege(g.rolname, p.oid, 'EXECUTE')
   LOOP
     kind := 'definer-function-exposed';
@@ -333,18 +377,50 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 3. Key health, readable by a deployer that is not a superuser
+-- 3. Role powers that live outside the privilege system
+-- ---------------------------------------------------------------------------
+
+-- assert_role_exclusivity() checks rolsuper and rolbypassrls. Membership in a
+-- PREDEFINED role confers power that never appears in a table ACL, so none of
+-- the reachability derivation above can see it: pg_execute_server_program is
+-- `COPY ... FROM PROGRAM` — arbitrary command execution as the database OS user,
+-- which ends the tenancy model outright. pg_read_all_data IS caught, because it
+-- surfaces through has_table_privilege; that difference is exactly the boundary
+-- of the derivation, and this closes it.
+--
+-- Whether these are grantable at all on the hosting target is a separate
+-- question (Supabase's postgres is not a superuser; RDS blocks server programs).
+-- The gate should object either way rather than depend on it.
+CREATE OR REPLACE FUNCTION assert_role_powers() RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE
+  offenders text;
+  dangerous constant text[] := ARRAY['pg_execute_server_program','pg_read_server_files','pg_write_server_files'];
+BEGIN
+  SELECT string_agg(format('%s in %s', r.rolname, d.grp), '; ' ORDER BY r.rolname) INTO offenders
+    FROM pg_roles r
+   CROSS JOIN LATERAL unnest(dangerous) AS d(grp)
+   WHERE NOT r.rolsuper AND r.rolname NOT LIKE 'pg\_%'
+     AND EXISTS (SELECT 1 FROM pg_roles t WHERE t.rolname = d.grp)
+     AND pg_has_role(r.rolname, d.grp, 'MEMBER');
+
+  IF offenders IS NOT NULL THEN
+    RAISE EXCEPTION 'these roles hold server-level powers no policy can restrain: %', offenders;
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Key health, readable by a deployer that is not a superuser
 -- ---------------------------------------------------------------------------
 
 -- The gate read auth_signing_keys directly. That table FORCEs RLS with a single
 -- TO auth_verifier policy — the entire point of the design — so on the
 -- production posture the design prescribes, a non-superuser deployer sees ZERO
 -- rows and the gate fails with "no live row", which is the opposite of what is
--- wrong. The only way to make it pass was to run the deploy with BYPASSRLS and
--- excuse that role, waiving the single most important assertion in the file.
+-- wrong. The only way to make it pass was to deploy with BYPASSRLS and excuse
+-- that role, waiving the single most important assertion in the file.
 --
--- Counts only. No secret material crosses this boundary, so it is safe to
--- expose, and it is in the default-deny allowlist above.
+-- Counts only. No secret material crosses this boundary.
 CREATE OR REPLACE FUNCTION auth_key_health()
 RETURNS TABLE(live_keys integer, misconfigured integer, constraint_present boolean)
 LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -360,35 +436,43 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- 4. Ownership and grants
+-- 5. Ownership and grants
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE tenancy_exposure_manifest ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tenancy_exposure_manifest FORCE  ROW LEVEL SECURITY;
-GRANT SELECT ON tenancy_exposure_manifest TO auth_verifier;
-CREATE POLICY manifest_verifier_only ON tenancy_exposure_manifest FOR ALL TO auth_verifier USING (true) WITH CHECK (true);
+-- The deploy principal. The gate's functions are granted to THIS role rather
+-- than to PUBLIC: tenancy_exposure_faults() returns a ranked list of exactly
+-- which relations are reachable-and-unreviewed, plus signatures and owners of
+-- definer functions in schemas the caller cannot even enter. No tenant data and
+-- no key material — but a targeting list, handed to the attacker. Grant
+-- deploy_check to whatever role runs `pnpm db:check`.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'deploy_check') THEN CREATE ROLE deploy_check NOLOGIN; END IF;
+END $$;
 
 DO $$ BEGIN EXECUTE format('GRANT auth_verifier TO %I', current_user); END $$;
 
 ALTER FUNCTION tenancy_exposure_faults() OWNER TO auth_verifier;
 ALTER FUNCTION auth_key_health()          OWNER TO auth_verifier;
-ALTER TABLE    tenancy_exposure_manifest  OWNER TO auth_verifier;
+-- Called from inside tenancy_exposure_faults(), which runs as auth_verifier, so
+-- the owner must be able to execute it after the REVOKE below.
+ALTER FUNCTION manifest_root(oid)         OWNER TO auth_verifier;
 
--- Both are EXECUTE-to-PUBLIC, deliberately. They must be callable by a deploy
--- role that is NOT a member of auth_verifier — that was the contradiction in the
--- previous gate, which could only pass if the deployer bypassed RLS, waiving the
--- one assertion that matters most. Neither returns secret material or tenant
--- data: auth_key_health() returns three counts, and tenancy_exposure_faults()
--- returns configuration facts a role can already read out of the catalog for
--- objects it holds privileges on. Both are in the default-deny allowlist above.
-GRANT EXECUTE ON FUNCTION auth_key_health()          TO PUBLIC;
-GRANT EXECUTE ON FUNCTION tenancy_exposure_faults()  TO PUBLIC;
+ALTER TABLE tenancy_exposure_manifest ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenancy_exposure_manifest FORCE  ROW LEVEL SECURITY;
+GRANT SELECT ON tenancy_exposure_manifest TO auth_verifier;
+CREATE POLICY manifest_verifier_only ON tenancy_exposure_manifest FOR ALL TO auth_verifier USING (true) WITH CHECK (true);
+ALTER TABLE tenancy_exposure_manifest OWNER TO auth_verifier;
 
--- Same reason: the deploy role must be able to run the gate without being a
--- member of auth_verifier and without bypassing RLS. assert_role_exclusivity()
--- is invoker-rights and reads only pg_roles and pg_auth_members, which Postgres
--- makes world-readable regardless, so this grants no visibility a caller does
--- not already have.
-GRANT EXECUTE ON FUNCTION assert_role_exclusivity()  TO PUBLIC;
+REVOKE ALL ON FUNCTION tenancy_exposure_faults() FROM PUBLIC;
+REVOKE ALL ON FUNCTION auth_key_health()          FROM PUBLIC;
+REVOKE ALL ON FUNCTION manifest_root(oid)         FROM PUBLIC;
+REVOKE ALL ON FUNCTION assert_role_exclusivity()  FROM PUBLIC;
+REVOKE ALL ON FUNCTION assert_role_powers()       FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION tenancy_exposure_faults() TO deploy_check;
+GRANT EXECUTE ON FUNCTION auth_key_health()         TO deploy_check;
+GRANT EXECUTE ON FUNCTION assert_role_exclusivity() TO deploy_check;
+GRANT EXECUTE ON FUNCTION assert_role_powers()      TO deploy_check;
 
 DO $$ BEGIN EXECUTE format('REVOKE auth_verifier FROM %I', current_user); END $$;

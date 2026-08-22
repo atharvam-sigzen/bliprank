@@ -6,6 +6,15 @@
 -- or `pnpm --filter @bliprank/db db:check`. Any assertion raises, psql exits
 -- non-zero, and the deploy fails.
 --
+-- THE DEPLOY ROLE MUST BE A MEMBER OF `deploy_check`:
+--
+--   GRANT deploy_check TO <the role that runs this>;
+--
+-- and it must NOT need to be a superuser, a member of auth_verifier, or hold
+-- BYPASSRLS. That was the previous contradiction: the gate read
+-- auth_signing_keys directly, which FORCEs RLS, so the only posture in which it
+-- passed was one that waived its own most important assertion.
+--
 -- WHY THIS FILE IS NOW SHORT.
 --
 -- Four independent audits found four BLOCKERs here, and three of them were the
@@ -35,6 +44,12 @@
 
 \echo 'checking role exclusivity, RLS-bypassing roles, and superusers...'
 SELECT assert_role_exclusivity();
+
+-- Membership in a predefined role confers power that never appears in a table
+-- ACL, so no amount of privilege derivation can see it. pg_execute_server_program
+-- is arbitrary command execution as the database OS user.
+\echo 'checking no role holds server-level powers...'
+SELECT assert_role_powers();
 
 \echo 'checking every reachable object is declared in the exposure manifest...'
 DO $$

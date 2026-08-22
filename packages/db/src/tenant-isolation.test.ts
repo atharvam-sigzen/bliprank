@@ -107,20 +107,26 @@ afterAll(async () => {
   await db.close()
 })
 
-describe('every scoped relation in the manifest has a disjointness case here', () => {
-  /** Kept in step with the manifest by the test below, not by memory. */
-  const COVERED = new Set([
-    'workspaces',
-    'workspace_members',
-    'workspace_brands',
-    'workspace_subscriptions',
-    'accounts',
-    'brands',
-    'score_rows',
-    'score_aggregates',
-  ])
+/**
+ * The relations exercised below, and the column used to identify a row in each.
+ * Declared once, at the top, because the coverage guard derives from THIS —
+ * an earlier version compared the manifest against a second hand-written list,
+ * so adding a name to that list satisfied the guard while exercising nothing.
+ */
+const CASES: readonly (readonly [string, string])[] = [
+  ['workspaces', 'id'],
+  ['workspace_members', 'account_id'],
+  ['workspace_brands', 'brand_id'],
+  ['workspace_subscriptions', 'workspace_id'],
+  ['accounts', 'id'],
+  ['brands', 'id'],
+  ['score_rows', 'brand_id'],
+  ['score_aggregates', 'brand_id'],
+]
 
+describe('every scoped relation in the manifest has a disjointness case here', () => {
   it('the manifest declares nothing scoped that this file does not exercise', async () => {
+    const COVERED = new Set(CASES.map(([r]) => r))
     const declared = (
       (await db.query(`SELECT DISTINCT relation FROM tenancy_exposure_manifest WHERE disposition = 'scoped' ORDER BY 1`))
         .rows as { relation: string }[]
@@ -133,16 +139,7 @@ describe('every scoped relation in the manifest has a disjointness case here', (
 })
 
 describe('two real tenants, disjoint row sets', () => {
-  const cases: [string, string][] = [
-    ['workspaces', 'id'],
-    ['workspace_members', 'account_id'],
-    ['workspace_brands', 'brand_id'],
-    ['workspace_subscriptions', 'workspace_id'],
-    ['accounts', 'id'],
-    ['brands', 'id'],
-    ['score_rows', 'brand_id'],
-    ['score_aggregates', 'brand_id'],
-  ]
+  const cases = CASES
 
   for (const [relation, col] of cases) {
     it(`${relation}: what One sees and what Two sees do not intersect`, async () => {
@@ -188,12 +185,25 @@ describe('writes are scoped too, not only reads', () => {
     // The catalog gate declares this; here it is exercised. A DELETE or TRUNCATE
     // grant is what audit 4 used to destroy the other tenant's rows from a
     // fully authenticated session, and neither is restrainable by a policy.
+    // Derived the same way the gate derives it: every schema, every relkind a
+    // tenant can read, column-level grants included, and every role that can
+    // reach app_rw — not `has_table_privilege('app_rw', …)` over public tables,
+    // which would pass a database the gate refuses.
     const held = await db.query(`
-      SELECT c.relname, p.priv FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      CROSS JOIN unnest(ARRAY['INSERT','UPDATE','DELETE','TRUNCATE']) AS p(priv)
-      WHERE n.nspname = 'public' AND c.relkind IN ('r','p')
-        AND has_table_privilege('app_rw', c.oid, p.priv)`)
+      SELECT DISTINCT ns.nspname || '.' || c.relname AS rel, p.priv, g.rolname
+        FROM pg_class c
+        JOIN pg_namespace ns ON ns.oid = c.relnamespace
+       CROSS JOIN unnest(ARRAY['INSERT','UPDATE','DELETE','TRUNCATE']) AS p(priv)
+       CROSS JOIN LATERAL (
+         SELECT rolname FROM pg_roles
+          WHERE rolname NOT LIKE 'pg\_%' AND NOT rolsuper
+            AND (rolname = 'app_rw' OR pg_has_role(rolname, 'app_rw', 'MEMBER'))
+         UNION ALL SELECT 'public'
+       ) g
+       WHERE ns.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+         AND c.relkind IN ('r','p','v','m','f')
+         AND (has_table_privilege(g.rolname, c.oid, p.priv)
+              OR (p.priv NOT IN ('TRUNCATE','DELETE') AND has_any_column_privilege(g.rolname, c.oid, p.priv)))`)
     expect(held.rows).toEqual([])
   })
 
@@ -233,7 +243,7 @@ describe('the shared relation is genuinely shared, and stays that way', () => {
     await db.exec(`ALTER TABLE prompt_banks ADD COLUMN workspace_id uuid`)
     try {
       const faults = (await db.query(`SELECT kind, detail FROM tenancy_exposure_faults()`)).rows as { kind: string }[]
-      expect(faults.map((f) => f.kind)).toContain('shared-with-tenant-column')
+      expect(faults.map((f) => f.kind)).toContain('shared-columns-changed')
     } finally {
       await db.exec(`ALTER TABLE prompt_banks DROP COLUMN workspace_id`)
     }
