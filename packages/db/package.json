@@ -7,7 +7,8 @@
     ".": "./src/schema.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:check": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f scripts/check-deploy.sql"
   },
   "dependencies": {
     "drizzle-orm": "^0.44.0"

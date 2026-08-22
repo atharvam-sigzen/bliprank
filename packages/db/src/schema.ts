@@ -5,8 +5,12 @@
  * written SQL applied in order, and this file must be kept in step with them.
  *
  * HUMAN-OWNED area (tenancy model) — see the migration header. Authority lives
- * in roles (app_rw / svc_scorer / svc_onboard) and entitlements, none of which
- * this ORM mirror expresses; the SQL is the source of truth.
+ * in roles (app_rw / svc_scorer / svc_onboard / auth_verifier) and entitlements,
+ * none of which this ORM mirror expresses; the SQL is the source of truth. Nor
+ * does it express the two things migration 0001 added: that a tenant context can
+ * only be established from a token the database verifies itself, and that the
+ * billing gate is a trigger which refuses an INSERT rather than code that tidies
+ * up afterwards.
  */
 
 import { boolean, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
@@ -53,6 +57,35 @@ export const workspaceBrands = pgTable(
   },
   (t) => [primaryKey({ columns: [t.workspaceId, t.brandId] })],
 )
+
+/**
+ * Billing state behind the entitlement gate. Writing a row here is the only way
+ * a workspace becomes able to hold an entitlement at all: a BEFORE INSERT
+ * trigger on workspace_brands refuses when this row is missing, not active, out
+ * of period, or already at brand_limit (migration 0001). Blocked before create —
+ * an unpaid entitlement never exists, not even briefly.
+ */
+export const workspaceSubscriptions = pgTable('workspace_subscriptions', {
+  workspaceId: uuid('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  plan: text('plan', { enum: ['trial', 'starter', 'growth', 'scale'] }).notNull(),
+  status: text('status', { enum: ['active', 'past_due', 'cancelled'] }).notNull(),
+  brandLimit: integer('brand_limit').notNull(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/**
+ * JWT signing keys for set_workspace_jwt(). Deliberately has NO application-role
+ * grant: the tenant role cannot read the secret it would need to forge a token,
+ * and only the auth_verifier role that owns the verifier function can. Mirrored
+ * here for migrations and key rotation tooling, never for application queries.
+ */
+export const authSigningKeys = pgTable('auth_signing_keys', {
+  kid: text('kid').primaryKey(),
+  secret: text('secret').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  retiredAt: timestamp('retired_at', { withTimezone: true }),
+})
 
 export const promptBanks = pgTable('prompt_banks', {
   id: uuid('id').primaryKey().defaultRandom(),

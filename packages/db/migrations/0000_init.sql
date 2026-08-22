@@ -31,7 +31,12 @@
 -- the corpus carries no workspace column, visibility is a filtered join.
 --
 -- TWO INVARIANTS THIS SCHEMA ASSUMES AND CANNOT ITSELF ENFORCE — both need
--- explicit human sign-off (they are the tenancy boundary, HUMAN-OWNED):
+-- explicit human sign-off (they are the tenancy boundary, HUMAN-OWNED).
+--   >>> BOTH WERE CLOSED IN 0001_tenancy_identity.sql on 2026-08-22. Read that
+--   >>> file with this one: (D) is now enforced by the database verifying a
+--   >>> signed token itself, and (C) by a deploy-time assertion. The text below
+--   >>> is kept because it is the reason 0001 exists.
+--
 --   (D) Trusted context. set_workspace(ws) performs NO principal->workspace
 --       binding: app_rw naming any workspace reads it. The web app is the
 --       authorization boundary — it must call set_workspace() with exactly the
