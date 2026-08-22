@@ -458,7 +458,23 @@ describe('(D) the tenant cannot name a workspace — it presents a token the DB 
 
 describe('(C) role exclusivity is asserted at deploy time, not only in this suite', () => {
   it('passes on a clean database', async () => {
+    // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
+    // assertion correctly refuses. That is a harness artifact — managed Postgres
+    // gives you a privileged non-superuser — so it is named in the allowlist
+    // rather than switched off, which is exactly how a real break-glass DSN
+    // would be handled.
+    await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
     await db.exec(`SELECT assert_role_exclusivity()`)
+  })
+
+  it('and refuses a BYPASSRLS role that is NOT on the allowlist', async () => {
+    await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
+    await db.exec(`CREATE ROLE sneaky LOGIN BYPASSRLS`)
+    try {
+      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/sneaky\(BYPASSRLS\)/)
+    } finally {
+      await db.exec(`DROP ROLE sneaky`)
+    }
   })
 
   it('fails loudly when a login role is granted two authority groups', async () => {
@@ -561,8 +577,28 @@ describe('(B) the billing gate blocks before it creates', () => {
 // commit as any new tenancy-relevant table or context mechanism.
 // ===========================================================================
 describe('adversarial paths — a tenant must not be able to manufacture a context', () => {
-  /** Every table whose visibility depends on tenant context. */
-  const SCOPED = ['workspaces', 'workspace_members', 'workspace_brands', 'brands', 'score_rows', 'score_aggregates', 'accounts', 'workspace_subscriptions']
+  /**
+   * Every table whose visibility depends on tenant context — DERIVED, not
+   * listed. A hardcoded array silently stops covering the next table someone
+   * adds, which is the same failure mode as a hardcoded role list in the deploy
+   * check. Anything app_rw can read and whose policy mentions
+   * current_workspace_id belongs here by construction.
+   */
+  let SCOPED: string[] = []
+  beforeAll(async () => {
+    SCOPED = (
+      (
+        await db.query(`
+          SELECT DISTINCT p.tablename FROM pg_policies p
+           WHERE p.schemaname = 'public'
+             AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
+             AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
+           ORDER BY p.tablename`)
+      ).rows as { tablename: string }[]
+    ).map((r) => r.tablename)
+    // If this ever comes back short, the sweep below is asserting nothing.
+    expect(SCOPED.length).toBeGreaterThanOrEqual(7)
+  })
 
   /** Runs `fn` as app_rw with NO sanctioned context established. */
   async function asTenant<T>(fn: (q: (sql: string, p?: unknown[]) => Promise<{ rows: unknown[] }>) => Promise<T>): Promise<T> {
@@ -668,6 +704,55 @@ describe('adversarial paths — a tenant must not be able to manufacture a conte
     await db.exec(`DELETE FROM auth_tenant_context`)
   })
 
+  // NOTE: the equivalent test under a real non-superuser LOGIN principal lives
+  // in deploy-check.test.ts, which builds an isolated database per case.
+  // `SET SESSION AUTHORIZATION` does not reliably unwind on this harness, so
+  // running it against the suite's shared instance poisoned every later test
+  // with "permission denied to set role" — a confusing way to learn one test
+  // broke. Isolation is the fix, not a more careful teardown.
+
+  it('the definer functions resolve public.*, not a shadow in pg_temp', async () => {
+    // search_path is pinned to `public, pg_temp`. Nothing in the suite would
+    // notice if a future migration dropped that clause, so assert both the
+    // configuration and the behaviour it buys.
+    const pinned = await db.query(`
+      SELECT p.proname FROM pg_proc p
+       WHERE p.proname IN ('current_workspace_id','current_account_id','stamp_tenant_context','set_workspace_jwt','set_workspace')
+         AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}')) c WHERE c LIKE 'search\_path=%')`)
+    expect(pinned.rows).toEqual([])
+
+    // A temp table with the context table's exact name, seeded with a forged
+    // row. If `public` did not precede `pg_temp` in the pinned search_path, the
+    // definer function would read this instead of the real table.
+    const seen: unknown[] = []
+    await db.exec('BEGIN')
+    try {
+      await db.exec(`SET LOCAL ROLE app_rw`)
+      await db.exec(`CREATE TEMP TABLE auth_tenant_context (backend_pid integer, xact_id xid8, workspace_id uuid, account_id uuid, stamped_at timestamptz)`)
+      await db.exec(`INSERT INTO pg_temp.auth_tenant_context VALUES (pg_backend_pid(), pg_current_xact_id(), '${WS1}', '${USER1}', now())`)
+      seen.push((await db.query(`SELECT current_workspace_id() AS w`)).rows)
+      seen.push((await db.query(`SELECT count(*)::int n FROM workspaces`)).rows)
+    } finally {
+      // Assertions come after the rollback, always. An assertion that throws
+      // inside an open transaction leaves the session aborted and every later
+      // test fails with "current transaction is aborted" instead of its own
+      // reason.
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+    }
+    expect(seen).toEqual([[{ w: null }], [{ n: 0 }]])
+  })
+
+  it('no materialized view is readable by an application role — they cannot carry RLS', async () => {
+    // The standing sweeps filter relkind IN ('r','p'). A matview is 'm', has no
+    // RLS at all, and is the obvious reach when a rollup needs to be fast.
+    const mv = await db.query(`
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       CROSS JOIN unnest(ARRAY['app_rw','svc_scorer','svc_onboard']) AS r(rolname)
+       WHERE n.nspname='public' AND c.relkind='m' AND has_any_column_privilege(r.rolname, c.oid, 'SELECT')`)
+    expect(mv.rows).toEqual([])
+  })
+
   it('the tenant cannot reach the signing secret by any path', async () => {
     await asTenant(async (q) => {
       await expect(q(`SELECT secret FROM auth_signing_keys`)).rejects.toThrow(/permission denied/)
@@ -741,10 +826,10 @@ describe('the hardened verifier (0002)', () => {
 
   it('MINOR-1: an empty kid cannot be stored, and a token without one is refused', async () => {
     await expect(db.query(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('', '${SECRET}', '${ISS}', '${AUD}')`)).rejects.toThrow(
-      /auth_signing_keys_kid_nonempty/,
+      /auth_signing_keys_live_is_configured/,
     )
     await expect(db.query(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('short', 'tooshort', '${ISS}', '${AUD}')`)).rejects.toThrow(
-      /auth_signing_keys_secret_len/,
+      /auth_signing_keys_live_is_configured/,
     )
     await asTenant(async (q) => {
       const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')

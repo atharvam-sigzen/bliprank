@@ -253,6 +253,43 @@ The same pass closed a second real break: `assert_role_exclusivity()` passed a
 login role granted both `app_rw` and `auth_verifier`, which then read the HS256
 signing secret in plaintext and could forge a token for any workspace.
 
+**The re-audit of that fix returned a second BLOCKER, and it is the more
+instructive one.** The context mechanism itself held — thirteen non-sanctioned
+paths were attempted against a real non-superuser login role and every one came
+back blind. What did not hold was the migration: `0002` added `NOT NULL DEFAULT
+'unset'` columns with validating CHECKs, and **could not be applied to any
+database that had run `0001` in service**, because such a database must hold a
+signing key, that row backfilled to `'unset'`, and the CHECK rejected it. The
+whole migration rolled back, leaving the original BLOCKER live in production.
+The test suite never saw it because it inserted the key *after* running all
+three migrations — the one ordering in which an inapplicable migration looks
+fine. A correct fix that cannot be deployed is not a fix.
+
+Three MAJORs came with it, each with a working proof-of-concept: a login role
+with `BYPASSRLS` read every tenant and **passed the entire deploy check** (on
+managed Postgres you cannot create a superuser, but you can set that attribute);
+the deploy check asserted its properties against a hardcoded list of three group
+roles, so a login role granted EXECUTE on `set_workspace()` passed and then named
+any workspace; and the "does this table scope on the tenant?" sweep existed only
+in the test suite, so a new table with `USING (true)` passed the deploy and
+served every tenant's rows.
+
+The through-line in all three is the same as the original bug: **an assertion
+that names a specific list rather than deriving the property**. `check-deploy.sql`
+now enumerates from the catalog, and `deploy-check.test.ts` builds a
+deliberately-broken database per assertion, on the rule that an assertion with
+no failing case is indistinguishable from one that does nothing.
+
+**Accepted consequence, recorded rather than discovered later:** the tenant read
+path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
+`default_transaction_read_only`, and the context table is `UNLOGGED` and so does
+not exist on a physical standby. **Supabase read replicas are unavailable to
+`apps/web` while the context lives here.** Every tenant request also consumes an
+XID. This is the price of the mechanism being sound and is not negotiable
+downward — relaxing the write is what would put the context back somewhere the
+tenant can reach. If replicas become necessary that is an ADR, and the only
+shape that avoids the write puts an HMAC inside every RLS policy evaluation.
+
 ### Spend control, reworked twice under review
 
 `services/collector/src/spend-ledger.ts` (`6c41ce3`, `47a5e75`). ⚠️ HUMAN-OWNED.

@@ -39,6 +39,27 @@
 -- UNLOGGED: this is per-connection scratch that is meaningless after a restart,
 -- and it is written on every tenant transaction, so the WAL traffic would be
 -- pure waste. One row per backend, upserted, so it cannot grow with traffic.
+--
+-- ACCEPTED CONSEQUENCE, stated rather than discovered later: THE TENANT READ
+-- PATH IS NOW A WRITE PATH. set_workspace_jwt() INSERTs, so it fails with
+-- "cannot execute INSERT in a read-only transaction" under SET TRANSACTION READ
+-- ONLY or default_transaction_read_only=on, and an UNLOGGED table does not exist
+-- on a physical standby at all. **Supabase read replicas are unavailable to
+-- apps/web for as long as the context lives here.** Every tenant request also
+-- consumes an xid and leaves one dead tuple on one hot row per backend, so this
+-- table wants autovacuum attention that a table this small would not normally
+-- get.
+--
+-- This is the price of the mechanism being sound, and it is not negotiable
+-- downward: relaxing the write is what would put the context back somewhere the
+-- tenant can reach. If replicas become necessary, that is an ADR — a signed
+-- context in a GUC, verified per read, is the only shape that avoids the write,
+-- and it puts an HMAC inside every RLS policy evaluation.
+--
+-- Backend-pid reuse is safe, and the reason is specific: xid8 is 64-bit and
+-- monotonic, never reused, so a row left by a dead backend always carries a
+-- strictly lower xact_id than any later transaction. Keying on the 32-bit xid,
+-- or on a timestamp, would not have this property.
 CREATE UNLOGGED TABLE auth_tenant_context (
   backend_pid  integer PRIMARY KEY,
   -- xid8, not a timestamp: the question is "was this stamped in THIS
@@ -102,22 +123,37 @@ $$;
 -- 3. Token verification, hardened (MINOR-1, MINOR-2, MINOR-6)
 -- ---------------------------------------------------------------------------
 
--- An empty kid matched a row whose kid was '' via COALESCE, and nothing bounded
--- the secret's length. Both are now refused by the table, and the COALESCE is
--- gone so an absent kid raises instead of matching anything.
-ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_kid_nonempty CHECK (length(kid) > 0);
-ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_secret_len   CHECK (length(secret) >= 32);
-
 -- MINOR-6: a token minted for one environment verified in another wherever the
 -- signing key was shared. Issuer and audience are properties OF THE KEY, so
--- they cannot drift apart from it. No defaults: a security parameter that can
--- be forgotten will be.
-ALTER TABLE auth_signing_keys ADD COLUMN issuer   text NOT NULL DEFAULT 'unset';
-ALTER TABLE auth_signing_keys ADD COLUMN audience text NOT NULL DEFAULT 'unset';
-ALTER TABLE auth_signing_keys ALTER COLUMN issuer   DROP DEFAULT;
-ALTER TABLE auth_signing_keys ALTER COLUMN audience DROP DEFAULT;
-ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_iss_set CHECK (issuer   <> 'unset' AND length(issuer)   > 0);
-ALTER TABLE auth_signing_keys ADD CONSTRAINT auth_signing_keys_aud_set CHECK (audience <> 'unset' AND length(audience) > 0);
+-- they cannot drift apart from it.
+--
+-- NULLABLE, AND THE CONSTRAINTS ARE `NOT VALID`. The first draft of this block
+-- added them NOT NULL DEFAULT 'unset' with validating CHECKs, and it could not
+-- be applied to any database that had run 0001 in service: such a database MUST
+-- hold a signing key (check-deploy asserts it, and without one nobody can log
+-- in), that row backfilled to 'unset', and the CHECK then rejected it. Verified:
+-- the whole migration rolled back, leaving the GUC BLOCKER live in production.
+--
+-- So the table grandfathers what already exists and constrains only what is
+-- written from here on. A legacy key with no issuer simply cannot verify a
+-- token — the checks in set_workspace_jwt() are IS DISTINCT FROM, so NULL is a
+-- mismatch and the key is inert. check-deploy then fails the deploy loudly
+-- until a properly configured key exists. Fails closed at every step, and the
+-- migration always applies.
+ALTER TABLE auth_signing_keys ADD COLUMN issuer   text;
+ALTER TABLE auth_signing_keys ADD COLUMN audience text;
+-- MINOR-4. Defaulted rather than nullable: an unbounded default would be the
+-- wrong direction to fail, and 12 hours is short enough to matter.
+ALTER TABLE auth_signing_keys ADD COLUMN max_lifetime_s integer NOT NULL DEFAULT 43200;
+
+ALTER TABLE auth_signing_keys
+  ADD CONSTRAINT auth_signing_keys_live_is_configured CHECK (
+    retired_at IS NOT NULL OR (
+      length(kid) > 0 AND length(secret) >= 32
+      AND issuer   IS NOT NULL AND length(issuer)   > 0
+      AND audience IS NOT NULL AND length(audience) > 0
+    )
+  ) NOT VALID;
 
 CREATE OR REPLACE FUNCTION set_workspace_jwt(token text) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -132,7 +168,11 @@ DECLARE
 BEGIN
   IF token IS NULL THEN RAISE EXCEPTION 'auth: no token'; END IF;
   parts := string_to_array(token, '.');
-  IF array_length(parts, 1) <> 3 THEN RAISE EXCEPTION 'auth: malformed token'; END IF;
+  -- IS DISTINCT FROM, not <>: string_to_array('', '.') gives an empty array and
+  -- array_length() is then SQL NULL, so `NULL <> 3` is NULL and the guard would
+  -- do nothing. It was caught two checks later by the header type test, which is
+  -- luck rather than design.
+  IF array_length(parts, 1) IS DISTINCT FROM 3 THEN RAISE EXCEPTION 'auth: malformed token'; END IF;
 
   BEGIN
     header  := convert_from(b64url_decode(parts[1]), 'utf8')::jsonb;
@@ -186,6 +226,13 @@ BEGIN
   -- saw a bad token as a database fault.
   IF jsonb_typeof(payload->'exp') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'auth: exp missing or not a number'; END IF;
   IF (payload->>'exp')::numeric <= now_s THEN RAISE EXCEPTION 'auth: token expired'; END IF;
+  -- There is no revocation list. Membership is re-checked on every call, so
+  -- removing someone takes effect on their next transaction; what this bounds is
+  -- a stolen token belonging to a still-valid member. A key may not mint
+  -- sessions that outlive its configured ceiling.
+  IF (payload->>'exp')::numeric > now_s + k.max_lifetime_s THEN
+    RAISE EXCEPTION 'auth: token lifetime exceeds the % second ceiling for this key', k.max_lifetime_s;
+  END IF;
   IF payload ? 'nbf' THEN
     IF jsonb_typeof(payload->'nbf') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'auth: nbf is not a number'; END IF;
     IF (payload->>'nbf')::numeric > now_s THEN RAISE EXCEPTION 'auth: token not yet valid'; END IF;
@@ -221,7 +268,13 @@ DECLARE
 BEGIN
   SELECT m.account_id INTO owner_acct FROM workspace_members m
    WHERE m.workspace_id = ws ORDER BY m.account_id LIMIT 1;
-  PERFORM stamp_tenant_context(ws, COALESCE(owner_acct, '00000000-0000-0000-0000-000000000000'::uuid));
+  -- Raise rather than stamp a synthetic all-zero account. Nothing reads
+  -- current_account_id() today; the day something does, a fabricated principal
+  -- in the audit trail is worse than a failed maintenance call.
+  IF owner_acct IS NULL THEN
+    RAISE EXCEPTION 'set_workspace: workspace % has no members, so there is no account to stamp', ws;
+  END IF;
+  PERFORM stamp_tenant_context(ws, owner_acct);
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -301,12 +354,36 @@ BEGIN
     RAISE EXCEPTION 'role exclusivity violated: % can reach auth_verifier and therefore read the JWT signing secret and write tenant context.', offenders;
   END IF;
 
-  -- Not fatal, but it must not be silent: a superuser login role bypasses RLS
-  -- entirely, so nothing in this file constrains it.
-  SELECT string_agg(r.rolname, ', ' ORDER BY r.rolname) INTO supers
-    FROM pg_roles r WHERE r.rolcanlogin AND r.rolsuper;
+  -- A role that bypasses RLS reads every tenant with no token and no context,
+  -- and every other assertion in this file is decoration for it. Verified: an
+  -- app_rw login role with BYPASSRLS passed the entire deploy check and then
+  -- read every workspace, account and score row.
+  --
+  -- BYPASSRLS matters more than SUPERUSER on the actual hosting target: managed
+  -- Postgres (Supabase, RDS) will not let you create a superuser, but ALTER ROLE
+  -- ... BYPASSRLS is available, so it is the realistic form of this mistake.
+  --
+  -- RAISE EXCEPTION, not WARNING. A WARNING does not fail psql under
+  -- ON_ERROR_STOP, so the previous version reported the superuser case into a
+  -- log nobody reads and passed the deploy.
+  --
+  -- The override is an ALLOWLIST of role names, not a boolean. A switch would
+  -- have to be turned on to accept the one admin role every database has, and
+  -- would then also accept the next role someone quietly grants BYPASSRLS to —
+  -- which is the whole finding. Naming the roles keeps the exception scoped to
+  -- the roles you actually decided about:
+  --
+  --   SET bliprank.rls_bypass_allowed = 'postgres, breakglass_ro';
+  SELECT string_agg(format('%s(%s)', r.rolname, CASE WHEN r.rolsuper THEN 'SUPERUSER' ELSE 'BYPASSRLS' END), ', ' ORDER BY r.rolname)
+    INTO supers
+    FROM pg_roles r
+   WHERE r.rolcanlogin AND (r.rolsuper OR r.rolbypassrls)
+     AND r.rolname <> ALL (
+           SELECT btrim(x) FROM unnest(string_to_array(
+             coalesce(current_setting('bliprank.rls_bypass_allowed', true), ''), ',')) AS x);
+
   IF supers IS NOT NULL THEN
-    RAISE WARNING 'superuser login roles bypass RLS and are not covered by this check: %', supers;
+    RAISE EXCEPTION 'these login roles bypass RLS entirely and read every tenant: %. Remove the attribute, or name them in bliprank.rls_bypass_allowed to accept them deliberately.', supers;
   END IF;
 END $$;
 
