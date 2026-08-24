@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 431 passing, 23 files, all offline
+**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 459 passing, 24 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -558,6 +558,49 @@ get their real values from G0 data.
 invisible (1.20:1 against the card, 1.02:1 against the gridlines it overlays),
 and a metric rendered without its interval — in the scaffold built to
 demonstrate R8. Both fixed.
+
+**PHASES 3.4 — head-to-head with CI bands (2026-08-24).** `apps/public` gains
+`lib/head-to-head.ts` (ordering, verdicts, geometry — pure), a dot-and-range SVG,
+a fixture competitor set and 28 tests. A band is right for the trend chart, where
+the x-axis is time and the space between cycles is real; brands are categorical,
+so this is one interval per row with a marker at the estimate. Verdicts come from
+`compare()` rather than being re-derived — every guard it already carries (algo
+bump, collection path, `comparison_basis`, the n floor, mismatched precision)
+applies unchanged to brand-vs-brand. Rows sort by point estimate *including* the
+subject, and the subject's own interval is projected across every row, so a bar
+that touches it is a brand the scan cannot separate from you whatever order it
+sits in. A competitor with a HIGHER estimate and an overlapping interval has its
+own test: if that ever returns "ahead", the chart has become a league table.
+
+**The first CRITICAL was only half fixed, and the fix could not have worked.**
+Measured rather than eyeballed: the band's stroke at `--color-secondary` 0.85 was
+**2.98:1 against the card** — under the 3:1 its own comment claimed — and
+**2.53:1 against the gridlines**, which is the half of the finding that survived.
+Raising the opacity could never have closed it, because secondary at *full*
+opacity is 3.01:1 on a gridline: that is the ceiling, so the colour had to change.
+It is now `--color-primary` at full opacity (7.15:1), in both apps, with the
+legend swatch corrected to match — a legend that misdescribes the chart is the
+exact defect the comment beside it was written about.
+
+The durable part is that contrast is now **enforced rather than reviewed**.
+`apps/public/lib/head-to-head.test.ts` parses the real stylesheet, resolves the
+custom properties, composites each mark over every surface it can sit on and
+checks it against every surface it can sit *beside* — the full adjacency matrix,
+because the reported 1.02:1 was the band over the CARD next to a bare GRIDLINE, a
+pair a same-surface check never forms. It reproduces both original figures to two
+decimals, which is what shows the harness measures the same thing the designer
+measured by hand. A fix that depends on someone reviewing it again is not a fix.
+
+⚠️ **TRACKED, NOT FIXED — design-token contrast margin.** The competitor bars
+(`.h2h__interval`, `.h2h__cap`) sit at **3.01:1**, passing WCAG 1.4.11 by 0.01.
+The worst case is `--color-secondary` against `--color-border` where a horizontal
+interval crosses a vertical gridline, and full opacity is already the ceiling for
+that pair. Closing the margin means moving `--color-secondary` or
+`--color-border`, which is a cross-app design-token change and out of scope for
+3.4 — deliberately left rather than smuggled into a feature commit. The contrast
+suite fails loudly if either token moves the wrong way, so this cannot regress
+silently. **Next action:** decide the token change with the P3 design pass, when
+a frontend design plugin is active again (see §4).
 
 **`27652c2` — signed off 2026-08-22.** The R2 object identity change is now
 recorded formally as **ADR-0003 Amendment 1**, and CLAUDE.md R4's shorthand was

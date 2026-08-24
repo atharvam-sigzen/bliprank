@@ -243,9 +243,23 @@ a {
    */
   fill: var(--color-secondary);
   fill-opacity: 0.45;
-  stroke: var(--color-secondary);
+  /*
+   * The EDGE is what carries WCAG 1.4.11 here. The fill cannot: at 0.45 it is
+   * 1.72:1 against the card, and no opacity that still reads as a band gets it
+   * to 3:1 — that is the nature of a translucent region and the reason the
+   * design puts the duty on the stroke.
+   *
+   * Primary and fully opaque, not secondary at 0.85. Measured rather than
+   * eyeballed, the old value was 2.98:1 against the card and 2.68:1 against the
+   * gridlines it crosses, while the comment above it claimed 3:1. The second
+   * number is the half of the original CRITICAL that survived the first fix.
+   * Primary is 8.7:1 and 7.1:1, which leaves margin for a palette change.
+   *
+   * apps/public/lib/head-to-head.test.ts parses this file and fails the suite if
+   * any mark a reader needs drops below 3:1 against any surface it touches.
+   */
+  stroke: var(--color-primary);
   stroke-width: 1;
-  stroke-opacity: 0.85;
 }
 
 .chart__line {
@@ -348,4 +362,94 @@ td.num {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* --- head-to-head (PHASES 3.4) ------------------------------------------- */
+/*
+ * Grader-only. apps/web has no head-to-head view, so this block is the one place
+ * the two stylesheets deliberately differ — putting an acquisition-surface
+ * component's styles in the dashboard's sheet is how dead CSS starts.
+ *
+ * CONTRAST IS ENFORCED, NOT ASSERTED. Every mark below that a reader needs in
+ * order to understand the chart is checked against the 3:1 of WCAG 1.4.11 by
+ * apps/public/lib/head-to-head.test.ts, which parses THIS FILE, resolves the
+ * custom properties and computes the ratio. The previous CRITICAL here was a
+ * band at 1.20:1 against the card and 1.02:1 against the gridlines it overlaid,
+ * found by review; a review that has to happen again every time is not a fix.
+ */
+
+/*
+ * The subject's own interval, drawn across every row so a reader sees which
+ * neighbours it touches before they finish reading the order.
+ *
+ * The fill is 1.17:1 and cannot carry meaning; it only tints the region. The
+ * EDGES carry it, in primary at 8.7:1, dashed so the band never reads as a
+ * seventh competitor bar.
+ */
+.h2h__band {
+  fill: var(--color-muted);
+}
+
+.h2h__band-edge {
+  stroke: var(--color-primary);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/*
+ * The interval bar IS the content, so it is a solid stroke rather than a
+ * translucent fill. Translucency is what produced the original CRITICAL: an
+ * opacity low enough to sit politely behind a line is an opacity too low to see.
+ */
+.h2h__interval {
+  stroke: var(--color-secondary);
+  stroke-width: 3;
+  stroke-linecap: butt;
+}
+
+/* Weight and a marker, never colour alone — the row label is bold and carries a
+   glyph too, so the subject is identifiable in greyscale and to a screen reader. */
+.h2h__interval--subject {
+  stroke: var(--color-primary);
+  stroke-width: 5;
+}
+
+/*
+ * A row that was NOT compared (below the sample floor, or a different basis).
+ * Signalled by a dash pattern, deliberately not by fading it out: the interval
+ * is real and measured, it is the comparison that is refused, and dropping the
+ * contrast to say so would re-introduce the exact bug this file was fixed for.
+ */
+.h2h__interval--uncompared {
+  stroke-dasharray: 4 3;
+}
+
+.h2h__cap {
+  stroke: var(--color-secondary);
+  stroke-width: 2;
+}
+
+.h2h__cap--subject {
+  stroke: var(--color-primary);
+}
+
+.h2h__dot {
+  fill: var(--color-primary);
+}
+
+.h2h__label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--color-muted-foreground);
+}
+
+.h2h__label--subject {
+  fill: var(--color-foreground);
+  font-weight: 600;
+}
+
+.h2h__glyph {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--color-neutral-ink);
 }

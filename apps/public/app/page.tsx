@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue, wilson, type Metric } from '@bliprank/stats'
+import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue, type Metric } from '@bliprank/stats'
+import { HeadToHeadChart } from '@/components/head-to-head-chart'
+import { COMPETITORS, SUBJECT_METRIC } from '@/lib/fixtures'
+import { buildHeadToHead } from '@/lib/head-to-head'
 
 // Module scope on purpose: the grade is only computed after a user submits, so
 // relying on confidenceGrade to throw would mean discovering the block in front
@@ -26,11 +29,6 @@ assertProvisionalAllowed('The AI Visibility Grader')
 
 type State = { phase: 'idle' } | { phase: 'scanning'; domain: string } | { phase: 'done'; domain: string; metric: Metric }
 
-const metricFor = (k: number, n: number): Metric => {
-  const w = wilson(k, n)
-  return { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, algo_version: 'det-1', collection_path: 'third-party-grounded', comparison_basis: 'grader|engines=5|en-GB|GB|auto-bank' }
-}
-
 export default function Grader() {
   const [state, setState] = useState<State>({ phase: 'idle' })
   const [domain, setDomain] = useState('')
@@ -50,11 +48,11 @@ export default function Grader() {
     setState({ phase: 'scanning', domain: value })
     // Scaffold: a fixture result stands in for the real grade run. Nothing is
     // collected and no provider is called.
-    setTimeout(() => setState({ phase: 'done', domain: value, metric: metricFor(3, 15) }), 900)
+    setTimeout(() => setState({ phase: 'done', domain: value, metric: SUBJECT_METRIC }), 900)
   }
 
   return (
-    <main className="shell" style={{ maxWidth: 760 }}>
+    <main className="shell" style={{ maxWidth: 860 }}>
       <header className="masthead">
         <div>
           <h1>AI Visibility Grader</h1>
@@ -193,6 +191,8 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
         cannot separate you from a competitor whose range overlaps yours. Anyone quoting a precise number off a sample this size is guessing.
       </p>
 
+      <HeadToHead domain={domain} metric={metric} />
+
       <button
         type="button"
         onClick={onReset}
@@ -209,6 +209,45 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
       >
         Check another domain
       </button>
+    </section>
+  )
+}
+
+/**
+ * PHASES 3.4 — the head-to-head, sitting directly under the caveat it proves.
+ *
+ * The paragraph above it already promises the number "cannot separate you from
+ * a competitor whose range overlaps yours". Until now the visitor had to take
+ * that on trust; this is the picture of it, and putting it on the free surface
+ * rather than behind the signup is the positioning. Every competitor tool shows
+ * a confident ranking here. The bet is that a prospect who can see the overlaps
+ * trusts the tool that drew them.
+ */
+function HeadToHead({ domain, metric }: { domain: string; metric: Metric }) {
+  const data = buildHeadToHead({ label: domain, metric }, COMPETITORS)
+  const uncompared = data.rows.filter((r) => r.verdict === 'insufficient-data' || r.verdict === 'not-comparable')
+
+  return (
+    <section className="section" aria-labelledby="h2h-heading">
+      <h2 id="h2h-heading">How that compares in your category</h2>
+
+      <HeadToHeadChart data={data} subjectLabel={domain} />
+
+      <p className="metric__interval" style={{ marginTop: 'var(--space-3)' }}>
+        {data.allIndistinguishable
+          ? `On this scan, not one brand in your category can be told apart from ${domain}. That is a fact about the sample size, not about the brands.`
+          : `Where a range crosses the shaded band, that brand and ${domain} cannot be told apart on this scan — whatever order they appear in.`}
+      </p>
+
+      {uncompared.length > 0 ? (
+        <p className="metric__interval">
+          {/* Named individually rather than left as a dashed bar the reader has
+              to interpret. A refusal that is not explained reads as a rendering
+              bug, and the next thing the visitor does is distrust the rest. */}
+          Not compared: {uncompared.map((r) => `${r.label} (${r.verdict === 'insufficient-data' ? 'too few answers' : 'different engine set'})`).join(', ')}. Their
+          ranges are drawn, dashed, because the measurement is real — it is the comparison that would not be.
+        </p>
+      ) : null}
     </section>
   )
 }

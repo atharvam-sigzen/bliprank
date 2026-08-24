@@ -113,9 +113,11 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
           Estimate
         </span>
         <span>
-          {/* Matches the band's actual fill-opacity. The key previously showed
-              0.3 for a band drawn at 0.16 — a legend that misdescribes the chart. */}
-          <span className="chart__swatch" style={{ background: 'var(--color-secondary)', opacity: 0.45, outline: '1px solid var(--color-secondary)' }} aria-hidden="true" />
+          {/* Matches the band's actual fill-opacity AND its actual edge colour.
+              The key previously showed 0.3 for a band drawn at 0.16 — a legend
+              that misdescribes the chart — and then kept a secondary outline
+              after the edge moved to primary for contrast. */}
+          <span className="chart__swatch" style={{ background: 'var(--color-secondary)', opacity: 0.45, outline: '1px solid var(--color-primary)' }} aria-hidden="true" />
           95% confidence interval
         </span>
         <span>Scale fixed 0–100%, never auto-fitted.</span>

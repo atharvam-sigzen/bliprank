@@ -243,9 +243,23 @@ a {
    */
   fill: var(--color-secondary);
   fill-opacity: 0.45;
-  stroke: var(--color-secondary);
+  /*
+   * The EDGE is what carries WCAG 1.4.11 here. The fill cannot: at 0.45 it is
+   * 1.72:1 against the card, and no opacity that still reads as a band gets it
+   * to 3:1 — that is the nature of a translucent region and the reason the
+   * design puts the duty on the stroke.
+   *
+   * Primary and fully opaque, not secondary at 0.85. Measured rather than
+   * eyeballed, the old value was 2.98:1 against the card and 2.68:1 against the
+   * gridlines it crosses, while the comment above it claimed 3:1. The second
+   * number is the half of the original CRITICAL that survived the first fix.
+   * Primary is 8.7:1 and 7.1:1, which leaves margin for a palette change.
+   *
+   * apps/public/lib/head-to-head.test.ts parses this file and fails the suite if
+   * any mark a reader needs drops below 3:1 against any surface it touches.
+   */
+  stroke: var(--color-primary);
   stroke-width: 1;
-  stroke-opacity: 0.85;
 }
 
 .chart__line {
