@@ -416,9 +416,13 @@ describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface 
     // Without this the suite above proves only that today's values pass, which
     // an assertion that always passes also does. These are the ACTUAL values
     // from before each fix, and both must come out under 3:1.
-    const secondary = resolve('var(--color-secondary)')
-    const card = resolve('var(--color-card)')
-    const gridline = resolve('var(--color-border)')
+    // Pinned to the HEX VALUES THAT WERE IN PLAY, not to today's tokens. This
+    // reproduces a historical measurement, so reading current tokens made it
+    // drift the moment the palette was refined — the history did not change,
+    // the reader of it did. That is itself the bug this test exists to model.
+    const secondary = '#3b82f6'
+    const card = '#ffffff'
+    const gridline = '#dbeafe'
 
     // The original band: fill-opacity 0.16, reported at 1.20:1 against the card
     // and 1.02:1 against the gridlines. Both reproduce here to two decimals,
@@ -427,11 +431,11 @@ describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface 
     expect(contrastRatio(over(secondary, card, 0.16), rgb(card))).toBeCloseTo(1.2, 2)
     expect(contrastRatio(over(secondary, card, 0.16), rgb(gridline))).toBeCloseTo(1.01, 2)
 
-    // The band's stroke as it stood until today: secondary at 0.85, claiming
+    // The band's stroke as it stood before the fix: secondary at 0.85, claiming
     // 3:1 in its own comment, actually 2.98:1 on the card — and 2.68:1 on a
     // gridline, which is the half of the CRITICAL the first fix left behind.
-    // Raising the opacity could never have closed it: secondary is 3.02:1 on a
-    // gridline at FULL opacity, so the colour had to change, not the alpha.
+    // Raising the opacity could never have closed it: that secondary was 3.02:1
+    // on a gridline at FULL opacity, so the colour had to change, not the alpha.
     expect(contrastRatio(over(secondary, card, 0.85), rgb(card))).toBeLessThan(3)
     expect(contrastRatio(over(secondary, gridline, 0.85), rgb(gridline))).toBeLessThan(3)
     expect(contrastRatio(over(secondary, card, 1), rgb(gridline))).toBeLessThan(3.1)

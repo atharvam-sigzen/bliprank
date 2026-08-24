@@ -893,3 +893,314 @@ body {
     justify-content: flex-start;
   }
 }
+
+/* ==========================================================================
+   REFINEMENT LAYER
+   ==========================================================================
+   Five things were making this read as unfinished, and none of them was the
+   colour scheme:
+
+   1. TINTED CHROME. Borders were #DBEAFE — baby blue. Every rule, divider and
+      card edge on the page was a pale brand tint. Chrome is now true neutral
+      and the brand hue is reserved for data, which is the single biggest
+      difference between a template and a product.
+
+   2. NAVY BODY TEXT. Foreground was #1E3A8A. Coloured body copy reads as a
+      theme applied to a document rather than an interface; near-black reads as
+      typeset.
+
+   3. NO TABULAR FIGURES. In a proportional font the digit 1 is narrower than 8,
+      so a column of percentages does not line up and the decimal points drift.
+      On a page that is almost entirely numbers this is the loudest possible
+      tell. `tabular-nums` everywhere a figure appears.
+
+   4. NO TYPE SCALE. Everything sat between 0.6875 and 1.25rem with one weight,
+      so nothing had rank. Display, title, section and label are now distinct in
+      size, weight AND tracking — large type gets negative tracking, small caps
+      get positive, which is what makes set type look set rather than scaled.
+
+   5. NO ELEVATION AND NO ROOM. Cards had a 1px shadow at 4% and 16px of
+      padding. Content pressed against its own edges. Real (still restrained)
+      elevation, and padding that lets a number breathe.
+
+   The dense-dashboard brief is unchanged: this is not more decoration, it is
+   the same information given rank, rhythm and alignment. */
+
+:root {
+  /* Chrome: true neutrals. */
+  --color-background: #fafbfd;
+  --color-card: #ffffff;
+  --color-foreground: #0f1419;
+  --color-card-foreground: #0f1419;
+  --color-muted: #f2f4f7;
+  --color-muted-foreground: #5a6675;
+  --color-border: #e4e7ec;
+  --color-neutral-ink: #5a6675;
+
+  /* Data: the brand hue, and only here. */
+  --color-primary: #1d4ed8;
+  --color-secondary: #3579ee;
+  --color-ring: #1d4ed8;
+
+  --color-delta-bg: #e8effc;
+  --color-delta-ink: #10357e;
+
+  /* A hairline that is a real hairline on a retina screen. */
+  --hairline: 1px solid var(--color-border);
+
+  --shadow-card: 0 1px 1px rgb(15 20 25 / 0.03), 0 2px 6px rgb(15 20 25 / 0.04);
+  --shadow-raised: 0 1px 1px rgb(15 20 25 / 0.04), 0 6px 18px rgb(15 20 25 / 0.08);
+  --shadow-pop: 0 12px 32px rgb(15 20 25 / 0.14);
+
+  --radius: 8px;
+  --radius-sm: 5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-background: #080b11;
+    --color-card: #111720;
+    --color-foreground: #e9edf4;
+    --color-card-foreground: #e9edf4;
+    --color-muted: #181f29;
+    --color-muted-foreground: #96a1b2;
+    --color-border: #242c38;
+    --color-neutral-ink: #96a1b2;
+    --color-primary: #82abf5;
+    --color-secondary: #4d8ae0;
+    --color-ring: #82abf5;
+    --color-delta-bg: #16305c;
+    --color-delta-ink: #cfe0ff;
+    --shadow-card: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+    --shadow-raised: 0 1px 1px rgb(0 0 0 / 0.5), 0 6px 18px rgb(0 0 0 / 0.45);
+    --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-background: #080b11;
+  --color-card: #111720;
+  --color-foreground: #e9edf4;
+  --color-card-foreground: #e9edf4;
+  --color-muted: #181f29;
+  --color-muted-foreground: #96a1b2;
+  --color-border: #242c38;
+  --color-neutral-ink: #96a1b2;
+  --color-primary: #82abf5;
+  --color-secondary: #4d8ae0;
+  --color-ring: #82abf5;
+  --color-delta-bg: #16305c;
+  --color-delta-ink: #cfe0ff;
+  --shadow-card: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+  --shadow-raised: 0 1px 1px rgb(0 0 0 / 0.5), 0 6px 18px rgb(0 0 0 / 0.45);
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
+}
+
+/* --- type ---------------------------------------------------------------- */
+
+body {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Every figure on the page, in one rule. Proportional digits make a column of
+ * percentages ripple; lining tabular figures make it a column.
+ */
+.metric__value,
+.metric__interval,
+.metric__provenance,
+.num,
+.tip__value,
+.tip__row,
+.chart__tick,
+.h2h__label,
+.cycle,
+table {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+}
+
+.masthead {
+  align-items: flex-end;
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.masthead h1 {
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+}
+
+.masthead .cycle {
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  margin-top: 6px;
+}
+
+.section {
+  margin-top: var(--space-5);
+}
+
+.section > h2 {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--hairline);
+}
+
+/* The card label is a label, and reads like one: small, tracked, quiet. */
+.card h2,
+.card h3 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-muted-foreground);
+}
+
+/* --- surfaces ------------------------------------------------------------ */
+
+.card {
+  padding: var(--space-4);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.grid {
+  gap: var(--space-3);
+}
+
+/* A KPI card lifts on hover — it is a live object, not a printed one. */
+.grid .card:hover {
+  box-shadow: var(--shadow-raised);
+  border-color: var(--color-muted-foreground);
+}
+
+.metric__value {
+  font-size: 2.25rem;
+  font-weight: 500;
+  letter-spacing: -0.032em;
+  line-height: 1.05;
+  margin-top: var(--space-3);
+}
+
+.metric__interval {
+  font-size: 0.8125rem;
+  letter-spacing: -0.005em;
+  margin-top: 6px;
+}
+
+.metric__provenance {
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: var(--hairline);
+  border-top-style: solid;
+  color: var(--color-muted-foreground);
+  opacity: 0.85;
+}
+
+/* --- tables -------------------------------------------------------------- */
+
+table {
+  font-size: 0.8125rem;
+}
+
+thead th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-muted-foreground);
+  padding-top: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--hairline);
+}
+
+td,
+tbody th {
+  padding: 10px var(--space-2);
+  border-bottom: var(--hairline);
+}
+
+tbody tr:last-child td,
+tbody tr:last-child th {
+  border-bottom: none;
+}
+
+/* --- controls ------------------------------------------------------------ */
+
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.delta {
+  padding: 3px 9px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  border-radius: 999px;
+}
+
+.productbar {
+  padding: var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+.productbar__mark {
+  font-size: 0.9375rem;
+  letter-spacing: -0.015em;
+}
+
+.productbar__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+}
+
+.tip {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.tip__value {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+/* --- charts -------------------------------------------------------------- */
+
+/*
+ * Gridlines recede and the baseline holds. A chart where every rule is the same
+ * weight has no ground for the data to sit on, which is why the trend read as a
+ * sketch on graph paper.
+ */
+.chart__axis {
+  stroke: var(--color-border);
+}
+
+.chart__tick {
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  fill: var(--color-muted-foreground);
+}
+
+.chart__line {
+  stroke-width: 2.25;
+}
+
+.h2h__label--subject {
+  letter-spacing: -0.005em;
+}
