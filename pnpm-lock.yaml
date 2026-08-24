@@ -101,6 +101,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/stats
 
+  services/grader:
+    dependencies:
+      '@bliprank/collector':
+        specifier: workspace:*
+        version: link:../collector
+      '@bliprank/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@bliprank/scorer':
+        specifier: workspace:*
+        version: link:../scorer
+      '@bliprank/stats':
+        specifier: workspace:*
+        version: link:../../packages/stats
+      '@bliprank/taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/taxonomy
+
   services/scorer:
     dependencies:
       '@bliprank/contracts':

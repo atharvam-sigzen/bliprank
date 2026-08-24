@@ -22,3 +22,8 @@ next-env.d.ts
 
 # Personal local editor config (Obsidian vault settings — not project state)
 .obsidian/
+
+# Collected answers and ledgers from the local Grader runner. Raw payloads never
+# go in git for the same reason they never go in Postgres (R4), and the ledger is
+# a spend record for one machine, not shared state.
+services/grader/data/

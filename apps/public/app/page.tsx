@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue, type Metric } from '@bliprank/stats'
+import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
 import { HeadToHeadChart } from '@/components/head-to-head-chart'
-import { COMPETITORS, SUBJECT_METRIC } from '@/lib/fixtures'
 import { buildHeadToHead } from '@/lib/head-to-head'
+import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 // Module scope on purpose: the grade is only computed after a user submits, so
 // relying on confidenceGrade to throw would mean discovering the block in front
@@ -27,7 +27,11 @@ assertProvisionalAllowed('The AI Visibility Grader')
  * this size cannot support.
  */
 
-type State = { phase: 'idle' } | { phase: 'scanning'; domain: string } | { phase: 'done'; domain: string; metric: Metric }
+type State =
+  | { phase: 'idle' }
+  | { phase: 'scanning'; domain: string }
+  | { phase: 'done'; domain: string; scan: ScanResultFile }
+  | { phase: 'not-scanned'; domain: string }
 
 export default function Grader() {
   const [state, setState] = useState<State>({ phase: 'idle' })
@@ -56,9 +60,11 @@ export default function Grader() {
     }
     setError(null)
     setState({ phase: 'scanning', domain: value })
-    // Scaffold: a fixture result stands in for the real grade run. Nothing is
-    // collected and no provider is called.
-    setTimeout(() => setState({ phase: 'done', domain: value, metric: SUBJECT_METRIC }), 900)
+    // No collection happens here. `scanFor` looks up the result a runner already
+    // produced under an explicit budget (see lib/scan-result.ts); an unscanned
+    // domain says so rather than inventing a number for it.
+    const found = scanFor(value)
+    setTimeout(() => setState(found ? { phase: 'done', domain: value, scan: found } : { phase: 'not-scanned', domain: value }), 400)
   }
 
   return (
@@ -71,10 +77,21 @@ export default function Grader() {
       </header>
 
       <p className="notice">
-        <strong>Scaffold, not data.</strong> This flow returns a fixture result. No answers are collected and no provider is called.
+        {IS_LIVE ? (
+          <>
+            <strong>Real answers.</strong> {SCAN.counts.answersScored} answers collected across {SCAN.run.engines.length} engines on {SCAN.run.day}, at a
+            cost of ${SCAN.run.spentUsd.toFixed(4)}. Nothing is collected when you press the button: this page renders a scan a runner already produced under
+            an explicit budget.
+          </>
+        ) : (
+          <>
+            <strong>Fixture answers, real pipeline.</strong> Every number below was classified, collected, scored and given its interval by the production
+            code path, but the answers came from the offline fixture adapter rather than a provider. Re-run with a live plan to replace them.
+          </>
+        )}
       </p>
 
-      {state.phase !== 'done' ? (
+      {state.phase === 'idle' || state.phase === 'scanning' ? (
         <form className="card" onSubmit={submit} noValidate>
           {/* Visible label, not a placeholder: a placeholder disappears the
               moment it is needed, which is when the user starts typing. */}
@@ -140,19 +157,69 @@ export default function Grader() {
             {state.phase === 'scanning' ? `Checking ${state.domain} across five answer engines…` : ''}
           </p>
         </form>
+      ) : state.phase === 'not-scanned' ? (
+        <NotScanned domain={state.domain} onReset={() => setState({ phase: 'idle' })} />
       ) : (
-        <Result domain={state.domain} metric={state.metric} onReset={() => setState({ phase: 'idle' })} />
+        <Result scan={state.scan} onReset={() => setState({ phase: 'idle' })} />
       )}
     </main>
   )
 }
 
-function Result({ domain, metric, onReset }: { domain: string; metric: Metric; onReset: () => void }) {
+function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }) {
+  return (
+    <section className="card" aria-live="polite">
+      <h2>{domain}</h2>
+      {/* No number is invented for an unscanned domain. Showing a placeholder
+          here would be the same dishonesty as a point estimate with no interval:
+          a shape that looks like a measurement and is not one. */}
+      <p style={{ marginTop: 'var(--space-2)' }}>
+        This build has no scan for {domain}. Collection runs in a budgeted runner, not from this form, so nothing was bought when you pressed the button.
+      </p>
+      <p className="metric__interval">
+        To scan it: <code>pnpm grader:scan -- --domain {domain} --plan mega --cap 0.50</code> with <code>COLLECTION_ENABLED=true</code>, then rebuild.
+        The runner refuses without an explicit plan and cap.
+      </p>
+      <p className="metric__interval" style={{ marginTop: 'var(--space-2)' }}>
+        Scanned in this build: <strong>{SCAN.domain}</strong> ({SCAN.categoryName}).
+      </p>
+      <ResetButton onReset={onReset} />
+    </section>
+  )
+}
+
+function ResetButton({ onReset }: { onReset: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onReset}
+      style={{
+        marginTop: 'var(--space-3)',
+        minHeight: 44,
+        padding: '0 var(--space-3)',
+        background: 'transparent',
+        color: 'var(--color-primary)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius)',
+        fontWeight: 500,
+      }}
+    >
+      Check another domain
+    </button>
+  )
+}
+
+function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }) {
+  const subject = subjectOf(scan)
+  const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
 
   return (
     <section className="card" aria-live="polite">
-      <h2>{domain}</h2>
+      <h2>{scan.domain}</h2>
+      <p className="metric__interval" style={{ marginTop: 2 }}>
+        {scan.categoryName} · {scan.counts.answersScored} answers · {scan.run.engines.length} engines
+      </p>
 
       <p className="metric__value">{formatValue(metric)}</p>
       <p className="metric__interval">
@@ -201,24 +268,20 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
         cannot separate you from a competitor whose range overlaps yours. Anyone quoting a precise number off a sample this size is guessing.
       </p>
 
-      <HeadToHead domain={domain} metric={metric} />
+      {subject.mentions === 0 ? (
+        <p className="metric__interval" style={{ marginTop: 'var(--space-3)' }}>
+          {/* Zero is a finding, not a missing value, and it still carries an
+              interval: the upper bound is what says how confidently zero. */}
+          Not mentioned in any of the {metric.n} answers. That is a real result with a real upper bound of {formatInterval(metric).split('–')[1]}, not an error.
+          {scan.subjectSource === 'domain-label'
+            ? ' Note the brand was identified from the domain label alone, so a trading name that differs from the domain would be undercounted.'
+            : ''}
+        </p>
+      ) : null}
 
-      <button
-        type="button"
-        onClick={onReset}
-        style={{
-          marginTop: 'var(--space-3)',
-          minHeight: 44,
-          padding: '0 var(--space-3)',
-          background: 'transparent',
-          color: 'var(--color-primary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius)',
-          fontWeight: 500,
-        }}
-      >
-        Check another domain
-      </button>
+      <HeadToHead scan={scan} />
+
+      <ResetButton onReset={onReset} />
     </section>
   )
 }
@@ -227,33 +290,39 @@ function Result({ domain, metric, onReset }: { domain: string; metric: Metric; o
  * PHASES 3.4 — the head-to-head, sitting directly under the caveat it proves.
  *
  * The paragraph above it already promises the number "cannot separate you from
- * a competitor whose range overlaps yours". Until now the visitor had to take
- * that on trust; this is the picture of it, and putting it on the free surface
- * rather than behind the signup is the positioning. Every competitor tool shows
- * a confident ranking here. The bet is that a prospect who can see the overlaps
- * trusts the tool that drew them.
+ * a competitor whose range overlaps yours". This is the picture of it, drawn
+ * from the same scan: every brand here was scored over the SAME answers, so
+ * they share one `comparison_basis` and `compare()` will actually compare them.
  */
-function HeadToHead({ domain, metric }: { domain: string; metric: Metric }) {
-  const data = buildHeadToHead({ label: domain, metric }, COMPETITORS)
+function HeadToHead({ scan }: { scan: ScanResultFile }) {
+  const subject = subjectOf(scan)
+  const data = buildHeadToHead(
+    { label: subject.name, metric: subject.metric },
+    scan.brands.filter((b) => !b.isSubject).map((b) => ({ label: b.name, metric: b.metric })),
+  )
   const uncompared = data.rows.filter((r) => r.verdict === 'insufficient-data' || r.verdict === 'not-comparable')
 
   return (
     <section className="section" aria-labelledby="h2h-heading">
-      <h2 id="h2h-heading">How that compares in your category</h2>
+      <h2 id="h2h-heading">How that compares in {scan.categoryName.toLowerCase()}</h2>
 
-      <HeadToHeadChart data={data} subjectLabel={domain} />
+      <HeadToHeadChart data={data} subjectLabel={subject.name} />
 
       <p className="metric__interval" style={{ marginTop: 'var(--space-3)' }}>
         {data.allIndistinguishable
-          ? `On this scan, not one brand in your category can be told apart from ${domain}. That is a fact about the sample size, not about the brands.`
-          : `Where a range crosses the shaded band, that brand and ${domain} cannot be told apart on this scan — whatever order they appear in.`}
+          ? `On this scan, not one brand in the category can be told apart from ${subject.name}. That is a fact about the sample size, not about the brands.`
+          : `Where a range crosses the shaded band, that brand and ${subject.name} cannot be told apart on this scan — whatever order they appear in.`}
+      </p>
+
+      <p className="metric__interval">
+        {/* The prompt subset is the honest part: a share-of-voice number taken
+            from prompts that name brands would measure our own phrasing. */}
+        Measured on {scan.counts.answersScored} answers from prompts that name no brand — the unprompted set. Comparison and verification prompts are excluded
+        from this number by construction.
       </p>
 
       {uncompared.length > 0 ? (
         <p className="metric__interval">
-          {/* Named individually rather than left as a dashed bar the reader has
-              to interpret. A refusal that is not explained reads as a rendering
-              bug, and the next thing the visitor does is distrust the rest. */}
           Not compared: {uncompared.map((r) => `${r.label} (${r.verdict === 'insufficient-data' ? 'too few answers' : 'different engine set'})`).join(', ')}. Their
           ranges are drawn, dashed, because the measurement is real — it is the comparison that would not be.
         </p>

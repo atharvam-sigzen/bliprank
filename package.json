@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "collector:pilot": "tsx services/collector/src/pilot/collect.ts",
     "collector:analyse": "tsx services/collector/src/pilot/analyse.ts",
-    "test:rls": "vitest run packages/db"
+    "test:rls": "vitest run packages/db",
+    "grader:scan": "tsx services/grader/src/run.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
