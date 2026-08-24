@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-24 · **master:** `MERGE_SHA` · **First commit:** 2026-08-18 · **Tests:** 431 passing, 23 files, all offline
+**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 431 passing, 23 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -157,7 +157,7 @@ Hand-merged, file by file, so it could not revert reviewed fixes (`8293d85`,
 | 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Wired into `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel. |
 | 1.5 | R2 storage, one object per cell | **Done** (`1d80396`). Hand-rolled SigV4 over R2's S3 REST API, no AWS SDK: three verbs against one bucket does not justify that dependency, and a signer checked against AWS's own published vectors is easier to trust than an SDK we cannot see into. `assertSafeKey` refuses keys containing dot segments, because `new URL()` resolves them *before* signing — such a key would be signed and sent for a different object, the same wrong object both times, so it would succeed silently. **Never exercised against a real bucket.** |
 | 1.6 | Rate-limit budget manager | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite. |
-| 1.7 | `packages/db` schema + RLS                         | **Mechanism done** (`af9fa1a`, then `MERGE_SHA`). Merged 2026-08-22 after the three open decisions; the tenant context was moved out of a self-settable GUC on 2026-08-24 and has held seven independent adversarial audits. **The deploy-time gate is NOT done** and is required before G1 — ADR-0007, `fix/tenancy-deploy-gate`. See below. |     |
+| 1.7 | `packages/db` schema + RLS                         | **Mechanism done** (`af9fa1a`, then `0ac22df`). Merged 2026-08-22 after the three open decisions; the tenant context was moved out of a self-settable GUC on 2026-08-24 and has held seven independent adversarial audits. **The deploy-time gate is NOT done** and is required before G1 — ADR-0007, `fix/tenancy-deploy-gate`. See below. |     |
 
 **Review findings that changed the code.** `measurement-engineer` returned two
 verified BLOCKERs on the orchestrator, both fixed in `27652c2`:
