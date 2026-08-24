@@ -555,3 +555,74 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     expect(IS_LIVE).toBe(false)
   })
 })
+
+describe('the design-system checklist, as assertions', () => {
+  const TSX_ALL = ['../app/page.tsx', '../components/head-to-head-chart.tsx', '../components/chrome.tsx', '../../web/app/page.tsx', '../../web/components/ci-trend-chart.tsx', '../../web/components/chrome.tsx', '../../web/components/metric-card.tsx']
+
+  it('THE FINDING: no emoji or symbol font character is used as a UI icon', () => {
+    // The theme toggle shipped with `☀`, `☾` and `◐`. Those render at whatever
+    // size, weight and colour the platform's symbol font decides — on some
+    // Windows builds `☀` arrives as a full-colour emoji — and an icon inside a
+    // control has to inherit currentColor and the surrounding type size, which
+    // only a real vector does.
+    //
+    // Chart glyphs (▲ ▼ ≈) are exempt by position, not by luck: they are data
+    // marks inside an SVG, aria-hidden, and every one is paired with the same
+    // verdict as a word in the table beneath.
+    // Explicit ranges: arrows, misc technical, geometric shapes, misc symbols
+    // and dingbats, and the emoji planes. The astral range needs braces \u2014
+    // `\u1F300` without them is a BMP character followed by a literal '0',
+    // which silently turns the class into one that matches ordinary letters.
+    // That was the first version of this test, and it "found" 755 offenders.
+    const BANNED = /[\u2190-\u21FF\u2300-\u23FF\u25A0-\u25FF\u2600-\u27BF\u2B00-\u2BFF]|[\u{1F300}-\u{1FAFF}]/u
+    // The exemption is a principle, not a file list. These are DIRECTIONAL DATA
+    // MARKS: each is aria-hidden and each is rendered beside the same verdict as
+    // a word (DeltaBadge prints `comparison.label`; the chart prints
+    // VERDICT_WORDS in its table). They reinforce text rather than replacing it.
+    // A file-scoped skip would also have waved through a stray emoji in the same
+    // file, which is the thing this test is for.
+    const DATA_MARKS = /[▲▼▸≈≠–]/gu
+    const offenders: string[] = []
+    for (const rel of TSX_ALL) {
+      const src = readFileSync(new URL(rel, import.meta.url), 'utf8')
+      for (const [i, line] of src.split('\n').entries()) {
+        const t = line.trimStart()
+        if (t.startsWith('*') || t.startsWith('//') || t.startsWith('/*')) continue
+        const m = BANNED.exec(line.replace(DATA_MARKS, ''))
+        if (m) offenders.push(`${rel}:${i + 1}: ${JSON.stringify(m[0])}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('every interactive control declares a pointer cursor', () => {
+    for (const sel of ['.themetoggle', '.chart__hit', '.h2h__row-hit']) {
+      expect([sel, declarations(sel)['cursor']]).toEqual([sel, 'pointer'])
+    }
+  })
+
+  it('hover transitions sit in the 150-300ms band the checklist specifies', () => {
+    const durations = [...CSS.matchAll(/transition:[^;]*?(\d+)ms/g)].map((m) => Number(m[1]))
+    expect(durations.length).toBeGreaterThan(0)
+    for (const d of durations) expect([d, d >= 120 && d <= 300]).toEqual([d, true])
+  })
+
+  it('reduced motion is honoured, and the body never scrolls sideways', () => {
+    for (const { name, css } of SHEETS) {
+      expect([name, /@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css)]).toEqual([name, true])
+      // A page of wide tables must scroll inside its own containers, never at
+      // the document level — sideways body scroll on a phone is the single most
+      // obvious "this was never opened on a phone" tell.
+      expect([name, /overflow-x:\s*hidden/.test(css)]).toEqual([name, true])
+      expect([name, /\.table-wrap\s*\{[^}]*overflow-x:\s*auto/.test(css)]).toEqual([name, true])
+    }
+  })
+
+  it('there are real width breakpoints, not just preference queries', () => {
+    for (const { name, css } of SHEETS) {
+      const widths = [...css.matchAll(/@media\s*\(max-width:\s*(\d+)px\)/g)].map((m) => Number(m[1]))
+      expect([name, widths.length]).toEqual([name, expect.any(Number)])
+      expect([name, widths.some((w) => w <= 640)]).toEqual([name, true])
+    }
+  })
+})

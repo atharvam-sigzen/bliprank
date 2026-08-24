@@ -830,3 +830,66 @@ tbody tr:hover {
     transition: none;
   }
 }
+
+/* --- responsive ---------------------------------------------------------- */
+/*
+ * There were no width breakpoints at all — the three media queries in this file
+ * were `prefers-color-scheme` and `prefers-reduced-motion`. The layout survived
+ * narrow screens only because flex-wrap and `auto-fit` happened to be doing the
+ * work, which is luck rather than design.
+ *
+ * Nothing here changes the desktop view. It stops the product bar from becoming
+ * a cramped four-item row on a phone, and it keeps the one thing that must never
+ * happen on a page full of tables — the BODY scrolling sideways — from
+ * happening. Wide content scrolls inside its own container instead.
+ */
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .productbar {
+    margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) var(--space-3);
+    gap: var(--space-2);
+  }
+
+  /* The positioning line is the first thing to go: it is context, not
+     navigation, and the two links plus the toggle are what a reader needs. */
+  .productbar .cycle {
+    display: none;
+  }
+
+  .productbar__nav {
+    margin-left: auto;
+  }
+
+  .masthead h1 {
+    font-size: 1.125rem;
+  }
+
+  .metric__value {
+    font-size: 1.75rem;
+  }
+
+  /* One card per row rather than a track that squeezes three into 375px. */
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Below this the label and the icon together crowd the two links out of the
+     row, and the icon alone is not a label — so the row wraps instead. */
+  .productbar__nav {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}

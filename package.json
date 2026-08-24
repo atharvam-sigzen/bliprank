@@ -13,8 +13,8 @@
     "collector:analyse": "tsx services/collector/src/pilot/analyse.ts",
     "test:rls": "vitest run packages/db",
     "grader:scan": "tsx services/grader/src/run.ts",
-    "demo:dashboard": "pnpm --filter @bliprank/web build && pnpm --filter @bliprank/web start",
-    "demo:grader": "pnpm --filter @bliprank/public build && pnpm --filter @bliprank/public start"
+    "demo:dashboard": "pnpm --filter @bliprank/web dev",
+    "demo:grader": "pnpm --filter @bliprank/public dev"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

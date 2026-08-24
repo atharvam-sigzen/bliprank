@@ -53,7 +53,34 @@ export function ProductBar({ current }: { current: Surface }) {
 type Choice = 'light' | 'dark' | 'system'
 const NEXT: Record<Choice, Choice> = { system: 'light', light: 'dark', dark: 'system' }
 const LABEL: Record<Choice, string> = { system: 'System', light: 'Light', dark: 'Dark' }
-const GLYPH: Record<Choice, string> = { system: '◐', light: '☀', dark: '☾' }
+/**
+ * Inline SVG, not `☀`/`☾`/`◐`.
+ *
+ * Those are Unicode symbols pressed into service as icons, and they render at
+ * whatever size, weight and colour the platform's emoji or symbol font decides —
+ * on some Windows builds `☀` arrives as a full-colour emoji. An icon in a
+ * control has to inherit `currentColor` and the surrounding type size, which
+ * only a real vector does. 1.5px strokes to match the interface weight.
+ */
+const ICON: Record<Choice, React.ReactNode> = {
+  system: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  light: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
+    </svg>
+  ),
+  dark: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2Z" />
+    </svg>
+  ),
+}
 
 /**
  * Three states, not two. A binary toggle cannot express "I chose light on a
@@ -90,7 +117,7 @@ export function ThemeToggle() {
       // user unable to tell what the theme currently is.
       aria-label={`Theme: ${LABEL[choice]}. Activate for ${LABEL[NEXT[choice]]}.`}
     >
-      <span aria-hidden="true">{GLYPH[choice]}</span>
+      {ICON[choice]}
       {LABEL[choice]}
     </button>
   )
