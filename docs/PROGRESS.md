@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 461 passing, 24 files, all offline
+**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 503 passing, 26 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -483,6 +483,98 @@ deploy-time gate: a misconfiguration introduced by a deploy-time `GRANT` will no
 be caught until the redesign lands. That is a real reduction against what the
 branch tip claimed, and it is the reason the deadline is a gate rather than a
 sentiment.
+
+### P3 — the demo taxonomy, classifier and banks (2026-08-24, ADR-0008)
+
+**Why this exists at all.** The 3.1 scoping report found the category classifier
+unbuildable as specified: its output space did not exist. No taxonomy anywhere in
+the repo or the plan, no granularity decision, no labelled set for G3's ≥95%
+criterion, and two of the three named input signals with no provider, no key and
+no cost line. Those questions are still open. **ADR-0008 answers none of them** —
+it creates eight hand-authored categories so the application can be demonstrated
+end to end, built so that adopting the real answer costs a deletion.
+
+**The geo contradiction is resolved for these entries.** `prompt_banks` is
+`UNIQUE(category, locale, geo, version)` while `/category-bank`'s own argument
+hint is `india-d2c-skincare in`, putting the country in the slug *and* passing it
+separately. The slug is now geo-free, and the deciding argument is R6 rather than
+tidiness: the cache key already carries geo, so a geo-bearing slug fragments one
+vertical into N banks whose prompts normalise identically — the same text
+collected once per variant, into a different cell each time, no cache hit between
+them. `/category-bank` still contradicts this and was left alone; correcting a
+production artefact belongs with the production decision.
+
+**The classifier is deterministic, and the reason is not R1.** A Haiku
+classification is ~$0.0002 against a $0.18 scan, so cost is a weak argument here.
+The category decides which bank runs, which decides `comparison_basis` — so a
+non-deterministic classifier lets one domain land in different banks on different
+days and the thing a number measures changes underneath the customer, which is
+exactly what `compare()` refuses. Two offline signals: leader-domain match, then
+whole-token domain keywords. Concatenated labels are never segmented (`mycrm.com`
+is unclassified) because substring matching is how `compass.com` becomes a
+password manager. Three outcomes, and **there is no default category**: a
+fallback would be a silent `comparison_basis` change wearing a helpful face.
+
+**Eight banks, 240 prompts, authored and then adversarially reviewed** across
+three lenses — leader sets, prompt neutrality, cache-key duplication. The review
+returned **50 findings including 5 blockers**, and they were not cosmetic:
+
+- `zoho` as a bare alias matched "Zoho Books" and "Zoho People", both *leaders in
+  other banks* — a live cross-brand collision that flips `mentioned`, not just a
+  count.
+- `monday.com` was an alias AND a domain in two banks, so one string resolved to
+  two leader ids and any rollup joining on brand id double-counted the vendor.
+- Apex `microsoft.com` on Dynamics, apex `adobe.com` on Adobe Commerce, apex
+  `intuit.com` on QuickBooks, apex `atlassian.com` on Jira: `isOnDomain` matches
+  subdomains, so each credited every sibling product's citation to one leader.
+  The Jira case stole citations from Trello, a co-leader in the same bank.
+- One prompt named Mailchimp outside brand-verification, making its mention rate
+  on that cell structurally 100%.
+
+All 50 were applied or explicitly declined with a reason. Nine attribution limits
+that cannot be fixed host-side are recorded in the bank notes rather than papered
+over — Zoho, Proton Pass and Adobe marketing pages live on paths, and host-only
+matching cannot see them, so those citation rates are stated as lower bounds.
+
+**A finding of the same class as the tenancy one.** The Grader's input check
+carried a comment saying it had been hardened so `hello.txt` could not reach a
+collection call. It had not: the regex accepts `hello.txt` and `report.pdf`,
+because `.txt` is only "not a TLD" if you carry a 1,500-entry TLD list. Verified,
+corrected in place, and the real guard named instead — an unclassified domain has
+no category, so no bank, so no cycle is ever published.
+
+**Attribution domains and classification domains turned out to be two jobs.**
+Narrowing `domains` for attribution correctness made `zoho.com` unclassifiable,
+which killed the demo's flagship case. `siteDomains` now carries the
+classification-only signal, so `zoho.com` returns ambiguous across the three
+categories Zoho really leads instead of the attribution list being widened back
+and quietly re-breaking the scorer.
+
+⚠️ **HUMAN REVIEW REQUIRED: services/scorer — case-sensitive alias matching.**
+Three leaders cannot be counted correctly without it. Bare `notion` matches "the
+notion that"; bare `kit` matches "media kit"; `gusto` matches "with gusto" and
+`rippling` matches "a rippling effect". Notion and Kit are therefore matched only
+through unambiguous forms and their mention rates are **lower bounds**; Gusto and
+Rippling keep their bare aliases and are **upper bounds**. A test asserts the
+bank note records the bias wherever a known-risk alias is used, so the caveat
+cannot be dropped silently. Fixing it properly is a scoring-algorithm change: R5
+version bump, golden-set diff, `stats-reviewer`. **Not touched.**
+
+⚠️ **HUMAN REVIEW REQUIRED: services/collector/pilot/bank.json** — the review
+found two defects in the G0 pilot bank, which is flagged for human review in its
+own note. It lists `microsoft.com/en-us/dynamics-365`, a path that can never
+match because `isOnDomain` compares hosts only, and a bare `freshworks` alias
+that credits Freshdesk and Freshservice to Freshsales. **Not touched.**
+
+Also open: `crm-software` now exists twice — the P0 pilot bank (100 prompts,
+en-US/US) and a demo bank. They must be reconciled before either runs a real
+cycle, or one category collects two different prompt sets.
+
+**503 tests (was 461), 26 files.** 42 in `packages/taxonomy`: the classifier
+against fixtures, the shipped banks as data, and the classifier against the real
+banks — every leader domain must classify, every category must be reachable, and
+the two genuine ambiguities (Zoho across three categories, HubSpot across two)
+are asserted rather than resolved.
 
 ### Spend control, reworked twice under review
 

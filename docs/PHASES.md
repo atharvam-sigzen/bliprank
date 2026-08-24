@@ -133,8 +133,8 @@ the product.
 
 | # | Deliverable |
 |---|---|
-| 3.1 | Category classifier (site content + autocomplete + contacts enrichment) |
-| 3.2 | 200 pre-computed category prompt banks + leader sets, via `/category-bank` |
+| 3.1 | Category classifier (site content + autocomplete + contacts enrichment). **Demo-scoped slice done 2026-08-24** — deterministic, domain-only, over the 8-category taxonomy in ADR-0008. **None of the three named signals is built**: all need a network call and two have no provider anywhere in the repo. |
+| 3.2 | 200 pre-computed category prompt banks + leader sets, via `/category-bank`. **8 of 200 done 2026-08-24**, demo-scoped (ADR-0008), 240 prompts, leader sets unverified. |
 | 3.3 | `apps/public` — the free AI Visibility Grader. **Scan size must clear `MIN_N_FOR_COMPARISON` in the DEGRADED case, not the nominal one** — see the note below |
 | 3.4 | Head-to-head chart with CI bands; Confidence Grade A–D — **done 2026-08-24** (`4d1cb96`), fixture-only |
 | 3.5 | Email gate on the gap list; indexable public result pages |

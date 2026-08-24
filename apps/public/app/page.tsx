@@ -37,8 +37,18 @@ export default function Grader() {
   function submit(e: React.FormEvent) {
     e.preventDefault()
     const value = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
-    // A '.' test accepted 'hello.txt'. Weak input here eventually costs a real
-    // collection call, so the shape is checked properly before it can.
+    // >>> CORRECTION, 2026-08-24 <<<
+    //
+    // What stood here said a '.' test had accepted 'hello.txt' and that "the
+    // shape is checked properly before it can" cost a collection call. The
+    // second half was false: this regex accepts 'hello.txt' and 'report.pdf'
+    // too, because '.txt' is only "not a TLD" if you carry a 1,500-entry TLD
+    // list. Verified, not assumed — packages/taxonomy has the failing case.
+    //
+    // The check is kept because it does reject the common junk (no dot, spaces,
+    // 'localhost'). But the guard that actually protects spend is downstream and
+    // holds regardless of what gets through here: an unclassified domain has no
+    // category, so it has no prompt bank, so no cycle is ever published.
     const looksLikeDomain = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(value)
     if (!looksLikeDomain) {
       setError('Enter a domain, for example acme.com')
