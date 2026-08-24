@@ -26,4 +26,4 @@ next-env.d.ts
 # Collected answers and ledgers from the local Grader runner. Raw payloads never
 # go in git for the same reason they never go in Postgres (R4), and the ledger is
 # a spend record for one machine, not shared state.
-services/grader/data/
+services/grader/data*/

@@ -43,6 +43,7 @@ import {
 } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { fixtureAdapter } from '@bliprank/collector/fixture'
+import { loadApiKey } from './load-key.js'
 import { FileBlobStore, FileKV } from './local-store.js'
 import { runScan, type ScanResult } from './scan.js'
 
@@ -56,6 +57,8 @@ export interface RunnerOptions {
   readonly engines: readonly EngineId[]
   readonly capUsd: number
   readonly maxPrompts?: number
+  /** Absolute per-engine ceiling, below whatever the plan table allows. */
+  readonly maxRps?: number
   readonly mode: 'live' | 'fixture' | 'stub'
   readonly apiKey: string
   readonly dataDir: string
@@ -63,7 +66,18 @@ export interface RunnerOptions {
   readonly log: (s: string) => void
 }
 
-export function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): { opts: RunnerOptions; preview: boolean } | { refuse: string } {
+export function parseArgs(
+  argv: readonly string[],
+  env: NodeJS.ProcessEnv,
+  /**
+   * Where to look for `.env.local`/`.env`. Injected so a test can point at a
+   * directory that has neither — without it the loader falls back to the real
+   * repo root, finds the developer's own key, and the "refuses without a key"
+   * test passes on this machine and fails on a build agent.
+   */
+  root?: string,
+): { opts: RunnerOptions; preview: boolean; keySource?: string } | { refuse: string } {
+  let keySource = 'n/a'
   const args = new Map<string, string>()
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!
@@ -86,8 +100,13 @@ export function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): { op
   if (!(plan in PRICE_USD_PER_CALL)) return { refuse: `unknown plan "${plan}"` }
   if (!offline && !planArg) return { refuse: 'plan not set: pass --plan payg|pro|ultra|mega or set OPENWEBNINJA_PLAN. Not defaulted.' }
 
-  const apiKey = env['OPENWEBNINJA_API_KEY'] ?? ''
-  if (!offline && !apiKey) return { refuse: 'OPENWEBNINJA_API_KEY is not set' }
+  // Secret from the file, decisions from the command line. COLLECTION_ENABLED
+  // and the plan are deliberately NOT read from .env — see load-key.ts.
+  const repoRoot = root ?? new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+  const found = loadApiKey(repoRoot, env)
+  const apiKey = found?.key ?? ''
+  if (!offline && !apiKey) return { refuse: `OPENWEBNINJA_API_KEY not found in the environment, .env.local or .env` }
+  if (!offline) keySource = found?.from ?? 'unknown'
   if (!offline && env['COLLECTION_ENABLED'] !== 'true') {
     return { refuse: 'COLLECTION_ENABLED is not "true" (rule R3). Enable it deliberately for this run, or pass --fixture.' }
   }
@@ -103,8 +122,11 @@ export function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): { op
   const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const dataDir = args.get('data') ?? join(here, '..', 'data')
   const maxPromptsArg = args.get('max-prompts')
+  const maxRpsArg = args.get('max-rps')
+  if (maxRpsArg !== undefined && !(Number(maxRpsArg) > 0)) return { refuse: `--max-rps must be > 0, got ${maxRpsArg}` }
 
   return {
+    keySource,
     preview: args.has('preview'),
     opts: {
       domain,
@@ -113,6 +135,7 @@ export function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): { op
       engines,
       capUsd,
       ...(maxPromptsArg ? { maxPrompts: Number(maxPromptsArg) } : {}),
+      ...(maxRpsArg ? { maxRps: Number(maxRpsArg) } : {}),
       mode,
       apiKey,
       dataDir,
@@ -147,8 +170,19 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
     // Keyed by ENGINE ID, which is what the orchestrator looks up. Getting this
     // wrong does not fall back to unlimited — `RangeError: unknown rate bucket`
     // failed every cell closed, which is the right direction and how it surfaced.
+    //
+    // `--max-rps` is an ABSOLUTE floor on top of that, and it exists because our
+    // plan table cannot express the tier a trial key is actually on. `OwnPlan`
+    // has payg/pro/ultra/mega; the provider also has a Free tier whose terms are
+    // different in kind — 50 requests a MONTH, hard limit, no overage — and
+    // adding it to `RPS_CEILING`/`PRICE_USD_PER_CALL` is a change to
+    // rate-limit and spend-control logic, which is HUMAN-OWNED. So a trial run
+    // declares its real ceiling here instead of misdeclaring its plan.
     const buckets = Object.fromEntries(
-      o.engines.map((e) => [e, { rps: Math.max(0.2, RPS_CEILING[o.plan][e] * scale), burst: 1 } satisfies BucketConfig]),
+      o.engines.map((e) => {
+        const planRps = RPS_CEILING[o.plan][e] * scale
+        return [e, { rps: Math.max(0.05, o.maxRps === undefined ? planRps : Math.min(planRps, o.maxRps)), burst: 1 } satisfies BucketConfig]
+      }),
     )
 
     const declared = { ...process.env, COLLECTOR_TOPOLOGY: 'single-process' }
@@ -211,6 +245,7 @@ async function main(): Promise<void> {
     process.exit(2)
   }
   const { opts, preview } = parsed
+  if (opts.mode === 'live') opts.log(`  key loaded from ${parsed.keySource ?? 'unknown'}`)
 
   // Print the bill before incurring it, never after. `/backfill` holds the same
   // rule and it is the difference between a decision and a discovery.

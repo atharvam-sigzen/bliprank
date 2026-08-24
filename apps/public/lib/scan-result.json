@@ -1,13 +1,13 @@
 {
   "status": "scanned",
-  "domain": "pipedrive.com",
+  "domain": "salesforce.com",
   "category": "crm-software",
   "categoryName": "CRM software",
   "classification": {
     "status": "classified",
     "slug": "crm-software",
     "signal": "leader-domain",
-    "evidence": "pipedrive.com"
+    "evidence": "salesforce.com"
   },
   "subjectSource": "leader",
   "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
@@ -15,23 +15,23 @@
   "collectedAt": "2026-08-24T10:43:11.687Z",
   "counts": {
     "cellsRequested": 85,
-    "cacheHits": 20,
-    "collected": 65,
+    "cacheHits": 85,
+    "collected": 0,
     "failed": 0,
     "answersScored": 85,
-    "providerCalls": 65
+    "providerCalls": 0
   },
   "brands": [
     {
-      "id": "pipedrive",
-      "name": "Pipedrive",
+      "id": "salesforce",
+      "name": "Salesforce",
       "isSubject": true,
-      "mentions": 0,
+      "mentions": 43,
       "citations": 0,
       "metric": {
-        "value": 0,
-        "ci_low": 0,
-        "ci_high": 0.04323948381405151,
+        "value": 0.5058823529411764,
+        "ci_low": 0.40166435808548967,
+        "ci_high": 0.609591647987286,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -55,22 +55,6 @@
       }
     },
     {
-      "id": "salesforce",
-      "name": "Salesforce",
-      "isSubject": false,
-      "mentions": 43,
-      "citations": 0,
-      "metric": {
-        "value": 0.5058823529411764,
-        "ci_low": 0.40166435808548967,
-        "ci_high": 0.609591647987286,
-        "n": 85,
-        "algo_version": "det-1",
-        "collection_path": "third-party-grounded",
-        "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
-      }
-    },
-    {
       "id": "zoho-crm",
       "name": "Zoho CRM",
       "isSubject": false,
@@ -80,6 +64,22 @@
         "value": 0.4823529411764706,
         "ci_low": 0.3792074367906816,
         "ci_high": 0.587024544990991,
+        "n": 85,
+        "algo_version": "det-1",
+        "collection_path": "third-party-grounded",
+        "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
+      }
+    },
+    {
+      "id": "pipedrive",
+      "name": "Pipedrive",
+      "isSubject": false,
+      "mentions": 0,
+      "citations": 0,
+      "metric": {
+        "value": 0,
+        "ci_low": 0,
+        "ci_high": 0.04323948381405151,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -164,6 +164,6 @@
     ],
     "spentUsd": 0,
     "capUsd": 1,
-    "at": "2026-08-24T10:43:11.743Z"
+    "at": "2026-08-24T11:25:16.397Z"
   }
 }

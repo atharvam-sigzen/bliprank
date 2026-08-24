@@ -76,7 +76,7 @@ export default function Grader() {
         </div>
       </header>
 
-      <p className="notice">
+      <p className="notice notice--info">
         {IS_LIVE ? (
           <>
             <strong>Real answers.</strong> {SCAN.counts.answersScored} answers collected across {SCAN.run.engines.length} engines on {SCAN.run.day}, at a
@@ -99,7 +99,7 @@ export default function Grader() {
             Your domain
           </label>
           <p id="domain-help" className="metric__interval" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
-            We check the prompts buyers in your category actually ask.
+            We check the prompts buyers in your category actually ask. This build holds one collected scan: <strong>{SCAN.domain}</strong>.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <input
@@ -112,7 +112,7 @@ export default function Grader() {
               onChange={(e) => setDomain(e.target.value)}
               aria-describedby={error ? 'domain-help domain-error' : 'domain-help'}
               aria-invalid={error ? true : undefined}
-              placeholder="acme.com"
+              placeholder={SCAN.domain}
               disabled={state.phase === 'scanning'}
               style={{
                 flex: '1 1 260px',
@@ -176,12 +176,8 @@ function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }
       <p style={{ marginTop: 'var(--space-2)' }}>
         This build has no scan for {domain}. Collection runs in a budgeted runner, not from this form, so nothing was bought when you pressed the button.
       </p>
-      <p className="metric__interval">
-        To scan it: <code>pnpm grader:scan -- --domain {domain} --plan mega --cap 0.50</code> with <code>COLLECTION_ENABLED=true</code>, then rebuild.
-        The runner refuses without an explicit plan and cap.
-      </p>
       <p className="metric__interval" style={{ marginTop: 'var(--space-2)' }}>
-        Scanned in this build: <strong>{SCAN.domain}</strong> ({SCAN.categoryName}).
+        Scanned in this build: <strong>{SCAN.domain}</strong> — {SCAN.categoryName}, {SCAN.counts.answersScored} answers. Try that one to see a full result.
       </p>
       <ResetButton onReset={onReset} />
     </section>
@@ -294,6 +290,22 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
  * from the same scan: every brand here was scored over the SAME answers, so
  * they share one `comparison_basis` and `compare()` will actually compare them.
  */
+/**
+ * Why a row could not be ranked, taken from what `compare()` actually decided
+ * rather than assumed. `format.ts` is HUMAN-OWNED, so its wording is read, not
+ * rewritten — see the note in PROGRESS.md about its "(n=… then n=…)" phrasing
+ * being misleading for brand-vs-brand, where the cause is interval width.
+ */
+function reasonFor(row: { verdict: string; comparison: { label: string } | null }): string {
+  if (row.verdict === 'insufficient-data') return 'too few answers to compare'
+  const label = row.comparison?.label ?? ''
+  if (label.includes('precision')) return 'its range is far tighter than yours'
+  if (label.includes('engine set') || label.includes('locale') || label.includes('geo')) return 'measured over a different engine set'
+  if (label.includes('scored by')) return 'scored by a different algorithm version'
+  if (label.includes('collected via')) return 'collected by a different path'
+  return 'measured on a different basis'
+}
+
 function HeadToHead({ scan }: { scan: ScanResultFile }) {
   const subject = subjectOf(scan)
   const data = buildHeadToHead(
@@ -323,8 +335,15 @@ function HeadToHead({ scan }: { scan: ScanResultFile }) {
 
       {uncompared.length > 0 ? (
         <p className="metric__interval">
-          Not compared: {uncompared.map((r) => `${r.label} (${r.verdict === 'insufficient-data' ? 'too few answers' : 'different engine set'})`).join(', ')}. Their
-          ranges are drawn, dashed, because the measurement is real — it is the comparison that would not be.
+          {/* The reason is DERIVED, not guessed. This previously printed
+              "different engine set" for every uncompared row, which was simply
+              false for the common case: these brands share the engine set
+              exactly, and what compare() refused was a pair whose intervals are
+              far too different in width to separate honestly. Stating a wrong
+              reason on a page about measurement integrity is worse than stating
+              none. */}
+          Not ranked against you: {uncompared.map((r) => `${r.label} (${reasonFor(r)})`).join(', ')}. Their ranges are drawn, dashed, because the measurement is
+          real — it is the comparison that would not be. Every other tool in this category would give you a number here anyway.
         </p>
       ) : null}
     </section>

@@ -13,10 +13,12 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Scaffold honesty: this must not be mistaken for a measurement. */}
-      <p className="notice">
-        <strong>Scaffold, not data.</strong> Every number on this page is fixture data used to build and review the interface. No answers have been collected — gate
-        G0 has not run.
+      {/* Not amber. This is a methodology disclosure, which is the product
+          working as intended — dressing it as a warning makes an honest
+          statement look like a defect. */}
+      <p className="notice notice--info">
+        <strong>Illustrative data.</strong> Every number here is fixture data, shaped to exercise the interface. No answers have been collected and no provider has
+        been called. The intervals, the significance rules and the provenance line are the real ones.
       </p>
 
       <section className="grid" aria-label="Headline metrics">
@@ -99,28 +101,12 @@ export default function Dashboard() {
                       {/* The bar shows the interval as well as the estimate:
                           a solid bar alone would reassert the precision the
                           number next to it just disclaimed. */}
-                      <div aria-hidden="true" style={{ position: 'relative', height: 10 }}>
+                      <div aria-hidden="true" className="range">
                         <div
-                          style={{
-                            position: 'absolute',
-                            left: `${s.metric.ci_low * 100}%`,
-                            width: `${(s.metric.ci_high - s.metric.ci_low) * 100}%`,
-                            height: 10,
-                            background: 'var(--color-secondary)',
-                            opacity: 0.28,
-                            borderRadius: 2,
-                            minWidth: 2,
-                          }}
+                          className="range__span"
+                          style={{ left: `${s.metric.ci_low * 100}%`, width: `${(s.metric.ci_high - s.metric.ci_low) * 100}%` }}
                         />
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: `${s.metric.value * 100}%`,
-                            width: 2,
-                            height: 10,
-                            background: 'var(--color-primary)',
-                          }}
-                        />
+                        <div className="range__tick" style={{ left: `${s.metric.value * 100}%` }} />
                       </div>
                     </td>
                   </tr>

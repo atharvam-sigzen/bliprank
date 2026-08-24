@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest'
 import { MIN_N_FOR_COMPARISON, wilson, type Metric } from '@bliprank/stats'
 import { COMPETITORS, GRADER_SCAN, GRADER_SCAN_N, SCAN_BASIS, SUBJECT_METRIC } from './fixtures'
 import { CHART, VERDICT_GLYPH, VERDICT_WORDS, buildHeadToHead, chartHeight, xOf, yOf, type Verdict } from './head-to-head'
+import { IS_LIVE, SCAN, scanFor } from './scan-result'
 
 const m = (k: number, n: number, over: Partial<Metric> = {}): Metric => {
   const w = wilson(k, n)
@@ -223,17 +224,35 @@ describe('the shipped fixture exercises every state the chart can render', () =>
 /* Contrast — measured against the real stylesheet                             */
 /* -------------------------------------------------------------------------- */
 
-const CSS = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
+const sheet = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
+
+/**
+ * BOTH stylesheets. The two apps share a palette and most components, and they
+ * have already diverged once — checking only this app's would let the dashboard
+ * carry a mark this suite believes it has verified.
+ */
+const SHEETS: readonly { name: string; css: string }[] = [
+  { name: 'apps/public', css: sheet('../app/globals.css') },
+  { name: 'apps/web', css: sheet('../../web/app/globals.css') },
+]
 
 /** Custom properties from `:root`, so the test moves when the palette moves. */
-const TOKENS: Record<string, string> = Object.fromEntries(
-  [...(/:root\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]),
-)
+const tokensOf = (css: string): Record<string, string> =>
+  Object.fromEntries([...(/:root\s*\{([^}]*)\}/.exec(css)?.[1] ?? '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]))
+
+function declarationsIn(css: string, selector: string): Record<string, string> | null {
+  const body = new RegExp(`${selector.replace(/[.\-]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css)?.[1]
+  if (body === undefined) return null
+  return Object.fromEntries([...body.matchAll(/([\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]))
+}
+
+const CSS = SHEETS[0]!.css
+const TOKENS = tokensOf(CSS)
 
 function declarations(selector: string): Record<string, string> {
-  const body = new RegExp(`${selector.replace(/[.\-]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1]
-  if (body === undefined) throw new Error(`contrast: no rule for ${selector} in globals.css`)
-  return Object.fromEntries([...body.matchAll(/([\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]))
+  const d = declarationsIn(CSS, selector)
+  if (!d) throw new Error(`contrast: no rule for ${selector} in globals.css`)
+  return d
 }
 
 const resolve = (v: string): string => (v.startsWith('var(') ? (TOKENS[v.slice(4, -1).trim()] ?? v) : v)
@@ -279,7 +298,7 @@ const SURFACES = {
  * stroke is what this asserts — and asserting it is what caught that the stroke
  * was at 2.98:1 while its own comment claimed 3:1.
  */
-const MARKS: readonly { selector: string; prop: 'stroke' | 'fill'; on: (keyof typeof SURFACES)[] }[] = [
+const MARKS: readonly { selector: string; prop: 'stroke' | 'fill' | 'background'; on: (keyof typeof SURFACES)[] }[] = [
   { selector: '.chart__band', prop: 'stroke', on: ['card', 'gridline'] },
   { selector: '.chart__line', prop: 'stroke', on: ['card', 'gridline'] },
   { selector: '.chart__dot', prop: 'fill', on: ['card', 'gridline'] },
@@ -289,6 +308,10 @@ const MARKS: readonly { selector: string; prop: 'stroke' | 'fill'; on: (keyof ty
   { selector: '.h2h__cap', prop: 'stroke', on: ['card', 'gridline', 'band'] },
   { selector: '.h2h__cap--subject', prop: 'stroke', on: ['card', 'gridline', 'band'] },
   { selector: '.h2h__dot', prop: 'fill', on: ['card', 'gridline', 'band'] },
+  // The dashboard's source-mix bar. It was an inline style at 0.28 — 1.39:1
+  // against the card — and this suite could not see it, because this suite reads
+  // CSS. That is why it is CSS now, and why the inline rule below exists.
+  { selector: '.range__span', prop: 'background', on: ['card', 'gridline'] },
 ]
 
 describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface it lands on', () => {
@@ -347,5 +370,114 @@ describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface 
     const fill = resolve(declarations('.h2h__band')['fill'] ?? '')
     expect(contrastRatio(rgb(fill), rgb(resolve('var(--color-card)')))).toBeLessThan(1.3)
     expect(declarations('.h2h__band-edge')['stroke-dasharray']).toBeTruthy()
+  })
+})
+
+describe('colour decisions live in CSS, where this suite can measure them', () => {
+  const TSX = ['../app/page.tsx', '../components/head-to-head-chart.tsx', '../../web/app/page.tsx', '../../web/components/ci-trend-chart.tsx', '../../web/components/metric-card.tsx']
+
+  it('THE FINDING: no component dims a colour token from an inline style', () => {
+    // The dashboard's source-mix bar sat at `opacity: 0.28` on --color-secondary
+    // for the whole of this project's life: 1.39:1 against the card, the same
+    // failure the trend band was fixed for. Every suite above missed it, because
+    // every suite above reads CSS and that was inline.
+    //
+    // So the rule is absolute rather than a second list to maintain: a component
+    // may reference a token, and may not weaken one. Anything that needs a tint
+    // gets a class, and a class is something this file can measure.
+    const offenders: string[] = []
+    for (const rel of TSX) {
+      const src = readFileSync(new URL(rel, import.meta.url), 'utf8')
+      for (const [i, line] of src.split('\n').entries()) {
+        const hasToken = line.includes('var(--color-')
+        const dims = /opacity:\s*(0|0?\.\d+)/.test(line)
+        if (hasToken && dims) offenders.push(`${rel}:${i + 1}: ${line.trim().slice(0, 90)}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('the two stylesheets agree on every shared mark', () => {
+    // apps/web and apps/public keep separate copies of the palette and the chart
+    // marks. They have diverged once already. A mark that is 3:1 in one sheet and
+    // not in the other is a bug this suite would otherwise certify as fixed.
+    const shared = ['.chart__band', '.chart__line', '.chart__dot', '.chart__axis', '.range__span', '.range__tick', '.notice--info']
+    const mismatched: string[] = []
+    for (const sel of shared) {
+      const seen = SHEETS.map((s) => ({ name: s.name, decl: declarationsIn(s.css, sel) }))
+      const missing = seen.filter((x) => !x.decl)
+      if (missing.length) {
+        mismatched.push(`${sel} missing from ${missing.map((m) => m.name).join(', ')}`)
+        continue
+      }
+      const [a, b] = seen as [{ name: string; decl: Record<string, string> }, { name: string; decl: Record<string, string> }]
+      const norm = (d: Record<string, string>) => JSON.stringify(Object.entries(d).sort())
+      if (norm(a.decl) !== norm(b.decl)) mismatched.push(`${sel} differs between ${a.name} and ${b.name}`)
+    }
+    expect(mismatched).toEqual([])
+  })
+
+  it('the palettes are identical, so a ratio measured here holds there', () => {
+    const [a, b] = SHEETS.map((s) => tokensOf(s.css)) as [Record<string, string>, Record<string, string>]
+    const colours = (t: Record<string, string>) => Object.entries(t).filter(([k]) => k.startsWith('--color-')).sort()
+    expect(colours(a)).toEqual(colours(b))
+  })
+})
+
+describe('the demo path — what a viewer actually reaches by clicking', () => {
+  it('the scanned domain resolves, in every form someone might type it', () => {
+    for (const typed of [SCAN.domain, `WWW.${SCAN.domain}`, `https://${SCAN.domain}/pricing`, `  ${SCAN.domain.toUpperCase()}  `]) {
+      expect([typed, scanFor(typed)?.domain ?? null]).toEqual([typed, SCAN.domain])
+    }
+  })
+
+  it('the placeholder is a domain that HAS a result', () => {
+    // It was `acme.com` — the single most likely thing to be typed, and the one
+    // guaranteed to land on the empty state. A demo that breaks on its own
+    // placeholder is the definition of only working because nobody pressed it.
+    expect(scanFor(SCAN.domain)).not.toBeNull()
+  })
+
+  it('an unscanned domain resolves to null rather than to someone else’s numbers', () => {
+    for (const other of ['acme.com', 'hubspot.com', 'example.org']) {
+      expect([other, scanFor(other)]).toEqual([other, null])
+    }
+  })
+
+  it('the shipped scan is complete enough to render every part of the page', () => {
+    expect(SCAN.status).toBe('scanned')
+    expect(SCAN.counts.answersScored).toBeGreaterThanOrEqual(MIN_N_FOR_COMPARISON)
+    expect(SCAN.brands.length).toBeGreaterThanOrEqual(6)
+    expect(SCAN.brands.filter((b) => b.isSubject)).toHaveLength(1)
+    for (const b of SCAN.brands) {
+      // R8 on the committed artefact too: a scan file missing provenance would
+      // render a bare number and no test above would have caught it.
+      expect([b.id, b.metric.n, b.metric.algo_version, b.metric.collection_path]).toEqual([b.id, SCAN.counts.answersScored, 'det-1', 'third-party-grounded'])
+    }
+  })
+
+  it('THE DEMO POINT: the top brands overlap, so the chart refuses to rank them', () => {
+    // If the shipped scan ever separates cleanly, the page stops demonstrating
+    // the one thing it exists to demonstrate, and nobody would notice.
+    const subject = SCAN.brands.find((b) => b.isSubject)!
+    const h = buildHeadToHead(
+      { label: subject.name, metric: subject.metric },
+      SCAN.brands.filter((b) => !b.isSubject).map((b) => ({ label: b.name, metric: b.metric })),
+    )
+    // Two brands overlap the subject and cannot be ranked against it; the five
+    // that appear in no answer are refused too, because a 0/85 interval is far
+    // tighter than a 43/85 one and separating them would be an ordinary 95% test
+    // wearing a 99.4% badge. Both refusals are the demo.
+    expect(h.rows.some((r) => r.verdict === 'indistinguishable')).toBe(true)
+    expect(h.rows.some((r) => r.verdict === 'not-comparable')).toBe(true)
+    expect(h.rows.every((r) => r.verdict !== 'ahead')).toBe(true)
+  })
+
+  it('the banner tells the truth about where the answers came from', () => {
+    // fixture, and spent nothing. If a live scan were ever committed here by
+    // accident this flips, and the page copy flips with it.
+    expect(SCAN.run.mode).toBe('fixture')
+    expect(SCAN.run.spentUsd).toBe(0)
+    expect(IS_LIVE).toBe(false)
   })
 })

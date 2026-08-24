@@ -453,3 +453,86 @@ td.num {
   font-size: 11px;
   fill: var(--color-neutral-ink);
 }
+
+/* --- range bar: an interval and its estimate, in a table cell ------------- */
+/*
+ * Was an inline style at opacity 0.28 — 1.39:1 against the card and 1.14:1
+ * against the row rule. The same failure the trend band was fixed for, in a
+ * different component, and invisible to the contrast suite because that suite
+ * parses CSS and this was inline. All colour-and-opacity decisions now live in
+ * stylesheets, where they can be measured; a test refuses an inline one.
+ *
+ * The span is full-opacity secondary (3.68:1 on the card, 3.02:1 on a rule) and
+ * the estimate tick is the CARD colour knocked out of it, which is 3.68:1
+ * against the span it sits on. A primary tick would have been 2.37:1 against
+ * that span — darker, and less legible, which is the trap.
+ */
+.range {
+  position: relative;
+  height: 10px;
+}
+
+.range__span {
+  position: absolute;
+  height: 10px;
+  min-width: 2px;
+  border-radius: 2px;
+  background: var(--color-secondary);
+}
+
+.range__tick {
+  position: absolute;
+  width: 2px;
+  height: 10px;
+  background: var(--color-card);
+}
+
+/* Mirrors the trend band: a 0.45 tint carrying no meaning, with the primary
+   edge that does. Moved out of an inline style so the rule below can be
+   absolute — nothing in a component may dim a colour token. */
+.chart__swatch--band {
+  background: var(--color-secondary);
+  opacity: 0.45;
+  outline: 1px solid var(--color-primary);
+}
+
+/* --- informational notice ------------------------------------------------ */
+/*
+ * Amber is reserved for the one thing that needs attention (CLAUDE.md §6).
+ * A methodology disclosure is not that: it is the product working as intended,
+ * and dressing it in warning colours makes an honest statement look like a
+ * defect. This is the neutral variant — same prominence, no alarm.
+ */
+.notice--info {
+  border-color: var(--color-primary);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+/* --- inline code --------------------------------------------------------- */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  overflow-wrap: anywhere;
+}
+
+/* A bare h1 outside the masthead — the 404 is the one that reaches it — would
+   otherwise render at the browser default 2em, which reads as an unstyled page
+   in the middle of a designed one. */
+main > h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--space-2);
+}
+
+/* Links carry a visible affordance, not colour alone: a colour-blind reader and
+   a greyscale print both need to see that this is a link. */
+a {
+  color: var(--color-primary);
+  text-underline-offset: 2px;
+}
