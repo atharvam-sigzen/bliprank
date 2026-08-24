@@ -3,8 +3,36 @@
  * PGlite (real Postgres in-process), synthetic rows only. `pnpm test:rls`.
  *
  * Covers the hardened model: authority in roles not GUCs, entitlement granted
- * not self-declared, FORCE RLS on every table incl. partitions, transaction-
- * stamped tenant context that fails closed on a leaked GUC.
+ * not self-declared, FORCE RLS on every table incl. partitions, and tenant
+ * context that lives in a table no application role can write (migration 0002).
+ *
+ * ===========================================================================
+ * STANDING TEST CATEGORY: ADVERSARIAL PATHS. Read this before adding a policy.
+ * ===========================================================================
+ *
+ * Every test below that establishes a tenant context does so through the
+ * SANCTIONED path, `set_workspace_jwt()`. That is necessary and it is not
+ * sufficient, and assuming otherwise cost us a cross-tenant read that survived
+ * two full audits.
+ *
+ * WHAT HAPPENED. Migration 0001 revoked EXECUTE on `set_workspace(uuid)` from
+ * the tenant, and a test titled "app_rw has no way to call the unverified
+ * setter at all" passed. The claim was reviewed, approved and merged. It was
+ * false: `set_workspace()` was never the authority — `current_workspace_id()`
+ * was, and it read a customised GUC, which Postgres classifies USERSET and any
+ * role can set with a bare `SET LOCAL`, no function and no grant involved. The
+ * test asserted a proxy for the property, the proxy held, and the property did
+ * not.
+ *
+ * THE RULE THIS LEAVES BEHIND. For every policy that scopes on tenant context,
+ * there must be a test that establishes context by a NON-sanctioned path and
+ * asserts zero rows. Not "the sanctioned path is locked" — that is the proxy
+ * that failed. Ask instead: what else could make `current_workspace_id()`
+ * return a value, and is each of those closed?
+ *
+ * The `adversarial paths` suite at the foot of this file is that category. When
+ * a tenancy-relevant table or a new context mechanism is added, extend it in
+ * the same commit. It is the only part of this file whose job is to be wrong.
  */
 
 import { createHmac } from 'node:crypto'
@@ -25,14 +53,16 @@ const USER2 = '00000000-0000-4000-8000-0000000000f2'
 const k = (c: string) => c.repeat(64)
 
 const KID = 'k1'
-const SECRET = 'test-signing-secret-not-a-real-one'
+const SECRET = 'test-signing-secret-not-a-real-one-long-enough'
+const ISS = 'bliprank-test'
+const AUD = 'bliprank-app'
 const OWNER_OF: Record<string, string> = { [WS1]: USER1, [WS2]: USER2 }
 
 /** Mint an HS256 token the way the web app's session layer will. */
 function mint(claims: Record<string, unknown>, opts: { secret?: string; kid?: string; alg?: string } = {}): string {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const head = b64({ alg: opts.alg ?? 'HS256', typ: 'JWT', kid: opts.kid ?? KID })
-  const body = b64({ exp: Math.floor(Date.now() / 1000) + 300, ...claims })
+  const body = b64({ exp: Math.floor(Date.now() / 1000) + 300, iss: ISS, aud: AUD, ...claims })
   const sig = createHmac('sha256', opts.secret ?? SECRET).update(`${head}.${body}`).digest('base64url')
   return `${head}.${body}.${sig}`
 }
@@ -45,21 +75,21 @@ type Role = 'app_rw' | 'svc_scorer' | 'svc_onboard'
 async function as<T>(role: Role, ctx: { workspace?: string; leakStaleWs?: string }, fn: (q: (sql: string, p?: unknown[]) => Promise<{ rows: unknown[] }>) => Promise<T>): Promise<T> {
   await db.exec('BEGIN')
   try {
-    // Simulate a leaked session GUC from a *previous* transaction: set it with is_local=false
-    // BEFORE stamping this txn, so its app.workspace_at timestamp is stale.
+    // Simulate a context row left behind by a PREVIOUS transaction on this same
+    // backend — the pooled-connection case. Stamped and committed, then this
+    // transaction starts without stamping anything of its own.
     if (ctx.leakStaleWs) {
       await db.exec('COMMIT')
-      await db.exec(`SELECT set_config('app.workspace_id', '${ctx.leakStaleWs}', false)`)
-      await db.exec(`SELECT set_config('app.workspace_at', '1999-01-01 00:00:00+00', false)`)
+      await db.exec(`SELECT set_workspace('${ctx.leakStaleWs}')`)
       await db.exec('BEGIN')
     }
+    // Service roles have no EXECUTE on set_workspace(): stamp as the owner
+    // before dropping into the role, the way a maintenance job would.
+    if (ctx.workspace && role !== 'app_rw') await db.query(`SELECT set_workspace($1)`, [ctx.workspace])
     await db.exec(`SET LOCAL ROLE ${role}`)
-    if (ctx.workspace) {
-      // app_rw has no EXECUTE on set_workspace() any more: the only way it gets a
-      // tenant context is a token the database verifies for itself (0001).
-      if (role === 'app_rw') await db.query(`SELECT set_workspace_jwt($1)`, [tokenFor(ctx.workspace)])
-      else await db.query(`SELECT set_workspace($1)`, [ctx.workspace])
-    }
+    // app_rw has exactly one way to obtain a tenant context: a token the
+    // database verifies for itself. There is no argument it can pass.
+    if (ctx.workspace && role === 'app_rw') await db.query(`SELECT set_workspace_jwt($1)`, [tokenFor(ctx.workspace)])
     const q = async (sql: string, p?: unknown[]) => {
       await db.exec('SAVEPOINT s')
       try {
@@ -73,9 +103,7 @@ async function as<T>(role: Role, ctx: { workspace?: string; leakStaleWs?: string
   } finally {
     await db.exec('ROLLBACK')
     await db.exec(`RESET ROLE`)
-    await db.exec(`SELECT set_config('app.workspace_id', '', false)`)
-    await db.exec(`SELECT set_config('app.account_id', '', false)`)
-    await db.exec(`SELECT set_config('app.workspace_at', '', false)`)
+    await db.exec(`DELETE FROM auth_tenant_context`)
   }
 }
 
@@ -83,7 +111,8 @@ beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
   await db.exec(readFileSync(new URL('../migrations/0000_init.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('../migrations/0001_tenancy_identity.sql', import.meta.url), 'utf8'))
-  await db.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('${KID}', '${SECRET}')`)
+  await db.exec(readFileSync(new URL('../migrations/0002_tenancy_context.sql', import.meta.url), 'utf8'))
+  await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('${KID}', '${SECRET}', '${ISS}', '${AUD}')`)
   // Seed as svc_onboard (identity + entitlements) and svc_scorer (corpus) — the roles that may write.
   await db.exec(`SET ROLE svc_onboard`)
   await db.exec(`
@@ -131,7 +160,7 @@ describe('the standing sweep that catches the next migration', () => {
       SELECT DISTINCT c.relname FROM pg_class c
       JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname='public' AND c.relkind IN ('r','p')
-        AND has_table_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
+        AND has_any_column_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
     const badly: string[] = []
     for (const { relname } of readable) {
       if (SHARED.has(relname)) continue
@@ -207,11 +236,13 @@ describe('rule R7 — tenancy is mechanical and fails closed', () => {
     })
   })
 
-  it('a leaked session GUC from a prior transaction fails closed (transaction-stamped context)', async () => {
+  it('a context row left by a prior transaction on the same backend fails closed', async () => {
     await as('app_rw', { leakStaleWs: WS1 }, async (q) => {
-      // the stale GUC names WS1 but its timestamp is from another txn → resolves to NULL → 0 rows
+      // The row names WS1 but carries the previous transaction's xid, so
+      // current_workspace_id() resolves to NULL and every policy yields nothing.
       expect((await q('SELECT count(*)::int n FROM score_rows')).rows).toEqual([{ n: 0 }])
       expect((await q('SELECT count(*)::int n FROM workspaces')).rows).toEqual([{ n: 0 }])
+      expect((await q('SELECT current_workspace_id() AS w')).rows).toEqual([{ w: null }])
     })
   })
 })
@@ -339,10 +370,11 @@ describe('(D) the tenant cannot name a workspace — it presents a token the DB 
     }
   }
 
-  it('THE FINDING: app_rw has no way to call the unverified setter at all', async () => {
-    // This is what made the web app the authorization boundary in 0000: any
-    // app_rw connection could name any workspace, so one SQL injection in the
-    // shared role was a full cross-tenant read.
+  it('the unverified setter is unreachable — NOTE: this is a proxy, not the property', async () => {
+    // Kept, but demoted. This exact assertion passed while the tenant could
+    // still name any workspace through a GUC. The property itself is asserted
+    // in `adversarial paths` at the foot of this file; this only shows one of
+    // the doors is shut. See the header comment.
     await asTenantRaw(async (q) => {
       await expect(q(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
     })
@@ -367,7 +399,7 @@ describe('(D) the tenant cannot name a workspace — it presents a token the DB 
       const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
       const none = `${b64({ alg: 'none', typ: 'JWT', kid: KID })}.${b64({ sub: USER1, workspace_id: WS1, exp: 4102444800 })}.`
       await expect(q(`SELECT set_workspace_jwt($1)`, [none])).rejects.toThrow(/unsupported alg/)
-      const wrongKid = mint({ sub: USER1, workspace_id: WS1 }, { kid: 'k-nope' })
+      const wrongKid = mint({ sub: USER1, workspace_id: WS1 }, { kid: 'k-nope' })  // valid shape, no such key
       await expect(q(`SELECT set_workspace_jwt($1)`, [wrongKid])).rejects.toThrow(/unknown or retired key/)
     })
   })
@@ -389,15 +421,15 @@ describe('(D) the tenant cannot name a workspace — it presents a token the DB 
       await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, nbf: future })])).rejects.toThrow(/not yet valid/)
       const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
       const head = b64({ alg: 'HS256', typ: 'JWT', kid: KID })
-      const body = b64({ sub: USER1, workspace_id: WS1 })
+      const body = b64({ sub: USER1, workspace_id: WS1, iss: ISS, aud: AUD }) // everything but exp
       const sig = createHmac('sha256', SECRET).update(`${head}.${body}`).digest('base64url')
-      await expect(q(`SELECT set_workspace_jwt($1)`, [`${head}.${body}.${sig}`])).rejects.toThrow(/no expiry/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [`${head}.${body}.${sig}`])).rejects.toThrow(/exp missing or not a number/)
     })
   })
 
   it('a retired key stops working, so rotation is a row update and not a flag day', async () => {
-    await db.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k2','second-secret')`)
-    const k2 = mint({ sub: USER1, workspace_id: WS1 }, { kid: 'k2', secret: 'second-secret' })
+    await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('k2','second-secret-long-enough-to-pass','${ISS}','${AUD}')`)
+    const k2 = mint({ sub: USER1, workspace_id: WS1 }, { kid: 'k2', secret: 'second-secret-long-enough-to-pass' })
     await asTenantRaw(async (q) => {
       expect((await q(`SELECT set_workspace_jwt($1) AS ws`, [k2])).rows).toEqual([{ ws: WS1 }])
     })
@@ -426,7 +458,23 @@ describe('(D) the tenant cannot name a workspace — it presents a token the DB 
 
 describe('(C) role exclusivity is asserted at deploy time, not only in this suite', () => {
   it('passes on a clean database', async () => {
+    // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
+    // assertion correctly refuses. That is a harness artifact — managed Postgres
+    // gives you a privileged non-superuser — so it is named in the allowlist
+    // rather than switched off, which is exactly how a real break-glass DSN
+    // would be handled.
+    await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
     await db.exec(`SELECT assert_role_exclusivity()`)
+  })
+
+  it('and refuses a BYPASSRLS role that is NOT on the allowlist', async () => {
+    await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
+    await db.exec(`CREATE ROLE sneaky LOGIN BYPASSRLS`)
+    try {
+      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/sneaky\(BYPASSRLS\)/)
+    } finally {
+      await db.exec(`DROP ROLE sneaky`)
+    }
   })
 
   it('fails loudly when a login role is granted two authority groups', async () => {
@@ -442,10 +490,13 @@ describe('(C) role exclusivity is asserted at deploy time, not only in this suit
     }
   })
 
-  it('fails loudly when an application role can borrow the JWT verifier', async () => {
+  it('fails loudly when a GROUP role can borrow the JWT verifier', async () => {
+    // No login role exists here, so a check that scanned only login roles would
+    // pass a database that already hands the secret to every future tenant
+    // connection. Both halves of the assertion are load-bearing.
     await db.exec(`GRANT auth_verifier TO app_rw`)
     try {
-      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/may read the JWT signing secret/)
+      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/app_rw can reach auth_verifier/)
     } finally {
       await db.exec(`REVOKE auth_verifier FROM app_rw`)
     }
@@ -517,5 +568,335 @@ describe('(B) the billing gate blocks before it creates', () => {
       // It can read its own plan, and only its own.
       expect((await q(`SELECT plan FROM workspace_subscriptions`)).rows).toEqual([{ plan: 'starter' }])
     })
+  })
+})
+
+// ===========================================================================
+// STANDING CATEGORY — see the file header. Context established by anything
+// other than the sanctioned path must yield nothing. Extend this in the same
+// commit as any new tenancy-relevant table or context mechanism.
+// ===========================================================================
+describe('adversarial paths — a tenant must not be able to manufacture a context', () => {
+  /**
+   * Every table whose visibility depends on tenant context — DERIVED, not
+   * listed. A hardcoded array silently stops covering the next table someone
+   * adds, which is the same failure mode as a hardcoded role list in the deploy
+   * check. Anything app_rw can read and whose policy mentions
+   * current_workspace_id belongs here by construction.
+   */
+  let SCOPED: string[] = []
+  beforeAll(async () => {
+    SCOPED = (
+      (
+        await db.query(`
+          SELECT DISTINCT p.tablename FROM pg_policies p
+           WHERE p.schemaname = 'public'
+             AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
+             AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
+           ORDER BY p.tablename`)
+      ).rows as { tablename: string }[]
+    ).map((r) => r.tablename)
+    // If this ever comes back short, the sweep below is asserting nothing.
+    expect(SCOPED.length).toBeGreaterThanOrEqual(7)
+  })
+
+  /** Runs `fn` as app_rw with NO sanctioned context established. */
+  async function asTenant<T>(fn: (q: (sql: string, p?: unknown[]) => Promise<{ rows: unknown[] }>) => Promise<T>): Promise<T> {
+    await db.exec('BEGIN')
+    try {
+      await db.exec('SET LOCAL ROLE app_rw')
+      const q = async (sql: string, p?: unknown[]) => {
+        await db.exec('SAVEPOINT s')
+        try {
+          return await db.query(sql, p)
+        } catch (e) {
+          await db.exec('ROLLBACK TO SAVEPOINT s')
+          throw e
+        }
+      }
+      return await fn(q)
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+    }
+  }
+
+  const assertBlind = async (q: (sql: string, p?: unknown[]) => Promise<{ rows: unknown[] }>, label: string) => {
+    expect([label, (await q(`SELECT current_workspace_id() AS w`)).rows]).toEqual([label, [{ w: null }]])
+    for (const t of SCOPED) {
+      expect([label, t, (await q(`SELECT count(*)::int n FROM ${t}`)).rows]).toEqual([label, t, [{ n: 0 }]])
+    }
+  }
+
+  it('THE BUG THAT SHIPPED: bare SET LOCAL on the old context GUCs yields nothing', async () => {
+    // Verbatim the two statements that read the whole corpus before 0002. No
+    // function call, no grant, nothing to revoke — which is precisely why the
+    // context could not stay in a GUC.
+    await asTenant(async (q) => {
+      await q(`SET LOCAL app.workspace_id = '${WS1}'`)
+      await q(`SELECT set_config('app.workspace_at', transaction_timestamp()::text, true)`)
+      await assertBlind(q, 'bare SET LOCAL')
+    })
+  })
+
+  it('set_config() on every context GUC name, session-scoped and local, yields nothing', async () => {
+    await asTenant(async (q) => {
+      for (const local of [true, false]) {
+        for (const name of ['app.workspace_id', 'app.account_id', 'app.workspace_at', 'app.service']) {
+          await q(`SELECT set_config($1, $2, $3)`, [name, WS1, local])
+        }
+      }
+      await assertBlind(q, 'set_config sweep')
+      expect((await q(`SELECT current_account_id() AS a`)).rows).toEqual([{ a: null }])
+    })
+  })
+
+  it('the tenant cannot write, update or delete its own context row', async () => {
+    await asTenant(async (q) => {
+      for (const sql of [
+        `INSERT INTO auth_tenant_context (backend_pid, xact_id, workspace_id, account_id)
+           VALUES (pg_backend_pid(), pg_current_xact_id(), '${WS1}', '${USER1}')`,
+        `UPDATE auth_tenant_context SET workspace_id = '${WS1}'`,
+        `DELETE FROM auth_tenant_context`,
+        `SELECT * FROM auth_tenant_context`,
+      ]) {
+        await expect(q(sql)).rejects.toThrow(/permission denied/)
+      }
+    })
+  })
+
+  it('the tenant cannot call the context writer directly', async () => {
+    await asTenant(async (q) => {
+      await expect(q(`SELECT stamp_tenant_context('${WS1}','${USER1}')`)).rejects.toThrow(/permission denied/)
+      await expect(q(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
+    })
+  })
+
+  it('a context stamped for ANOTHER backend is not visible to this one', async () => {
+    // Keyed on pg_backend_pid(), so a row belonging to a different connection
+    // must not leak in. Written as the owner, read as the tenant.
+    await db.exec(`INSERT INTO auth_tenant_context (backend_pid, xact_id, workspace_id, account_id)
+                   VALUES (pg_backend_pid() + 1, pg_current_xact_id(), '${WS1}', '${USER1}')`)
+    await asTenant(async (q) => {
+      await assertBlind(q, 'other backend')
+    })
+    await db.exec(`DELETE FROM auth_tenant_context WHERE backend_pid <> pg_backend_pid()`)
+  })
+
+  it('a context stamped in an EARLIER transaction on this backend is not reused', async () => {
+    await db.exec(`SELECT set_workspace('${WS1}')`) // committed, own transaction
+    await asTenant(async (q) => {
+      await assertBlind(q, 'stale xid')
+    })
+    await db.exec(`DELETE FROM auth_tenant_context`)
+  })
+
+  it('a verified context does NOT survive into the next transaction on the same backend', async () => {
+    await db.exec('BEGIN')
+    await db.exec('SET LOCAL ROLE app_rw')
+    await db.query(`SELECT set_workspace_jwt($1)`, [tokenFor(WS1)])
+    expect((await db.query(`SELECT count(*)::int n FROM workspaces`)).rows).toEqual([{ n: 1 }])
+    await db.exec('COMMIT') // the row persists; its xid does not match any more
+    await db.exec('RESET ROLE')
+    await asTenant(async (q) => {
+      await assertBlind(q, 'after commit')
+    })
+    await db.exec(`DELETE FROM auth_tenant_context`)
+  })
+
+  // NOTE: the equivalent test under a real non-superuser LOGIN principal lives
+  // in deploy-check.test.ts, which builds an isolated database per case.
+  // `SET SESSION AUTHORIZATION` does not reliably unwind on this harness, so
+  // running it against the suite's shared instance poisoned every later test
+  // with "permission denied to set role" — a confusing way to learn one test
+  // broke. Isolation is the fix, not a more careful teardown.
+
+  it('the definer functions resolve public.*, not a shadow in pg_temp', async () => {
+    // search_path is pinned to `public, pg_temp`. Nothing in the suite would
+    // notice if a future migration dropped that clause, so assert both the
+    // configuration and the behaviour it buys.
+    const pinned = await db.query(`
+      SELECT p.proname FROM pg_proc p
+       WHERE p.proname IN ('current_workspace_id','current_account_id','stamp_tenant_context','set_workspace_jwt','set_workspace')
+         AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}')) c WHERE c LIKE 'search\_path=%')`)
+    expect(pinned.rows).toEqual([])
+
+    // A temp table with the context table's exact name, seeded with a forged
+    // row. If `public` did not precede `pg_temp` in the pinned search_path, the
+    // definer function would read this instead of the real table.
+    const seen: unknown[] = []
+    await db.exec('BEGIN')
+    try {
+      await db.exec(`SET LOCAL ROLE app_rw`)
+      await db.exec(`CREATE TEMP TABLE auth_tenant_context (backend_pid integer, xact_id xid8, workspace_id uuid, account_id uuid, stamped_at timestamptz)`)
+      await db.exec(`INSERT INTO pg_temp.auth_tenant_context VALUES (pg_backend_pid(), pg_current_xact_id(), '${WS1}', '${USER1}', now())`)
+      seen.push((await db.query(`SELECT current_workspace_id() AS w`)).rows)
+      seen.push((await db.query(`SELECT count(*)::int n FROM workspaces`)).rows)
+    } finally {
+      // Assertions come after the rollback, always. An assertion that throws
+      // inside an open transaction leaves the session aborted and every later
+      // test fails with "current transaction is aborted" instead of its own
+      // reason.
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+    }
+    expect(seen).toEqual([[{ w: null }], [{ n: 0 }]])
+  })
+
+  it('no materialized view is readable by an application role — they cannot carry RLS', async () => {
+    // The standing sweeps filter relkind IN ('r','p'). A matview is 'm', has no
+    // RLS at all, and is the obvious reach when a rollup needs to be fast.
+    const mv = await db.query(`
+      SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       CROSS JOIN unnest(ARRAY['app_rw','svc_scorer','svc_onboard']) AS r(rolname)
+       WHERE n.nspname='public' AND c.relkind='m' AND has_any_column_privilege(r.rolname, c.oid, 'SELECT')`)
+    expect(mv.rows).toEqual([])
+  })
+
+  it('the tenant cannot reach the signing secret by any path', async () => {
+    await asTenant(async (q) => {
+      await expect(q(`SELECT secret FROM auth_signing_keys`)).rejects.toThrow(/permission denied/)
+      // NOTE: `SET ROLE auth_verifier` is deliberately NOT asserted here. It
+      // would succeed, because PGlite's session user is a superuser and SET ROLE
+      // is checked against the SESSION user, not the current one. Asserting it
+      // would pass for a reason production does not share — exactly the kind of
+      // proxy assertion that let the GUC bug through. pg_has_role below is the
+      // real property, and check-deploy.sql enforces it where the roles live.
+    })
+    expect((await db.query(`SELECT pg_has_role('app_rw','auth_verifier','USAGE') AS x`)).rows).toEqual([{ x: false }])
+  })
+
+  it('a tenant holding the old advisory-lock key can no longer stall the billing gate', async () => {
+    // Before 0002 the gate took pg_advisory_xact_lock(hashtext(...)), and both
+    // functions are PUBLIC-executable: a tenant could hold the exact key. The
+    // gate now serialises on the subscription row instead, which app_rw cannot
+    // lock — it has SELECT only, and a plain SELECT does not queue.
+    const lockedByTenant = await db.query(`SELECT count(*)::int n FROM pg_proc p
+      JOIN pg_trigger t ON t.tgfoid = p.oid
+      WHERE p.proname = 'lock_workspace_for_entitlement'`)
+    expect(lockedByTenant.rows).toEqual([{ n: 0 }])
+    expect((await db.query(`SELECT count(*)::int n FROM pg_proc WHERE proname='lock_workspace_for_entitlement'`)).rows).toEqual([{ n: 0 }])
+  })
+})
+
+describe('the hardened verifier (0002)', () => {
+  async function asTenant<T>(fn: (q: (sql: string, p?: unknown[]) => Promise<{ rows: unknown[] }>) => Promise<T>): Promise<T> {
+    await db.exec('BEGIN')
+    try {
+      await db.exec('SET LOCAL ROLE app_rw')
+      const q = async (sql: string, p?: unknown[]) => {
+        await db.exec('SAVEPOINT s')
+        try {
+          return await db.query(sql, p)
+        } catch (e) {
+          await db.exec('ROLLBACK TO SAVEPOINT s')
+          throw e
+        }
+      }
+      return await fn(q)
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+    }
+  }
+
+  it('MINOR-6: a token from another issuer or audience is refused', async () => {
+    await asTenant(async (q) => {
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, iss: 'staging' })])).rejects.toThrow(/issuer mismatch/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, aud: 'someone-else' })])).rejects.toThrow(/audience mismatch/)
+      // aud as an array is a policy nobody has made, so it is refused rather than guessed at
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, aud: [AUD] })])).rejects.toThrow(/audience mismatch/)
+    })
+  })
+
+  it('MINOR-2: exp and nbf must be JSON numbers, and the error keeps the auth: convention', async () => {
+    await asTenant(async (q) => {
+      // Previously accepted: the JSON string "9999999999".
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, exp: '9999999999' })])).rejects.toThrow(
+        /auth: exp missing or not a number/,
+      )
+      // Previously a raw 22P02 that echoed the attacker's value into the log.
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, exp: true })])).rejects.toThrow(/auth: exp/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, nbf: 'later' })])).rejects.toThrow(/auth: nbf is not a number/)
+      // A float exp is a number and must be honoured, not crash.
+      const past = Math.floor(Date.now() / 1000) - 30.5
+      await expect(q(`SELECT set_workspace_jwt($1)`, [mint({ sub: USER1, workspace_id: WS1, exp: past })])).rejects.toThrow(/auth: token expired/)
+    })
+  })
+
+  it('MINOR-1: an empty kid cannot be stored, and a token without one is refused', async () => {
+    await expect(db.query(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('', '${SECRET}', '${ISS}', '${AUD}')`)).rejects.toThrow(
+      /auth_signing_keys_live_is_configured/,
+    )
+    await expect(db.query(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('short', 'tooshort', '${ISS}', '${AUD}')`)).rejects.toThrow(
+      /auth_signing_keys_live_is_configured/,
+    )
+    await asTenant(async (q) => {
+      const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
+      const head = b64({ alg: 'HS256', typ: 'JWT' }) // no kid
+      const body = b64({ sub: USER1, workspace_id: WS1, exp: 4102444800, iss: ISS, aud: AUD })
+      const sig = createHmac('sha256', SECRET).update(`${head}.${body}`).digest('base64url')
+      await expect(q(`SELECT set_workspace_jwt($1)`, [`${head}.${body}.${sig}`])).rejects.toThrow(/auth: token has no kid/)
+    })
+  })
+
+  it('MAJOR-1: exclusivity catches a LOGIN role holding both app_rw and auth_verifier', async () => {
+    await db.exec(`CREATE ROLE web_prod LOGIN`)
+    await db.exec(`GRANT app_rw TO web_prod`)
+    await db.exec(`GRANT auth_verifier TO web_prod`)
+    try {
+      // This exact grant pair PASSED the 0001 check, and web_prod then read the
+      // signing secret in plaintext.
+      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/can reach auth_verifier/)
+      await db.exec(`REVOKE auth_verifier FROM web_prod`)
+      await db.exec(`GRANT svc_onboard TO web_prod`)
+      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/role exclusivity violated: web_prod/)
+      await db.exec(`REVOKE svc_onboard FROM web_prod`)
+      // And transitively, through an intermediate role.
+      await db.exec(`CREATE ROLE middleman NOLOGIN`)
+      await db.exec(`GRANT auth_verifier TO middleman`)
+      await db.exec(`GRANT middleman TO web_prod`)
+      await expect(db.query(`SELECT assert_role_exclusivity()`)).rejects.toThrow(/can reach auth_verifier/)
+      await db.exec(`REVOKE middleman FROM web_prod`)
+      await db.exec(`REVOKE auth_verifier FROM middleman`)
+      await db.exec(`DROP ROLE middleman`)
+    } finally {
+      await db.exec(`REVOKE app_rw FROM web_prod`)
+      await db.exec(`DROP ROLE web_prod`)
+    }
+  })
+
+  it('MAJOR-2: the migration owner is not left a standing member of auth_verifier', async () => {
+    const members = await db.query(`SELECT m.rolname FROM pg_auth_members am
+      JOIN pg_roles g ON g.oid = am.roleid JOIN pg_roles m ON m.oid = am.member
+      WHERE g.rolname = 'auth_verifier'`)
+    expect(members.rows).toEqual([])
+  })
+
+  it('MINOR-3: an entitlement cannot be moved past the gate with UPDATE', async () => {
+    const NOSUB = '00000000-0000-4000-8000-00000000000e'
+    await db.exec(`SET ROLE svc_onboard`)
+    await db.exec(`INSERT INTO workspaces (id, name) VALUES ('${NOSUB}','Moved Onto')`)
+    await db.exec(`RESET ROLE`)
+    await as('svc_onboard', {}, async (q) => {
+      await expect(q(`UPDATE workspace_brands SET workspace_id='${NOSUB}' WHERE workspace_id='${WS1}' AND brand_id='${ACME}'`)).rejects.toThrow(
+        /has no subscription/,
+      )
+    })
+    expect((await db.query(`SELECT count(*)::int n FROM workspace_brands WHERE workspace_id='${NOSUB}'`)).rows).toEqual([{ n: 0 }])
+  })
+
+  it('MINOR-5: the gate refuses to run at REPEATABLE READ, where its recount is unsound', async () => {
+    // PGlite is a single connection, so the race itself cannot be exercised in
+    // this harness in either direction — which is why the old advisory lock was
+    // load-bearing and untested. This asserts the guard instead of the race.
+    await db.exec('BEGIN')
+    await db.exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+    await db.exec('SET LOCAL ROLE svc_onboard')
+    await expect(
+      db.query(`INSERT INTO workspace_brands (workspace_id, brand_id, relation) VALUES ('${WS1}','${BRIT}','competitor')`),
+    ).rejects.toThrow(/not safe at REPEATABLE READ/)
+    await db.exec('ROLLBACK')
+    await db.exec('RESET ROLE')
   })
 })

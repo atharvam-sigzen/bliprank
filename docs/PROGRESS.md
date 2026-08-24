@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-22 · **master:** `af9fa1a` · **First commit:** 2026-08-18 · **Tests:** 377 passing, 21 files, all offline
+**As of:** 2026-08-24 · **master:** `MERGE_SHA` · **First commit:** 2026-08-18 · **Tests:** 431 passing, 23 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -157,7 +157,7 @@ Hand-merged, file by file, so it could not revert reviewed fixes (`8293d85`,
 | 1.4 | Cache key + Redis index, shared prompt-pool dedupe | **Done** (`52cac9a`, `d6528e4`, `4d3a5a1`, `27652c2`). `AnswerIndex` over an injectable KV (memory + Upstash REST), atomic per-cell claim so 15 agency clients on one category cause one collection. Wired into `CollectionOrchestrator` — the cache-check → collect-on-miss → single-blob-write funnel. |
 | 1.5 | R2 storage, one object per cell | **Done** (`1d80396`). Hand-rolled SigV4 over R2's S3 REST API, no AWS SDK: three verbs against one bucket does not justify that dependency, and a signer checked against AWS's own published vectors is easier to trust than an SDK we cannot see into. `assertSafeKey` refuses keys containing dot segments, because `new URL()` resolves them *before* signing — such a key would be signed and sent for a different object, the same wrong object both times, so it would succeed silently. **Never exercised against a real bucket.** |
 | 1.6 | Rate-limit budget manager | **Done** (`a392f95`). `RateBudget` interface with `LocalRateBudget` (continuous token buckets, key sharding, UTC window, injectable clock) behind it. The interface is the point: it is what makes the P5 Vercel → Hetzner migration a swap rather than a rewrite. |
-| 1.7 | `packages/db` schema + RLS                         | **Done** (`af9fa1a`). Merged 2026-08-22 after the three open decisions were taken. See below.                                                                                                                                                                                                                                                                         |     |
+| 1.7 | `packages/db` schema + RLS                         | **Mechanism done** (`af9fa1a`, then `MERGE_SHA`). Merged 2026-08-22 after the three open decisions; the tenant context was moved out of a self-settable GUC on 2026-08-24 and has held seven independent adversarial audits. **The deploy-time gate is NOT done** and is required before G1 — ADR-0007, `fix/tenancy-deploy-gate`. See below. |     |
 
 **Review findings that changed the code.** `measurement-engineer` returned two
 verified BLOCKERs on the orchestrator, both fixed in `27652c2`:
@@ -191,15 +191,15 @@ second pass are in `18cde63`.
 **The three decisions that blocked the merge, taken 2026-08-22** and
 implemented in `0001_tenancy_identity.sql` (`f658900`):
 
-1. **DB-level tenancy identity, not app-level-only.** `set_workspace()` did no
-   principal → workspace binding, so the web app was the authorization boundary
-   and one SQL injection in the shared `app_rw` role was a full cross-tenant
-   read. `app_rw` now has no EXECUTE on it at all. It presents an HS256 token;
-   `set_workspace_jwt()` verifies the signature *inside Postgres* against a
-   secret in a table no application role can read, pins the algorithm (so
-   `alg:none` and RS256-as-HMAC are refused), checks `kid`/`exp`/`nbf`, and then
-   requires the subject to actually be a member of the workspace the token
-   names. The signature proves who; membership decides what.
+1. **DB-level tenancy identity, not app-level-only.** The tenant presents an
+   HS256 token; `set_workspace_jwt()` verifies the signature *inside Postgres*
+   against a secret in a table no application role can read, pins the algorithm
+   (so `alg:none` and RS256-as-HMAC are refused), checks
+   `kid`/`iss`/`aud`/`exp`/`nbf`, and requires the subject to actually be a
+   member of the workspace the token names. The signature proves who; membership
+   decides what. The verified context is written to `auth_tenant_context`, keyed
+   on `(backend_pid, xact_id)`, which no application role has any grant on —
+   **see the incident below for why it is a table and not a GUC.**
 2. **Role exclusivity is checked where the roles are.** It was an assertion
    about a fixture database, which proves nothing about a deployment — login
    roles are created outside every migration. `assert_role_exclusivity()` plus
@@ -218,9 +218,271 @@ The RLS suite went from 17 tests to 34 and now drives `app_rw` through the token
 path, so every pre-existing tenancy test is exercised against verified identity
 rather than a named workspace.
 
-⚠️ **HUMAN REVIEW REQUIRED: tenancy.** The JWT verifier is new attack surface at
-the tenancy boundary, written in plpgsql, and has **not** been through a
-`tenancy-auditor` pass — the two audits on this branch predate it.
+#### Incident, 2026-08-22 — a claim was approved and merged before it was found false
+
+`0001` shipped the JWT verifier above and stated, in the migration header, in
+`check-deploy.sql`, in a passing test titled *"app_rw has no way to call the
+unverified setter at all"*, and in the report that obtained sign-off, that the
+tenant role could no longer name a workspace. **It could.** `set_workspace()`
+was never the authority — `current_workspace_id()` was, and it read a customised
+GUC. Postgres classifies those USERSET: any role sets one with a bare
+`SET LOCAL`, no function call and no grant involved, and the transaction stamp
+guarding it is not a secret. Two statements read another tenant's workspaces,
+member accounts, entitlements, plan and corpus slice, and the whole corpus by
+re-issuing `set_config()` per workspace id in the same transaction.
+
+Reproduced on a non-superuser login role whose only membership is `app_rw`. The
+hole was inherited from `0000`, so it had survived **two** prior
+`tenancy-auditor` passes, and it survived them for the same reason it survived
+review: every test established context through the sanctioned path and none
+tried the unsanctioned one. **The test asserted a proxy for the property, the
+proxy held, and the property did not.**
+
+Fixed in `0002_tenancy_context.sql`: context moved into a table no application
+role can write, keyed on `(backend_pid, xact_id)` so it cannot outlive its
+transaction on a pooled connection. Nothing is deployed and no customer data
+exists, so this was a fix-forward, not a breach.
+
+**What it leaves behind is a standing test category**, documented at the top of
+`packages/db/src/rls.test.ts`: for every policy that scopes on tenant context,
+a test that establishes context by a *non-sanctioned* path and asserts zero
+rows. Extended in the same commit as any new tenancy-relevant table. It is the
+only part of that suite whose job is to be wrong.
+
+The same pass closed a second real break: `assert_role_exclusivity()` passed a
+login role granted both `app_rw` and `auth_verifier`, which then read the HS256
+signing secret in plaintext and could forge a token for any workspace.
+
+**The re-audit of that fix returned a second BLOCKER, and it is the more
+instructive one.** The context mechanism itself held — thirteen non-sanctioned
+paths were attempted against a real non-superuser login role and every one came
+back blind. What did not hold was the migration: `0002` added `NOT NULL DEFAULT
+'unset'` columns with validating CHECKs, and **could not be applied to any
+database that had run `0001` in service**, because such a database must hold a
+signing key, that row backfilled to `'unset'`, and the CHECK rejected it. The
+whole migration rolled back, leaving the original BLOCKER live in production.
+The test suite never saw it because it inserted the key *after* running all
+three migrations — the one ordering in which an inapplicable migration looks
+fine. A correct fix that cannot be deployed is not a fix.
+
+Three MAJORs came with it, each with a working proof-of-concept: a login role
+with `BYPASSRLS` read every tenant and **passed the entire deploy check** (on
+managed Postgres you cannot create a superuser, but you can set that attribute);
+the deploy check asserted its properties against a hardcoded list of three group
+roles, so a login role granted EXECUTE on `set_workspace()` passed and then named
+any workspace; and the "does this table scope on the tenant?" sweep existed only
+in the test suite, so a new table with `USING (true)` passed the deploy and
+served every tenant's rows.
+
+The through-line in all three is the same as the original bug: **an assertion
+that names a specific list rather than deriving the property**.
+
+**Audit three found four more of exactly that**, each with a working
+proof-of-concept ending in the plaintext HMAC signing secret: `pg_has_role(...,
+'USAGE')` is blind to a `NOINHERIT` member, who reaches everything through
+`SET ROLE` — a role granted all three authority groups *and* `auth_verifier`
+passed the whole gate and read the secret; `rolcanlogin` is blind to `BYPASSRLS`
+on a `NOLOGIN` role, and to `ALTER ROLE app_rw BYPASSRLS`, which needs no extra
+role at all; the `SECURITY DEFINER` assertion named five functions, so a
+six-line helper granted to `app_rw` returned the secret and the tenant then
+forged a token and entered through the front door; and `relkind IN ('r','p')`
+is blind to plain views. A fifth, `MAJOR`: write policies were never swept at
+all — `with_check` was not read — so a legitimately authenticated WS1 session
+inserted a row into WS2, invisible to the writer and read by the victim as its
+own reconciliation data. On a product whose claim is that its numbers
+reconcile, that is corruption of record rather than a leak.
+
+The gate now derives every *subject* from the catalog — which roles, which
+relkinds, which functions — and names only the objects an assertion is about.
+Where a list is unavoidable it is **default-deny**: every `SECURITY DEFINER`
+function is refused unless it is one of the three that form the intended
+surface, so the next one fails the deploy the day it is written. The earlier
+lists were default-allow, which is the bug.
+
+`deploy-check.test.ts` builds a deliberately-broken database per assertion, on
+the rule that an assertion with no failing case is indistinguishable from one
+that does nothing — including the two the audit flagged as having none, the
+bare-GUC regression and the pgcrypto resolution check.
+
+**Audit four found four more, and at that point the approach was the problem.**
+Every assertion in the gate pinned `schema = 'public'` — nine times — so a table
+in a new schema **with no RLS at all** passed and returned both tenants' rows.
+The policy *command* was named too, so `FOR DELETE USING (true)` and a `TRUNCATE`
+grant both passed, and each let a fully authenticated WS1 session destroy WS2's
+rows. `qual LIKE '%current_workspace_id%'` tests for a substring rather than a
+scope, so `USING (current_workspace_id() IS NOT NULL)` passed and returned every
+tenant. And the gate **could not pass on the production posture it prescribes**:
+it read `auth_signing_keys` directly, which FORCEs RLS, so a non-superuser
+deployer saw zero rows — the only way to make it pass was to deploy with
+`BYPASSRLS` and excuse that role, waiving the single most important assertion in
+the file.
+
+Three rounds of patching a check that keeps being incomplete is not bad luck.
+**Proving "no unsafe configuration exists" by listing unsafe configurations is
+unbounded by construction** — the catalog can always express one more thing than
+the list. So the enumeration inverted, into `0003_tenancy_exposure_manifest.sql`:
+everything a non-trusted role can reach — every schema, every relkind, every
+privilege, every `SECURITY DEFINER` function — must be **declared** in
+`tenancy_exposure_manifest` with a disposition and a reason. Reachable-and-
+undeclared is now the failure condition, so a new schema, object kind, verb or
+grantee fails by default rather than needing to be predicted. `check-deploy.sql`
+went from 380 lines to 130.
+
+The other half is behavioural, in `packages/db/src/tenant-isolation.test.ts`: two
+seeded tenants, real reads and writes across every scoped relation, asserting the
+row sets are disjoint. That is the half a catalog check structurally cannot do —
+a substring is not a scope, and no amount of inspecting `pg_policies` turns one
+into the other. All five of audit four's attacks now fail the gate, and the gate
+passes as a non-superuser deployer with no RLS bypass.
+
+**Audit five found one assertion left in the old style, and it was the one with
+no test.** The policy-scoping check exempted any policy whose role list mentioned
+a service role, so `CREATE POLICY p ON score_rows FOR SELECT TO app_rw,
+svc_scorer USING (true)` — one statement — passed the gate and returned every
+tenant's corpus to an authenticated session. RLS ORs permissive policies, so
+naming a service role alongside `app_rw` changes nothing about what `app_rw`
+reads. The predicate asked whether *any* named role was trusted; the property is
+whether *every* one is.
+
+**Those two facts are the same fact.** The only assertion in the file without a
+failing case was the only one that did not work. Every assertion now has one,
+and the five it was missing are the reason this is worth writing down rather
+than just fixing.
+
+Audit five also closed: the manifest match ignored the grantee, so a privilege
+declared `service` silently authorised it for tenants too; the `shared` column
+test was a five-word case-sensitive regex that `brand_id`, `org_id`, `agency`,
+`owner_id` and `"WorkspaceId"` all passed — and in this schema brand identity
+*is* tenant identity, so shared columns are now declared rather than guessed;
+partitions were seeded once at migration time, so `ensure_score_partition()` — a
+correct maintenance job — failed the deploy on the 1st of every month, and a gate
+that fails routinely gets `|| true`'d; predefined-role membership
+(`pg_execute_server_program`) confers power that never appears in a table ACL, so
+no privilege derivation could see it; and the gate's own functions were granted
+to PUBLIC, handing a tenant a ranked list of exactly which relations are
+reachable-and-unreviewed. They now go to a `deploy_check` role.
+
+**Audit six found that the fix for the partition churn had opened a hole.**
+Resolving a partition to its parent's declaration through `pg_inherits` stopped
+the monthly false failure, and propagated the *declaration* downward while
+leaving every *obligation* attached to the relation named in the manifest. A
+partition created without RLS, an existing partition with RLS switched off, a
+table staged with `LIKE ... INCLUDING ALL` (which does not copy RLS) and then
+attached, and a legacy `INHERITS` child all passed the gate and returned another
+tenant's rows to a legitimately authenticated session. Sticky, too:
+`ensure_score_partition()` short-circuits on the relation already existing, so a
+partition pre-created without RLS stays that way forever, and that helper's
+normal behaviour is to grant every partition to `app_rw`.
+
+The second was sharper. A **child of the shared relation** — carrying a correct
+`workspace_id = current_workspace_id()` policy of its own, which is exactly what
+`0000` instructs — reads nothing through itself and every tenant's private
+prompt bank when read through the parent, because a parent applies the
+*parent's* policy to its children's rows and a shared relation's policy is
+`USING (true)`. A shared relation must be a leaf; no column-list comparison on
+the parent can ever see this.
+
+**And the correlation held a third time.** The three mechanisms whose only tests
+asserted the gate *tolerates* something — `manifest_root()`, the `deploy_check`
+exemption, `assert_role_powers()` — were the three that were broken. Each now
+has a case requiring it to refuse.
+
+**Audit seven found three more, two of them again created by the previous fix.**
+The descendant sweep resolved the manifest on the *root's* schema while the two
+other loops resolve it on the *child's*, so `CREATE TABLE archive.accounts (LIKE
+public.accounts)` plus an `INHERIT` — a cold-storage move — shed the obligation
+while keeping the declaration, and returned every tenant's user emails. And a
+`scoped` declaration on a **view** carried no obligation at all: views have no
+policies, the RLS duty was filtered to ordinary tables, and a plain view runs
+with its owner's rights straight past RLS. The obligation is now derived from the
+relation kind rather than filtered to one.
+
+The third is the one worth remembering. **The gate could not pass the production
+posture at all.** Ownership confers every privilege implicitly; the sweeps
+excluded only superusers, which worked solely because PGlite's owner is one.
+Reassigning the tables to a non-superuser — what Supabase does by default, and
+what `0001` says the design exists to survive — produced 54 faults. The gate had
+never been run against the shape it was written for, and the predictable remedy
+(exempt the owner by name, or `|| true` in the pipeline) is what its own preamble
+warns against. Owners are excluded per relation and constrained instead.
+
+**Accepted consequence, recorded rather than discovered later:** the tenant read
+path is now a write path. `set_workspace_jwt()` INSERTs, so it fails under
+`default_transaction_read_only`, and the context table is `UNLOGGED` and so does
+not exist on a physical standby. **Supabase read replicas are unavailable to
+`apps/web` while the context lives here.** Every tenant request also consumes an
+XID. This is the price of the mechanism being sound and is not negotiable
+downward — relaxing the write is what would put the context back somewhere the
+tenant can reach. If replicas become necessary that is an ADR, and the only
+shape that avoids the write puts an HMAC inside every RLS policy evaluation.
+
+**The branch split, 2026-08-24 (ADR-0007). The mechanism merged; the gate did
+not.** Seven audits produced two separable outcomes, and continuing to treat
+them as one was costing everything else in the project.
+
+The mechanism held all seven, every attempted bypass blind, including the bare
+`SET LOCAL` path each audit was instructed to try first as a real non-superuser
+`LOGIN` principal. It is on `master`.
+
+The gate did not converge, and the way it failed changed. Audits 1–4 kept
+finding shapes the enumeration had not anticipated — an incompleteness argument,
+which the manifest inversion was the right answer to. **Audits 5, 6 and 7 each
+found that the previous round's fix had opened the next hole:** the manifest
+match blind to the grantee; `manifest_root()` propagating the declaration down
+the tree without the obligation; declaration keyed on the child's schema and
+obligation on the root's. Three rounds of a fix generating its successor is a
+different claim from four rounds of an incomplete list. The first says the list
+is short. The second says the approach is wrong.
+
+What merged: `0002_tenancy_context.sql`, the corrected `0001` header,
+`schema.ts`, `rls.test.ts` (53 tests), `tenant-isolation.test.ts` (15 tests) and
+`check-deploy.test.ts` (20 tests). The isolation suite now derives its subject
+from `pg_policies` rather than from 0003's manifest, so it stands alone — and
+that is the better property anyway.
+
+The reduced gate keeps its own rule, so each of its six remaining assertions
+ships with the unsafe database it refuses. That immediately paid: the
+dropped-context-reader case failed, because `has_function_privilege()` **raises**
+on a signature that does not exist — so a missing reader reported `function
+"set_workspace(uuid)" does not exist` instead of the assertion's own message. The
+deploy failed either way; the operator got the wrong reason. Fixed by asserting
+existence first. On the branch that case passed, because its expectation was an
+alternation the other branch satisfied — the same pattern that hid three earlier
+BLOCKERs.
+
+What did not, and stays on `fix/tenancy-deploy-gate`:
+`0003_tenancy_exposure_manifest.sql` and `deploy-check.test.ts` (78 tests).
+`check-deploy.sql` on `master` keeps only what holds without the catalog
+derivation — role exclusivity, the `pg_class` RLS sweep, the context readers, the
+bare-GUC regression, pgcrypto resolution — and says in its own header that it is
+partial, why, and by when. Three assertions are deliberately absent rather than
+reimplemented: the exposure manifest, `assert_role_powers()`, and live
+signing-key health (which needs `auth_key_health()` from 0003; until then a
+deploy with no live key fails at first login rather than at deploy time).
+
+**The gate is open work with a hard deadline: it must be closed before G1, not
+"before launch".** PHASES.md's standing suite item 3 runs the RLS suite at every
+gate, and G1 is the first gate at which real collected rows exist to be isolated.
+"Before launch" has no date attached and is the phrasing under which this would
+never be closed.
+
+**The next attempt is a redesign, not an eighth round.** Enumerate every
+RLS-relevant object from Postgres's own catalog — `pg_class` across all relkinds,
+`pg_inherits` for both partitioning and legacy inheritance, views and their
+`security_invoker` setting, real ownership via `relowner` — and require every
+object *found* to prove coverage. No hand-written exemption or inclusion list;
+those are what missed the unanticipated arrangement, seven times. 0003 is the
+starting point, not the baseline: it already inverted the enumeration, but it
+resolved properties against something other than the object itself, which is the
+single mistake underneath rounds 5, 6 and 7.
+
+**Honest statement of what `master` now guarantees.** DB-level tenancy
+enforcement that survived seven adversarial audits, plus a behavioural isolation
+suite that catches what no catalog check can. It does **not** have a complete
+deploy-time gate: a misconfiguration introduced by a deploy-time `GRANT` will not
+be caught until the redesign lands. That is a real reduction against what the
+branch tip claimed, and it is the reason the deadline is a gate rather than a
+sentiment.
 
 ### Spend control, reworked twice under review
 
@@ -405,6 +667,13 @@ durably stored answers and a ≥ 90% cache hit rate on a repeat cycle and so
 cannot be evaluated on fixtures at all. The code G1 tests already exists (1.1,
 1.4, 1.5) — what is missing is real data flowing through it.
 
+> **G1 also carries a hard tenancy prerequisite.** The deploy-time gate
+> (`check-deploy.sql`) is partial and must be closed *before* G1, per ADR-0007 —
+> not "before launch". PHASES.md's standing suite item 3 runs the RLS suite at
+> every gate, and G1 is the first gate at which real collected rows exist to be
+> isolated. The redesign is scoped in ADR-0007 §4 and its evidence is on
+> `fix/tenancy-deploy-gate`; it is not an eighth patch round.
+
 **(d) G2 — scoring correctness.** Needs the golden set populated to 300–500
 hand-labelled answers, which needs real collected answers, which needs G0.
 
@@ -421,8 +690,23 @@ write path, and every "valid" QStash token in the tests is minted by our own
 signer. Both fail *closed*, so the risk is silent inaction rather than
 corruption — which is what the collection heartbeat now watches for.
 
-**`p1/db-schema` — merged 2026-08-22.** No longer a blocker. What it leaves
-behind is a `tenancy-auditor` pass on the JWT verifier, which no audit has seen.
+**`p1/db-schema` → the tenancy mechanism, merged 2026-08-24 (ADR-0007).** The
+`tenancy-auditor` pass on the JWT verifier returned a BLOCKER: the verifier was
+an optional path around a GUC any role could set. Fixed in
+`0002_tenancy_context.sql`, then re-audited six more times, every attempted
+bypass blind. On `master`.
+
+**The deploy-time tenancy gate — OPEN, deadline G1.** Not merged, not a
+checklist, not deferred to "before launch". The redesign is decided: derive every
+RLS-relevant object from Postgres's own catalog (`pg_class` across all relkinds,
+`pg_inherits` for partitioning and legacy inheritance, views and their
+`security_invoker` setting, real ownership via `relowner`) and require every
+object *found* to prove coverage — no hand-written exemption or inclusion lists,
+which are what missed the unanticipated arrangement seven times. Existing work
+and all seven audit reports are preserved on `fix/tenancy-deploy-gate`
+(`0003_tenancy_exposure_manifest.sql`, `deploy-check.test.ts`, 78 tests). Until
+it lands, `master` has no complete deploy-time gate: a misconfiguration
+introduced by a deploy-time `GRANT` will not be caught. See §2 and ADR-0007.
 
 **Three provisional numbers, all awaiting G0 data**: the A–D confidence-grade
 thresholds (blocked from live builds), `MIN_N_FOR_COMPARISON`, and the choice of
