@@ -135,8 +135,8 @@ the product.
 |---|---|
 | 3.1 | Category classifier (site content + autocomplete + contacts enrichment) |
 | 3.2 | 200 pre-computed category prompt banks + leader sets, via `/category-bank` |
-| 3.3 | `apps/public` — the free AI Visibility Grader |
-| 3.4 | Head-to-head chart with CI bands; Confidence Grade A–D |
+| 3.3 | `apps/public` — the free AI Visibility Grader. **Scan size must clear `MIN_N_FOR_COMPARISON` in the DEGRADED case, not the nominal one** — see the note below |
+| 3.4 | Head-to-head chart with CI bands; Confidence Grade A–D — **done 2026-08-24** (`4d1cb96`), fixture-only |
 | 3.5 | Email gate on the gap list; indexable public result pages |
 | 3.6 | Turnstile / abuse protection; per-IP budget cap |
 
@@ -149,8 +149,38 @@ the product.
 | **Performance** | **Domain → first scored benchmark** | **p95 ≤ 90 seconds** |
 | **Cost** | Marginal cost per grade (cached category) | ≤ $0.05 |
 | **Cost** | Marginal cost per grade (novel domain) | ≤ $0.20 |
+| Functional | Free-scan sample after simulated engine loss | ≥ `MIN_N_FOR_COMPARISON`, so the head-to-head is not silently empty |
 | Usability | 5 strangers grade their own domain unaided | 5/5 reach the gap list |
 | Usability | 5 strangers can say what the interval means | ≥ 3/5 |
+
+> **The free scan has a floor, and it fights the cost criterion above it.**
+> Decided 2026-08-24. `compare()` refuses any pair below
+> `MIN_N_FOR_COMPARISON`, so a scan under that floor renders a head-to-head in
+> which every verdict is "not enough data" — honest, and useless, on the tier
+> most visitors will ever see. The size is therefore set by what SURVIVES: the
+> G0 pilot got HTTP 403 from all five surfaces at once, so two dark engines is a
+> normal bad day, and 20 prompts × 5 engines × 1 run still leaves 48 answers at
+> 80% yield on three surviving engines.
+>
+> Breadth, not depth. `n_eff = n / DEFF` and DEFF grows with runs per cell, not
+> with prompt count, so one run over many prompts buys more effective sample
+> than many runs over few for the same spend.
+>
+> **This does not close at pay-as-you-go rates.** 20 prompts × 5 engines costs
+> $0.180 at Mega marginal against the ≤ $0.20 novel-domain criterion — a 10%
+> margin — and $0.680 at pay-as-you-go, which is 3.4× over. Even the bare
+> minimum that clears the floor with no failure margin at all (6 prompts × 5
+> engines) is $0.204 at pay-as-you-go, already over the gate. **The free
+> Grader's novel-domain unit economics only close on the Mega tier**, and
+> `Budget` charges every attempt including retries (`maxAttempts: 3`), so
+> realised cost per scan is above nominal. Cached categories are the answer for
+> volume — that is what the 200 pre-computed banks in 3.2 are for — but a novel
+> domain is the acquisition case.
+>
+> Both numbers are provisional. `MIN_N_FOR_COMPARISON` is pending G0's measured
+> design effect, so the floor and therefore the scan size and therefore the cost
+> per grade all move once G0 runs. Nothing hardcodes the floor: the scan asserts
+> against the imported constant.
 
 ---
 

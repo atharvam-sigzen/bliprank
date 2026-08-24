@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 459 passing, 24 files, all offline
+**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 461 passing, 24 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -590,6 +590,66 @@ because the reported 1.02:1 was the band over the CARD next to a bare GRIDLINE, 
 pair a same-surface check never forms. It reproduces both original figures to two
 decimals, which is what shows the harness measures the same thing the designer
 measured by hand. A fix that depends on someone reviewing it again is not a fix.
+
+**Free-scan size — decided 2026-08-24, and there is nowhere yet to configure it.**
+
+The decision: a free scan must collect enough answers to clear
+`MIN_N_FOR_COMPARISON`, so the head-to-head is not silently empty on the tier
+most visitors see. Correct, and it turned out to be unimplementable today —
+**there is no free-tier scan configuration anywhere in the repo.** Verified, not
+assumed:
+
+- `grep -rln grader services/ packages/` matches one doc comment in `format.ts`
+  and nothing else. No Grader collection path exists in any service or package.
+- The Grader "run" in `apps/public/app/page.tsx` is a `setTimeout` returning a
+  fixture. No provider is contacted on any path.
+- `CollectJob.runs` (`qstash.ts`) is a required per-job field with **no default**,
+  and `publishCycle` has **no caller outside tests**. Nothing in the repo builds
+  a collection cycle for the Grader or for any tier.
+- The only job builder is the G0 pilot (`pilot/collect.ts`), a different thing:
+  100 prompts × 5 engines × 10 runs against three known brands, driven by
+  `bank.json` and CLI flags.
+- `packages/contracts` has no tier or plan concept. `packages/db` has
+  `plan: trial|starter|growth|scale` on subscriptions — billing tiers, not scan
+  sizes, and the Grader is pre-signup so none of them applies.
+- P3.1 (category classifier), P3.2 (200 prompt banks) and P3.3 (the real Grader
+  run) are all unbuilt.
+
+So the decision was recorded where it will bind instead of being implemented into
+a config file nothing reads: **PHASES.md 3.3 and a new G3 functional criterion**,
+with the fixture resized to the decided shape (20 prompts × 5 engines × 1 run =
+100) so the scaffold demonstrates it.
+
+**Sized on the degraded case, not the nominal one.** The G0 pilot got HTTP 403
+from all five surfaces simultaneously, so two dark engines is a normal bad day
+rather than pessimism. 20 × 5 leaves 48 answers on three surviving engines at 80%
+yield; 12 × 5 leaves 28.8 and the chart goes silent on exactly the day a customer
+is most likely to be looking. Breadth over depth, too: `n_eff = n / DEFF` and
+DEFF grows with runs per cell rather than prompt count, so one run over many
+prompts buys more effective sample than many runs over few for the same money.
+
+⚠️ **COST FLAG — the free Grader only closes on Mega.** Per scan at one run per
+cell across five engines: **$0.180 at Mega marginal**, $0.280 Ultra, $0.460 Pro,
+**$0.680 pay-as-you-go**. G3's novel-domain criterion is ≤ $0.20. Mega passes
+with a 10% margin; every other plan fails, pay-as-you-go by 3.4×. Even the bare
+minimum that clears the floor with no failure margin (6 prompts × 5 engines) is
+$0.204 at pay-as-you-go — over the gate before any resilience is bought.
+`Budget` charges every *attempt* including retries (`maxAttempts: 3`), so
+realised cost sits above nominal.
+
+⚠️ **And the free surface shares one daily ceiling with paid collection.**
+`COLLECTION_BUDGET_USD_DAILY` is a single global cap (`.env.example` ships 25),
+not a per-tier or per-surface one. At $0.180 a scan that is ~138 novel-domain
+grades a day before the ledger refuses **everything**, paid customers' cycles
+included. Nothing was adjusted: per the standing instruction, budget logic is
+HUMAN-OWNED and a cap change is a decision, not a side effect. The per-IP budget
+cap in P3.6 is the intended control and is unbuilt.
+
+Both numbers are downstream of a provisional one. `MIN_N_FOR_COMPARISON` is
+pending G0's measured design effect, so the floor, the scan size and the cost per
+grade all move when G0 runs. The floor is never written as a literal in the
+Grader: `head-to-head.test.ts` imports the constant and fails if the scan stops
+clearing it, degraded case included.
 
 ⚠️ **TRACKED, NOT FIXED — design-token contrast margin.** The competitor bars
 (`.h2h__interval`, `.h2h__cap`) sit at **3.01:1**, passing WCAG 1.4.11 by 0.01.

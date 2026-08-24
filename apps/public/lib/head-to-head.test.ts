@@ -15,8 +15,8 @@
 
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { wilson, type Metric } from '@bliprank/stats'
-import { COMPETITORS, SCAN_BASIS, SUBJECT_METRIC } from './fixtures'
+import { MIN_N_FOR_COMPARISON, wilson, type Metric } from '@bliprank/stats'
+import { COMPETITORS, GRADER_SCAN, GRADER_SCAN_N, SCAN_BASIS, SUBJECT_METRIC } from './fixtures'
 import { CHART, VERDICT_GLYPH, VERDICT_WORDS, buildHeadToHead, chartHeight, xOf, yOf, type Verdict } from './head-to-head'
 
 const m = (k: number, n: number, over: Partial<Metric> = {}): Metric => {
@@ -180,11 +180,37 @@ describe('the shipped fixture exercises every state the chart can render', () =>
   })
 
   it('the free scan is above the comparison floor, or the whole view says nothing', () => {
-    // At the previous n=15 every verdict was 'insufficient-data'. Recorded as a
+    // At the earlier n=15 every verdict was 'insufficient-data'. Recorded as a
     // test because it is a product constraint on the free tier, not a fixture
     // detail: under the floor, 3.4 cannot honestly render on this surface.
     const compared = h.rows.filter((r) => !r.isSubject && r.verdict !== 'insufficient-data')
     expect(compared.length).toBeGreaterThan(0)
+  })
+
+  it('THE PRODUCT CONSTRAINT: the scan clears the floor even with engines dark and prompts lost', () => {
+    // Compared against the IMPORTED constant, never a literal 30.
+    // MIN_N_FOR_COMPARISON is provisional pending G0's measured design effect,
+    // so when it moves this test is what points at the free-tier scan size
+    // instead of the number being rediscovered in front of a customer.
+    expect(GRADER_SCAN_N).toBeGreaterThanOrEqual(MIN_N_FOR_COMPARISON)
+
+    // The size is set by the degraded case, not the nominal one. The G0 pilot
+    // got HTTP 403 from all five surfaces at once, so two dark engines is a
+    // normal bad day rather than a pessimistic assumption, and prompts that
+    // return nothing parseable come off the top of what is left.
+    const DARK_ENGINES = 2
+    const YIELD = 0.8
+    const degraded = GRADER_SCAN.prompts * (GRADER_SCAN.engines - DARK_ENGINES) * GRADER_SCAN.runsPerCell * YIELD
+    expect(degraded).toBeGreaterThanOrEqual(MIN_N_FOR_COMPARISON)
+  })
+
+  it('the sample comes from prompt breadth, not repeated runs of the same cell', () => {
+    // n_eff = n / DEFF, and DEFF grows with runs per cell rather than with
+    // prompt count, so depth buys less effective sample than breadth for the
+    // same spend. One run per cell also keeps the day×cell correlation the G0
+    // gate measures out of the free surface's numbers entirely.
+    expect(GRADER_SCAN.runsPerCell).toBe(1)
+    expect(GRADER_SCAN.prompts).toBeGreaterThan(GRADER_SCAN.engines)
   })
 
   it('at least one competitor sorts above the subject while remaining indistinguishable', () => {

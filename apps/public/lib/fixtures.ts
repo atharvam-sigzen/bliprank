@@ -22,25 +22,42 @@ const metric = (k: number, n: number, basis: string = SCAN_BASIS): Metric => {
 }
 
 /**
- * The free scan: 12 prompts × 5 engines, one run each.
+ * The free scan: 20 prompts × 5 engines, one run each.
  *
- * ⚠️ THIS SIZE IS NOW A PRODUCT CONSTRAINT, NOT A COSMETIC FIXTURE CHOICE.
+ * ⚠️ THIS IS A PRODUCT CONSTRAINT, NOT A FIXTURE CHOICE — PHASES.md 3.3.
  *
- * The scaffold previously used n=15. `compare()` refuses any pair below
- * `MIN_N_FOR_COMPARISON` (30), so at n=15 every head-to-head verdict is "not
- * enough data" and the chart states nothing at all. That is the honest output at
- * that sample — which is the finding: a free scan under 30 answers cannot
- * support a competitor comparison, so either the free tier collects at least
- * that many or 3.4 does not ship on the free surface.
+ * `compare()` refuses any pair below `MIN_N_FOR_COMPARISON`, so a free scan
+ * under that floor renders a head-to-head in which every verdict is "not enough
+ * data". That is the honest output at that size, and it is also useless: the
+ * comparison is the reason the chart exists. The scaffold sat at n=15 and said
+ * nothing at all.
  *
- * 60 is the smallest round figure comfortably above the floor. It is provisional
- * in the same way `MIN_N_FOR_COMPARISON` is: the real number falls out of G0,
- * because the floor itself is pending the measured design effect.
+ * The size is set by the DEGRADED case, not the nominal one. Engines go dark —
+ * the G0 pilot got HTTP 403 from all five at once — and prompts return
+ * unparseable answers, so the number that matters is what survives: 20 prompts
+ * across 3 surviving engines at 80% yield is still 48, comfortably clear. At 12
+ * prompts the same degradation lands on 28.8 and the chart goes silent on
+ * exactly the bad day a customer is most likely to be looking.
+ *
+ * Breadth, not depth: the n comes from distinct prompts at one run each rather
+ * than repeated runs of fewer prompts. Repetition within a cell is what the
+ * design effect charges for — n_eff = n / DEFF, and DEFF grows with runs per
+ * cell, not with prompt count — so 20×5×1 buys far more effective sample than
+ * 4×5×5 for the same money and the same wall-clock.
+ *
+ * `MIN_N_FOR_COMPARISON` is itself provisional pending G0's measured design
+ * effect, so this size is downstream of a number that will move. It is never
+ * compared against a literal here: `head-to-head.test.ts` imports the constant
+ * and fails if the scan stops clearing it, which is what makes the floor cheap
+ * to change later.
  */
-export const GRADER_SCAN = { successes: 14, answers: 60 } as const
+export const GRADER_SCAN = { prompts: 20, engines: 5, runsPerCell: 1, successes: 23 } as const
+
+/** Nominal answers in a clean scan. The degraded case is asserted in the tests. */
+export const GRADER_SCAN_N = GRADER_SCAN.prompts * GRADER_SCAN.engines * GRADER_SCAN.runsPerCell
 
 /** The graded domain's own result. */
-export const SUBJECT_METRIC: Metric = metric(GRADER_SCAN.successes, GRADER_SCAN.answers)
+export const SUBJECT_METRIC: Metric = metric(GRADER_SCAN.successes, GRADER_SCAN_N)
 
 /**
  * The competitor set, as the category registry would return it.
@@ -52,15 +69,15 @@ export const SUBJECT_METRIC: Metric = metric(GRADER_SCAN.successes, GRADER_SCAN.
  */
 export const COMPETITORS = [
   // Separated above the subject — a genuinely different result.
-  { label: 'Salesforce', metric: metric(36, 60) },
+  { label: 'Salesforce', metric: metric(60, GRADER_SCAN_N) },
   // Overlaps the subject from above. The point estimate is higher and the
   // verdict is still "cannot be separated": this is the row that proves the
   // ordering is not a ranking.
-  { label: 'HubSpot', metric: metric(18, 60) },
+  { label: 'HubSpot', metric: metric(30, GRADER_SCAN_N) },
   // Overlaps from below, for the same reason in the other direction.
-  { label: 'Pipedrive', metric: metric(11, 60) },
+  { label: 'Pipedrive', metric: metric(18, GRADER_SCAN_N) },
   // Separated below.
-  { label: 'Freshsales', metric: metric(2, 60) },
+  { label: 'Freshsales', metric: metric(4, GRADER_SCAN_N) },
   // Added to the category registry part-way through the window, so only part of
   // the scan was scored against it. Below the comparison floor, so it is drawn
   // with its interval and explicitly not compared.
@@ -68,5 +85,5 @@ export const COMPETITORS = [
   // Absent from two engines in this locale, so its denominator is a different
   // shape. Separated intervals here would render a composition difference as a
   // competitive gap — the exact error `comparison_basis` exists to catch.
-  { label: 'Zoho', metric: metric(21, 36, 'grader|engines=chatgpt,gemini,copilot|en-GB|GB|auto-bank|1cycle') },
+  { label: 'Zoho', metric: metric(35, 60, 'grader|engines=chatgpt,gemini,copilot|en-GB|GB|auto-bank|1cycle') },
 ] as const
