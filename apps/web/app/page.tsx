@@ -1,11 +1,14 @@
 import { compare, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
 import { MetricCard, DeltaBadge } from '@/components/metric-card'
 import { CiTrendChart } from '@/components/ci-trend-chart'
+import { ProductBar } from '@/components/chrome'
 import { BY_ENGINE, HEADLINE, SOURCE_MIX, TREND } from '@/lib/fixtures'
 
 export default function Dashboard() {
   return (
     <main className="shell">
+      <ProductBar current="dashboard" />
+
       <header className="masthead">
         <div>
           <h1>Acme CRM — AI search visibility</h1>

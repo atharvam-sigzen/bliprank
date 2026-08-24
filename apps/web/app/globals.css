@@ -23,7 +23,7 @@
   --color-muted: #e9eef6;
   --color-muted-foreground: #475569;
   --color-border: #dbeafe;
-  --color-destructive: #dc2626;
+  --color-destructive: #b91c1c;
   --color-ring: #1e40af;
 
   /* Neutral by design: a movement inside the interval gets NO colour cue. */
@@ -209,8 +209,8 @@ a {
    * is a data statement, so it takes the data colour.
    */
   border-color: var(--color-primary);
-  background: #dbeafe;
-  color: #14306e;
+  background: var(--color-delta-bg);
+  color: var(--color-delta-ink);
   font-weight: 600;
 }
 
@@ -338,10 +338,10 @@ td.num {
 /* --- notices ------------------------------------------------------------ */
 
 .notice {
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-notice-border);
   border-left-width: 3px;
-  background: #fffbeb;
-  color: #713f12;
+  background: var(--color-notice-bg);
+  color: var(--color-notice-ink);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
   font-size: 0.8125rem;
@@ -445,4 +445,298 @@ main > h1 {
 a {
   color: var(--color-primary);
   text-underline-offset: 2px;
+}
+
+/* ==========================================================================
+   THEME — light, dark, and the system default
+   ==========================================================================
+   Three states, not two. An explicit choice stamps `data-theme` on <html> and
+   must win in BOTH directions; with nothing stamped, the OS preference decides.
+   A two-state implementation (`.dark` class only) cannot express "I chose light
+   on a dark-mode machine", which is the one a reader notices.
+
+   Every dark value below was measured before it was written, not adjusted until
+   it looked right: text at 4.5:1 and every chart mark at 3:1 against every
+   surface it lands on. The contrast suite runs over BOTH palettes, so a dark
+   theme cannot ship half-verified.
+
+   `color-scheme` is set so the browser paints form controls, scrollbars and the
+   canvas to match — without it a dark page keeps light scrollbars. */
+
+:root {
+  color-scheme: light;
+
+  /* Tokens for the two components that carried raw hex. A hardcoded #dbeafe is
+     invisible to a theme switch: it stays a light-mode colour on a dark page. */
+  --color-delta-bg: #dbeafe;
+  --color-delta-ink: #14306e;
+  --color-notice-bg: #fffbeb;
+  --color-notice-ink: #713f12;
+  --color-notice-border: var(--color-accent);
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 4px 16px rgb(15 23 42 / 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --color-primary: #7ba7f0;
+    --color-on-primary: #060a13;
+    --color-secondary: #4d8ae0;
+    --color-accent: #f5a524;
+    --color-on-accent: #060a13;
+
+    --color-background: #060a13;
+    --color-foreground: #e6edf9;
+    --color-card: #121b2e;
+    --color-card-foreground: #e6edf9;
+    --color-muted: #1e2a42;
+    --color-muted-foreground: #a3b3cc;
+    --color-border: #2c3d5a;
+    --color-destructive: #f87171;
+    --color-ring: #7ba7f0;
+    --color-neutral-ink: #a3b3cc;
+
+    --color-delta-bg: #1e3a6e;
+    --color-delta-ink: #cfe0ff;
+    --color-notice-bg: #2a1f08;
+    --color-notice-ink: #f6dcb0;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.55);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-primary: #7ba7f0;
+  --color-on-primary: #060a13;
+  --color-secondary: #4d8ae0;
+  --color-accent: #f5a524;
+  --color-on-accent: #060a13;
+
+  --color-background: #060a13;
+  --color-foreground: #e6edf9;
+  --color-card: #121b2e;
+  --color-card-foreground: #e6edf9;
+  --color-muted: #1e2a42;
+  --color-muted-foreground: #a3b3cc;
+  --color-border: #2c3d5a;
+  --color-destructive: #f87171;
+  --color-ring: #7ba7f0;
+  --color-neutral-ink: #a3b3cc;
+
+  --color-delta-bg: #1e3a6e;
+  --color-delta-ink: #cfe0ff;
+  --color-notice-bg: #2a1f08;
+  --color-notice-ink: #f6dcb0;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.55);
+}
+
+/* --- product bar: the two surfaces are one product ----------------------- */
+/*
+ * The dashboard and the Grader are separate deploys for hosting reasons
+ * (ADR-0002), which is an infrastructure fact and not something a reader should
+ * have to infer from two unrelated-looking pages. One bar, one mark, and each
+ * surface names the other.
+ */
+.productbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-card);
+  padding: var(--space-2) var(--space-3);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-3)) var(--space-4);
+}
+
+.productbar__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.productbar__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.productbar__nav {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.productbar__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+  text-decoration: none;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.productbar__link:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+/* The current surface is marked with a border and weight, never colour alone. */
+.productbar__link[aria-current='page'] {
+  border-color: var(--color-border);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+/* --- theme toggle -------------------------------------------------------- */
+.themetoggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.themetoggle:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+/* --- interactive rows and cards ------------------------------------------ */
+.card {
+  box-shadow: var(--shadow-card);
+}
+
+tbody tr {
+  transition: background 120ms ease;
+}
+
+tbody tr:hover {
+  background: var(--color-muted);
+}
+
+/* --- chart interaction --------------------------------------------------- */
+/*
+ * Hover is not the only way in. The guidance is explicit that a hover-only
+ * affordance fails on touch, so every hotspot is a real button: focusable,
+ * operable with Enter or Space, and dismissible with Escape. The same numbers
+ * are also in the visually-hidden table under each chart, which is what a
+ * screen reader actually reads.
+ */
+.chart__hit {
+  fill: transparent;
+  stroke: transparent;
+  cursor: pointer;
+}
+
+.chart__hit:hover ~ .chart__dot,
+.chart__hit:focus-visible ~ .chart__dot {
+  r: 5;
+}
+
+.chart__hit:focus-visible {
+  stroke: var(--color-ring);
+  stroke-width: 2;
+  outline: none;
+}
+
+.chart__crosshair {
+  stroke: var(--color-primary);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.h2h__row-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.h2h__row-hit:hover,
+.h2h__row-hit:focus-visible {
+  fill: var(--color-muted);
+  outline: none;
+}
+
+.h2h__row-hit:focus-visible {
+  stroke: var(--color-ring);
+  stroke-width: 2;
+}
+
+/* --- tooltip ------------------------------------------------------------- */
+/*
+ * A real element in the flow rather than a floating overlay: it cannot be
+ * clipped by the SVG viewBox, it reflows on a narrow screen instead of hanging
+ * off the edge, and it is announced because it is live rather than because a
+ * screen reader happened to follow the pointer.
+ */
+.tip {
+  min-height: 74px;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-size: 0.8125rem;
+}
+
+.tip__idle {
+  color: var(--color-muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.tip__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.tip__value {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.tip__row {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  margin-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .productbar__link,
+  .themetoggle,
+  tbody tr {
+    transition: none;
+  }
 }

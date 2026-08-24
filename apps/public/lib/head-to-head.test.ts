@@ -237,8 +237,16 @@ const SHEETS: readonly { name: string; css: string }[] = [
 ]
 
 /** Custom properties from `:root`, so the test moves when the palette moves. */
-const tokensOf = (css: string): Record<string, string> =>
-  Object.fromEntries([...(/:root\s*\{([^}]*)\}/.exec(css)?.[1] ?? '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]))
+function tokensOf(css: string): Record<string, string> {
+  // EVERY `:root` block, merged in source order, because that is how the browser
+  // resolves them — a second block redefining a token wins. Reading only the
+  // first made this suite disagree with the page it was measuring.
+  const out: Record<string, string> = {}
+  for (const block of css.matchAll(/:root\s*\{([^}]*)\}/g)) {
+    for (const m of block[1]!.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[m[1]!] = m[2]!.trim()
+  }
+  return out
+}
 
 function declarationsIn(css: string, selector: string): Record<string, string> | null {
   const body = new RegExp(`${selector.replace(/[.\-]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css)?.[1]
@@ -247,6 +255,23 @@ function declarationsIn(css: string, selector: string): Record<string, string> |
 }
 
 const CSS = SHEETS[0]!.css
+
+/**
+ * Tokens for one theme. Light is `:root`; dark is the `[data-theme='dark']`
+ * block layered over it, which is how the cascade actually resolves — the dark
+ * block only redefines what changes, so a token it omits keeps its light value
+ * and would be measured against a dark surface. That is precisely the bug this
+ * has to be able to catch.
+ */
+function themeTokens(css: string, theme: 'light' | 'dark'): Record<string, string> {
+  const light = tokensOf(css)
+  if (theme === 'light') return light
+  const darkBlock = /:root\[data-theme='dark'\]\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+  const dark = Object.fromEntries([...darkBlock.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]))
+  return { ...light, ...dark }
+}
+
+const THEMES = ['light', 'dark'] as const
 const TOKENS = tokensOf(CSS)
 
 function declarations(selector: string): Record<string, string> {
@@ -315,28 +340,77 @@ const MARKS: readonly { selector: string; prop: 'stroke' | 'fill' | 'background'
 ]
 
 describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface it lands on', () => {
-  for (const mark of MARKS) {
-    it(`${mark.selector} (${mark.prop})`, () => {
-      const decl = declarations(mark.selector)
-      const colour = resolve(decl[mark.prop] ?? '')
-      expect(colour, `${mark.selector} declares no ${mark.prop}`).toMatch(/^#/)
-      const alpha = Number(decl[`${mark.prop}-opacity`] ?? '1')
+  for (const theme of THEMES) {
+    for (const mark of MARKS) {
+      it(`${theme}: ${mark.selector} (${mark.prop})`, () => {
+        // Resolved against THIS theme's palette. Adding a dark mode without this
+        // would leave half the product's contrast unverified while the suite
+        // reported green — the marks all change colour, and so do the surfaces
+        // they are measured against.
+        const tokens = themeTokens(CSS, theme)
+        const resolveIn = (v: string): string => (v.startsWith('var(') ? (tokens[v.slice(4, -1).trim()] ?? v) : v)
+        const decl = declarations(mark.selector)
+        const colour = resolveIn(decl[mark.prop] ?? '')
+        expect(colour, `${mark.selector} declares no ${mark.prop}`).toMatch(/^#/)
+        const alpha = Number(decl[`${mark.prop}-opacity`] ?? '1')
 
       // The full adjacency matrix, not just mark-against-its-own-backdrop.
       // 1.4.11 is about ADJACENT colours, and the mark's neighbour is often not
       // the thing it is painted on: the original CRITICAL's 1.02:1 figure was
       // the band composited over the CARD sitting next to a bare GRIDLINE, a
       // pair a naive same-surface check never forms.
-      for (const drawnOn of mark.on) {
-        const composite = over(colour, resolve(`var(${SURFACES[drawnOn]})`), alpha)
-        for (const adjacent of mark.on) {
-          const neighbour = resolve(`var(${SURFACES[adjacent]})`)
-          const ratio = contrastRatio(composite, rgb(neighbour))
-          expect(ratio, `${mark.selector} ${mark.prop} drawn on ${drawnOn}, beside ${adjacent}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+        for (const drawnOn of mark.on) {
+          const composite = over(colour, resolveIn(`var(${SURFACES[drawnOn]})`), alpha)
+          for (const adjacent of mark.on) {
+            const neighbour = resolveIn(`var(${SURFACES[adjacent]})`)
+            const ratio = contrastRatio(composite, rgb(neighbour))
+            expect(ratio, `${theme}: ${mark.selector} ${mark.prop} on ${drawnOn}, beside ${adjacent}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+          }
+        }
+      })
+    }
+  }
+
+  it('TEXT clears 4.5:1 in both themes, on every surface it is printed on', () => {
+    // Marks are 3:1; text is 4.5:1 and was never checked at all. A dark theme is
+    // where that bites — a muted-foreground tuned for a white card is unreadable
+    // on a dark one, and nothing above would have noticed.
+    const inks = ['--color-foreground', '--color-card-foreground', '--color-muted-foreground', '--color-neutral-ink', '--color-destructive']
+    const grounds = ['--color-card', '--color-background', '--color-muted']
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      for (const ink of inks) {
+        for (const ground of grounds) {
+          const ratio = contrastRatio(rgb(t[ink]!), rgb(t[ground]!))
+          expect(ratio, `${theme}: ${ink} on ${ground} is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
         }
       }
-    })
-  }
+      // The two components that carried raw hex until they were tokenised.
+      for (const [ink, ground] of [
+        ['--color-delta-ink', '--color-delta-bg'],
+        ['--color-notice-ink', '--color-notice-bg'],
+      ] as const) {
+        const ratio = contrastRatio(rgb(t[ink]!), rgb(t[ground]!))
+        expect(ratio, `${theme}: ${ink} on ${ground} is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
+  it('the dark block redefines every token whose light value would not survive', () => {
+    // A token the dark block forgets keeps its LIGHT value on a dark surface.
+    // That is a silent failure — the page still renders — so it is checked by
+    // name rather than left to the ratio sweep to catch by accident.
+    const light = themeTokens(CSS, 'light')
+    const dark = themeTokens(CSS, 'dark')
+    const mustChange = [
+      '--color-background', '--color-foreground', '--color-card', '--color-card-foreground',
+      '--color-muted', '--color-muted-foreground', '--color-border', '--color-primary',
+      '--color-secondary', '--color-neutral-ink', '--color-delta-bg', '--color-delta-ink',
+      '--color-notice-bg', '--color-notice-ink',
+    ]
+    const unchanged = mustChange.filter((k) => light[k] === dark[k])
+    expect(unchanged).toEqual([])
+  })
 
   it('the check bites — it scores the two CRITICALs review found as failures', () => {
     // Without this the suite above proves only that today's values pass, which

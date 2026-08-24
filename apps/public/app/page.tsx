@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
+import { ProductBar } from '@/components/chrome'
 import { HeadToHeadChart } from '@/components/head-to-head-chart'
 import { buildHeadToHead } from '@/lib/head-to-head'
 import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
@@ -69,6 +70,8 @@ export default function Grader() {
 
   return (
     <main className="shell" style={{ maxWidth: 860 }}>
+      <ProductBar current="grader" />
+
       <header className="masthead">
         <div>
           <h1>AI Visibility Grader</h1>

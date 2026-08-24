@@ -1,5 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import type { Metric } from '@bliprank/stats'
-import { formatInterval, formatValue } from '@bliprank/stats'
+import { compare, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
 
 export interface TrendPoint {
   /** Cycle label, e.g. an ISO date. */
@@ -22,6 +25,7 @@ export interface TrendPoint {
  * per-prompt drill-down needs interaction (P4.2).
  */
 export function CiTrendChart({ points, title, height = 200 }: { points: readonly TrendPoint[]; title: string; height?: number }) {
+  const [active, setActive] = useState<number | null>(null)
   if (points.length === 0) return <p className="metric__interval">No cycles collected yet.</p>
 
   const W = 600
@@ -81,7 +85,46 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
             {p.cycle.slice(5)}
           </text>
         ))}
+
+        {active !== null ? <line className="chart__crosshair" x1={x(active)} x2={x(active)} y1={PAD.top} y2={H - PAD.bottom} /> : null}
+
+        {/*
+          One hotspot per point, wide enough to be a 44px-class target on a
+          phone rather than a 3px dot. Every one is a real focusable control:
+          the guidance is explicit that a hover-only affordance simply does not
+          exist on touch, and a `div` with an onMouseEnter is not operable by
+          keyboard either. Drawn last so they sit above the marks.
+        */}
+        {points.map((p, i) => (
+          <rect
+            key={`hit-${p.cycle}`}
+            className="chart__hit"
+            x={x(i) - Math.max(12, plotW / (points.length * 2))}
+            y={PAD.top}
+            width={Math.max(24, plotW / points.length)}
+            height={plotH}
+            rx={3}
+            tabIndex={0}
+            role="button"
+            aria-label={`${p.cycle}: ${formatValue(p.metric)}, 95% interval ${formatInterval(p.metric)}, n=${p.metric.n}`}
+            aria-pressed={active === i}
+            onMouseEnter={() => setActive(i)}
+            onMouseLeave={() => setActive(null)}
+            onFocus={() => setActive(i)}
+            onBlur={() => setActive(null)}
+            onClick={() => setActive((c) => (c === i ? null : i))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setActive((c) => (c === i ? null : i))
+              }
+              if (e.key === 'Escape') setActive(null)
+            }}
+          />
+        ))}
       </svg>
+
+      <TrendTip points={points} active={active} />
 
       {/* A screen reader cannot navigate a concatenated aria-label point by
           point, so the same data is offered as a real table. */}
@@ -123,5 +166,56 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
         <span>Scale fixed 0–100%, never auto-fitted.</span>
       </figcaption>
     </figure>
+  )
+}
+
+/**
+ * The detail panel for the hovered, tapped or focused cycle.
+ *
+ * A block in the flow rather than a floating overlay: it cannot be clipped by
+ * the SVG viewBox, it reflows on a narrow screen instead of hanging off the
+ * edge, and `aria-live` announces it because it is live — not because a screen
+ * reader happened to follow a pointer it does not have.
+ *
+ * It reserves its height whether or not anything is active, so hovering the
+ * chart does not shove the rest of the page down (CLS).
+ *
+ * R8 applies here as much as anywhere: the panel shows the interval, the sample
+ * size and the provenance, never a bare value. And where a cycle can be compared
+ * with the one before it, the verdict is `compare()`'s, so a movement inside the
+ * interval reads as "no significant change" here exactly as it does in a card.
+ */
+function TrendTip({ points, active }: { points: readonly TrendPoint[]; active: number | null }) {
+  if (active === null) {
+    return (
+      <div className="tip" aria-live="polite">
+        <p className="tip__idle" style={{ margin: 0 }}>
+          Hover, tap or tab to a cycle for its interval and provenance.
+        </p>
+      </div>
+    )
+  }
+  const p = points[active]!
+  const prev = active > 0 ? points[active - 1] : undefined
+  const verdict = prev ? compare(p.metric, prev.metric) : null
+
+  return (
+    <div className="tip" aria-live="polite">
+      <div className="tip__head">
+        <span>{p.cycle}</span>
+        <span className="tip__value">{formatValue(p.metric)}</span>
+      </div>
+      <p className="tip__row" style={{ margin: 0 }}>
+        95% interval {formatInterval(p.metric)} · n={p.metric.n}
+      </p>
+      {verdict ? (
+        <p className="tip__row" style={{ margin: 0 }}>
+          vs {prev!.cycle}: {verdict.label}
+        </p>
+      ) : null}
+      <p className="tip__row" style={{ margin: 0 }}>
+        {formatProvenance(p.metric)}
+      </p>
+    </div>
   )
 }

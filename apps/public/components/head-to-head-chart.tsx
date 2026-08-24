@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
 import { CHART, VERDICT_GLYPH, VERDICT_WORDS, chartHeight, xOf, yOf, type HeadToHead, type HeadToHeadRow } from '../lib/head-to-head'
 
@@ -19,6 +22,7 @@ import { CHART, VERDICT_GLYPH, VERDICT_WORDS, chartHeight, xOf, yOf, type HeadTo
  * of the picture, where it is far harder to find than a constant.
  */
 export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subjectLabel: string }) {
+  const [active, setActive] = useState<number | null>(null)
   const { rows } = data
   const H = chartHeight(rows.length)
   const plotRight = CHART.width - CHART.padRight
@@ -63,10 +67,46 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
           <Row key={row.label} row={row} y={yOf(i)} />
         ))}
 
+        {/*
+          A full-width hotspot per row, drawn last so it sits above the marks.
+          Real buttons rather than hover targets: hover does not exist on touch,
+          and a bar 3px tall is not a pointer target on a phone either. The row
+          band is.
+        */}
+        {rows.map((row, i) => (
+          <rect
+            key={`hit-${row.label}`}
+            className="h2h__row-hit"
+            x={2}
+            y={yOf(i) - CHART.rowHeight / 2}
+            width={CHART.width - 4}
+            height={CHART.rowHeight}
+            rx={3}
+            tabIndex={0}
+            role="button"
+            aria-label={`${row.label}: ${formatValue(row.metric)}, 95% interval ${formatInterval(row.metric)}, n=${row.metric.n}, ${VERDICT_WORDS[row.verdict]}`}
+            aria-pressed={active === i}
+            onMouseEnter={() => setActive(i)}
+            onMouseLeave={() => setActive(null)}
+            onFocus={() => setActive(i)}
+            onBlur={() => setActive(null)}
+            onClick={() => setActive((c) => (c === i ? null : i))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setActive((c) => (c === i ? null : i))
+              }
+              if (e.key === 'Escape') setActive(null)
+            }}
+          />
+        ))}
+
         <text className="chart__tick" x={plotRight} y={H - 14} textAnchor="end">
           mention rate
         </text>
       </svg>
+
+      <RowTip rows={rows} active={active} subjectLabel={subjectLabel} />
 
       {/* A screen reader cannot navigate a concatenated aria-label row by row,
           so the same data is offered as a real table — including the verdict as
@@ -164,5 +204,46 @@ function Row({ row, y }: { row: HeadToHeadRow; y: number }) {
         {VERDICT_GLYPH[row.verdict]}
       </text>
     </g>
+  )
+}
+
+/**
+ * The detail panel for the hovered, tapped or focused brand.
+ *
+ * The verdict is the point of it. A reader looking at two bars that nearly touch
+ * wants to know whether the difference is real, and this is where the chart
+ * answers in words rather than leaving them to judge overlap by eye — which is
+ * exactly the judgement the product argues nobody should have to make.
+ */
+function RowTip({ rows, active, subjectLabel }: { rows: readonly HeadToHeadRow[]; active: number | null; subjectLabel: string }) {
+  if (active === null) {
+    return (
+      <div className="tip" aria-live="polite">
+        <p className="tip__idle" style={{ margin: 0 }}>
+          Hover, tap or tab to a brand for its interval and how it compares with {subjectLabel}.
+        </p>
+      </div>
+    )
+  }
+  const row = rows[active]!
+  return (
+    <div className="tip" aria-live="polite">
+      <div className="tip__head">
+        <span>
+          {row.label}
+          {row.isSubject ? ' — your brand' : ''}
+        </span>
+        <span className="tip__value">{formatValue(row.metric)}</span>
+      </div>
+      <p className="tip__row" style={{ margin: 0 }}>
+        95% interval {formatInterval(row.metric)} · n={row.metric.n}
+      </p>
+      <p className="tip__row" style={{ margin: 0 }}>
+        {row.isSubject ? 'This is the domain being graded.' : `Versus ${subjectLabel}: ${VERDICT_WORDS[row.verdict]}.`}
+      </p>
+      <p className="tip__row" style={{ margin: 0 }}>
+        {formatProvenance(row.metric)}
+      </p>
+    </div>
   )
 }
