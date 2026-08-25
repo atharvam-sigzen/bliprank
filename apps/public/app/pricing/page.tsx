@@ -64,10 +64,19 @@ export default function Pricing() {
                 {t.id === 'pro' ? <span className="tier__flag">Most chosen</span> : null}
                 <h3 className="tier__name">{t.name}</h3>
 
-                <p className="tier__price">
-                  <span className="tier__amount">${t.usdPerMonth}</span>
+                {/*
+                  The price is typeset in three pieces for the eye and read as
+                  one sentence by a screen reader. Marking only the "$" hidden
+                  would have produced "149 slash month US dollars per month",
+                  so the whole visual group is hidden and the sentence replaces
+                  it rather than being appended to it.
+                */}
+                <p className="tier__price" aria-hidden="true">
+                  <span className="tier__currency">$</span>
+                  <span className="tier__amount">{t.usdPerMonth}</span>
                   <span className="tier__unit">/month</span>
                 </p>
+                <p className="visually-hidden">{t.usdPerMonth} US dollars per month</p>
                 <p className="tier__for">{t.forWhom}</p>
 
                 <p className="tier__cap">

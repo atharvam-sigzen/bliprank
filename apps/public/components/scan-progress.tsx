@@ -82,20 +82,7 @@ export function ScanRefusal({ kind, message, onReset }: { kind: string; message:
       <p className="metric__provenance">
         No number is shown because there is no measurement behind one. Nothing here falls back to sample data.
       </p>
-      <button
-        type="button"
-        onClick={onReset}
-        style={{
-          marginTop: 'var(--space-3)',
-          minHeight: 44,
-          padding: '0 var(--space-3)',
-          background: 'transparent',
-          color: 'var(--color-primary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius)',
-          fontWeight: 500,
-        }}
-      >
+      <button type="button" onClick={onReset} className="btn btn--quiet" style={{ marginTop: 'var(--space-3)' }}>
         Try another domain
       </button>
     </section>

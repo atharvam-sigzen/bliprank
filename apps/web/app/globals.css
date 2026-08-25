@@ -1440,3 +1440,263 @@ main > h1 {
   }
 }
 
+/* ==========================================================================
+   MATERIAL & INTERACTION
+   Depth here is physical, not decorative: a card is a panel with a lit top edge
+   and a shadow under it, and pressing something moves it. Nothing glows, nothing
+   gradients, and no surface competes with a number for attention.
+   ========================================================================== */
+
+/*
+ * The lit top edge. One inset hairline is the whole trick — it reads as a panel
+ * catching light from above, which is what makes a flat rectangle feel like an
+ * object. Light theme gets white; dark theme gets a faint warm lift, because
+ * white-on-dark reads as a glow rather than as an edge.
+ */
+:root {
+  --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --lift: translateY(-1px);
+  /*
+   * A CONTROL BOUNDARY IS NOT A HAIRLINE, AND --color-border IS ONLY A HAIRLINE.
+   *
+   * --color-border computes 1.24:1 against the card. That is right for a rule
+   * between sections and wrong for the edge of a text field, which is the only
+   * thing telling a reader where the input is — WCAG 1.4.11 asks for 3:1 on
+   * exactly that. The old inline style used --color-border and nothing could see
+   * it, because inline colours never reach the contrast suite.
+   *
+   * Tuned to clear 3:1 on the card AND on the page background, in both themes,
+   * without going as heavy as --color-muted-foreground (5.85:1), which reads as
+   * a filled outline rather than an edge. Asserted, not eyeballed.
+   */
+  --color-field-border: #828d9e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    --color-field-border: #5b6a80;
+  }
+}
+:root[data-theme='dark'] {
+  --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --color-field-border: #5b6a80;
+}
+
+.card,
+.stamp,
+.capsplit,
+.tip {
+  box-shadow: var(--shadow-card), var(--edge-light);
+}
+
+/*
+ * EVERY card lifts, not just the ones in a grid. The result card is the single
+ * most looked-at surface in the product and it was the one that did not respond
+ * to the pointer at all.
+ */
+.card {
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-raised), var(--edge-light);
+  transform: var(--lift);
+}
+
+/*
+ * THE CALIBRATION FIELD. The same ruler idea as the rail, at page scale: a
+ * 32px grid, drawn at an opacity where it registers as texture rather than as
+ * lines you could count. It sits on the page background only — never under a
+ * card — so it never touches the contrast of anything that carries meaning.
+ */
+body {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-border) 45%, transparent) 0 1px, transparent 1px 32px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-border) 45%, transparent) 0 1px, transparent 1px 32px);
+}
+
+/*
+ * The grid holds still while the content scrolls over it — the backdrop of an
+ * instrument rather than wallpaper attached to the page.
+ *
+ * Desktop pointers only. `background-attachment: fixed` is a known repaint
+ * problem on mobile Safari, where it stutters the whole scroll, and the effect
+ * is not worth that. Everywhere else the grid simply scrolls with the page,
+ * which looks fine.
+ */
+@media (hover: hover) and (pointer: fine) {
+  body {
+    background-attachment: fixed;
+  }
+}
+
+/* --- controls ------------------------------------------------------------ */
+
+.field__label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: var(--space-1);
+}
+
+.field__row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.field {
+  flex: 1 1 260px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--color-foreground);
+  background: var(--color-card);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.04);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.field:hover:not(:disabled) {
+  border-color: var(--color-muted-foreground);
+}
+/*
+ * The focus ring is drawn with box-shadow rather than replacing the global
+ * outline, so the outline stays for Windows high-contrast mode, where
+ * box-shadow is discarded and an outline is the only thing that survives.
+ */
+.field:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.04),
+    0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+.field--invalid {
+  border-color: var(--color-destructive);
+}
+.field:disabled {
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  cursor: not-allowed;
+}
+.field::placeholder {
+  color: var(--color-muted-foreground);
+}
+
+.field__error {
+  color: var(--color-destructive);
+  font-size: 0.8125rem;
+  margin-bottom: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 80ms ease;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-card), var(--edge-light);
+}
+.btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 88%, var(--color-foreground));
+  box-shadow: var(--shadow-raised), var(--edge-light);
+}
+/* Pressing moves it. A button that does not move on :active feels like an image
+   of a button, and this is the one control the whole demo runs through. */
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.btn:disabled {
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  border-color: var(--color-border);
+  box-shadow: none;
+  cursor: progress;
+}
+
+.btn--quiet {
+  background: transparent;
+  color: var(--color-primary);
+  border-color: var(--color-border);
+  font-weight: 500;
+  padding: 0 var(--space-3);
+}
+.btn--quiet:hover:not(:disabled) {
+  background: var(--color-muted);
+  border-color: var(--color-primary);
+}
+
+/* --- the precision badge ------------------------------------------------- */
+
+.gradeline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.gradebadge {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: var(--radius);
+  background: var(--color-muted);
+  border: 1px solid var(--color-field-border);
+  box-shadow: var(--edge-light);
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+  grid-auto-flow: row;
+}
+
+.gradebadge__cap {
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+}
+
+/* --- motion off ---------------------------------------------------------- */
+
+/*
+ * Everything with a transition above is listed here. The test in
+ * apps/public/lib/head-to-head.test.ts parses both stylesheets and fails if any
+ * selector declares a transition or animation without appearing in one of these
+ * blocks — so this cannot drift out of date silently.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .field,
+  .btn,
+  .card:hover,
+  .btn:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+}

@@ -891,6 +891,68 @@ so it is tested rather than reasoned about:
 
 607 tests, 31 files. Typecheck clean.
 
+### Material, interaction and pricing craft (2026-08-25)
+
+A second design pass, built on the Instrument Serif / range-growth / ruler-tick
+direction rather than replacing it. Three areas, and the verification is the
+point of the entry.
+
+**Material.** Cards, the stamp, the splitter panel and the detail tip now carry a
+lit top edge (`--edge-light`, one inset hairline) over their shadow, which is
+what makes a flat rectangle read as a panel. Every card lifts on hover, not just
+the ones in a grid — the result card, the most-looked-at surface in the product,
+previously did not respond to the pointer at all. The page background carries a
+32px calibration grid, the ruler idea at page scale, held still under the content
+on desktop pointers only (`background-attachment: fixed` stutters mobile Safari).
+
+**Interaction.** ⚠️ **The primary form was entirely inline-styled** — the input
+and the submit button, the two controls the whole demo runs through. That meant
+no hover, no `:active`, no disabled treatment, colours the contrast suite is
+structurally blind to, and a `transition` written inline **where
+`prefers-reduced-motion` can never reach it**. All of it is now `.field` / `.btn`
+/ `.btn--quiet` classes with hover, press, focus and disabled states. The focus
+ring is drawn with `box-shadow` *in addition to* the global outline, so Windows
+high-contrast mode — which discards shadows — keeps a visible ring.
+
+**Pricing.** The featured tier is raised and capped with a 3px accent rail rather
+than tinted, because a colour wash behind a price sits badly next to numbers this
+product asks people to trust. The price is typeset (small raised currency mark,
+3rem mono figure, tight tracking) and read to screen readers as one sentence
+instead of "149 slash month US dollars per month". Feature rows get a hairline
+marker rather than a tick — these are specifications, not benefits. The pool bar
+and splitter carry the same calibration ticks as the range rail, so the two
+signature components are visibly from one instrument.
+
+**⚠️ TWO REAL FAILURES, BOTH FOUND BY COMPUTING RATHER THAN LOOKING.**
+
+| Finding | Was | Needed | Fix |
+|---|---|---|---|
+| `.field` border used `--color-border` | **1.24:1** light, **1.28:1** dark | 3:1 (WCAG 1.4.11 — it is the only thing showing where the input is) | new `--color-field-border`, tuned to clear 3:1 on card, background *and* muted in both themes |
+| `.btn--primary:hover` shade | unverified | 4.5:1 | computed: 7.73 light / 9.35 dark. In dark the mix moves *toward* the light foreground, i.e. away from the dark ink — the direction had to be checked, not assumed |
+
+**Four new test groups, and each was mutation-tested to prove it bites:**
+
+- **WCAG 2.3.3 coverage** — parses both stylesheets, brace-matches every
+  `prefers-reduced-motion` block, and fails if any selector declares a
+  transition or animation without an escape. Verified by injecting an uncovered
+  rule and watching it fail. Also bans inline `transition`/`animation` in TSX,
+  which no media query can reach.
+- **Control contrast** — field border on three surfaces, the computed hover mix,
+  the quiet button on both its grounds, the featured accent. Verified by
+  weakening the border token and watching it fail.
+- **Target size** — `.btn`, `.field`, `.capsplit__tier`, `.tier__cta` at 44px.
+- **Overhang clipping, generalised** — a registry of marks that deliberately
+  overhang their container, asserting no container clips them, *plus* an
+  assertion that they still overhang so the guard cannot become decorative.
+  Verified by adding `overflow: hidden` to `.tier` and watching it fail.
+
+Text over the new page texture was checked too: 16.51:1 light / 14.86:1 dark
+worst case (directly over a grid line).
+
+627 tests, 32 files. Typecheck clean.
+
+---
+
 ### The flag that could not be turned on, and a personality pass (2026-08-25)
 
 **⚠️ THE FLAGS WERE UNREACHABLE BY THE DOCUMENTED METHOD.** `.env.local` was

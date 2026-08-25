@@ -824,3 +824,198 @@ describe('marks are clamped to their plot at the extremes', () => {
     expect(rr).not.toContain('left: pct(metric.value)')
   })
 })
+
+/**
+ * MOTION MUST BE SWITCHABLE OFF — mechanically, not by memory.
+ *
+ * WCAG 2.3.3, and the reason it needs a test rather than a review note: every
+ * new hover lift, press or reveal is one more thing somebody has to remember to
+ * add to a `prefers-reduced-motion` block, and the cost of forgetting lands
+ * entirely on people who get sick from motion. There is no browser in this
+ * toolchain, so nothing else here can see an animation at all.
+ *
+ * It also catches the subtler failure the form actually had: a `transition`
+ * written as an INLINE STYLE, which no media query can ever reach.
+ */
+function blocksOf(css: string, header: RegExp): { inside: string; outside: string } {
+  let inside = ''
+  let outside = ''
+  let i = 0
+  for (;;) {
+    const m = header.exec(css.slice(i))
+    if (!m) {
+      outside += css.slice(i)
+      break
+    }
+    const start = i + m.index
+    outside += css.slice(i, start)
+    // Brace-match the at-rule body, because these blocks contain nested rules.
+    let depth = 0
+    let j = css.indexOf('{', start)
+    const open = j
+    for (; j < css.length; j++) {
+      if (css[j] === '{') depth++
+      else if (css[j] === '}' && --depth === 0) break
+    }
+    inside += css.slice(open + 1, j)
+    i = j + 1
+  }
+  return { inside, outside }
+}
+
+/** `.btn:active:not(:disabled)` -> `.btn`; `a:hover` -> `a`. */
+const baseSelectors = (sel: string): string[] =>
+  sel
+    .split(',')
+    .map((s) => s.trim().replace(/::?[a-z-]+(\([^)]*\))?/g, '').trim())
+    .filter(Boolean)
+
+describe('WCAG 2.3.3 — everything that moves can be stopped', () => {
+  for (const { name, css } of SHEETS) {
+    it(`${name}: every animated selector is covered by a reduced-motion block`, () => {
+      const { inside, outside } = blocksOf(css, /@media[^{]*prefers-reduced-motion[^{]*/)
+
+      const stopped = new Set<string>()
+      for (const m of inside.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+        if (!/(transition|animation)\s*:\s*none/.test(m[2]!)) continue
+        for (const b of baseSelectors(m[1]!)) stopped.add(b)
+      }
+
+      // Only rules that START a transition/animation count. `transition: none`
+      // and `animation: none` outside a media query are switches-off too.
+      const moving = new Set<string>()
+      for (const m of outside.matchAll(/([^{}@]+)\{([^}]*)\}/g)) {
+        const body = m[2]!
+        if (!/(^|[;{\s])(transition|animation)\s*:/.test(body)) continue
+        if (/(transition|animation)\s*:\s*none/.test(body)) continue
+        for (const b of baseSelectors(m[1]!)) moving.add(b)
+      }
+
+      const uncovered = [...moving].filter((s) => !stopped.has(s)).sort()
+      expect(uncovered, `${name}: these animate with no reduced-motion escape: ${uncovered.join(', ')}`).toEqual([])
+    })
+  }
+
+  it('no interactive element carries an inline transition, which no media query can reach', () => {
+    for (const rel of ['../app/page.tsx', '../app/pricing/page.tsx', '../components/scan-progress.tsx', '../components/cap-split.tsx', '../components/head-to-head-chart.tsx']) {
+      const src = readFileSync(new URL(rel, import.meta.url), 'utf8')
+      expect([rel, /style=\{\{[^}]*transition/.test(src)]).toEqual([rel, false])
+      expect([rel, /style=\{\{[^}]*animation/.test(src)]).toEqual([rel, false])
+    }
+  })
+})
+
+/**
+ * TARGET SIZE. Every control the demo runs through, at 44px minimum.
+ * Checked in the stylesheet rather than by looking, for the same reason as above.
+ */
+describe('every control is big enough to hit', () => {
+  it('the interactive classes declare a 44px minimum', () => {
+    // `declarations` merges nothing and takes the first rule, which is where the
+    // box model for each of these is declared. Reusing it rather than building a
+    // second CSS parser in the same file.
+    for (const sel of ['.btn', '.field', '.capsplit__tier', '.tier__cta']) {
+      expect([sel, declarations(sel)['min-height']]).toEqual([sel, '44px'])
+    }
+  })
+})
+
+/**
+ * THE CONTROLS, MEASURED.
+ *
+ * Everything here was introduced by the material pass and none of it is visible
+ * to the existing MARKS matrix, which only knows about chart geometry. Two of
+ * these were genuinely failing when first computed, which is the argument for
+ * the file rather than for a review pass.
+ */
+describe('WCAG 1.4.11 — control boundaries and states', () => {
+  /** color-mix(in srgb, A p%, B) over two opaque colours. */
+  const mix = (a: string, b: string, p: number): [number, number, number] => {
+    const [x, y] = [rgb(a), rgb(b)]
+    return [0, 1, 2].map((i) => Math.round(x[i]! * p + y[i]! * (1 - p))) as [number, number, number]
+  }
+
+  it('the field border clears 3:1 on every surface it sits on, in both themes', () => {
+    // --color-border is 1.24:1 and was what the inline style used. A text field
+    // whose edge cannot be seen is a field a reader cannot find.
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      for (const ground of ['--color-card', '--color-background', '--color-muted']) {
+        const ratio = contrastRatio(rgb(t['--color-field-border']!), rgb(t[ground]!))
+        expect(ratio, `${theme}: field border on ${ground} is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
+  it('the field actually uses that token, not the hairline one', () => {
+    expect(declarations('.field')['border']).toBe('1px solid var(--color-field-border)')
+  })
+
+  it('the primary button keeps its 4.5:1 THROUGH the hover mix, in both themes', () => {
+    // The hover shade is computed by the browser, so it is computed here too.
+    // In dark mode the mix moves toward the light foreground, i.e. toward the
+    // opposite end from the ink — the direction had to be checked, not assumed.
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      const hover = mix(t['--color-primary']!, t['--color-foreground']!, 0.88)
+      const ratio = contrastRatio(rgb(t['--color-on-primary']!), hover)
+      expect(ratio, `${theme}: on-primary over hovered primary is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('the quiet button stays readable on both its resting and hovered grounds', () => {
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      for (const ground of ['--color-card', '--color-muted']) {
+        const ratio = contrastRatio(rgb(t['--color-primary']!), rgb(t[ground]!))
+        expect(ratio, `${theme}: quiet-button ink on ${ground} is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
+  it('the featured tier accent is visible against the card it caps', () => {
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      const ratio = contrastRatio(rgb(t['--color-primary']!), rgb(t['--color-card']!))
+      expect(ratio, `${theme}: featured accent is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+    }
+  })
+})
+
+/**
+ * NOTHING GETS CROPPED BY ITS OWN CONTAINER.
+ *
+ * The rail already learned this the expensive way. The rule generalises: a mark
+ * that deliberately overhangs its box is cropped the instant somebody adds
+ * `overflow: hidden` to that box for an unrelated reason — a texture, a rounded
+ * corner — and there is no browser here to notice.
+ */
+describe('overhanging marks are not clipped', () => {
+  const OVERHANGS: readonly { child: string; container: string }[] = [
+    // 18px needle in a 12px track, top: -3px.
+    { child: '.rail__needle', container: '.rail__track' },
+    // The "Most chosen" flag sits above the card's top edge.
+    { child: '.tier__flag', container: '.tier' },
+  ]
+
+  it('every container of an overhanging mark leaves overflow visible', () => {
+    for (const rel of ['../app/globals.css', '../../web/app/globals.css']) {
+      const css = readFileSync(new URL(rel, import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
+      for (const { child, container } of OVERHANGS) {
+        if (!css.includes(child)) continue
+        for (const m of css.matchAll(new RegExp(`\${container}\s*\{([^}]*)\}`, 'g'))) {
+          const clips = /overflow(-[xy])?\s*:\s*(hidden|clip|auto|scroll)/.test(m[1]!)
+          expect([rel, container, clips]).toEqual([rel, container, false])
+        }
+      }
+    }
+  })
+
+  it('the marks really do overhang, so the rule above is not vacuous', () => {
+    // If the needle ever stops overhanging, the guard above is protecting
+    // nothing and should be deleted rather than left as decoration.
+    const needle = declarations('.rail__needle')
+    expect(Number.parseFloat(needle['top']!)).toBeLessThan(0)
+    expect(Number.parseFloat(needle['height']!)).toBeGreaterThan(Number.parseFloat(declarations('.rail__track')['height']!))
+  })
+})

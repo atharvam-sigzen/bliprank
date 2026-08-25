@@ -159,13 +159,13 @@ export default function Grader() {
         <form className="card" onSubmit={submit} noValidate>
           {/* Visible label, not a placeholder: a placeholder disappears the
               moment it is needed, which is when the user starts typing. */}
-          <label htmlFor="domain" style={{ display: 'block', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
+          <label className="field__label" htmlFor="domain">
             Your domain
           </label>
           <p id="domain-help" className="metric__interval" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
             We check the prompts buyers in your category actually ask. This build holds one collected scan: <strong>{SCAN.domain}</strong>.
           </p>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <div className="field__row">
             <input
               id="domain"
               name="domain"
@@ -178,40 +178,20 @@ export default function Grader() {
               aria-invalid={error ? true : undefined}
               placeholder={SCAN.domain}
               disabled={state.phase === 'scanning'}
-              style={{
-                flex: '1 1 260px',
-                minHeight: 44,
-                padding: '0 var(--space-2)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '1rem',
-                border: `1px solid ${error ? 'var(--color-destructive)' : 'var(--color-border)'}`,
-                borderRadius: 'var(--radius)',
-                background: 'var(--color-card)',
-                color: 'var(--color-foreground)',
-              }}
+              // Class, not an inline style. Inline colours are invisible to the
+              // contrast suite — that is exactly how a 1.39:1 bar shipped once —
+              // and an inline `transition` cannot be reached by
+              // prefers-reduced-motion at all.
+              className={`field${error ? ' field--invalid' : ''}`}
             />
-            <button
-              type="submit"
-              disabled={state.phase === 'scanning'}
-              style={{
-                minHeight: 44,
-                padding: '0 var(--space-4)',
-                background: 'var(--color-primary)',
-                color: 'var(--color-on-primary)',
-                border: 'none',
-                borderRadius: 'var(--radius)',
-                fontWeight: 600,
-                fontSize: '0.9375rem',
-                transition: 'background 200ms',
-              }}
-            >
+            <button type="submit" disabled={state.phase === 'scanning'} className="btn btn--primary">
               {state.phase === 'scanning' ? 'Checking…' : 'Grade my brand'}
             </button>
           </div>
 
           {/* Error next to the field it belongs to, announced when it appears. */}
           {error ? (
-            <p id="domain-error" role="alert" style={{ color: 'var(--color-destructive)', fontSize: '0.8125rem', marginBottom: 0 }}>
+            <p id="domain-error" role="alert" className="field__error">
               {error}
             </p>
           ) : null}
@@ -250,20 +230,7 @@ function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }
 
 function ResetButton({ onReset }: { onReset: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onReset}
-      style={{
-        marginTop: 'var(--space-3)',
-        minHeight: 44,
-        padding: '0 var(--space-3)',
-        background: 'transparent',
-        color: 'var(--color-primary)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius)',
-        fontWeight: 500,
-      }}
-    >
+    <button type="button" onClick={onReset} className="btn btn--quiet" style={{ marginTop: 'var(--space-3)' }}>
       Check another domain
     </button>
   )
@@ -322,28 +289,12 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           should be missing. */}
       <p className="metric__provenance">{formatProvenance(metric)}</p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
-        <span
-          aria-hidden="true"
-          style={{
-            display: 'grid',
-            placeItems: 'center',
-            width: 56,
-            height: 56,
-            borderRadius: 'var(--radius)',
-            background: 'var(--color-muted)',
-            border: '1px solid var(--color-border)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: '1.75rem',
-            fontWeight: 600,
-            lineHeight: 1,
-            flexDirection: 'column',
-          }}
-        >
+      <div className="gradeline">
+        <span className="gradebadge" aria-hidden="true">
           {/* Labelled, because a bare A-D badge is the PageSpeed/security-score
               pattern and reads as "you scored B". This grades how much the
               sample knows, not how the brand is doing. */}
-          <span style={{ fontSize: '0.5rem', letterSpacing: '0.08em', fontWeight: 500 }}>PRECISION</span>
+          <span className="gradebadge__cap">PRECISION</span>
           {grade}
         </span>
         <div>
