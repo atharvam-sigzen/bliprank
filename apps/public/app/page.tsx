@@ -10,6 +10,7 @@ import { runLiveScan } from '@/lib/live-scan'
 import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
 import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
 import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
+import { writeActiveDomain, writeRole } from '@/lib/workspace'
 
 // Module scope on purpose: the grade is only computed after a user submits, so
 // relying on confidenceGrade to throw would mean discovering the block in front
@@ -253,6 +254,7 @@ function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }
         <p className="prose">
           Collection runs in a budgeted runner, not from this form, so nothing was bought when you pressed the button.
         </p>
+        <OpenWorkspaceButton domain={domain} label="Open pre-flight workspace" />
         <ResetButton onReset={onReset} />
       </section>
       <aside className="note">
@@ -263,6 +265,39 @@ function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }
         <span className="note__gloss">Try that one to see a full result.</span>
       </aside>
     </div>
+  )
+}
+
+/**
+ * THE HANDOFF. The Grader is where a domain becomes a subject; the dashboard is
+ * where it becomes a workspace. Writing the domain and the role IS the
+ * transfer: the dashboard reads both back out of storage on load, so it opens
+ * on this domain instead of asking for it a second time.
+ *
+ * Nothing is collected by pressing this. A workspace is offline arithmetic —
+ * category, prompt bank, engine list — until a budgeted runner says otherwise
+ * (R3), so it is exactly as safe to press for an unmeasured domain as for a
+ * measured one. The label is what has to differ, not the behaviour.
+ */
+function OpenWorkspaceButton({ domain, label }: { domain: string; label: string }) {
+  return (
+    <button
+      type="button"
+      className="btn btn--primary record__action"
+      // Layout only, and it belongs to the pair rather than to the control: JSX
+      // drops the whitespace between two sibling elements, so without this the
+      // two buttons touch.
+      style={{ marginRight: 'var(--space-3)' }}
+      onClick={() => {
+        writeActiveDomain(domain)
+        writeRole('brand')
+        // Full navigation rather than a router push: the dashboard reads the
+        // role and the domain out of storage as it loads.
+        window.location.href = '/dashboard'
+      }}
+    >
+      {label}
+    </button>
   )
 }
 
@@ -419,6 +454,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
 
       <HeadToHead scan={scan} />
 
+      <OpenWorkspaceButton domain={scan.domain} label="Open in dashboard" />
       <ResetButton onReset={onReset} />
     </section>
   )

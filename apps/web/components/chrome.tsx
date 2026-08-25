@@ -12,52 +12,58 @@ import { useEffect, useState } from 'react'
  * latency-sensitive and goes to Vercel. That is an infrastructure fact, and a
  * reader should never have to infer it from two pages that look unrelated. One
  * bar, one mark, and each surface names the other.
+ *
+ * WHY THIS ONE IS SIMPLER THAN THE GRADER'S. Same two tiers and the same class
+ * names, so the two deploys do not look like two products — but the workspace
+ * lives entirely in `apps/public`: the role, the active domain and the client
+ * list are stored in that origin's `localStorage` and cannot be read from here.
+ * A role switch on this bar could only pretend, so there is not one. This app
+ * has exactly one screen, and tier one says so: a worked example.
  */
 
 export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
-const HREF = {
-  dashboard: process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000',
-  grader: process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001',
-}
-// Pricing is a marketing page, so it ships with the free tools on Cloudflare
-// Pages rather than with the paid app (ADR-0002) — hence off the Grader origin
-// from both surfaces, not a relative path that would 404 from the dashboard.
-const PRICING = `${HREF.grader}/pricing`
-// The agency view is a concept screen and ships beside the free tools, not in
-// the paid app — there is no agency product to put it in yet.
-const AGENCY = `${HREF.grader}/agency`
+const GRADER = process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001'
 
 export function ProductBar({ current }: { current: Surface }) {
+  const here = current === 'dashboard'
   return (
-    <nav className="productbar" aria-label="BlipRank surfaces">
-      <span className="productbar__mark">
-        <span className="productbar__dot" aria-hidden="true" />
-        BlipRank
-      </span>
-      <span className="cycle" style={{ fontSize: '0.75rem' }}>
-        AI Search Visibility Assurance
-      </span>
-      <div className="productbar__nav">
-        {/*
-          Plain anchors, not next/link: these cross an origin in dev (3000 to
-          3001) and cross a host in production (Vercel to Cloudflare Pages), and
-          next/link's client navigation cannot do either.
-        */}
-        <a className="productbar__link" href={HREF.dashboard} {...(current === 'dashboard' ? { 'aria-current': 'page' as const } : {})}>
-          Dashboard
-        </a>
-        <a className="productbar__link" href={HREF.grader} {...(current === 'grader' ? { 'aria-current': 'page' as const } : {})}>
-          Grader
-        </a>
-        <a className="productbar__link" href={PRICING} {...(current === 'pricing' ? { 'aria-current': 'page' as const } : {})}>
-          Pricing
-        </a>
-        <a className="productbar__link" href={AGENCY} {...(current === 'agency' ? { 'aria-current': 'page' as const } : {})}>
-          Agency
-        </a>
+    <nav className="navbar" aria-label="BlipRank">
+      <div className="navbar__identity">
+        <span className="navbar__mark">
+          <span className="navbar__dot" aria-hidden="true" />
+          BlipRank
+        </span>
+        <span className="navbar__active">worked example</span>
         <ThemeToggle />
+      </div>
+
+      <div className="navbar__nav">
+        {/*
+          Plain anchors, not next/link: every one of these crosses an origin in
+          dev (3000 to 3001) and a host in production (Vercel to Cloudflare
+          Pages), and next/link's client navigation cannot do either. The brand
+          and agency workspaces both live over there, so this bar links to them
+          rather than pretending to hold them.
+        */}
+        <a className="navbar__link" href={`${GRADER}/dashboard`}>
+          Brand dashboard
+        </a>
+        <a className="navbar__link" href={`${GRADER}/agency`}>
+          Portfolio
+        </a>
+        <div className="navbar__util">
+          <a className="navbar__link" href={GRADER}>
+            Grader
+          </a>
+          <a className="navbar__link" href={`${GRADER}/pricing`}>
+            Pricing
+          </a>
+          <a className={`navbar__link${here ? ' navbar__link--on' : ''}`} href="/" {...(here ? { 'aria-current': 'page' as const } : {})}>
+            Worked example
+          </a>
+        </div>
       </div>
     </nav>
   )
@@ -104,19 +110,31 @@ export function ThemeToggle() {
   const [choice, setChoice] = useState<Choice>('system')
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('bliprank-theme')
-    if (stored === 'light' || stored === 'dark') setChoice(stored)
+    // A private window throws on the `localStorage` property itself, not on the
+    // call — and this control is on every page in the app, so an unguarded read
+    // here is a white screen everywhere rather than a lost preference. Same
+    // reasoning as `readRaw` in lib/workspace.ts, and the same as THEME_BOOT
+    // below, which has always had its try.
+    try {
+      const stored = window.localStorage.getItem('bliprank-theme')
+      if (stored === 'light' || stored === 'dark') setChoice(stored)
+    } catch {
+      // Nothing stored that we are allowed to see; the media query decides.
+    }
   }, [])
 
   function apply(next: Choice) {
     setChoice(next)
     const root = document.documentElement
-    if (next === 'system') {
-      root.removeAttribute('data-theme')
-      window.localStorage.removeItem('bliprank-theme')
-    } else {
-      root.setAttribute('data-theme', next)
-      window.localStorage.setItem('bliprank-theme', next)
+    // The attribute is what actually changes the theme, so it is set first and
+    // outside the try: the toggle must work in a window that cannot persist.
+    if (next === 'system') root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', next)
+    try {
+      if (next === 'system') window.localStorage.removeItem('bliprank-theme')
+      else window.localStorage.setItem('bliprank-theme', next)
+    } catch {
+      // The choice holds for this page and does not survive a reload.
     }
   }
 

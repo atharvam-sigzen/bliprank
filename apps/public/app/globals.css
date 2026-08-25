@@ -388,75 +388,8 @@ table {
   max-width: 1160px;
 }
 
-/*
- * THE CHASSIS STRIP. The product bar was a floating card with a negative-
- * margin hack coupling it to the shell padding; template chrome. It is now a
- * hairline strip on the paper: the mark, the positioning line, the surfaces,
- * the theme control. Nothing floats, nothing casts a shadow.
- */
-.productbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  border-bottom: var(--hairline);
-  padding: var(--space-2) 0 var(--space-2);
-  margin: 0 0 var(--space-4);
-}
-
-.productbar__mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  letter-spacing: -0.015em;
-  white-space: nowrap;
-}
-
-/* A calibration mark, not a logo blob: a filled square with a knocked-out
-   tick, the same construction as the rail needle. Flat — no gradients on an
-   instrument. */
-.productbar__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--color-primary);
-  box-shadow: inset 0 0 0 2px var(--color-primary), inset 3px 0 0 var(--color-background);
-}
-
-.productbar__nav {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-  align-items: center;
-}
-
-.productbar__link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  font-size: 0.8125rem;
-  color: var(--color-muted-foreground);
-  text-decoration: none;
-  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
-}
-
-.productbar__link:hover {
-  background: var(--color-muted);
-  color: var(--color-foreground);
-}
-
-/* The current surface is marked with a border and weight, never colour alone. */
-.productbar__link[aria-current='page'] {
-  border-color: var(--color-border);
-  background: var(--color-muted);
-  color: var(--color-foreground);
-  font-weight: 600;
-}
+/* The chassis strip is now `.navbar`: two tiers, identity then navigation.
+   It is defined with the rest of the new chrome at the foot of this sheet. */
 
 .themetoggle {
   display: inline-flex;
@@ -464,7 +397,10 @@ table {
   min-height: 32px;
   gap: 6px;
   padding: 0 10px;
-  border: var(--hairline);
+  /* A control boundary, not a rule between sections: --color-border is 1.24:1
+     and left this button with no findable edge. --color-field-border is the
+     token that clears 3:1 on the paper, the card and the muted surface. */
+  border: 1px solid var(--color-field-border);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-muted-foreground);
@@ -1953,7 +1889,8 @@ tbody tr:hover {
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .productbar__link,
+  .navbar__link,
+  .navbar__rolebtn,
   .themetoggle,
   .card,
   .field,
@@ -2010,15 +1947,6 @@ tbody tr:hover {
     padding: var(--space-2) var(--space-2) var(--space-5);
   }
 
-  .productbar {
-    gap: var(--space-2);
-  }
-
-  /* The positioning line is context, not navigation. */
-  .productbar .cycle {
-    display: none;
-  }
-
   .masthead h1,
   main > h1 {
     font-size: 1.75rem;
@@ -2031,15 +1959,6 @@ tbody tr:hover {
   /* One panel per row rather than a track that squeezes three into 375px. */
   .grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 420px) {
-  /* Below this the links plus the toggle crowd the mark out of the row. */
-  .productbar__nav {
-    width: 100%;
-    margin-left: 0;
-    justify-content: flex-start;
   }
 }
 
@@ -2263,4 +2182,413 @@ h2.record__title,
   .portfolio__marks {
     gap: var(--space-5);
   }
+}
+
+/* ==========================================================================
+   THE CHASSIS STRIP — two tiers
+   ==========================================================================
+   Replaces `.productbar`, which listed four surfaces as peers and therefore
+   could not say who you are or which domain is on screen: a brand director and
+   an agency operator read the same four words and had to work out for
+   themselves which two were theirs.
+
+   Tier one is IDENTITY — the mark, the mode, the subject. Tier two is the
+   navigation for that mode. Both are hairline strip on the paper: no panel
+   fill, no shadow, nothing floating, because this is the one component on the
+   page that must not be looked at. It takes the smallest type on the sheet and
+   the muted ink, and its only saturated mark is the 2px rule under whichever
+   surface you are actually on.
+
+   EVERY TIER WRAPS RATHER THAN SCROLLS. At 390px the identity row breaks after
+   the role switch and the utility group drops to a row of its own; nothing is
+   ever pushed past the edge, because a chrome strip that induces sideways body
+   scroll is the "never opened on a phone" tell this sheet already fixed once.
+   ========================================================================== */
+
+.navbar {
+  border-bottom: var(--hairline);
+  margin: 0 0 var(--space-4);
+}
+
+.navbar__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.navbar__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+/* A calibration mark, not a logo blob: a filled square with a knocked-out
+   tick, the same construction as the rail needle. Flat — no gradients on an
+   instrument. Carried over unchanged from the bar this replaces. */
+.navbar__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  box-shadow: inset 0 0 0 2px var(--color-primary), inset 3px 0 0 var(--color-background);
+}
+
+/*
+ * THE ROLE SWITCH. Two states of ONE control, so it is drawn as one control:
+ * a single border around the pair and a hairline between the halves, not two
+ * buttons that happen to be adjacent.
+ *
+ * The group boundary is --color-field-border (3.41:1 on the paper, 3.69:1 on
+ * a card, 3.12:1 on the muted surface) and never --color-border, which is
+ * 1.24:1 — a rule between sections, not an edge a reader can find. WCAG 1.4.11
+ * wants 3:1 on exactly this.
+ *
+ * The selected half is marked THREE ways — filled, heavier, and underscored in
+ * the data colour at 6.30:1 on that fill — because a mode switch that signals
+ * in colour alone is unreadable to precisely the reader most likely to be
+ * running two workspaces at once. `aria-pressed` carries it for a screen
+ * reader; none of the three is load-bearing on its own.
+ */
+.navbar__role {
+  display: inline-flex;
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+}
+
+.navbar__rolebtn {
+  display: inline-flex;
+  align-items: center;
+  /* 44px, like every other control on the sheet. A segmented control is the
+     easiest place to talk yourself into 28px because it "looks tidier". */
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+/* The corners belong to the GROUP; only its ends are round. */
+.navbar__rolebtn:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.navbar__rolebtn:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.navbar__rolebtn + .navbar__rolebtn {
+  border-left: 1px solid var(--color-field-border);
+}
+
+.navbar__rolebtn:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+.navbar__rolebtn--on {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-weight: 650;
+  box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+/*
+ * What the reader is looking at, phrased in their own role: a tracked domain,
+ * or a client count. It is a FACT ABOUT STATE, so it is mono like every other
+ * fact on this sheet — and it wraps rather than truncating, because an elided
+ * domain is a domain the reader cannot check.
+ */
+.navbar__active {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The theme control closes the identity row, wherever that row ends up
+   ending. Two classes deep so it does not restyle the toggle anywhere else. */
+.navbar__identity .themetoggle {
+  margin-left: auto;
+}
+
+.navbar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  border-top: var(--hairline);
+}
+
+.navbar__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border-bottom: 2px solid transparent;
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+  text-decoration: none;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.navbar__link:hover {
+  color: var(--color-foreground);
+}
+
+/*
+ * The current surface: a 2px rule in the data colour (6.89:1 on the paper),
+ * plus ink and weight. Never colour alone. There is no padding under the row,
+ * so the rule lands ON the strip's own bottom hairline — which is what makes
+ * it read as a tab rather than as an underlined link.
+ */
+.navbar__link--on {
+  color: var(--color-foreground);
+  border-bottom-color: var(--color-primary);
+  font-weight: 650;
+}
+
+/*
+ * The utility group — the Grader, pricing, the worked example. None of these
+ * belongs to the mode you are in, so they are pushed to the far end and fenced
+ * off by a rule instead of being interleaved with the links that do.
+ */
+.navbar__util {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  margin-left: auto;
+  padding-left: var(--space-2);
+  border-left: var(--hairline);
+}
+
+@media (max-width: 640px) {
+  /* The fence becomes a floor: at this width `margin-left: auto` buys nothing,
+     and a left rule would sit under the product links rather than beside
+     them. Same DOM, one row lower. */
+  .navbar__util {
+    width: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    border-top: var(--hairline);
+  }
+
+  /* Pinning the toggle right once the row has wrapped strands it alone on a
+     line with the paper showing through the gap. */
+  .navbar__identity .themetoggle {
+    margin-left: 0;
+  }
+}
+
+/* ==========================================================================
+   PRE-FLIGHT — a workspace with nothing collected yet
+   ==========================================================================
+   The state a domain is in before its first cycle, and the hardest state in
+   this product to render honestly: there is nothing to show, and every
+   template instinct is to show something anyway — a greyed chart, a zero, a
+   dash in a metric slot.
+
+   So it is quiet and STRUCTURAL, not an error. No oxide rule, no amber panel,
+   no empty axis waiting for a line. A rule, the mono status cap, and one
+   sentence naming what has not happened. A refusal marker here would say the
+   product failed; what actually happened is that collection has not run.
+   ========================================================================== */
+
+.preflight {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--hairline);
+}
+
+/* The serif, because this is the record explaining itself rather than the
+   chassis reporting — same voice as `.prose`, and a separate class only
+   because it opens a block instead of sitting inside one. */
+.preflight__lead {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 460;
+  line-height: 1.62;
+  letter-spacing: 0.002em;
+  color: var(--color-foreground);
+  max-width: 62ch;
+  margin: var(--space-1) 0 0;
+}
+
+/* ==========================================================================
+   THE PROMPT LIST — the questions, printed
+   ==========================================================================
+   The bank verbatim: not a sample, not a paraphrase, and the one thing on a
+   pre-flight page that IS real. So it is set to be read — the serif at body
+   size, one question per row, divided by rules the way `.tier__list` divides
+   specifications.
+
+   DELIBERATELY NOT A CODE BLOCK. Mono here would say "configuration", and
+   these are sentences a person types into ChatGPT; the only mono on the row is
+   the intent tag, which is metadata ABOUT the question rather than the
+   question. Markers are dropped for the same reason the rows are not boxed:
+   the order carries no meaning, and a numbered column invites reading a prompt
+   bank as a ranking.
+   ========================================================================== */
+
+.promptlist {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  border-top: var(--hairline);
+}
+
+.promptlist__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--hairline);
+}
+
+/* Flex-basis in ch rather than a percentage: below it the tag drops to its own
+   line instead of squeezing the question into a two-word column at 390px. */
+.promptlist__text {
+  flex: 1 1 20ch;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 460;
+  line-height: 1.5;
+  color: var(--color-foreground);
+}
+
+.promptlist__intent {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   THE PROMPT POOL — one cap, one track
+   ==========================================================================
+   The same instrument as the range rail and the pricing pool, on purpose: one
+   track, the calibration ticks, a solid fill, outlined in the fill colour so
+   the empty half has an edge at all (--color-muted is 1.19:1 on the card and
+   would otherwise have none). An allocation against a plan cap is the same
+   KIND of quantity as an interval against a scale, and drawing it with a
+   different device would claim it is not.
+
+   The fill is clamped in the component and the legend prints the true figures,
+   so an over-allocated portfolio reads as over-allocated in words rather than
+   being trimmed by CSS into looking compliant.
+   ========================================================================== */
+
+.pool {
+  margin-top: var(--space-3);
+}
+
+.pool__track {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-muted);
+  border: 1px solid var(--color-primary);
+  background-image: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-muted-foreground) 40%, transparent) 0 1px,
+    transparent 1px 10%
+  );
+  box-shadow: var(--edge-light);
+}
+
+.pool__fill {
+  height: 100%;
+  background: var(--color-primary);
+}
+
+.pool__legend {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+}
+
+/* `.num` only buys tabular width — the family comes from whatever the figure
+   sits in, and a legend is sans. Every figure on this sheet is mono, so the
+   figures in the legend are made mono here rather than by widening `.num`,
+   which is also used inside serif prose. */
+.pool__legend .num {
+  font-family: var(--font-mono);
+  color: var(--color-foreground);
+}
+
+/* ==========================================================================
+   WORKSPACE FACTS — the settings, as a definition list
+   ==========================================================================
+   What a cycle WOULD do: domain, category, prompts, surfaces, schedule, last
+   run. Settings, not measurements — so this deliberately wears none of the
+   readout family: no rail, no interval, no grade, nothing that would let a
+   configured number be mistaken for a collected one.
+
+   Keys in the chassis sans because they are the machine's labels; values in
+   the mono because every one of them is a figure, a domain or a machine name.
+   ========================================================================== */
+
+.wsfact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-2);
+  border-top: var(--hairline);
+}
+
+.wsfact__key {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+}
+
+.wsfact__val {
+  /* <dd> ships a 40px indent that would push every value off the grid. */
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-foreground);
+  /* An engine list is five machine names on one line; it wraps inside its own
+     column rather than widening the page. */
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   ADD CLIENT — rhythm only
+   ==========================================================================
+   The form is the Grader's chassis and the result is the sheet's record; both
+   already carry their own material. These two classes space them apart and do
+   nothing else, which is the whole test for a new class: if it does not need a
+   look of its own, it does not get one.
+   ========================================================================== */
+
+.addclient {
+  margin-top: var(--space-4);
+}
+
+.addclient__result {
+  margin-top: var(--space-5);
 }

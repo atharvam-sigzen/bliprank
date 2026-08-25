@@ -539,72 +539,9 @@ a {
   --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.55);
 }
 
-/* --- product bar: the two surfaces are one product ----------------------- */
-/*
- * The dashboard and the Grader are separate deploys for hosting reasons
- * (ADR-0002), which is an infrastructure fact and not something a reader should
- * have to infer from two unrelated-looking pages. One bar, one mark, and each
- * surface names the other.
- */
-.productbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-card);
-  padding: var(--space-2) var(--space-3);
-  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-3)) var(--space-4);
-}
-
-.productbar__mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.productbar__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--color-primary);
-}
-
-.productbar__nav {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-  align-items: center;
-}
-
-.productbar__link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: var(--radius);
-  border: 1px solid transparent;
-  font-size: 0.8125rem;
-  color: var(--color-muted-foreground);
-  text-decoration: none;
-  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
-}
-
-.productbar__link:hover {
-  background: var(--color-muted);
-  color: var(--color-foreground);
-}
-
-/* The current surface is marked with a border and weight, never colour alone. */
-.productbar__link[aria-current='page'] {
-  border-color: var(--color-border);
-  background: var(--color-muted);
-  color: var(--color-foreground);
-  font-weight: 600;
-}
+/* The chassis strip is now `.navbar`: two tiers, identity then navigation.
+   Mirrored from apps/public — one bar across both deploys. It is defined at
+   the foot of this sheet. */
 
 /* --- theme toggle -------------------------------------------------------- */
 .themetoggle {
@@ -613,7 +550,10 @@ a {
   min-height: 32px;
   gap: 6px;
   padding: 0 10px;
-  border: 1px solid var(--color-border);
+  /* A control boundary, not a rule between sections: --color-border is 1.24:1
+     and left this button with no findable edge. --color-field-border is the
+     token that clears 3:1 on the paper, the card and the muted surface. */
+  border: 1px solid var(--color-field-border);
   border-radius: var(--radius);
   background: var(--color-card);
   color: var(--color-muted-foreground);
@@ -735,7 +675,8 @@ tbody tr:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .productbar__link,
+  .navbar__link,
+  .navbar__rolebtn,
   .themetoggle,
   tbody tr {
     transition: none;
@@ -766,21 +707,6 @@ body {
     padding: var(--space-3) var(--space-2);
   }
 
-  .productbar {
-    margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) var(--space-3);
-    gap: var(--space-2);
-  }
-
-  /* The positioning line is the first thing to go: it is context, not
-     navigation, and the two links plus the toggle are what a reader needs. */
-  .productbar .cycle {
-    display: none;
-  }
-
-  .productbar__nav {
-    margin-left: auto;
-  }
-
   .masthead h1 {
     font-size: 1.125rem;
   }
@@ -792,16 +718,6 @@ body {
   /* One card per row rather than a track that squeezes three into 375px. */
   .grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 420px) {
-  /* Below this the label and the icon together crowd the two links out of the
-     row, and the icon alone is not a label — so the row wraps instead. */
-  .productbar__nav {
-    width: 100%;
-    margin-left: 0;
-    justify-content: flex-start;
   }
 }
 
@@ -1062,23 +978,6 @@ tbody tr:last-child th {
   font-size: 0.6875rem;
   letter-spacing: 0.01em;
   border-radius: 999px;
-}
-
-.productbar {
-  padding: var(--space-2) var(--space-4);
-  box-shadow: var(--shadow-card);
-}
-
-.productbar__mark {
-  font-size: 0.9375rem;
-  letter-spacing: -0.015em;
-}
-
-.productbar__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
 }
 
 .tip {
@@ -1793,4 +1692,214 @@ body {
   --color-notice-bg: #2c230e;
   --color-notice-ink: #e8cd96;
   --color-notice-border: var(--color-accent);
+}
+
+/* ==========================================================================
+   THE CHASSIS STRIP — two tiers
+   ==========================================================================
+   Replaces `.productbar`, which listed four surfaces as peers and therefore
+   could not say who you are or which domain is on screen: a brand director and
+   an agency operator read the same four words and had to work out for
+   themselves which two were theirs.
+
+   Tier one is IDENTITY — the mark, the mode, the subject. Tier two is the
+   navigation for that mode. Both are hairline strip on the paper: no panel
+   fill, no shadow, nothing floating, because this is the one component on the
+   page that must not be looked at. It takes the smallest type on the sheet and
+   the muted ink, and its only saturated mark is the 2px rule under whichever
+   surface you are actually on.
+
+   EVERY TIER WRAPS RATHER THAN SCROLLS. At 390px the identity row breaks after
+   the role switch and the utility group drops to a row of its own; nothing is
+   ever pushed past the edge, because a chrome strip that induces sideways body
+   scroll is the "never opened on a phone" tell this sheet already fixed once.
+   ========================================================================== */
+
+.navbar {
+  border-bottom: var(--hairline);
+  margin: 0 0 var(--space-4);
+}
+
+.navbar__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.navbar__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+/* A calibration mark, not a logo blob: a filled square with a knocked-out
+   tick, the same construction as the rail needle. Flat — no gradients on an
+   instrument. Carried over unchanged from the bar this replaces. */
+.navbar__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  box-shadow: inset 0 0 0 2px var(--color-primary), inset 3px 0 0 var(--color-background);
+}
+
+/*
+ * THE ROLE SWITCH. Two states of ONE control, so it is drawn as one control:
+ * a single border around the pair and a hairline between the halves, not two
+ * buttons that happen to be adjacent.
+ *
+ * The group boundary is --color-field-border (3.41:1 on the paper, 3.69:1 on
+ * a card, 3.12:1 on the muted surface) and never --color-border, which is
+ * 1.24:1 — a rule between sections, not an edge a reader can find. WCAG 1.4.11
+ * wants 3:1 on exactly this.
+ *
+ * The selected half is marked THREE ways — filled, heavier, and underscored in
+ * the data colour at 6.30:1 on that fill — because a mode switch that signals
+ * in colour alone is unreadable to precisely the reader most likely to be
+ * running two workspaces at once. `aria-pressed` carries it for a screen
+ * reader; none of the three is load-bearing on its own.
+ */
+.navbar__role {
+  display: inline-flex;
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+}
+
+.navbar__rolebtn {
+  display: inline-flex;
+  align-items: center;
+  /* 44px, like every other control on the sheet. A segmented control is the
+     easiest place to talk yourself into 28px because it "looks tidier". */
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+/* The corners belong to the GROUP; only its ends are round. */
+.navbar__rolebtn:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.navbar__rolebtn:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.navbar__rolebtn + .navbar__rolebtn {
+  border-left: 1px solid var(--color-field-border);
+}
+
+.navbar__rolebtn:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+.navbar__rolebtn--on {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-weight: 650;
+  box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+/*
+ * What the reader is looking at, phrased in their own role: a tracked domain,
+ * or a client count. It is a FACT ABOUT STATE, so it is mono like every other
+ * fact on this sheet — and it wraps rather than truncating, because an elided
+ * domain is a domain the reader cannot check.
+ */
+.navbar__active {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The theme control closes the identity row, wherever that row ends up
+   ending. Two classes deep so it does not restyle the toggle anywhere else. */
+.navbar__identity .themetoggle {
+  margin-left: auto;
+}
+
+.navbar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  border-top: var(--hairline);
+}
+
+.navbar__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border-bottom: 2px solid transparent;
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+  text-decoration: none;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.navbar__link:hover {
+  color: var(--color-foreground);
+}
+
+/*
+ * The current surface: a 2px rule in the data colour (6.89:1 on the paper),
+ * plus ink and weight. Never colour alone. There is no padding under the row,
+ * so the rule lands ON the strip's own bottom hairline — which is what makes
+ * it read as a tab rather than as an underlined link.
+ */
+.navbar__link--on {
+  color: var(--color-foreground);
+  border-bottom-color: var(--color-primary);
+  font-weight: 650;
+}
+
+/*
+ * The utility group — the Grader, pricing, the worked example. None of these
+ * belongs to the mode you are in, so they are pushed to the far end and fenced
+ * off by a rule instead of being interleaved with the links that do.
+ */
+.navbar__util {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  margin-left: auto;
+  padding-left: var(--space-2);
+  border-left: var(--hairline);
+}
+
+@media (max-width: 640px) {
+  /* The fence becomes a floor: at this width `margin-left: auto` buys nothing,
+     and a left rule would sit under the product links rather than beside
+     them. Same DOM, one row lower. */
+  .navbar__util {
+    width: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    border-top: var(--hairline);
+  }
+
+  /* Pinning the toggle right once the row has wrapped strands it alone on a
+     line with the paper showing through the gap. */
+  .navbar__identity .themetoggle {
+    margin-left: 0;
+  }
 }

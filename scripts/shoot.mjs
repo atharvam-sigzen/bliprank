@@ -16,7 +16,7 @@
  * Usage: node scripts/shoot.mjs [outDir]
  */
 
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
 
@@ -31,13 +31,32 @@ const VIEWPORTS = {
 /** Requests that must never leave the browser. */
 const FORBIDDEN = [/openwebninja\.com/i, /\/api\/scan/i]
 
-async function shoot(browser, { name, path, viewport, theme, prepare }) {
+async function shoot(browser, { name, path, viewport, theme, prepare, seed }) {
   const context = await browser.newContext({
     viewport: VIEWPORTS[viewport],
     colorScheme: theme,
     deviceScaleFactor: 2,
     reducedMotion: 'reduce', // deterministic captures; motion is asserted by tests
   })
+
+  /*
+   * Seed the demo's session state BEFORE the first script runs.
+   *
+   * The brand dashboard reads its active workspace from localStorage, so its two
+   * states — a domain with data and a domain without — are not reachable by
+   * navigation alone. addInitScript lands before any page script, which is the
+   * only way to avoid photographing the pre-hydration shell instead of the state
+   * under test.
+   */
+  if (seed) {
+    await context.addInitScript((entries) => {
+      try {
+        for (const [k, v] of entries) window.localStorage.setItem(k, v)
+      } catch {
+        /* private window; the page must cope, and the capture will show whether it does */
+      }
+    }, Object.entries(seed))
+  }
 
   const blocked = []
   await context.route('**/*', (route) => {
@@ -104,6 +123,16 @@ async function shoot(browser, { name, path, viewport, theme, prepare }) {
       }
       if (!/Newsreader|serif/i.test(c.fontFamily)) out.push(`.record__title is not the serif voice: ${c.fontFamily.slice(0, 40)}`)
     }
+    /*
+     * `.record__domain` IS A CLAIM, NOT A SIZE. It means "this is the subject
+     * of an actual measurement", so it may only appear on a page that also drew
+     * a rail. Two pre-collection sheets wore it and nothing caught them: the
+     * `.record__title` sweep above cannot see a headline that is not one, and
+     * on the dashboard `.masthead h1` masked the size difference entirely.
+     */
+    if (document.querySelector('.record__domain') && !document.querySelector('.rail')) {
+      out.push('.record__domain on a page with no rail — that headline claims a measurement this page does not have')
+    }
     for (const el of document.querySelectorAll('.prose')) {
       const c = getComputedStyle(el)
       if (!/Newsreader|serif/i.test(c.fontFamily)) out.push(`.prose is not the serif voice: ${c.fontFamily.slice(0, 40)}`)
@@ -124,8 +153,40 @@ async function shoot(browser, { name, path, viewport, theme, prepare }) {
     return [...new Set(out)]
   })
 
+  /*
+   * THE R8 SWEEP, RUN ON THE RENDERED DOM.
+   *
+   * A screenshot of a pre-flight dashboard showing a percentage looks like a
+   * working product; it is the single worst defect this codebase can ship. Every
+   * capture whose name says it has no data is checked for anything shaped like a
+   * measurement — a percentage, a score, an interval, a grade badge.
+   */
+  const figures = await page.evaluate(() => {
+    /*
+     * The prompt list is taken out first. Those are questions from the
+     * committed bank, printed verbatim — and one of them is "Our organic
+     * traffic dropped 40% after a core update, how do we diagnose it?"
+     * (packages/taxonomy/src/banks/seo-tools.ts). A percentage inside a
+     * quoted question is not a measurement the page is asserting, so seeding
+     * any SEO-tools domain into a pre-flight capture would fail this sweep on
+     * the one page that is behaving. The fix belongs here rather than in the
+     * bank: the bank is right and the harness was reading it wrong.
+     */
+    const body = document.body.cloneNode(true)
+    for (const el of body.querySelectorAll('.promptlist__text')) el.remove()
+    const text = body.innerText ?? body.textContent ?? ''
+    const hits = []
+    // Percentages and x/100 scores, excluding the fixed 0/100 scale endpoints
+    // the rail always prints and the engine/prompt counts in settings.
+    for (const m of text.matchAll(/\d+(\.\d+)?\s?%/g)) hits.push(m[0])
+    for (const el of document.querySelectorAll('.score__value, .portfolio__grade, .gradebadge, .rail__value')) {
+      hits.push(`${el.className.split(' ')[0]}:${el.textContent?.trim().slice(0, 12)}`)
+    }
+    return [...new Set(hits)].slice(0, 12)
+  })
+
   await context.close()
-  return { file, blocked, problems, overflow, typography }
+  return { file, blocked, problems, overflow, typography, figures }
 }
 
 const browser = await chromium.launch()
@@ -163,12 +224,54 @@ const refuse = async (page) => {
   await page.waitForSelector('[role=alert]', { timeout: 8000 })
 }
 
+/*
+ * STORAGE KEYS ARE READ OUT OF THE SOURCE, NOT COPIED.
+ *
+ * This script is plain node against a running server, so it cannot import the
+ * app's TypeScript — and the first version simply guessed the three key strings.
+ * All three guesses were wrong, which would have seeded nothing, rendered the
+ * "no workspace" state on every dashboard capture, and let the R8 sweep pass
+ * because there was no data on screen to catch. A green result proving nothing
+ * is worse than a red one.
+ *
+ * So the values are parsed from workspace.ts and the run ABORTS if any is
+ * missing. A capture harness that silently tests the wrong state is not a
+ * harness.
+ */
+const WORKSPACE_SRC = readFileSync(new URL('../apps/public/lib/workspace.ts', import.meta.url), 'utf8')
+
+const keyFrom = (name) => {
+  // Line-oriented rather than one clever regex: the escaping in a template
+  // literal is exactly what broke the first attempt at this, and a parser that
+  // fails by returning the wrong answer is worse than no parser.
+  const line = WORKSPACE_SRC.split('\n').find((l) => l.includes(name) && l.includes('='))
+  const quoted = line && /'([^']+)'|"([^"]+)"/.exec(line)
+  const value = quoted && (quoted[1] ?? quoted[2])
+  if (!value) throw new Error(`shoot: could not read ${name} from workspace.ts — seeding would silently do nothing`)
+  return value
+}
+
+const KEY = {
+  role: keyFrom('ROLE_STORAGE_KEY'),
+  active: keyFrom('ACTIVE_STORAGE_KEY'),
+  agency: keyFrom('AGENCY_STORAGE_KEY'),
+}
+console.log(`seeding keys: ${KEY.role} | ${KEY.active} | ${KEY.agency}
+`)
+
 const SHOTS = [
   { name: '1-grader-landing', path: '/' },
   { name: '2-grader-result', path: '/', prepare: typeDomain },
   { name: '3-grader-refusal', path: '/', prepare: refuse },
   { name: '4-pricing', path: '/pricing' },
-  { name: '5-agency-concept', path: '/agency' },
+  // State A: the one domain with real collected data.
+  { name: '5-dashboard-real', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'pipedrive.com' } },
+  // State B: pre-flight. Classified, prompts listed, no metrics anywhere.
+  { name: '6-dashboard-preflight', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'zendesk.com' } },
+  // A domain that does not classify, so the fallback disclosure has to show.
+  { name: '7-dashboard-fallback', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'nike.com' } },
+  { name: '8-agency-portfolio', path: '/agency', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
+  { name: '9-agency-add', path: '/agency/add', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com']) } },
 ]
 
 let failures = 0
@@ -180,6 +283,10 @@ for (const shot of SHOTS) {
       if (r.blocked.length) flags.push(`BLOCKED ${r.blocked.length} forbidden request(s)`)
       if (r.problems.length) flags.push(...r.problems)
       if (r.typography.length) flags.push(...r.typography)
+      // Named for what they are: these captures must contain no measurement.
+      if (/preflight|fallback|agency-add/.test(shot.name) && r.figures.length) {
+        flags.push(`R8: a page with no collected data rendered figures: ${r.figures.join(', ')}`)
+      }
       if (r.overflow.scrollW > r.overflow.clientW + 1) {
         flags.push(`H-SCROLL ${r.overflow.scrollW}>${r.overflow.clientW}: ${r.overflow.offenders.join(' | ')}`)
       }

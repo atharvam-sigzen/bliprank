@@ -1,6 +1,14 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // apps/public's `@/*` path alias, so a component can be rendered in a test the
+  // same way Next resolves it. Regex-anchored on `@/` rather than keyed on `@`:
+  // a bare `@` key is a prefix match and would rewrite every `@bliprank/*`
+  // import in the monorepo.
+  resolve: {
+    alias: [{ find: /^@\//, replacement: fileURLToPath(new URL('./apps/public/', import.meta.url)) }],
+  },
   // React 17+ automatic runtime, matching what Next compiles the apps with.
   // Without it esbuild falls back to the classic transform and any component
   // rendered in a test dies on "React is not defined" — a failure about the

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./engines": "./src/engines.ts",
+    "./geo": "./src/geo.ts"
   },
   "scripts": {
     "test": "vitest run"

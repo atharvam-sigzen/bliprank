@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { readActiveDomain, readAgencyDomains, readRole, writeRole, type Role } from '@/lib/workspace'
 
 /**
  * Shared chrome: the product bar and the theme toggle.
@@ -12,55 +13,158 @@ import { useEffect, useState } from 'react'
  * latency-sensitive and goes to Vercel. That is an infrastructure fact, and a
  * reader should never have to infer it from two pages that look unrelated. One
  * bar, one mark, and each surface names the other.
+ *
+ * WHY TWO TIERS. The flat bar listed Dashboard, Grader, Pricing and Agency as
+ * peers, which made it role-blind: it could not say who you are or which domain
+ * is on screen, so a brand director and an agency operator saw the same four
+ * words and had to work out for themselves which two were theirs. Tier one is
+ * identity — who, in what mode, looking at what. Tier two is the product for
+ * that mode. The role switch is a real mode change and navigates, because a
+ * control that only relabels the page is a lie about what it did.
  */
 
 export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
-const HREF = {
-  dashboard: process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000',
-  grader: process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001',
+const WORKED_EXAMPLE = process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000'
+
+/** Where a role lives. Relative: every one of these ships in this app. */
+const HOME: Record<Role, string> = { brand: '/dashboard', agency: '/agency' }
+
+type Link = { readonly href: string; readonly label: string; readonly on?: Surface }
+
+/*
+ * EVERY HASH HERE HAS TO LAND ON SOMETHING, IN EVERY STATE OF ITS PAGE.
+ *
+ * `#prompts` and `#settings` were written against sections that do not exist —
+ * a link that scrolls nowhere is a page claiming a surface it has not built,
+ * which on this product is the same class of defect as a figure with nothing
+ * behind it. `#settings` now points at the workspace record, which every
+ * dashboard state carries and which is re-scrolled once the state that owns it
+ * has mounted; the agency equivalent is the pool,
+ * which is the only portfolio-wide setting there is. A "Prompts" entry is gone
+ * rather than aimed at a list that only the pre-flight state draws.
+ */
+const NAV: Record<Role, readonly Link[]> = {
+  brand: [
+    { href: '/dashboard', label: 'Overview', on: 'dashboard' },
+    { href: '/dashboard#settings', label: 'Workspace' },
+  ],
+  agency: [
+    { href: '/agency', label: 'Portfolio', on: 'agency' },
+    { href: '/agency/add', label: 'Add client' },
+    { href: '/agency#pool-heading', label: 'Prompt pool' },
+  ],
 }
-// Pricing is a marketing page, so it ships with the free tools on Cloudflare
-// Pages rather than with the paid app (ADR-0002) — hence off the Grader origin
-// from both surfaces, not a relative path that would 404 from the dashboard.
-const PRICING = `${HREF.grader}/pricing`
-// The agency view is a concept screen and ships beside the free tools, not in
-// the paid app — there is no agency product to put it in yet.
-const AGENCY = `${HREF.grader}/agency`
+
+/**
+ * The surface you are on IS a statement of mode: /dashboard is a brand
+ * workspace and /agency is a portfolio. Without this the stored role wins, so
+ * arriving at /agency from anywhere that did not set it — the worked-example
+ * app links straight at both — draws the brand half of the bar over a
+ * portfolio, with the role switch reporting the mode you are not in. The
+ * choice is written back so the rest of the session agrees with the page.
+ */
+const IMPLIED: Partial<Record<Surface, Role>> = { dashboard: 'brand', agency: 'agency' }
+
+function NavLink({ link, current }: { link: Link; current: Surface }) {
+  const on = link.on === current
+  return (
+    <a className={`navbar__link${on ? ' navbar__link--on' : ''}`} href={link.href} {...(on ? { 'aria-current': 'page' as const } : {})}>
+      {link.label}
+    </a>
+  )
+}
 
 export function ProductBar({ current }: { current: Surface }) {
+  // AT RENDER, NOT IN THE EFFECT. `IMPLIED[current]` depends only on the prop,
+  // so it is identical on the server and on the first client render and cannot
+  // cause a mismatch — while deferring it shipped the brand nav and a pressed
+  // "Brand" switch over /agency in the prerendered HTML, permanently so with JS
+  // off or to a crawler, and sent anyone clicking during that frame to
+  // /dashboard from the portfolio.
+  const [role, setRole] = useState<Role>(() => IMPLIED[current] ?? 'brand')
+  const [context, setContext] = useState('')
+  // The server has no storage, so the first client render must match the server
+  // exactly and the stored role arrives one paint later. `context` starts empty
+  // rather than at "no workspace" so the bar never states something false about
+  // the reader's own account, however briefly.
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    const implied = IMPLIED[current]
+    const actual = implied ?? readRole()
+    setRole(actual)
+    setContext(describe(actual))
+    if (implied) writeRole(implied)
+    setMounted(true)
+  }, [current])
+
+  function switchTo(next: Role) {
+    setRole(next)
+    setContext(describe(next))
+    writeRole(next)
+    // A mode change goes to that mode's home. Full navigation, not a router
+    // push: the destination reads the role back out of storage on load.
+    window.location.href = HOME[next]
+  }
+
   return (
-    <nav className="productbar" aria-label="BlipRank surfaces">
-      <span className="productbar__mark">
-        <span className="productbar__dot" aria-hidden="true" />
-        BlipRank
-      </span>
-      <span className="cycle" style={{ fontSize: '0.75rem' }}>
-        AI Search Visibility Assurance
-      </span>
-      <div className="productbar__nav">
-        {/*
-          Plain anchors, not next/link: these cross an origin in dev (3000 to
-          3001) and cross a host in production (Vercel to Cloudflare Pages), and
-          next/link's client navigation cannot do either.
-        */}
-        <a className="productbar__link" href={HREF.dashboard} {...(current === 'dashboard' ? { 'aria-current': 'page' as const } : {})}>
-          Dashboard
-        </a>
-        <a className="productbar__link" href={HREF.grader} {...(current === 'grader' ? { 'aria-current': 'page' as const } : {})}>
-          Grader
-        </a>
-        <a className="productbar__link" href={PRICING} {...(current === 'pricing' ? { 'aria-current': 'page' as const } : {})}>
-          Pricing
-        </a>
-        <a className="productbar__link" href={AGENCY} {...(current === 'agency' ? { 'aria-current': 'page' as const } : {})}>
-          Agency
-        </a>
+    <nav className="navbar" aria-label="BlipRank">
+      <div className="navbar__identity">
+        <span className="navbar__mark">
+          <span className="navbar__dot" aria-hidden="true" />
+          BlipRank
+        </span>
+        <div className="navbar__role" role="group" aria-label="Workspace role">
+          {(['brand', 'agency'] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              className={`navbar__rolebtn${role === r ? ' navbar__rolebtn--on' : ''}`}
+              // aria-pressed, not aria-current: these are two states of one
+              // control, and only one of them is ever true.
+              aria-pressed={role === r}
+              onClick={() => switchTo(r)}
+            >
+              {r === 'brand' ? 'Brand' : 'Agency'}
+            </button>
+          ))}
+        </div>
+        <span className="navbar__active">{mounted ? context : ''}</span>
         <ThemeToggle />
+      </div>
+
+      <div className="navbar__nav">
+        {NAV[role].map((link) => (
+          <NavLink key={link.href} link={link} current={current} />
+        ))}
+        <div className="navbar__util">
+          <NavLink link={{ href: '/', label: 'Grader', on: 'grader' }} current={current} />
+          <NavLink link={{ href: '/pricing', label: 'Pricing', on: 'pricing' }} current={current} />
+          {/*
+            Plain anchor and an absolute URL: this one crosses an origin in dev
+            (3001 to 3000) and a host in production (Cloudflare Pages to Vercel),
+            and next/link's client navigation cannot do either. It is no longer
+            called "Dashboard" — that name belongs to the brand dashboard above,
+            and this is a worked example on committed data.
+          */}
+          <a className="navbar__link" href={WORKED_EXAMPLE}>
+            Worked example
+          </a>
+        </div>
       </div>
     </nav>
   )
+}
+
+/** What the reader is looking at, in the words of whichever role they are in. */
+function describe(role: Role): string {
+  if (role === 'agency') {
+    const n = readAgencyDomains().length
+    return `${n} ${n === 1 ? 'client' : 'clients'}`
+  }
+  return readActiveDomain() ?? 'no workspace'
 }
 
 type Choice = 'light' | 'dark' | 'system'
@@ -104,19 +208,31 @@ export function ThemeToggle() {
   const [choice, setChoice] = useState<Choice>('system')
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('bliprank-theme')
-    if (stored === 'light' || stored === 'dark') setChoice(stored)
+    // A private window throws on the `localStorage` property itself, not on the
+    // call — and this control is on every page in the app, so an unguarded read
+    // here is a white screen everywhere rather than a lost preference. Same
+    // reasoning as `readRaw` in lib/workspace.ts, and the same as THEME_BOOT
+    // below, which has always had its try.
+    try {
+      const stored = window.localStorage.getItem('bliprank-theme')
+      if (stored === 'light' || stored === 'dark') setChoice(stored)
+    } catch {
+      // Nothing stored that we are allowed to see; the media query decides.
+    }
   }, [])
 
   function apply(next: Choice) {
     setChoice(next)
     const root = document.documentElement
-    if (next === 'system') {
-      root.removeAttribute('data-theme')
-      window.localStorage.removeItem('bliprank-theme')
-    } else {
-      root.setAttribute('data-theme', next)
-      window.localStorage.setItem('bliprank-theme', next)
+    // The attribute is what actually changes the theme, so it is set first and
+    // outside the try: the toggle must work in a window that cannot persist.
+    if (next === 'system') root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', next)
+    try {
+      if (next === 'system') window.localStorage.removeItem('bliprank-theme')
+      else window.localStorage.setItem('bliprank-theme', next)
+    } catch {
+      // The choice holds for this page and does not survive a reload.
     }
   }
 
