@@ -158,7 +158,24 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
   mkdirSync(o.dataDir, { recursive: true })
   const lock = join(o.dataDir, 'run.lock')
   if (existsSync(lock)) {
-    throw new Error(`another scan holds ${lock} (pid ${readFileSync(lock, 'utf8').trim()}). The cap is per data dir, so two concurrent runs would each see prior spend of 0.`)
+    const owner = Number(readFileSync(lock, 'utf8').trim())
+    // A lock whose owner is gone is not a lock, it is litter — and litter that
+    // refuses every future scan. A crashed run, a killed dev server or a
+    // disconnected client would otherwise brick collection until someone found
+    // the file by hand, which on the morning of a demo is indistinguishable
+    // from the product being broken.
+    let alive = false
+    try {
+      process.kill(owner, 0)
+      alive = owner !== process.pid
+    } catch {
+      alive = false
+    }
+    if (alive) {
+      throw new Error(`another scan holds ${lock} (pid ${owner}). The cap is per data dir, so two concurrent runs would each see prior spend of 0.`)
+    }
+    o.log(`reclaiming a stale run.lock left by pid ${owner}, which is no longer running`)
+    unlinkSync(lock)
   }
   writeFileSync(lock, String(process.pid))
 

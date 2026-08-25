@@ -55,15 +55,36 @@ export async function POST(req: Request): Promise<Response> {
   const { domain: raw } = (await req.json().catch(() => ({}))) as { domain?: string }
   const domain = normalise(String(raw ?? ''))
 
-  const send = (stream: ReadableStreamDefaultController, event: string, data: unknown) =>
-    stream.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+  // A browser that closes the tab mid-scan closes the stream, and every
+  // subsequent enqueue throws. Unguarded, that exception unwound the whole scan
+  // — discarding answers already PAID FOR and leaving the run lock held, so
+  // every later scan was refused with "another scan holds run.lock". The work is
+  // bought: it finishes and caches whether or not anyone is still watching.
+  let open = true
+  const send = (stream: ReadableStreamDefaultController, event: string, data: unknown) => {
+    if (!open) return
+    try {
+      stream.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+    } catch {
+      open = false
+    }
+  }
+  const done = (stream: ReadableStreamDefaultController) => {
+    if (!open) return
+    open = false
+    try {
+      stream.close()
+    } catch {
+      /* the client already went away */
+    }
+  }
 
   const stream = new ReadableStream({
     async start(c) {
       try {
         if (!domain) {
           send(c, 'error', { kind: 'input', message: 'Enter a domain, for example pipedrive.com' })
-          return c.close()
+          return done(c)
         }
 
         // 1. CACHE FIRST, ALWAYS. A repeat of the same domain must never re-spend
@@ -73,7 +94,7 @@ export async function POST(req: Request): Promise<Response> {
         if (hit) {
           send(c, 'cached', { domain })
           send(c, 'result', hit)
-          return c.close()
+          return done(c)
         }
 
         if (!enabled(env)) {
@@ -81,13 +102,13 @@ export async function POST(req: Request): Promise<Response> {
             kind: 'disabled',
             message: 'Live scanning is off. This build serves scans a runner already produced; nothing here contacts a provider.',
           })
-          return c.close()
+          return done(c)
         }
 
         const found = loadApiKey(ROOT, env)
         if (!found) {
           send(c, 'error', { kind: 'config', message: 'No provider key is configured, so a live scan cannot run.' })
-          return c.close()
+          return done(c)
         }
 
         // 2. THE GATE. Burst cap and the provider's own remaining quota, both
@@ -97,7 +118,7 @@ export async function POST(req: Request): Promise<Response> {
         const gate = await checkGate(domain, cfg, found.key, new Date())
         if (!gate.ok) {
           send(c, 'error', { kind: gate.reason, message: gate.message })
-          return c.close()
+          return done(c)
         }
 
         send(c, 'stage', { stage: 'classifying' })
@@ -135,11 +156,11 @@ export async function POST(req: Request): Promise<Response> {
         }
 
         send(c, 'result', result)
-        c.close()
+        done(c)
       } catch (e) {
         // Never a blank screen and never a substituted number: say what broke.
         send(c, 'error', { kind: 'failed', message: `The scan stopped: ${(e as Error).message}` })
-        c.close()
+        done(c)
       }
     },
   })

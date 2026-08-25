@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -135,5 +135,51 @@ describe('the ledger records only what actually spent', () => {
   it('is configurable, because a demo and a quiet week want different numbers', () => {
     const c = defaultGateConfig('/tmp/x', { GRADER_MAX_NEW_SCANS_PER_DAY: '5', GRADER_PROMPTS_PER_SCAN: '9' } as unknown as NodeJS.ProcessEnv)
     expect([c.maxNewPerDay, c.callsPerEngine]).toEqual([5, 9])
+  })
+})
+
+describe('a stranded run lock does not brick collection', () => {
+  it('THE FINDING: a lock whose owner is gone is reclaimed, not obeyed forever', async () => {
+    // A client that disconnects mid-scan, a killed dev server or a crash left
+    // run.lock behind, and every later scan was refused with "another scan holds
+    // run.lock". On the morning of a demo that is indistinguishable from the
+    // product being broken, and the fix a hurried person reaches for is deleting
+    // a file they have to know exists.
+    const { runGrader } = await import('./run.js')
+    const dir = mkdtempSync(join(tmpdir(), 'lock-'))
+    const lock = join(dir, 'run.lock')
+    // 2^31-1 is never a live pid; process.kill(pid, 0) throws for it.
+    writeFileSync(lock, '2147483647')
+
+    const r = await runGrader({
+      domain: 'pipedrive.com',
+      engines: ['chatgpt'],
+      day: '2026-08-25',
+      plan: 'mega',
+      mode: 'fixture',
+      apiKey: '',
+      capUsd: 1,
+      maxPrompts: 1,
+      dataDir: dir,
+      outFile: join(dir, 'out.json'),
+      log: () => {},
+    })
+    expect(r.status).toBe('scanned')
+    // And it releases its own lock on the way out.
+    expect(existsSync(lock)).toBe(false)
+  })
+
+  it('a lock held by a LIVE process is still obeyed', async () => {
+    const { runGrader } = await import('./run.js')
+    const dir = mkdtempSync(join(tmpdir(), 'lock2-'))
+    // A pid that is definitely alive and is not us would be ideal; the parent
+    // process id is exactly that on every platform this runs on.
+    writeFileSync(join(dir, 'run.lock'), String(process.ppid))
+    await expect(
+      runGrader({
+        domain: 'pipedrive.com', engines: ['chatgpt'], day: '2026-08-25', plan: 'mega', mode: 'fixture',
+        apiKey: '', capUsd: 1, maxPrompts: 1, dataDir: dir, outFile: join(dir, 'out.json'), log: () => {},
+      }),
+    ).rejects.toThrow(/another scan holds/)
   })
 })
