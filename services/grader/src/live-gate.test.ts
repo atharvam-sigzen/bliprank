@@ -229,3 +229,62 @@ describe('a stranded run lock does not brick collection', () => {
     expect(existsSync(join(dir, 'ledger.fixture.json'))).toBe(true)
   })
 })
+
+/**
+ * THE DEMO-DAY SEQUENCE, END TO END.
+ *
+ * The account is down to roughly one full scan. The manual gate has been removed
+ * on instruction, so the FIRST new domain typed spends what is left and the
+ * SECOND must fail honestly rather than crash, blank, or quietly show something
+ * that is not a measurement. This is the path most likely to be exercised in
+ * front of an audience, so it is pinned rather than reasoned about.
+ */
+describe('running out of quota mid-demo', () => {
+  const RESET = '2026-09-21'
+
+  it('the second new domain is refused before it spends, and the message says what to do', async () => {
+    // 17 per engine needed, 6 left on one engine: not enough for a full scan.
+    const r = await checkGate('second.com', cfg({ maxNewPerDay: 12, callsPerEngine: 17 }), 'k', NOW, fetchOK({ ...FULL, chatgpt: 6 }))
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.reason).toBe('quota')
+    // Everything a person standing in front of a room needs, in one string.
+    expect(r.message).toContain('chatgpt has 6 of 50 left')
+    expect(r.message).toContain(RESET)
+    expect(r.message).toContain('nothing was charged')
+    // The recovery, which is the part a bare error never carries.
+    expect(r.message.toLowerCase()).toContain('cached')
+  })
+
+  it('refuses on ONE short engine even when the other four are full', async () => {
+    // The average would pass. Averaging is how you half-collect a scan and then
+    // report the shortfall as a low mention rate.
+    const r = await checkGate('x.com', cfg({ callsPerEngine: 17 }), 'k', NOW, fetchOK({ ...FULL, ai_overviews: 0 }))
+    expect(r.ok).toBe(false)
+    if (!r.ok && r.reason === 'quota') expect(r.short.map((q) => q.engine)).toEqual(['google-ai-overviews'])
+  })
+
+  it('a domain already scanned today still passes the burst cap and is served from cache', async () => {
+    const c = cfg({ maxNewPerDay: 1, callsPerEngine: 17 })
+    recordScan('first.com', c, NOW)
+    // Re-showing a domain must never be refused: that path spends nothing and is
+    // exactly what a presenter does when they want the result back on screen.
+    expect((await checkGate('first.com', c, 'k', NOW, fetchOK())).ok).toBe(true)
+  })
+
+  it('THE BACKSTOP IS NOT THE LIMIT: the default cap cannot fire before the quota does', async () => {
+    // The instruction was that the PROVIDER's quota should be what stops a scan.
+    // With 50 requests per engine per month and 17 per scan, at most two scans
+    // can succeed in a cycle — so a burst cap above two can never be the thing a
+    // visitor hits first, and the honest quota message is what they get.
+    const capacity = Math.floor(50 / 17)
+    expect(defaultGateConfig('/tmp', {} as NodeJS.ProcessEnv).maxNewPerDay).toBeGreaterThan(capacity)
+  })
+
+  it('an unreadable quota still fails CLOSED, and says it refused rather than guessed', async () => {
+    const dead = (async () => ({ ok: false, status: 429 }) as Response) as unknown as typeof fetch
+    const r = await checkGate('y.com', cfg(), 'k', NOW, dead)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.message).toContain('rather than run blind')
+  })
+})

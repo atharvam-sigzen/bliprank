@@ -837,6 +837,68 @@ task.
 
 598 tests, 30 files. Typecheck clean on both apps.
 
+### Live scanning opened up, and the guard it cost (2026-08-25)
+
+On an explicit instruction, the Grader now auto-scans any real domain that is not
+already cached — no manual gate, no confirmation step. Three changes, and the
+second one traded away a safety property that should be recorded as such.
+
+**1. The taxonomy went from 8 categories to 14 plus a fallback.** New banks for
+help desk, website builders, analytics, SEO tools, video conferencing and
+e-signature, each with 6-8 leaders and 30 prompts in the mandated intent mix. The
+fallback, `general-business-software`, has **no leaders and no keywords** — it
+cannot be matched into, only fallen back to, and having no competitor set is the
+design rather than an omission. See ADR-0008 Amendment 1.
+
+Two apex conflicts surfaced while building it and were resolved rather than
+papered over: `hostinger.com` (already leads web-hosting) was dropped from
+website-builders, and `wix.com` is left deliberately ambiguous between website
+builders and ecommerce because Wix genuinely leads both.
+
+⚠️ **2. A REAL SPEND GUARD WAS REMOVED.** `runScan`'s PROPERTY 1 was *"a domain
+that does not classify never spends"* — no category, no bank, no cell, no
+provider call. That is gone: an uncategorised domain now costs a full scan. The
+test that asserted it has been rewritten to assert the narrowed property and
+carries a warning explaining what was traded and why.
+
+What replaced it is narrower on purpose. `normaliseHost` accepts `report.pdf` —
+documented long ago, and harmless only because unclassified used to buy nothing.
+With that gone, a pasted filename would have bought a full scan, so
+`looksLikeFilename` now refuses file extensions before the fallback is reached.
+**Known cost:** `.zip` and `.mov` are real gTLDs and are refused.
+
+**The remaining exposure is accepted, not solved:** any well-formed domain
+spends, with no confirmation step. The provider quota is the only thing between a
+typo and a scan.
+
+**3. The quota-exhausted path was made honest.** The likeliest failure on stage,
+so it is tested rather than reasoned about:
+
+- The burst cap moved from 2/day to 12/day and is now a runaway backstop, not the
+  operating limit — with 50 requests/engine/month and 17/scan, at most two scans
+  can succeed per cycle, so the cap can never pre-empt the quota message. Asserted.
+- The quota refusal now names what ran out, by how much, when it resets, that
+  nothing was charged, and that cached domains still load.
+- ⚠️ **An honesty bug was found and fixed in the process.** `no-answers` rendered
+  as *"No engine returned a usable answer"* — which reads as a real finding of
+  zero mentions. The same status is returned when every cell FAILED, i.e. when we
+  learned nothing at all. Reporting a collection failure as a score of zero is
+  precisely the substitution this product exists not to make, and running out of
+  quota mid-scan is the likeliest way to trigger it. The two cases are now
+  separate states with separate copy.
+- A partial scan (quota exhausted mid-run) discloses that N of M requests did not
+  come back and that the interval is correspondingly wider.
+
+607 tests, 31 files. Typecheck clean.
+
+⚠️ **BLOCKED, NOT DONE — the env flags could not be set from this session.**
+`.claude/settings.json` denies `Read(./.env*)`, so `.env.local` cannot be read or
+written here. Worse, that same file injects `COLLECTION_ENABLED: "false"` into
+every spawned process, and Next.js does not let `.env.local` override a variable
+already present in `process.env` — so setting it in `.env.local` alone will NOT
+enable live scanning for a dev server started from this session. Both changes are
+needed. See the handover note in the session report.
+
 ---
 
 ## 3. Tools and services, and why

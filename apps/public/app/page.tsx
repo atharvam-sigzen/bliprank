@@ -83,16 +83,36 @@ export default function Grader() {
         setState((s) => (s.phase === 'scanning' ? { ...s, done: e.done, total: e.total, lastCell: e.cell } : s))
       else if (e.kind === 'error') setState({ phase: 'refused', domain: value, kind: e.errorKind, message: e.message })
       else if (e.kind === 'result') {
-        const r = e.result as { status?: string }
-        // A classification refusal is not a failure to report as one: the
-        // taxonomy is demo-scoped and saying so is the honest answer.
+        const r = e.result as { status?: string; reason?: string; counts?: { cellsRequested: number; failed: number; collected: number; cacheHits: number } }
+        // Only a string that is not a domain reaches this now. A real domain we
+        // cannot categorise is scanned against the fallback bank instead — see
+        // `scan.ts`. Saying "not in the demo categories" here would be wrong.
         if (r.status === 'unclassified')
-          setState({ phase: 'refused', domain: value, kind: 'unclassified', message: `${value} is not in the eight demo categories yet. The production taxonomy decision is still open — see ADR-0008.` })
+          setState({ phase: 'refused', domain: value, kind: 'unclassified', message: r.reason ?? `${value} does not look like a domain, so nothing was collected for it.` })
         else if (r.status === 'ambiguous')
-          setState({ phase: 'refused', domain: value, kind: 'ambiguous', message: `${value} leads more than one of the demo categories, so picking one would be inventing a fact. Try a domain that sits in a single category.` })
-        else if (r.status === 'no-answers')
-          setState({ phase: 'refused', domain: value, kind: 'failed', message: `No engine returned a usable answer for ${value}. Nothing is shown because there is nothing measured.` })
-        else setState({ phase: 'done', domain: value, scan: e.result as ScanResultFile })
+          setState({ phase: 'refused', domain: value, kind: 'ambiguous', message: `${value} matches more than one category and could not be resolved.` })
+        else if (r.status === 'no-answers') {
+          /*
+           * TWO DIFFERENT FACTS, AND THE OLD COPY CONFLATED THEM.
+           *
+           * "No engine returned a usable answer" reads as "the engines never
+           * mention you" — a real, publishable finding. But the same status is
+           * returned when every cell FAILED, which means we learned nothing at
+           * all. Reporting a collection failure as a zero mention rate is the
+           * exact substitution this product exists not to make, and it is the
+           * likely shape of running out of quota part-way through.
+           */
+          const c = r.counts
+          const allFailed = c !== undefined && c.failed > 0 && c.collected === 0 && c.cacheHits === 0
+          setState({
+            phase: 'refused',
+            domain: value,
+            kind: allFailed ? 'collection-failed' : 'failed',
+            message: allFailed
+              ? `All ${c.cellsRequested} requests for ${value} failed, so nothing was collected and there is nothing to measure. This is a collection failure, not a score of zero — the most likely cause is the provider quota running out part-way through. Try again after the quota resets.`
+              : `The engines returned answers for ${value} but none could be scored. Nothing is shown because there is nothing measured.`,
+          })
+        } else setState({ phase: 'done', domain: value, scan: e.result as ScanResultFile })
       }
     })
   }
@@ -260,6 +280,38 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       <p className="metric__interval" style={{ marginTop: 2 }}>
         {scan.categoryName} · {scan.counts.answersScored} answers · {scan.run.engines.length} engines
       </p>
+
+      {/*
+        A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the
+        likeliest shape of running out of quota mid-scan — the scan still returns
+        a real number over the answers it did get, and the interval widens
+        correctly. What it cannot do on its own is tell the reader that the
+        sample is short ON PURPOSE rather than because the brand is rarely
+        mentioned. A wider interval is the honest consequence; saying why it is
+        wider is the honest disclosure.
+      */}
+      {scan.counts.failed > 0 ? (
+        <p className="notice notice--info" style={{ marginTop: 'var(--space-2)' }}>
+          {scan.counts.failed} of {scan.counts.cellsRequested} requests did not come back, so this is measured on a smaller sample than a full
+          scan and the interval below is correspondingly wider. The number is real; there is just less of it.
+        </p>
+      ) : null}
+
+      {/*
+        THE FALLBACK, DECLARED. The category was not identified, so there is no
+        competitor set and no ranking — and the reader is told that rather than
+        being shown an empty chart to interpret.
+      */}
+      {scan.fallback ? (
+        <p className="notice notice--info" style={{ marginTop: 'var(--space-2)' }}>
+          {scan.fallback.reason === 'ambiguous'
+            ? `${scan.domain} leads more than one category at once (${scan.fallback.candidates.join(', ')}), so picking one would be inventing a fact.`
+            : `We could not identify a category for ${scan.domain}.`}{' '}
+          It was measured against a general business-software prompt set instead. That mention rate is real, but there is no competitor set to
+          rank it against — we will not name rivals for a business we could not categorise. This number is also not comparable with a scan run on
+          a category prompt set.
+        </p>
+      ) : null}
 
       {/* The rail, on the surface most likely to be screenshotted beside a
           competitor's tool. Their headline is a confident figure; this one

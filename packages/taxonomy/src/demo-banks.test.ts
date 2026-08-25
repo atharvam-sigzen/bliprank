@@ -2,7 +2,7 @@ import { normalisePrompt } from '@bliprank/contracts'
 import { describe, expect, it } from 'vitest'
 import { classifyDomain } from './classify-domain.js'
 import { DEMO_BANKS } from './banks/index.js'
-import { DEMO_SLUGS, DEMO_TAXONOMY } from './taxonomy.js'
+import { DEMO_SLUGS, DEMO_TAXONOMY, FALLBACK_SLUG } from './taxonomy.js'
 import { INTENTS, type Intent } from './types.js'
 
 /**
@@ -27,6 +27,25 @@ function mentions(text: string, alias: string): boolean {
   const esc = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return new RegExp(`(?<![a-z0-9_])${esc}(?![a-z0-9_])`, 'i').test(text)
 }
+
+/**
+ * THE FALLBACK BANK IS EXEMPT FROM FOUR INVARIANTS, AND EACH EXEMPTION IS A
+ * CONSEQUENCE OF HAVING NO LEADERS RATHER THAN A CONCESSION.
+ *
+ * It is reached only when a domain does not resolve to a category, so we do not
+ * know what it sells and therefore do not know its competitors. Populating
+ * `leaders` would be inventing a competitor set — the one thing
+ * `/category-bank` forbids outright — so it has none, and three of the rules
+ * below are downstream of that: you cannot verify a brand you do not track, you
+ * cannot write a comparison prompt naming brands you do not have, and a category
+ * with no leader domains is not reachable by leader match.
+ *
+ * Everything that is NOT downstream of that still applies to it, and the tests
+ * below are written so it stays in scope for all of them: the key shape, the
+ * locale and geo format, the unverified marker, the prompt-collision rule, and
+ * the 17 unprompted prompts a free scan draws from.
+ */
+const isFallback = (category: string): boolean => category === FALLBACK_SLUG
 
 describe('the taxonomy is internally consistent', () => {
   it('every slug has exactly one bank, and every bank has a slug', () => {
@@ -84,6 +103,13 @@ describe('every bank is shaped the way prompt_banks expects', () => {
 
   it('holds 6-10 leaders with unique ids, lowercase aliases and apex-only domains', () => {
     for (const b of DEMO_BANKS) {
+      // The fallback holds ZERO, deliberately — asserted as exactly zero rather
+      // than skipped, because a leader quietly appearing in it is the failure
+      // this whole design exists to prevent.
+      if (isFallback(b.category)) {
+        expect([b.category, b.leaders.length]).toEqual([b.category, 0])
+        continue
+      }
       expect([b.category, b.leaders.length >= 6 && b.leaders.length <= 10]).toEqual([b.category, true])
       expect(new Set(b.leaders.map((l) => l.id)).size).toBe(b.leaders.length)
       for (const l of b.leaders) {
@@ -160,9 +186,14 @@ describe('every bank is shaped the way prompt_banks expects', () => {
 describe('the prompts are the intent mix `/category-bank` specifies', () => {
   it('10 discovery, 8 comparison, 7 problem-led, 5 brand-verification per bank', () => {
     const want: Record<Intent, number> = { discovery: 10, comparison: 8, 'problem-led': 7, 'brand-verification': 5 }
+    // The fallback tracks no brand, so it can hold no brand-verification prompt:
+    // "is X any good" is only a measurement when X is countable. The UNPROMPTED
+    // share is identical (10 + 7 = 17), so a fallback scan draws the same number
+    // of cells and costs exactly the same as a category scan.
+    const wantFallback: Record<Intent, number> = { ...want, 'brand-verification': 0 }
     for (const b of DEMO_BANKS) {
       const got = Object.fromEntries(INTENTS.map((i) => [i, b.prompts.filter((p) => p.intent === i).length]))
-      expect([b.category, got]).toEqual([b.category, want])
+      expect([b.category, got]).toEqual([b.category, isFallback(b.category) ? wantFallback : want])
     }
   })
 
@@ -219,15 +250,20 @@ describe('the prompts are the intent mix `/category-bank` specifies', () => {
     // instead of letting it live in a comment nobody re-reads.
     const unmatched: string[] = []
     for (const b of DEMO_BANKS) {
+      // Every comparison prompt in the fallback names nothing, necessarily —
+      // there is no tracked brand to name. Counting it would drown the signal
+      // this disclosure exists to carry.
+      if (isFallback(b.category)) continue
       const aliases = b.leaders.flatMap((l) => l.aliases)
-      for (const p of b.prompts) {
-        if (p.intent !== 'comparison') continue
-        if (!aliases.some((a) => mentions(p.text, a))) unmatched.push(`${b.category}: ${p.text}`)
-      }
+      const bad = b.prompts.filter((p) => p.intent === 'comparison' && !aliases.some((a) => mentions(p.text, a)))
+      for (const p of bad) unmatched.push(`${b.category}: ${p.text}`)
+      // PER BANK, not global. The old cap was a total across every bank, so it
+      // tightened every time a bank was added and would have had to be raised on
+      // each one — a threshold that moves to accommodate its own violations is
+      // not a threshold. The rule it protects was always per-bank: no single
+      // bank may drift into being mostly unmeasurable.
+      expect([b.category, bad.length <= 3]).toEqual([b.category, true])
     }
-    // Category-level comparisons legitimately name nothing; the cap is here so a
-    // bank cannot drift into being mostly unmeasurable without anyone noticing.
-    expect(unmatched.length).toBeLessThanOrEqual(6)
     if (unmatched.length) console.log(`comparison prompts naming no matchable brand (${unmatched.length}): ${unmatched.join(' | ')}`)
   })
 
@@ -266,7 +302,14 @@ describe('deduplication against the cache key — `/category-bank` step 2', () =
   it('the bank is large enough to draw a free scan from', () => {
     // The free scan takes 20 prompts (ADR-0008 / PHASES 3.3). A bank smaller
     // than that cannot fill one, and the head-to-head goes silent.
-    for (const b of DEMO_BANKS) expect([b.category, b.prompts.length]).toEqual([b.category, 30])
+    for (const b of DEMO_BANKS) expect([b.category, b.prompts.length]).toEqual([b.category, isFallback(b.category) ? 25 : 30])
+    // What actually matters for cost and for the interval is the UNPROMPTED
+    // count, which a free scan slices 17 from. That is 17 in every bank
+    // including the fallback, and it is the number worth pinning.
+    for (const b of DEMO_BANKS) {
+      const unprompted = b.prompts.filter((p) => p.intent === 'discovery' || p.intent === 'problem-led').length
+      expect([b.category, unprompted]).toEqual([b.category, 17])
+    }
   })
 })
 
@@ -355,6 +398,10 @@ describe('the classifier against the REAL banks — the demo path', () => {
         }
       }
     }
-    expect([...reached].sort()).toEqual([...DEMO_SLUGS].sort())
+    // The fallback is unreachable by leader match BY CONSTRUCTION — it has no
+    // leaders — and unreachable by keyword too, because it carries none. It is
+    // reachable only by `scan.ts` choosing it after both signals have missed,
+    // which is the single path that may select it.
+    expect([...reached].sort()).toEqual(DEMO_SLUGS.filter((s) => !isFallback(s)).sort())
   })
 })

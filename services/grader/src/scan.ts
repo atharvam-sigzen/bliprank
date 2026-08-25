@@ -37,7 +37,7 @@
 import { cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
-import { DEMO_BANKS, DEMO_TAXONOMY, classifyDomain, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
+import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
 import type { BlobStore, CollectionOrchestrator } from '@bliprank/collector'
 
 /** The two groups that name no brand. See property 2 above. */
@@ -110,6 +110,16 @@ export type ScanResult =
       readonly category: string
       readonly categoryName: string
       readonly classification: Classification
+      /**
+       * Set when the domain did NOT resolve to a category and the scan ran
+       * against the fallback bank instead. Absent on a normal scan.
+       *
+       * It carries WHY, because "we could not place you" and "you lead three of
+       * these at once" are different facts and the page says which. A consumer
+       * that ignores this field renders a number whose competitor set is empty
+       * without saying why it is empty, so it is not optional to read.
+       */
+      readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
       /** How the subject brand was identified — see `subjectFor`. */
       readonly subjectSource: 'leader' | 'domain-label'
       readonly comparisonBasis: string
@@ -194,18 +204,60 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   // PROPERTY 1. Classification first, and it is the spend gate: no category
   // means no bank means no cell means no provider call.
   const classification = classifyDomain(req.domain, banks, taxonomy)
-  if (classification.status === 'ambiguous') {
-    return { status: 'ambiguous', domain: req.domain, classification, candidates: classification.candidates }
-  }
-  if (classification.status === 'unclassified') {
-    return { status: 'unclassified', domain: req.domain, classification, reason: classification.reason }
+
+  /*
+   * THE FALLBACK, AND WHY IT LIVES HERE RATHER THAN IN THE CLASSIFIER.
+   *
+   * `classifyDomain` still answers honestly: unclassified is unclassified and
+   * ambiguous is ambiguous. What changed is what the CALLER does about it — it
+   * scans anyway, against a bank with no leaders, and says so. Keeping the
+   * decision at this layer means the classifier's answer is never overwritten by
+   * a helpful guess, which is the property ADR-0005 protects when it refuses to
+   * bucket an unknown citation as `owned`.
+   *
+   * Ambiguity is NOT collapsed into ignorance. `zoho.com` leads three of these
+   * categories and that is real information; it is carried into `candidates` and
+   * the page reports it, rather than being flattened to "we don't know".
+   *
+   * The cost is honest and structural: the fallback bank has no leaders, so
+   * there is no competitor set, so there is no ranking. `comparisonBasisFor`
+   * stamps the fallback slug, so `compare()` refuses to put this number beside a
+   * category-bank number without anyone having to remember to.
+   */
+  /*
+   * ...BUT A STRING THAT IS NOT A DOMAIN STILL BUYS NOTHING.
+   *
+   * The fallback exists so a REAL domain we cannot categorise still gets
+   * measured. `hello.txt`, `report.pdf` and a half-typed address are not real
+   * domains, and falling back for them would turn a typo into a full scan — on
+   * a public box, with no confirmation step, against a quota with one scan left
+   * in it. That is the opposite of what the fallback is for.
+   *
+   * Keyed off the host shape rather than off the reason STRING, so a reworded
+   * message cannot silently open the path.
+   */
+  if (classification.status === 'unclassified' && (normaliseHost(req.domain) === '' || looksLikeFilename(req.domain))) {
+    const reason = looksLikeFilename(req.domain) ? `${req.domain} looks like a filename, not a domain` : classification.reason
+    return { status: 'unclassified', domain: req.domain, classification, reason }
   }
 
-  const bank = banks.find((b) => b.category === classification.slug)
+  let fallback: { reason: 'unclassified' | 'ambiguous'; detail: string; candidates: readonly string[] } | undefined
+  let slug: string
+  if (classification.status === 'classified') {
+    slug = classification.slug
+  } else {
+    slug = FALLBACK_SLUG
+    fallback =
+      classification.status === 'ambiguous'
+        ? { reason: 'ambiguous', detail: classification.evidence, candidates: classification.candidates }
+        : { reason: 'unclassified', detail: classification.reason, candidates: [] }
+  }
+
+  const bank = banks.find((b) => b.category === slug)
   if (!bank) {
     // A classified slug with no bank is a wiring fault, not a user outcome. It
     // must not fall through to a scan of some other category.
-    return { status: 'unclassified', domain: req.domain, classification, reason: `no bank for category ${classification.slug}` }
+    return { status: 'unclassified', domain: req.domain, classification, reason: `no bank for category ${slug}` }
   }
 
   // PROPERTY 2. Unprompted prompts only.
@@ -309,6 +361,10 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     category: bank.category,
     categoryName: bank.displayName,
     classification,
+    // Spread, not `fallback,`: the field is optional and R8's no-optional-fields
+    // discipline is about METRICS, but exactOptionalPropertyTypes still refuses
+    // an explicit `undefined` here. A normal scan carries no key at all.
+    ...(fallback ? { fallback } : {}),
     subjectSource,
     comparisonBasis,
     algoVersion: SCORING_ALGO_VERSION,

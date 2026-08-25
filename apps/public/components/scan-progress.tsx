@@ -64,11 +64,12 @@ export function ScanRefusal({ kind, message, onReset }: { kind: string; message:
     unreadable: 'Could not verify remaining quota',
     disabled: 'Live scanning is off',
     config: 'Not configured for live scanning',
-    unclassified: 'Not in the demo categories',
+    unclassified: 'That is not a domain',
     ambiguous: 'More than one category matches',
     network: 'Could not reach the scan service',
     http: 'The scan service returned an error',
-    failed: 'The scan stopped',
+    failed: 'Answers came back, none could be scored',
+    'collection-failed': 'Nothing was collected',
     input: 'Check the domain',
   }
 

@@ -47,6 +47,8 @@ export interface ScanResultFile {
   readonly domain: string
   readonly category: string
   readonly categoryName: string
+  /** Present only when the scan ran against the fallback bank — see `scan.ts`. */
+  readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
   readonly subjectSource: 'leader' | 'domain-label'
   readonly comparisonBasis: string
   readonly algoVersion: string

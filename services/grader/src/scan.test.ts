@@ -98,29 +98,74 @@ const req = (domain: string, over: Partial<Parameters<typeof runScan>[0]> = {}) 
   ...over,
 })
 
-describe('PROPERTY 1 — a domain that does not classify never spends', () => {
-  it('an unclassified domain returns before any cell is requested', async () => {
+describe('PROPERTY 1 — what may spend, and what still may not', () => {
+  /*
+   * ⚠️ THIS PROPERTY WAS DELIBERATELY NARROWED, 2026-08-25.
+   *
+   * It used to read "a domain that does not classify never spends", and that was
+   * a real spend guard: no category meant no bank meant no cell. It was traded
+   * away on an explicit instruction, so that a demo visitor typing any real
+   * domain gets a measurement instead of a dead end. An uncategorised domain now
+   * scans against the fallback bank and COSTS A FULL SCAN.
+   *
+   * What survives is the half that was protecting against accidents rather than
+   * against ignorance: a string that is not a domain still buys nothing. That is
+   * the line, and these tests are what hold it.
+   */
+  it('an uncategorised but REAL domain now scans, against the fallback bank', async () => {
     const d = deps(() => 'nothing')
     const r = await runScan(req('acme.com'), d)
-    expect(r.status).toBe('unclassified')
-    // The assertion that matters: not "it returned an error" but "it bought
-    // nothing". This is the guard the Grader's input regex was wrongly credited
-    // with — junk in the box costs nothing because there is no bank to scan.
-    expect(d.blob.size).toBe(0)
+    expect(r.status).toBe('scanned')
+    if (r.status !== 'scanned') return
+    expect(r.category).toBe('general-business-software')
+    expect(r.fallback).toEqual({ reason: 'unclassified', detail: expect.any(String), candidates: [] })
+    // No leaders in that bank, so the subject is the only brand and there is
+    // nothing to rank it against. An empty competitor set is the honest output
+    // when the category is unknown — not an empty chart with invented rivals.
+    expect(r.brands.filter((b) => !b.isSubject)).toEqual([])
+    expect(r.subjectSource).toBe('domain-label')
+    // It really did buy something. Stated plainly rather than left implied.
+    expect(d.blob.size).toBeGreaterThan(0)
   })
 
-  it('an ambiguous domain returns the candidates and buys nothing', async () => {
+  it('an ambiguous domain scans too, and carries the candidates rather than flattening them', async () => {
     const d = deps(() => 'nothing')
     const r = await runScan(req('zoho.com'), d)
-    expect(r.status).toBe('ambiguous')
-    if (r.status === 'ambiguous') expect(r.candidates).toEqual(['accounting-software', 'crm-software', 'hr-payroll-software'])
-    expect(d.blob.size).toBe(0)
+    expect(r.status).toBe('scanned')
+    if (r.status !== 'scanned') return
+    expect(r.category).toBe('general-business-software')
+    // "You lead three of these at once" is information. It is carried, not
+    // collapsed into "we could not place you", because those are different facts.
+    expect(r.fallback?.reason).toBe('ambiguous')
+    expect(r.fallback?.candidates).toEqual(['accounting-software', 'crm-software', 'hr-payroll-software'])
   })
 
-  it('a filename pasted into the box costs nothing', async () => {
+  it('THE LINE THAT HELD: a filename pasted into the box still costs nothing', async () => {
     const d = deps(() => 'nothing')
     expect((await runScan(req('report.pdf'), d)).status).toBe('unclassified')
     expect(d.blob.size).toBe(0)
+  })
+
+  it('and neither does a half-typed address', async () => {
+    // The failure this guards is a live one: a public box, no confirmation step,
+    // and one scan of quota left. A typo must not be able to spend it.
+    for (const junk of ['hello.txt', 'acme', 'http://', 'a.b', '  ']) {
+      const d = deps(() => 'nothing')
+      expect([junk, (await runScan(req(junk), d)).status]).toEqual([junk, 'unclassified'])
+      expect([junk, d.blob.size]).toEqual([junk, 0])
+    }
+  })
+
+  it('a fallback scan is NOT comparable with a category scan', async () => {
+    // The structural half of the honesty claim. Nobody has to remember this:
+    // comparisonBasisFor stamps the bank slug, so compare() refuses the pairing.
+    const a = await runScan(req('acme.com'), deps(() => 'nothing'))
+    const b = await runScan(req('pipedrive.com'), deps(() => 'nothing'))
+    expect(a.status).toBe('scanned')
+    expect(b.status).toBe('scanned')
+    if (a.status !== 'scanned' || b.status !== 'scanned') return
+    expect(a.comparisonBasis).not.toBe(b.comparisonBasis)
+    expect(a.comparisonBasis).toContain('general-business-software@1')
   })
 })
 

@@ -161,3 +161,38 @@ export function classifyDomain(input: string, banks: readonly PromptBank[], taxo
 
   return { status: 'unclassified', reason: 'no known brand and no category keyword in the domain' }
 }
+
+/**
+ * Does this look like a FILE someone pasted, rather than a domain?
+ *
+ * ⚠️ THIS IS NOW A SPEND GUARD, AND IT WAS NOT BEFORE.
+ *
+ * `normaliseHost` accepts `report.pdf` and `hello.txt` — documented, and
+ * previously harmless, because an unclassified domain had no bank and therefore
+ * bought nothing. That guard was removed on 2026-08-25 so that any real domain
+ * gets scanned against the fallback bank, which means a pasted filename would
+ * now buy a full scan. On a public box with no confirmation step, that turns one
+ * fat-fingered paste into the rest of the month's quota.
+ *
+ * A deny-list of file extensions rather than an allow-list of TLDs, on purpose:
+ * an allow-list rejects real but unusual TLDs, and rejecting a real domain is
+ * the failure this whole change exists to remove. This only ever rejects strings
+ * a domain is unlikely to end in.
+ *
+ * THE KNOWN COST: `.zip` and `.mov` ARE real gTLDs, and this refuses them. That
+ * is a deliberate trade — a genuine `something.zip` is vanishingly rare and a
+ * pasted archive name is not, and the refusal is visible and recoverable while
+ * the spend is neither.
+ */
+const FILE_EXTENSIONS = new Set([
+  'txt', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml',
+  'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'mp3', 'mp4', 'mov', 'avi', 'wav', 'webm',
+  'zip', 'rar', 'gz', 'tar', 'exe', 'dmg', 'iso', 'md', 'log', 'bak', 'tmp', 'html', 'htm', 'css',
+  'js', 'ts', 'tsx', 'jsx', 'py', 'rb', 'php', 'java', 'sql', 'sh', 'env',
+])
+
+export function looksLikeFilename(input: string): boolean {
+  const host = normaliseHost(input)
+  if (!host) return false
+  return FILE_EXTENSIONS.has(host.slice(host.lastIndexOf('.') + 1))
+}

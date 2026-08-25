@@ -159,3 +159,60 @@ fallback is a silent `comparison_basis` change.
 classifies *into* the set of categories the banks define. Both were authored
 together here, and the production ordering should be taxonomy → banks →
 classifier.
+
+---
+
+## Amendment 1 — the fallback, and the spend guard it cost (2026-08-25)
+
+**Status:** Accepted · Supersedes §3's "no default category" rule.
+
+### What changed
+
+The original decision was explicit: *"There is no default category and no
+fallback: a fallback would be a silent `comparison_basis` change wearing a
+helpful face."* That is now overridden on an explicit instruction, so that a
+demo visitor typing any real domain gets a measurement rather than a dead end.
+
+1. **Six categories added** — help desk, website builders, analytics, SEO tools,
+   video conferencing, e-signature. Fourteen in total, each with a full bank.
+2. **A fallback category**, `general-business-software`, with **no leaders and no
+   keywords**. It cannot be matched *into*; it can only be fallen *back* to.
+3. **The classifier is unchanged.** It still answers `unclassified` or
+   `ambiguous` honestly. `services/grader/src/scan.ts` decides to scan anyway.
+   Keeping the decision at the caller is what stops a helpful guess from
+   overwriting the classifier's real answer.
+
+### Why the fallback is not the thing §3 refused
+
+§3's objection was to a **silent** basis change. This one is loud in three ways,
+two of them structural rather than remembered:
+
+- `comparisonBasisFor` stamps `general-business-software@1`, so `compare()`
+  refuses to rank a fallback number against a category number. Nobody polices it.
+- The bank has **no leaders**, so there is no competitor set and no ranking. We
+  do not know the category, so we do not know the rivals, and inventing them is
+  what `/category-bank`'s do-not-invent rule forbids.
+- The result carries a `fallback` field with the reason, and the page states it.
+
+Ambiguity is carried, not flattened: `zoho.com` leads three categories and the
+result says which three, rather than collapsing to "we could not place you".
+
+### ⚠️ What this cost — a real spend guard
+
+`runScan`'s PROPERTY 1 used to be **"a domain that does not classify never
+spends"**: no category meant no bank meant no cell meant no provider call. That
+was the guard actually protecting spend, and it is now gone. An uncategorised
+domain costs a full scan.
+
+Two things were put in its place, because `normaliseHost` accepts `report.pdf`:
+
+- `looksLikeFilename` — a deny-list of file extensions. **Known cost:** `.zip`
+  and `.mov` are real gTLDs and are refused. Deliberate: a genuine `x.zip` is
+  vanishingly rare, a pasted archive name is not, and a refusal is recoverable
+  while a spend is not.
+- The host-shape check, keyed off `normaliseHost` rather than off a message
+  string, so rewording cannot open the path.
+
+**The remaining exposure is real and accepted:** any well-formed domain now
+spends. There is no confirmation step, by instruction. The provider quota and
+`live-gate` are the only things between a typo and a scan.

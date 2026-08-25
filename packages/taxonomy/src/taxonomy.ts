@@ -1,8 +1,9 @@
 /**
  * The demo-scoped taxonomy — ADR-0008.
  *
- * ⚠️ DEMO-SCOPED / PROVISIONAL. Eight hand-authored categories that exist so the
- * application can be demonstrated end to end on one machine. **This is not the
+ * ⚠️ DEMO-SCOPED / PROVISIONAL. Fourteen hand-authored categories plus a
+ * keyword-free fallback, existing so the application can be demonstrated end to
+ * end on one machine. **This is not the
  * production taxonomy decision**, which is still open: where the vocabulary
  * comes from, what granularity 200 banks implies, and what G3's ≥95% criterion
  * is measured against are all unanswered. Adopting the real answer invalidates
@@ -81,7 +82,67 @@ export const DEMO_TAXONOMY: readonly CategoryDef[] = [
     description: 'Platforms for building and running an online store.',
     domainKeywords: ['ecommerce', 'commerce', 'shop', 'shopping', 'store', 'storefront', 'cart', 'checkout'],
   },
+  {
+    slug: 'help-desk-software',
+    displayName: 'Help desk software',
+    description: 'Tools that run a support inbox, a ticket queue or a live chat widget.',
+    domainKeywords: ['helpdesk', 'servicedesk', 'ticketing', 'tickets', 'livechat', 'support'],
+  },
+  {
+    slug: 'website-builders',
+    displayName: 'Website builders',
+    description: 'Platforms for building a site or a landing page without writing code.',
+    domainKeywords: ['website', 'websites', 'sitebuilder', 'webdesign', 'landingpage', 'builder'],
+  },
+  {
+    slug: 'analytics-software',
+    displayName: 'Product and web analytics',
+    description: 'Tools that measure site and product usage — visitors, events and funnels.',
+    domainKeywords: ['analytics', 'analytic', 'metrics', 'telemetry', 'insights', 'dashboards'],
+  },
+  {
+    slug: 'seo-tools',
+    displayName: 'SEO tools',
+    description: 'Tools for keyword research, backlink analysis and rank tracking.',
+    domainKeywords: ['seo', 'serp', 'serps', 'backlink', 'backlinks', 'keywords', 'rank', 'ranking', 'rankings'],
+  },
+  {
+    slug: 'video-conferencing',
+    displayName: 'Video conferencing',
+    description: 'Software for running video meetings, webinars and remote calls.',
+    domainKeywords: ['meet', 'meeting', 'meetings', 'webinar', 'webinars', 'conferencing', 'videocall'],
+  },
+  {
+    slug: 'esignature-software',
+    displayName: 'E-signature software',
+    description: 'Tools for sending documents to be signed electronically.',
+    domainKeywords: ['esign', 'esignature', 'esignatures', 'signature', 'signatures', 'signing'],
+  },
+  /*
+   * THE FALLBACK. Deliberately last, and deliberately keyword-free.
+   *
+   * An empty `domainKeywords` means the token pass can never SELECT this
+   * category — nothing matches nothing. It is reachable only by `scan.ts`
+   * choosing it after both signals have already missed, which keeps the
+   * classifier's own answer honest: it still says "unclassified" or "ambiguous",
+   * and the decision to scan anyway is taken one layer up where it is visible.
+   *
+   * It has no leaders, and that is the point rather than an omission. We do not
+   * know this domain's category, so we do not know its competitors, and
+   * inventing a set to fill the chart is exactly what `/category-bank`'s
+   * do-not-invent rule forbids. The scan measures the domain's own mention rate
+   * against general software prompts and says the comparison is unavailable.
+   */
+  {
+    slug: 'general-business-software',
+    displayName: 'General business software',
+    description: 'The fallback used when a domain does not resolve to a known category.',
+    domainKeywords: [],
+  },
 ]
+
+/** The category `scan.ts` falls back to. Never reachable by keyword. */
+export const FALLBACK_SLUG = 'general-business-software'
 
 export const DEMO_SLUGS: readonly string[] = DEMO_TAXONOMY.map((c) => c.slug)
 

@@ -154,7 +154,16 @@ export async function checkGate(
   }
   if (short.length > 0) {
     const detail = short.map((q) => `${q.engine} has ${q.remaining} of ${q.limit} left`).join(', ')
-    return { ok: false, reason: 'quota', message: `A full scan needs ${needed} requests per engine and ${detail}. Quota resets ${short[0]!.resetAt.slice(0, 10)}.`, short }
+    // Says what ran out, by how much, when it comes back, AND what still works.
+    // A refusal that leaves someone with nothing to do next reads as a crash
+    // even when it is correct — and this one will most likely be read by
+    // somebody standing in front of an audience.
+    return {
+      ok: false,
+      reason: 'quota',
+      message: `The provider quota for this cycle is used up: a full scan needs ${needed} requests per engine and ${detail}. Quota resets ${short[0]!.resetAt.slice(0, 10)}. Nothing was collected and nothing was charged. Domains that have already been scanned are cached and still load instantly.`,
+      short,
+    }
   }
   return { ok: true, quota }
 }
@@ -171,7 +180,19 @@ export function recordScan(domain: string, cfg: GateConfig, now: Date = new Date
 }
 
 export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): GateConfig => ({
-  maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 2),
+  /*
+   * Raised from 2 on 2026-08-25, deliberately, and it is now a RUNAWAY BACKSTOP
+   * rather than the operating limit.
+   *
+   * The instruction was that the provider's own quota should be what stops a
+   * scan, so the honest "quota exhausted, try again next cycle" message is what
+   * a visitor sees. A local cap of 2 would pre-empt that with a different
+   * refusal — accurate, but answering a question nobody asked. It is not removed
+   * entirely: a cap of zero is a loop with no floor, and only SUCCESSFUL scans
+   * are counted, so this cannot fire before the quota does under any normal
+   * sequence.
+   */
+  maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 12),
   callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 17),
   ledgerFile: join(dataDir, 'live-cap.json'),
   engines: [...ENGINES],
