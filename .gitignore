@@ -27,3 +27,7 @@ next-env.d.ts
 # go in git for the same reason they never go in Postgres (R4), and the ledger is
 # a spend record for one machine, not shared state.
 services/grader/data*/
+
+# Screenshot output from scripts/shoot.mjs. Captures are build artifacts:
+# they are regenerated on demand and would otherwise land in every diff.
+shots/
