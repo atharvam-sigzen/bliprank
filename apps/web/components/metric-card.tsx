@@ -1,4 +1,5 @@
-import { compare, formatInterval, formatProvenance, formatValue, type Metric } from '@bliprank/stats'
+import { compare, formatProvenance, type Metric } from '@bliprank/stats'
+import { RangeRail } from './range-rail'
 
 /**
  * The one way a number reaches the screen.
@@ -17,18 +18,10 @@ export function MetricCard({ label, metric, previous }: { label: string; metric:
 
   return (
     <article className="card">
-      <h2>{label}</h2>
-
-      <p className="metric__value">{formatValue(metric)}</p>
-
-      {/* The interval carries its own label for screen readers: "24.7 percent"
-          followed by a bare range would otherwise be two unrelated numbers. */}
-      <p className="metric__interval">
-        <span className="visually-hidden">95% confidence interval: </span>
-        {formatInterval(metric)}
-        <span aria-hidden="true"> · </span>
-        <span className="visually-hidden">sample size </span>n={metric.n}
-      </p>
+      {/* The rail leads. What used to be here was a big number with the interval
+          set beneath it as small print — the exact hierarchy this product argues
+          against, in the component built to demonstrate the argument. */}
+      <RangeRail label={label} metric={metric} />
 
       {comparison ? <DeltaBadge comparison={comparison} /> : null}
 

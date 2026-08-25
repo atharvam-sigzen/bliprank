@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadChart } from '@/components/head-to-head-chart'
+import { RangeRail } from '@/components/range-rail'
+import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
+import { runLiveScan } from '@/lib/live-scan'
 import { buildHeadToHead } from '@/lib/head-to-head'
 import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
@@ -30,9 +33,10 @@ assertProvisionalAllowed('The AI Visibility Grader')
 
 type State =
   | { phase: 'idle' }
-  | { phase: 'scanning'; domain: string }
+  | { phase: 'scanning'; domain: string; stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string; cached: boolean }
   | { phase: 'done'; domain: string; scan: ScanResultFile }
   | { phase: 'not-scanned'; domain: string }
+  | { phase: 'refused'; domain: string; kind: string; message: string }
 
 export default function Grader() {
   const [state, setState] = useState<State>({ phase: 'idle' })
@@ -60,12 +64,37 @@ export default function Grader() {
       return
     }
     setError(null)
-    setState({ phase: 'scanning', domain: value })
-    // No collection happens here. `scanFor` looks up the result a runner already
-    // produced under an explicit budget (see lib/scan-result.ts); an unscanned
-    // domain says so rather than inventing a number for it.
-    const found = scanFor(value)
-    setTimeout(() => setState(found ? { phase: 'done', domain: value, scan: found } : { phase: 'not-scanned', domain: value }), 400)
+    setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
+
+    // The committed scan is checked first and costs nothing. Only a domain with
+    // no stored result reaches the server, and the server checks its own cache
+    // again before it is allowed to spend.
+    const local = scanFor(value)
+    if (local) {
+      setTimeout(() => setState({ phase: 'done', domain: value, scan: local }), 300)
+      return
+    }
+
+    void runLiveScan(value, (e) => {
+      if (e.kind === 'stage') setState((s) => (s.phase === 'scanning' ? { ...s, stage: e.stage } : s))
+      else if (e.kind === 'cached') setState((s) => (s.phase === 'scanning' ? { ...s, cached: true, stage: 'already collected' } : s))
+      else if (e.kind === 'begin') setState((s) => (s.phase === 'scanning' ? { ...s, total: e.total, engines: e.engines, prompts: e.prompts, stage: 'collecting' } : s))
+      else if (e.kind === 'progress')
+        setState((s) => (s.phase === 'scanning' ? { ...s, done: e.done, total: e.total, lastCell: e.cell } : s))
+      else if (e.kind === 'error') setState({ phase: 'refused', domain: value, kind: e.errorKind, message: e.message })
+      else if (e.kind === 'result') {
+        const r = e.result as { status?: string }
+        // A classification refusal is not a failure to report as one: the
+        // taxonomy is demo-scoped and saying so is the honest answer.
+        if (r.status === 'unclassified')
+          setState({ phase: 'refused', domain: value, kind: 'unclassified', message: `${value} is not in the eight demo categories yet. The production taxonomy decision is still open — see ADR-0008.` })
+        else if (r.status === 'ambiguous')
+          setState({ phase: 'refused', domain: value, kind: 'ambiguous', message: `${value} leads more than one of the demo categories, so picking one would be inventing a fact. Try a domain that sits in a single category.` })
+        else if (r.status === 'no-answers')
+          setState({ phase: 'refused', domain: value, kind: 'failed', message: `No engine returned a usable answer for ${value}. Nothing is shown because there is nothing measured.` })
+        else setState({ phase: 'done', domain: value, scan: e.result as ScanResultFile })
+      }
+    })
   }
 
   return (
@@ -79,22 +108,34 @@ export default function Grader() {
         </div>
       </header>
 
-      <p className="notice notice--info">
-        {IS_LIVE ? (
-          <>
-            <strong>Real answers.</strong> {SCAN.counts.answersScored} answers collected across {SCAN.run.engines.length} engines on {SCAN.run.day}, at a
-            cost of ${SCAN.run.spentUsd.toFixed(4)}. Nothing is collected when you press the button: this page renders a scan a runner already produced under
-            an explicit budget.
-          </>
-        ) : (
-          <>
-            <strong>Fixture answers, real pipeline.</strong> Every number below was classified, collected, scored and given its interval by the production
-            code path, but the answers came from the offline fixture adapter rather than a provider. Re-run with a live plan to replace them.
-          </>
-        )}
-      </p>
+      {/* Set as a mark of provenance, not a warning label. A disclosure that
+          looks like an error is a disclosure a reader learns to dismiss — and
+          this one is the product's central claim about itself. */}
+      <aside className="stamp">
+        <span className="stamp__eyebrow">{IS_LIVE ? 'Collected' : 'Fixture answers'}</span>
+        <p className="stamp__body">
+          {IS_LIVE ? (
+            <>
+              <strong>
+                {SCAN.counts.answersScored} answers across {SCAN.run.engines.length} engines on {SCAN.run.day}
+              </strong>
+              , at a cost of ${SCAN.run.spentUsd.toFixed(4)}. Nothing is collected when you press the button: this page renders a scan a runner already
+              produced under an explicit budget.
+            </>
+          ) : (
+            <>
+              <strong>Real pipeline, fixture answers.</strong> Every number below was classified, collected, scored and given its interval by the production
+              code path. The answers came from the offline fixture adapter rather than a provider.
+            </>
+          )}
+        </p>
+      </aside>
 
-      {state.phase === 'idle' || state.phase === 'scanning' ? (
+      {state.phase === 'refused' ? (
+        <ScanRefusal kind={state.kind} message={state.message} onReset={() => setState({ phase: 'idle' })} />
+      ) : state.phase === 'scanning' && state.total > 0 ? (
+        <ScanProgress stage={state.stage} done={state.done} total={state.total} engines={state.engines} prompts={state.prompts} lastCell={state.lastCell} />
+      ) : state.phase === 'idle' || state.phase === 'scanning' ? (
         <form className="card" onSubmit={submit} noValidate>
           {/* Visible label, not a placeholder: a placeholder disappears the
               moment it is needed, which is when the user starts typing. */}
@@ -125,7 +166,7 @@ export default function Grader() {
                 fontSize: '1rem',
                 border: `1px solid ${error ? 'var(--color-destructive)' : 'var(--color-border)'}`,
                 borderRadius: 'var(--radius)',
-                background: '#fff',
+                background: 'var(--color-card)',
                 color: 'var(--color-foreground)',
               }}
             />
@@ -220,11 +261,10 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         {scan.categoryName} · {scan.counts.answersScored} answers · {scan.run.engines.length} engines
       </p>
 
-      <p className="metric__value">{formatValue(metric)}</p>
-      <p className="metric__interval">
-        <span className="visually-hidden">95% confidence interval: </span>
-        {formatInterval(metric)} · n={metric.n} answers
-      </p>
+      {/* The rail, on the surface most likely to be screenshotted beside a
+          competitor's tool. Their headline is a confident figure; this one
+          cannot be photographed without the range around it. */}
+      <RangeRail label="Mention rate" metric={metric} />
       {/* The free surface is the one most likely to be screenshotted and
           compared against another tool, so it is the last place provenance
           should be missing. */}

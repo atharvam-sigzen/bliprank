@@ -1204,3 +1204,208 @@ tbody tr:last-child th {
 .h2h__label--subject {
   letter-spacing: -0.005em;
 }
+
+/* ==========================================================================
+   THE RANGE RAIL — the signature
+   ==========================================================================
+   Every tool in this category renders a confident number. This inverts it: the
+   RANGE is the dominant shape on the card and the estimate is a mark inside it.
+   It is the one place the design spends its boldness, and it is true to the
+   brief rather than decorative — a reader cannot look at a headline metric here
+   without seeing how much it does not know.
+
+   Three layers, and each has a contrast job:
+
+     track   the full 0-100% scale, so a narrow interval LOOKS narrow. Without
+             it a 17-45% range and a 2-4% range draw the same width and the
+             chart lies by omission.
+     band    the interval itself, in the data hue.
+     needle  the point estimate.
+
+   THE NEEDLE IS HALOED, AND THAT IS NOT DECORATION. The obvious choice — the
+   primary hue on the band — computes 1.63:1 in light and 1.51:1 in dark: it
+   disappears into the bar it sits on. Foreground alone fixes light (4.51) and
+   fails dark (2.97). A core inside a card-coloured collar clears both: the
+   collar separates from the band (4.10 / 5.16) and the core reads against the
+   collar (18.51 / 15.32). Where the estimate sits at the very edge of its own
+   interval the collar touches the track instead, and the core still carries it
+   directly (16.80 / 14.12).
+
+   The number keeps its own job. The range is the dominant SHAPE; the figure is
+   the fastest DATUM, so it stays large, heavy, near-black and — critically — in
+   a fixed position, because a number that moves with the estimate cannot be
+   found at a glance. */
+
+.rail {
+  margin-top: var(--space-3);
+}
+
+.rail__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--color-foreground);
+  margin: 0 0 var(--space-2);
+}
+
+.rail__track {
+  position: relative;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--color-muted);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.rail__band {
+  position: absolute;
+  top: 0;
+  height: 12px;
+  min-width: 3px;
+  border-radius: 3px;
+  background: var(--color-secondary);
+}
+
+/* The collar. Its only job is to separate the core from the band underneath. */
+.rail__needle {
+  position: absolute;
+  top: -3px;
+  width: 7px;
+  height: 18px;
+  margin-left: -3.5px;
+  border-radius: 2px;
+  background: var(--color-card);
+}
+
+/* The reading itself. */
+.rail__needle::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--color-foreground);
+}
+
+.rail__bounds {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  color: var(--color-muted-foreground);
+}
+
+/* The label row above the rail: what it measures, and how much of it there is. */
+.rail__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.rail__n {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}
+
+/*
+ * The estimate dot on a head-to-head bar had the same 1.63:1 problem as the
+ * naive needle, and no test caught it because the suite checks marks against
+ * SURFACES and never against other marks. Same construction, same reason.
+ */
+.h2h__dot-collar {
+  fill: var(--color-card);
+}
+
+/* --- fixture banner: a stamp, not a warning ------------------------------ */
+/*
+ * A disclosure that looks like an error teaches a reader to dismiss it. This is
+ * the product's own claim about itself, so it is set like a mark of provenance:
+ * a monospace eyebrow, a rule, and the sentence. Quiet, deliberate, unmissable.
+ */
+.stamp {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 var(--space-3);
+  align-items: start;
+  border: var(--hairline);
+  border-left: 2px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.stamp__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.stamp__body {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-muted-foreground);
+  margin: 0;
+}
+
+.stamp__body strong {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .stamp {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* --- motion: one orchestrated moment, not scattered effects -------------- */
+/*
+ * The rails draw themselves once on load, staggered left to right. It is the
+ * page saying "here is a range" before it says "here is a number", which is the
+ * whole argument in a quarter of a second. Nothing else on the page animates.
+ */
+@keyframes rail-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.rail__band {
+  transform-origin: left center;
+  animation: rail-draw 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rail__needle {
+  animation: rail-draw 260ms cubic-bezier(0.22, 1, 0.36, 1) 420ms both;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail__band,
+  .rail__needle {
+    animation: none;
+  }
+}

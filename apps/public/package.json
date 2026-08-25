@@ -12,7 +12,9 @@
     "@bliprank/stats": "workspace:*",
     "next": "^15.5.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@bliprank/contracts": "workspace:*",
+    "@bliprank/taxonomy": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

@@ -80,13 +80,21 @@
     "ruflo-browser@ruflo": true,
     "ruflo-cost-tracker@ruflo": false,
     "ruflo-adr@ruflo": true,
-    "ruflo-metaharness@ruflo": true
+    "ruflo-metaharness@ruflo": true,
+    "frontend-design@claude-plugins-official": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   },
   "extraKnownMarketplaces": {
     "ruflo": {
       "source": {
         "source": "github",
         "repo": "ruvnet/ruflo"
+      }
+    },
+    "ui-ux-pro-max-skill": {
+      "source": {
+        "source": "github",
+        "repo": "sooraj-shaji/ui-ux-pro-max-skill"
       }
     }
   }

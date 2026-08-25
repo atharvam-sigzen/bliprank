@@ -23,9 +23,15 @@ importers:
 
   apps/public:
     dependencies:
+      '@bliprank/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@bliprank/stats':
         specifier: workspace:*
         version: link:../../packages/stats
+      '@bliprank/taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/taxonomy
       next:
         specifier: ^15.5.0
         version: 15.5.23(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

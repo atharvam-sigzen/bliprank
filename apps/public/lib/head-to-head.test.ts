@@ -266,8 +266,15 @@ const CSS = SHEETS[0]!.css
 function themeTokens(css: string, theme: 'light' | 'dark'): Record<string, string> {
   const light = tokensOf(css)
   if (theme === 'light') return light
-  const darkBlock = /:root\[data-theme='dark'\]\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
-  const dark = Object.fromEntries([...darkBlock.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((x) => [x[1]!, x[2]!.trim()]))
+  // EVERY dark block, merged in source order. `tokensOf` was fixed to merge all
+  // `:root` blocks and this was left reading only the first with `.exec` — so
+  // once a second dark block existed, every dark-theme assertion was verifying a
+  // palette the page no longer ships, and reporting green. The same cascade
+  // mistake, one selector over.
+  const dark: Record<string, string> = {}
+  for (const block of css.matchAll(/:root\[data-theme='dark'\]\s*\{([^}]*)\}/g)) {
+    for (const m of block[1]!.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) dark[m[1]!] = m[2]!.trim()
+  }
   return { ...light, ...dark }
 }
 
@@ -628,5 +635,73 @@ describe('the design-system checklist, as assertions', () => {
       expect([name, widths.length]).toEqual([name, expect.any(Number)])
       expect([name, widths.some((w) => w <= 640)]).toEqual([name, true])
     }
+  })
+})
+
+describe('a mark drawn ON another mark, which no surface check can see', () => {
+  // The suite above composites every mark over every SURFACE. It never asked
+  // what happens when one mark is drawn on top of another — and two were:
+  // the range-rail needle sits on the interval band, and the head-to-head
+  // estimate dot sits on the interval bar. Both computed 1.63:1 in light and
+  // 1.51:1 in dark with the obvious colour, which is invisible.
+  //
+  // Both are now haloed: a collar in the card colour separates the core from
+  // the mark underneath, and the core reads against the collar. This checks the
+  // construction rather than the intention.
+  const STACKS = [
+    { name: 'range-rail needle', collar: '.rail__needle', collarProp: 'background', under: '.rail__band', underProp: 'background', core: '--color-foreground' },
+    { name: 'head-to-head dot', collar: '.h2h__dot-collar', collarProp: 'fill', under: '.h2h__interval', underProp: 'stroke', core: '--color-primary' },
+  ] as const
+
+  for (const theme of THEMES) {
+    for (const s of STACKS) {
+      it(`${theme}: ${s.name} reads against the mark it sits on`, () => {
+        const t = themeTokens(CSS, theme)
+        const rv = (v: string): string => (v.startsWith('var(') ? (t[v.slice(4, -1).trim()] ?? v) : v)
+        const collar = rv(declarations(s.collar)[s.collarProp] ?? '')
+        const under = rv(declarations(s.under)[s.underProp] ?? '')
+        const core = t[s.core]!
+
+        expect(collar, `${s.collar} declares no ${s.collarProp}`).toMatch(/^#/)
+        // The collar separates from the mark below it...
+        const sep = contrastRatio(rgb(collar), rgb(under))
+        expect(sep, `${theme}: ${s.collar} on ${s.under} is ${sep.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+        // ...and the core reads against the collar.
+        const read = contrastRatio(rgb(core), rgb(collar))
+        expect(read, `${theme}: ${s.core} on ${s.collar} is ${read.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+      })
+    }
+  }
+
+  it('THE FINDING: the obvious colour for each really is invisible', () => {
+    // Without this the fix above is just an assertion that today passes. These
+    // are the values a reasonable person reaches for first, and both must fail.
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      const onBand = contrastRatio(rgb(t['--color-primary']!), rgb(t['--color-secondary']!))
+      expect(onBand, `${theme}: primary on secondary is ${onBand.toFixed(2)}:1`).toBeLessThan(3)
+    }
+    // Foreground fixes light and fails dark, which is why neither theme could
+    // take a single flat colour and both needed the collar.
+    const dark = themeTokens(CSS, 'dark')
+    expect(contrastRatio(rgb(dark['--color-foreground']!), rgb(dark['--color-secondary']!))).toBeLessThan(3)
+  })
+
+  it('THE GLANCE REQUIREMENT: the estimate stays the fastest thing to read', () => {
+    // The range is the dominant shape; the number must still be findable in
+    // under a second. Three things carry that, and all three are checked here
+    // because "it looked fine" is how a headline number quietly becomes small.
+    const v = declarations('.rail__value')
+    expect(Number.parseFloat(v['font-size'] ?? '0'), 'headline value font-size').toBeGreaterThanOrEqual(1.75)
+    expect(Number(v['font-weight'] ?? '400'), 'headline value weight').toBeGreaterThanOrEqual(600)
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      const ink = contrastRatio(rgb(t['--color-foreground']!), rgb(t['--color-card']!))
+      expect(ink, `${theme}: headline value on card is ${ink.toFixed(2)}:1`).toBeGreaterThanOrEqual(12)
+    }
+    // And it must not move with the data — a number that slides along the rail
+    // cannot be found at a glance, which defeats the point of keeping it big.
+    expect(v['position'] ?? 'static').not.toBe('absolute')
+    expect(declarations('.rail__needle')['position']).toBe('absolute')
   })
 })

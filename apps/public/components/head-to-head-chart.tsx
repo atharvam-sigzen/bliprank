@@ -198,6 +198,11 @@ function Row({ row, y }: { row: HeadToHeadRow; y: number }) {
       {[lo, hi].map((x) => (
         <line key={x} className={`h2h__cap${row.isSubject ? ' h2h__cap--subject' : ''}`} x1={x} x2={x} y1={y - cap} y2={y + cap} />
       ))}
+      {/* A collar, for the same reason the range rail has one: the primary dot
+          sits ON the secondary bar and computes 1.63:1 against it — invisible,
+          and missed by every contrast assertion because those check marks
+          against SURFACES, never against other marks. */}
+      <circle className="h2h__dot-collar" cx={mid} cy={y} r={row.isSubject ? 6.5 : 5.5} />
       <circle className="h2h__dot" cx={mid} cy={y} r={row.isSubject ? 4 : 3} />
 
       <text className="h2h__glyph" x={CHART.width - CHART.padRight + 6} y={y + 4} textAnchor="start" aria-hidden="true">

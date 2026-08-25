@@ -16,13 +16,16 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Not amber. This is a methodology disclosure, which is the product
-          working as intended — dressing it as a warning makes an honest
-          statement look like a defect. */}
-      <p className="notice notice--info">
-        <strong>Illustrative data.</strong> Every number here is fixture data, shaped to exercise the interface. No answers have been collected and no provider has
-        been called. The intervals, the significance rules and the provenance line are the real ones.
-      </p>
+      {/* A disclosure that looks like an error teaches a reader to dismiss it.
+          This is the product's own claim about itself, so it is set as a mark of
+          provenance rather than a warning label. */}
+      <aside className="stamp">
+        <span className="stamp__eyebrow">Illustrative data</span>
+        <p className="stamp__body">
+          Every number here is fixture data, shaped to exercise the interface. <strong>No answers have been collected and no provider has been called.</strong> The
+          intervals, the significance rules and the provenance lines are the real ones.
+        </p>
+      </aside>
 
       <section className="grid" aria-label="Headline metrics">
         <MetricCard label="Mention rate" metric={HEADLINE.mentionRate.current} previous={HEADLINE.mentionRate.previous} />

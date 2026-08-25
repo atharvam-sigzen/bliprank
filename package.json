@@ -14,7 +14,8 @@
     "test:rls": "vitest run packages/db",
     "grader:scan": "tsx services/grader/src/run.ts",
     "demo:dashboard": "pnpm --filter @bliprank/web dev",
-    "demo:grader": "pnpm --filter @bliprank/public dev"
+    "demo:grader": "pnpm --filter @bliprank/public dev",
+    "grader:diagnose": "tsx services/grader/src/diagnose.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

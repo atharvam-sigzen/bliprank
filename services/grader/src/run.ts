@@ -25,7 +25,8 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   AnswerIndex,
   Budget,
@@ -45,7 +46,7 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { fixtureAdapter } from '@bliprank/collector/fixture'
 import { loadApiKey } from './load-key.js'
 import { FileBlobStore, FileKV } from './local-store.js'
-import { runScan, type ScanResult } from './scan.js'
+import { runScan, type ScanProgress, type ScanResult } from './scan.js'
 
 /** Provider ceiling for one API key, shared across engines. */
 const KEY_RPS_CEILING = 15
@@ -59,6 +60,8 @@ export interface RunnerOptions {
   readonly maxPrompts?: number
   /** Absolute per-engine ceiling, below whatever the plan table allows. */
   readonly maxRps?: number
+  /** Observe each cell as it completes — the SSE route streams these. */
+  readonly onProgress?: (p: ScanProgress) => void
   readonly mode: 'live' | 'fixture' | 'stub'
   readonly apiKey: string
   readonly dataDir: string
@@ -102,7 +105,7 @@ export function parseArgs(
 
   // Secret from the file, decisions from the command line. COLLECTION_ENABLED
   // and the plan are deliberately NOT read from .env — see load-key.ts.
-  const repoRoot = root ?? new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+  const repoRoot = root ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
   const found = loadApiKey(repoRoot, env)
   const apiKey = found?.key ?? ''
   if (!offline && !apiKey) return { refuse: `OPENWEBNINJA_API_KEY not found in the environment, .env.local or .env` }
@@ -223,6 +226,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
         blob,
         adapterFor,
         onProgress: (p) => {
+          o.onProgress?.(p)
           if (p.done % 10 === 0 || p.done === p.total) o.log(`  ${p.done}/${p.total} cells · ${p.outcome}`)
         },
       },
