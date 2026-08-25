@@ -1700,3 +1700,97 @@ body {
     transform: none;
   }
 }
+
+/* ==========================================================================
+   THE MEASUREMENT RECORD — palette sync
+   ==========================================================================
+   The two apps must ship IDENTICAL colour tokens ("the palettes are
+   identical" in apps/public/lib/head-to-head.test.ts), so the ink-on-paper
+   palette lands here the moment it lands there. This block overrides every
+   colour token; the dashboard's structural redesign (record sheet, margin,
+   chassis) follows in its own pass — until then it is the old layout in the
+   new ink, which is a coherent interim state rather than a broken one.
+
+   paper #F6F6F3 · ink #15181D · Prussian #1E5A7D (data, 7.46:1 on card) ·
+   range #3D7EA6 (band, 4.44:1) · amber = attention only · oxide = refusal
+   only. Every ratio asserted by the suite, both themes. See the public
+   stylesheet header for the full reasoning.
+   ========================================================================== */
+
+:root {
+  --color-background: #f6f6f3;
+  --color-card: #ffffff;
+  --color-foreground: #15181d;
+  --color-card-foreground: #15181d;
+  --color-muted: #ecece7;
+  --color-muted-foreground: #5a5f66;
+  --color-border: #e1e1db;
+  --color-neutral-ink: #5a5f66;
+  --color-primary: #1e5a7d;
+  --color-on-primary: #ffffff;
+  --color-secondary: #3d7ea6;
+  --color-ring: #1e5a7d;
+  --color-accent: #b8821f;
+  --color-on-accent: #15181d;
+  --color-destructive: #b3341f;
+  --color-field-border: #83858a;
+  --color-delta-bg: #e4ebf1;
+  --color-delta-ink: #14384f;
+  --color-notice-bg: #f6eedc;
+  --color-notice-ink: #63460c;
+  --color-notice-border: var(--color-accent);
+
+  --shadow-card: 0 1px 1px rgb(21 24 29 / 0.03), 0 2px 6px rgb(21 24 29 / 0.04);
+  --shadow-raised: 0 1px 1px rgb(21 24 29 / 0.04), 0 6px 18px rgb(21 24 29 / 0.08);
+  --shadow-pop: 0 12px 32px rgb(21 24 29 / 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-background: #10151c;
+    --color-card: #192129;
+    --color-foreground: #e9ebe7;
+    --color-card-foreground: #e9ebe7;
+    --color-muted: #222b35;
+    --color-muted-foreground: #a5afb9;
+    --color-border: #2b333e;
+    --color-neutral-ink: #a5afb9;
+    --color-primary: #8fb8d8;
+    --color-on-primary: #0c1218;
+    --color-secondary: #6e97b8;
+    --color-ring: #8fb8d8;
+    --color-accent: #d9a23f;
+    --color-on-accent: #0c1218;
+    --color-destructive: #e4795f;
+    --color-field-border: #6d7987;
+    --color-delta-bg: #1c3247;
+    --color-delta-ink: #cce0f0;
+    --color-notice-bg: #2c230e;
+    --color-notice-ink: #e8cd96;
+    --color-notice-border: var(--color-accent);
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-background: #10151c;
+  --color-card: #192129;
+  --color-foreground: #e9ebe7;
+  --color-card-foreground: #e9ebe7;
+  --color-muted: #222b35;
+  --color-muted-foreground: #a5afb9;
+  --color-border: #2b333e;
+  --color-neutral-ink: #a5afb9;
+  --color-primary: #8fb8d8;
+  --color-on-primary: #0c1218;
+  --color-secondary: #6e97b8;
+  --color-ring: #8fb8d8;
+  --color-accent: #d9a23f;
+  --color-on-accent: #0c1218;
+  --color-destructive: #e4795f;
+  --color-field-border: #6d7987;
+  --color-delta-bg: #1c3247;
+  --color-delta-ink: #cce0f0;
+  --color-notice-bg: #2c230e;
+  --color-notice-ink: #e8cd96;
+  --color-notice-border: var(--color-accent);
+}

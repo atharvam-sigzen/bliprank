@@ -1,30 +1,33 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono, IBM_Plex_Sans, Instrument_Serif } from 'next/font/google'
+import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from 'next/font/google'
 
 /*
  * THE TYPE IS THE POSITIONING, SO IT STOPPED BEING NEUTRAL.
  *
- * Fira Sans and Fira Code were reasonable and anonymous — the same technical
- * sans every dashboard in this category reaches for, loaded through a
- * render-blocking `@import` that also guaranteed a flash of fallback text on the
- * headline. Both problems are fixed here: `next/font` self-hosts the files,
- * preloads them and emits `size-adjust` fallbacks, so there is no third-party
- * request at runtime and no reflow when the face arrives.
+ * `next/font` self-hosts the files, preloads them and emits `size-adjust`
+ * fallbacks: no third-party request at runtime, no reflow when a face arrives.
  *
  * Three roles, chosen against what this product claims rather than by taste:
  *
- *   Instrument Serif — headings. A high-contrast editorial face, the register of
- *   a published record rather than an app chrome. This is the one deliberate
- *   piece of personality, and it is on the words rather than on the data.
+ *   Newsreader — the record's voice: headlines AND the annotation prose (the
+ *   caveats, refusals and method sentences that are the product actually
+ *   speaking). It replaced Instrument Serif, which was display-only — a
+ *   single cut that could headline but never carry a paragraph, so the
+ *   "published record" register stopped at the masthead. Newsreader is a
+ *   text-first editorial family with a real optical-size axis (6–72) and true
+ *   italics, so one family sets a 44px title and a 15px caveat, and the
+ *   italic that marks a refused comparison is a designed letterform rather
+ *   than a slant. It is also not the serif every AI-generated page ships.
  *
- *   IBM Plex Sans — interface. Drawn for engineering documentation, with real
- *   tabular figures. It carries technical credibility without shouting.
+ *   IBM Plex Sans — the chassis: controls, labels, table headers. Demoted
+ *   from prose duty; it is the machine's lettering, not the record's voice.
  *
- *   IBM Plex Mono — every number, bound and provenance line. A monospace readout
- *   is what an instrument looks like, and tabular width is load-bearing: a
- *   column of intervals that does not align is a column nobody scans.
+ *   IBM Plex Mono — every number, bound and provenance line. A monospace
+ *   readout is what an instrument looks like, and tabular width is
+ *   load-bearing: a column of intervals that does not align is a column
+ *   nobody scans. The serif and the mono never trade jobs.
  */
-const display = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--font-display-src', display: 'swap' })
+const display = Newsreader({ subsets: ['latin'], style: ['normal', 'italic'], axes: ['opsz'], variable: '--font-display-src', display: 'swap' })
 const sans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-sans-src', display: 'swap' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono-src', display: 'swap' })
 import './globals.css'
