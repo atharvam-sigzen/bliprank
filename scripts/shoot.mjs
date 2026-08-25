@@ -93,16 +93,33 @@ async function shoot(browser, { name, path, viewport, theme, prepare }) {
    */
   const typography = await page.evaluate(() => {
     const out = []
-    for (const el of document.querySelectorAll('.panel__title')) {
+    // A headline on the paper is the SERIF at headline size. Both halves matter:
+    // the size catches the (0,1,1) label rules that once won this cascade, and
+    // the family catches the record being set in chassis lettering.
+    for (const el of document.querySelectorAll('.record__title')) {
       const c = getComputedStyle(el)
       const px = Number.parseFloat(c.fontSize)
-      if (px < 15 || c.textTransform === 'uppercase') {
-        out.push(`.panel__title renders ${c.fontSize}/${c.textTransform} — losing the cascade to a label rule`)
+      if (px < 18 || c.textTransform === 'uppercase') {
+        out.push(`.record__title renders ${c.fontSize}/${c.textTransform} — losing the cascade to a label rule`)
       }
+      if (!/Newsreader|serif/i.test(c.fontFamily)) out.push(`.record__title is not the serif voice: ${c.fontFamily.slice(0, 40)}`)
     }
     for (const el of document.querySelectorAll('.prose')) {
       const c = getComputedStyle(el)
       if (!/Newsreader|serif/i.test(c.fontFamily)) out.push(`.prose is not the serif voice: ${c.fontFamily.slice(0, 40)}`)
+    }
+    /*
+     * NOTHING ON THE PAPER MAY WEAR THE CHASSIS. A record that picks up a
+     * border, a card background or a shadow has quietly become a panel again —
+     * which is the exact regression this whole conversion undoes, and it would
+     * look merely "tidy" in a screenshot rather than wrong.
+     */
+    for (const el of document.querySelectorAll('.record')) {
+      const c = getComputedStyle(el)
+      if (c.boxShadow !== 'none') out.push(`.record has a shadow — that is chassis material: ${c.boxShadow.slice(0, 40)}`)
+      if (Number.parseFloat(c.borderTopWidth) > 0 || Number.parseFloat(c.borderLeftWidth) > 0) {
+        out.push('.record has a border — that is chassis material')
+      }
     }
     return [...new Set(out)]
   })

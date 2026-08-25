@@ -670,10 +670,6 @@ main > h1 {
 
 /* A refusal is a machine response, so it is a panel — with the oxide edge
    that is that colour's only job. */
-.card--refusal {
-  border-left: 3px solid var(--color-destructive);
-}
-
 .grid {
   display: grid;
   gap: var(--space-3);
@@ -2048,38 +2044,48 @@ tbody tr:hover {
 }
 
 /*
- * A panel's own heading, in the chassis voice.
+ * A RECORD'S OWN HEADING — serif, because this is paper.
  *
- * `.rail__head h2` is a 0.6875rem tracked label, which is right over a readout
- * ("MENTION RATE") and wrong over a refusal: "Provider quota exhausted" is a
- * statement someone has to read from across a room, not a field label. Plex
- * Sans keeps it chassis lettering — the serif is for the record and its prose,
- * and the two never trade jobs.
- */
-/*
- * ⚠️ THE ELEMENT QUALIFIER IS LOAD-BEARING, NOT STYLE.
+ * Replaces `.panel__title`, which was the chassis voice and correct only while
+ * these states were boxed. The plan gives the serif both headlines and
+ * annotation prose; the sans is chassis lettering and never sets a headline on
+ * the sheet. Smaller than `.record__domain`, which is reserved for the subject
+ * of an actual measurement — a refusal has no subject to name that way.
  *
- * `.card h2` and `.rail__head h2` are both (0,1,1); a bare `.panel__title` is
- * (0,1,0) and LOSES to them. It shipped that way for one capture and the
- * refusal's headline rendered as an 11px uppercase field label — the panel's
- * most important line, set as its least important one. `h2.panel__title` ties
- * on specificity and wins on source order, which is why this block sits at the
- * end of the sheet. Asserted on computed style by scripts/shoot.mjs.
+ * The element qualifier is load-bearing. `.card h2` and `.rail__head h2` are
+ * both (0,1,1) and a bare class is (0,1,0), which is how the refusal's headline
+ * once rendered as an 11px uppercase field label. Asserted on COMPUTED style by
+ * scripts/shoot.mjs, because the cascade is not a declaration and the
+ * stylesheet tests cannot see it resolve.
  */
-h2.panel__title,
-.panel__title {
-  font-family: var(--font-sans);
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.006em;
-  line-height: 1.3;
+h2.record__title,
+.record__title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 440;
+  letter-spacing: -0.008em;
+  line-height: 1.2;
   color: var(--color-foreground);
   margin: 0 0 var(--space-2);
   text-transform: none;
 }
 
-/* A panel's live status line: mono, because it reports counts and cell names. */
-.panel__status {
+/*
+ * The refusal marker, on paper. Oxide keeps its single documented job, but as a
+ * leader rule opening the record rather than a border around a box — the same
+ * device `.note` uses to open a margin annotation, in the refusal colour.
+ */
+.record--refused::before {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 2px;
+  background: var(--color-destructive);
+  margin-bottom: var(--space-2);
+}
+
+/* A live status line: mono, because it reports counts and cell names. */
+.record__status {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--color-muted-foreground);
@@ -2087,8 +2093,8 @@ h2.panel__title,
   overflow-wrap: anywhere;
 }
 
-/* The action that closes a panel. A class, so the spacing is not inline. */
-.panel__action {
+/* The action that closes a record. A class, so the spacing is not inline. */
+.record__action {
   margin-top: var(--space-3);
 }
 

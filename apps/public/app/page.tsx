@@ -240,13 +240,13 @@ export default function Grader() {
 
 function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }) {
   return (
-    // Chassis, like the refusal: there is no measurement here, so there is no
-    // record to typeset. The domain is NOT set as `.record__domain` — that
-    // headline means "this is the subject of a measurement", and claiming it for
-    // a domain we never scanned is the same shape of lie as a bare estimate.
+    // On the paper, like every other outcome. The domain is still NOT set as
+    // `.record__domain` — that headline means "this is the subject of a
+    // measurement", and claiming it for a domain we never scanned is the same
+    // shape of lie as a bare estimate. It gets the quieter record title instead.
     <div className="annotated">
-      <section className="card annotated__body" aria-live="polite">
-        <h2 className="panel__title">No scan for {domain}</h2>
+      <section className="record annotated__body" aria-live="polite">
+        <h2 className="record__title">No scan for {domain}</h2>
         {/* No number is invented for an unscanned domain. Showing a placeholder
             here would be the same dishonesty as a point estimate with no interval:
             a shape that looks like a measurement and is not one. */}
@@ -268,7 +268,7 @@ function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }
 
 function ResetButton({ onReset }: { onReset: () => void }) {
   return (
-    <button type="button" onClick={onReset} className="btn btn--quiet panel__action">
+    <button type="button" onClick={onReset} className="btn btn--quiet record__action">
       Check another domain
     </button>
   )

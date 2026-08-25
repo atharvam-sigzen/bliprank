@@ -18,9 +18,12 @@ export function ScanProgress({ stage, done, total, engines, prompts, lastCell }:
 
   return (
     <div className="annotated">
-      <section className="card annotated__body" aria-live="polite" aria-busy="true">
+      {/* On the paper too: §4 lists scan progress among the places the
+          calibrated readout appears, and a readout belongs on the sheet with
+          the other readouts rather than inside a box of its own. */}
+      <section className="record annotated__body" aria-live="polite" aria-busy="true">
         <div className="rail__head">
-          <h2 className="panel__title">Scanning</h2>
+          <h2 className="record__title">Scanning</h2>
           <span className="rail__n">{total > 0 ? `${done} / ${total} answers` : stage}</span>
         </div>
 
@@ -39,7 +42,7 @@ export function ScanProgress({ stage, done, total, engines, prompts, lastCell }:
           <span>{total > 0 ? `${total} answers` : ''}</span>
         </p>
 
-        <p className="panel__status">{lastCell ? <>Last: {lastCell}</> : <>{stage || 'Starting'}…</>}</p>
+        <p className="record__status">{lastCell ? <>Last: {lastCell}</> : <>{stage || 'Starting'}…</>}</p>
       </section>
 
       {/* The spend disclosure moves to the margin with every other piece of
@@ -83,26 +86,29 @@ export function ScanRefusal({ kind, message, onReset }: { kind: string; message:
   }
 
   /*
-   * A REFUSAL IS CHASSIS, NOT PAPER — and that is the plan's rule, not a
-   * shortcut. The PANELS block reserves the panel material for instruments:
-   * "the form, the progress readout, a refusal, the plan panels, the splitter.
-   * Results are typeset on the paper and get none of this." A refusal is the
-   * instrument answering, not a record of a measurement, because there is no
-   * measurement. Setting it on the paper would say the opposite.
+   * A REFUSAL IS TYPESET ON THE PAPER.
    *
-   * What was genuinely missing is everything INSIDE it. The message was
-   * unstyled body text, the reasoning was a provenance line under the panel,
-   * and the spacing was inline. Now the message takes the serif prose voice
-   * every other caveat on the page uses, and the reasoning moves to the margin
-   * as an annotation — the same treatment the rail's provenance gets, so the
-   * refusal is annotated exactly like a result is.
+   * The plan reserves panel materiality for "the domain field, buttons, the rail
+   * track, chart hit-areas" — the chassis is "controls you operate", and a
+   * refusal is not something you operate. It is the record of an outcome, and
+   * the outcome is that there is nothing to measure. Boxing it said "system
+   * error"; setting it on the sheet says "this is our answer", which is the
+   * honest framing and the one this product is positioned on.
+   *
+   * It also fixes what the box was doing to the text. A short message inside a
+   * full-width panel left a large empty rectangle; the same message on paper is
+   * simply a paragraph at the sheet's own 62ch measure, with its reasoning in
+   * the margin exactly where a result's provenance sits.
+   *
+   * Oxide survives as the refusal marker — its documented, single job — but as a
+   * leader rule opening the record rather than as a border around a box.
    */
   return (
     <div className="annotated">
-      <section className="card card--refusal annotated__body" role="alert">
-        <h2 className="panel__title">{TITLE[kind] ?? 'Cannot scan this domain'}</h2>
+      <section className="record record--refused annotated__body" role="alert">
+        <h2 className="record__title">{TITLE[kind] ?? 'Cannot scan this domain'}</h2>
         <p className="prose">{message}</p>
-        <button type="button" onClick={onReset} className="btn btn--quiet panel__action">
+        <button type="button" onClick={onReset} className="btn btn--quiet record__action">
           Try another domain
         </button>
       </section>
