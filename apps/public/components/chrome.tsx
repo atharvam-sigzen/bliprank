@@ -14,13 +14,17 @@ import { useEffect, useState } from 'react'
  * bar, one mark, and each surface names the other.
  */
 
-export type Surface = 'dashboard' | 'grader'
+export type Surface = 'dashboard' | 'grader' | 'pricing'
 
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
 const HREF = {
   dashboard: process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000',
   grader: process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001',
 }
+// Pricing is a marketing page, so it ships with the free tools on Cloudflare
+// Pages rather than with the paid app (ADR-0002) — hence off the Grader origin
+// from both surfaces, not a relative path that would 404 from the dashboard.
+const PRICING = `${HREF.grader}/pricing`
 
 export function ProductBar({ current }: { current: Surface }) {
   return (
@@ -43,6 +47,9 @@ export function ProductBar({ current }: { current: Surface }) {
         </a>
         <a className="productbar__link" href={HREF.grader} {...(current === 'grader' ? { 'aria-current': 'page' as const } : {})}>
           Grader
+        </a>
+        <a className="productbar__link" href={PRICING} {...(current === 'pricing' ? { 'aria-current': 'page' as const } : {})}>
+          Pricing
         </a>
         <ThemeToggle />
       </div>

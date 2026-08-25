@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
-import { CHART, VERDICT_GLYPH, VERDICT_WORDS, chartHeight, xOf, yOf, type HeadToHead, type HeadToHeadRow } from '../lib/head-to-head'
+import { CHART, VERDICT_GLYPH, VERDICT_WORDS, chartHeight, reasonFor, xOf, yOf, type HeadToHead, type HeadToHeadRow } from '../lib/head-to-head'
 
 /**
  * PHASES 3.4 — the head-to-head comparison, with every interval drawn.
@@ -137,7 +137,13 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
                     week-on-week ("+4.2% vs previous") and this axis is not time.
                     format.ts is HUMAN-OWNED and mid-review, so the wording is
                     adapted at the call site rather than by editing it. */}
-                <td>{row.isSubject ? '—' : VERDICT_WORDS[row.verdict]}</td>
+                <td>
+                  {row.isSubject
+                    ? '—'
+                    : row.verdict === 'insufficient-data' || row.verdict === 'not-comparable'
+                      ? `${VERDICT_WORDS[row.verdict]} — ${reasonFor(row)}`
+                      : VERDICT_WORDS[row.verdict]}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -161,6 +167,10 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
           />
           Your interval, projected
         </span>
+        <span>
+          <span className="chart__swatch chart__swatch--refused" aria-hidden="true" />
+          Measured, but not ranked against you
+        </span>
         <span>Ordered by estimate. Order is not a ranking — see below.</span>
         <span>Scale fixed 0–100%, never auto-fitted.</span>
       </figcaption>
@@ -178,10 +188,21 @@ function Row({ row, y }: { row: HeadToHeadRow; y: number }) {
   const mid = xOf(row.metric.value)
   const uncompared = row.verdict === 'insufficient-data' || row.verdict === 'not-comparable'
   const cap = 5
+  // Clamped inward by the collar's own radius. Close really does sit at 0.0%
+  // in the collected result, and an unclamped collar there reaches 5.5px PAST
+  // the plot edge and draws over the row's own label. The mark must stay inside
+  // the plot it belongs to, whatever the data does.
+  const r = row.isSubject ? 6.5 : 5.5
+  const dot = Math.min(CHART.width - CHART.padRight - r, Math.max(CHART.padLeft + r, mid))
 
   return (
     <g>
-      <text className={`h2h__label${row.isSubject ? ' h2h__label--subject' : ''}`} x={CHART.padLeft - 8} y={y + 4} textAnchor="end">
+      <text
+        className={`h2h__label${row.isSubject ? ' h2h__label--subject' : ''}${uncompared ? ' h2h__label--uncompared' : ''}`}
+        x={CHART.padLeft - 8}
+        y={y + 4}
+        textAnchor="end"
+      >
         {row.isSubject ? '▸ ' : ''}
         {row.label.length > 13 ? `${row.label.slice(0, 12)}…` : row.label}
       </text>
@@ -202,8 +223,8 @@ function Row({ row, y }: { row: HeadToHeadRow; y: number }) {
           sits ON the secondary bar and computes 1.63:1 against it — invisible,
           and missed by every contrast assertion because those check marks
           against SURFACES, never against other marks. */}
-      <circle className="h2h__dot-collar" cx={mid} cy={y} r={row.isSubject ? 6.5 : 5.5} />
-      <circle className="h2h__dot" cx={mid} cy={y} r={row.isSubject ? 4 : 3} />
+      <circle className="h2h__dot-collar" cx={dot} cy={y} r={r} />
+      <circle className="h2h__dot" cx={dot} cy={y} r={row.isSubject ? 4 : 3} />
 
       <text className="h2h__glyph" x={CHART.width - CHART.padRight + 6} y={y + 4} textAnchor="start" aria-hidden="true">
         {VERDICT_GLYPH[row.verdict]}
@@ -231,6 +252,7 @@ function RowTip({ rows, active, subjectLabel }: { rows: readonly HeadToHeadRow[]
     )
   }
   const row = rows[active]!
+  const uncompared = row.verdict === 'insufficient-data' || row.verdict === 'not-comparable'
   return (
     <div className="tip" aria-live="polite">
       <div className="tip__head">
@@ -238,13 +260,21 @@ function RowTip({ rows, active, subjectLabel }: { rows: readonly HeadToHeadRow[]
           {row.label}
           {row.isSubject ? ' — your brand' : ''}
         </span>
-        <span className="tip__value">{formatValue(row.metric)}</span>
+        <span className={`tip__value${uncompared ? ' tip__value--refused' : ''}`}>{formatValue(row.metric)}</span>
       </div>
       <p className="tip__row" style={{ margin: 0 }}>
         95% interval {formatInterval(row.metric)} · n={row.metric.n}
       </p>
-      <p className="tip__row" style={{ margin: 0 }}>
-        {row.isSubject ? 'This is the domain being graded.' : `Versus ${subjectLabel}: ${VERDICT_WORDS[row.verdict]}.`}
+      <p className={`tip__row${uncompared ? ' tip__row--refused' : ''}`} style={{ margin: 0 }}>
+        {row.isSubject
+          ? 'This is the domain being graded.'
+          : uncompared
+            ? // The refusal says WHY, at the moment it is refused. A dashed bar
+              // and a "≠" tell a reader something was withheld but not what, and
+              // the reason sitting in a paragraph further down is a reason most
+              // readers never reach.
+              `Not ranked against ${subjectLabel}: ${reasonFor(row)}. The measurement stands; the comparison would not.`
+            : `Versus ${subjectLabel}: ${VERDICT_WORDS[row.verdict]}.`}
       </p>
       <p className="tip__row" style={{ margin: 0 }}>
         {formatProvenance(row.metric)}

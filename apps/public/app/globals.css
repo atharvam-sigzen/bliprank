@@ -1276,7 +1276,6 @@ tbody tr:last-child th {
   top: -3px;
   width: 7px;
   height: 18px;
-  margin-left: -3.5px;
   border-radius: 2px;
   background: var(--color-card);
 }
@@ -1407,5 +1406,345 @@ tbody tr:last-child th {
   .rail__band,
   .rail__needle {
     animation: none;
+  }
+}
+
+/*
+ * A row the scan will not rank. It is SET ASIDE, not scored low — Close really
+ * is measured at 0.0% [0.0-4.3], and the refusal is about the comparison, not
+ * the measurement. The label is italicised rather than dimmed: dimming would
+ * drop its contrast, and a row a reader is meant to notice being refused is the
+ * last one to make harder to read.
+ */
+.h2h__label--uncompared {
+  font-style: italic;
+}
+
+/*
+ * A refused comparison, in the detail panel.
+ *
+ * The value is still shown at full contrast — Close IS measured at 0.0%, and
+ * hiding a real number would be the dishonesty this product exists to avoid.
+ * What changes is the FRAME: the figure is set in italic so it does not read as
+ * a rank-worthy datum, and the reason gets a rule beside it so the refusal
+ * looks deliberate rather than like a missing field.
+ */
+.tip__value--refused {
+  font-style: italic;
+}
+
+.tip__row--refused {
+  padding-left: 0.625rem;
+  border-left-width: 2px;
+  border-left-style: solid;
+  /* Longhand, so the contrast suite can read the colour. A shorthand hides it
+     inside a value the parser cannot resolve, which is how a mark goes
+     unchecked. */
+  border-left-color: var(--color-muted-foreground);
+}
+
+/*
+ * The legend's entry for a refused row. It draws the dashed BAR those rows use,
+ * not a dashed box — the box already means "your interval, projected", and two
+ * dashed things meaning different things in one legend is worse than no legend.
+ */
+.chart__swatch--refused {
+  height: 0;
+  border-top: 3px dashed var(--color-secondary);
+  border-radius: 0;
+  vertical-align: 3px;
+}
+
+/* ==========================================================================
+   PRICING
+   Built from the tokens above, so it inherits both themes and every contrast
+   fix rather than introducing a third palette. Two colours carry meaning here —
+   curated versus your own — and both are asserted by the contrast suite.
+   ========================================================================== */
+
+.tiers {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
+}
+
+.tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The middle plan is raised, not recoloured. A tinted card would put a marketing
+   accent next to numbers a buyer is meant to trust. */
+.tier--featured {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card), 0 0 0 1px var(--color-primary);
+}
+
+.tier__flag {
+  position: absolute;
+  top: calc(-1 * var(--space-1));
+  right: var(--space-3);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  /* Not #fff: white clears 6.70:1 on the light theme's primary and only 2.31:1
+     on the dark theme's, which is a lighter blue. The ink has to flip with the
+     surface, like every other pair in this sheet. */
+  color: var(--color-on-primary);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tier__name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+}
+
+.tier__price {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+.tier__amount {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-foreground);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.tier__unit {
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+}
+
+.tier__for {
+  margin: 0 0 var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+}
+
+.tier__cap {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.tier__capnum {
+  font-size: 1.25rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The cap as ONE track — the same device as the range rail: the shape says
+   "single pool", and the split inside it is only an example. */
+.tier__pool {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-muted);
+  border: 1px solid var(--color-primary);
+}
+.tier__pool-curated {
+  height: 100%;
+  background: var(--color-primary);
+}
+
+.tier__poolkey {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+.tier__key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.tier__key--curated {
+  background: var(--color-primary);
+}
+.tier__key--custom {
+  background: var(--color-muted);
+  border: 1px solid var(--color-primary);
+}
+
+.tier__note {
+  margin: 0 0 var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+
+.tier__list {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  border-top: var(--hairline);
+  padding-top: var(--space-2);
+}
+.tier__sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+
+.tier__cta {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.625rem var(--space-2);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  color: var(--color-primary);
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 150ms ease, color 150ms ease;
+}
+.tier__cta:hover {
+  background: var(--color-muted);
+}
+.tier__cta--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.tier__cta--primary:hover {
+  background: var(--color-foreground);
+  border-color: var(--color-foreground);
+  color: var(--color-background);
+}
+
+/* --- the draggable split ------------------------------------------------- */
+
+.capsplit {
+  border: var(--hairline);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-4);
+}
+
+.capsplit__tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: var(--space-3);
+}
+.capsplit__tier {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.375rem 1rem;
+  border: var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.capsplit__tier--on {
+  border-color: var(--color-primary);
+  background: var(--color-muted);
+  font-weight: 600;
+}
+.capsplit__tiercap {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.capsplit__bar {
+  display: flex;
+  height: 34px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Outlined in the fill colour, because the unfilled half is --color-muted and
+     that sits at 1.10:1 against the card — without this the bar has no edge. */
+  border: 1px solid var(--color-primary);
+}
+.capsplit__curated {
+  background: var(--color-primary);
+  transition: width 120ms ease;
+}
+.capsplit__custom {
+  background: var(--color-muted);
+  flex: 1;
+}
+.capsplit__curated,
+.capsplit__custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.capsplit__barnum {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.capsplit__curated .capsplit__barnum {
+  color: var(--color-on-primary);
+}
+.capsplit__custom .capsplit__barnum {
+  color: var(--color-foreground);
+}
+
+.capsplit__label {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+.capsplit__range {
+  width: 100%;
+  /* The native control's track is a few pixels tall; the box around it is what
+     a finger actually has to hit. */
+  min-height: 44px;
+  margin: 0 0 var(--space-1);
+  accent-color: var(--color-primary);
+}
+
+.capsplit__sum {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.capsplit__op {
+  color: var(--color-muted-foreground);
+}
+.capsplit__fixed {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+.capsplit__daily {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsplit__curated,
+  .tier__cta {
+    transition: none;
   }
 }

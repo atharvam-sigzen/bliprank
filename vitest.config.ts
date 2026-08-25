@@ -1,6 +1,11 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // React 17+ automatic runtime, matching what Next compiles the apps with.
+  // Without it esbuild falls back to the classic transform and any component
+  // rendered in a test dies on "React is not defined" — a failure about the
+  // harness, not the component.
+  esbuild: { jsx: 'automatic' },
   test: {
     // packages/db/src/deploy-check.test.ts stands up a fresh PGlite instance and
     // runs three migrations per case — the states it tests (role attributes,

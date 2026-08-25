@@ -184,3 +184,26 @@ export const VERDICT_WORDS: Readonly<Record<Verdict, string>> = {
   'insufficient-data': 'not enough data to compare',
   'not-comparable': 'not comparable',
 }
+
+/**
+ * WHY a row was not ranked, in the reader's words.
+ *
+ * `not-comparable` is the hardest verdict to render, because unlike every other
+ * one it has no ordering to show and the honest answer is a sentence, not a
+ * shape. Close is measured at 0.0% [0.0-4.3] in the collected result and its
+ * interval is far tighter than the subject's, so `compare()` refuses on
+ * precision divergence — the measurement is sound, the RANKING would not be.
+ *
+ * A reader who sees a dashed bar and a "≠" has been told that something was
+ * refused but not what. This lives here, next to the verdicts, so the chart's
+ * tooltip and the prose beneath it give the same reason rather than two.
+ */
+export function reasonFor(row: Pick<HeadToHeadRow, 'verdict' | 'comparison'>): string {
+  if (row.verdict === 'insufficient-data') return 'too few answers to compare'
+  const label = row.comparison?.label ?? ''
+  if (label.includes('precision')) return 'its range is far tighter than yours'
+  if (label.includes('engine set') || label.includes('locale') || label.includes('geo')) return 'measured over a different engine set'
+  if (label.includes('scored by')) return 'scored by a different algorithm version'
+  if (label.includes('collected via')) return 'collected by a different path'
+  return 'measured on a different basis'
+}

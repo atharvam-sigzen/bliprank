@@ -761,6 +761,82 @@ corrected to match. The flag is closed.
 ⚠️ **HUMAN REVIEW REQUIRED** stands on the JWT verifier merged with
 `p1/db-schema` — see above.
 
+### Design audit and the pricing page (2026-08-25)
+
+**The range-as-hero pass was audited against its own brief and four gaps
+closed.** All four were geometry or comprehension faults that the contrast suite
+structurally could not see, because it checks colour and these were about
+position and wording.
+
+1. **Marks escaped their plot at the extremes.** Close sits at 0.0% in the
+   collected pipedrive.com scan, and a mark positioned by its centre loses half
+   its body there: the head-to-head dot collar reached 5.5px past the plot edge
+   and drew over the row's own label, and `.rail__needle` lost 3.5px of its 7px
+   at both 0% and 100%. Both now travel the track minus their own width. Asserted
+   on the rendered SVG, not eyeballed.
+
+2. **A refused comparison did not say why, where a reader would see it.** The
+   reason existed only in a paragraph below the chart. Hovering or tabbing to
+   Close said "not comparable" and nothing more — the hardest verdict to render
+   was the one given least explanation. `reasonFor` moved into the shared lib and
+   now feeds the detail panel, the table and the prose from one source.
+
+3. **A dashed bar with no legend entry, next to a dashed swatch meaning something
+   else.** The legend's dashed box means "your interval, projected"; uncompared
+   rows draw a dashed BAR. A reader checking the legend was actively misled.
+   There is now an entry for it.
+
+4. **The screen-reader path had strictly less than the visual one.** The table's
+   verdict cell gave the verdict without the reason, and the glyphs are
+   aria-hidden. It now carries the reason too.
+
+**All six verdicts are rendered in a test**, against a constructed dataset,
+because the committed scan only exercises four. `insufficient-data` is currently
+UNREACHABLE from a live scan — every brand in a scan shares one `n`, so a scan
+at n=85 cannot produce it — which is exactly the kind of branch that rots
+silently until the first scan small enough to trigger it, live.
+
+⚠️ **FLAGGED, NOT FIXED — `format.ts` is HUMAN-OWNED.** `formatInterval` renders
+an exact-zero bound as `0`, not `0.0`: Close's interval prints `0–4.3%` while
+every other row prints two decimals on both bounds. In a tabular-figures column
+that is the one row whose decimals do not line up, and it is the row most likely
+to be questioned. The render test asserts what ships rather than changing it.
+
+**The pricing page is built** — `apps/public/app/pricing`, three tiers
+(Starter $49/15 prompts, Pro $149/40, Growth $349/100), each cap shared between
+app-curated and customer-added prompts, all re-checked daily across five
+engines. Static in the strong sense: no payment provider, no account creation,
+no cap enforcement, and the page says all three out loud. The shared cap is
+demonstrated with a native `<input type="range">` whose two halves visibly take
+from each other, because "shared" is routinely misread as two allowances and a
+sentence cannot disprove that reading.
+
+⚠️ **Three contrast failures were introduced and caught before commit**, all in
+the new pricing work, all found by computing rather than by looking:
+
+| Element | Was | Needed | Fix |
+|---|---|---|---|
+| Ink on `--color-primary` (flag, CTA, filled half) | 6.70:1 light, **2.31:1 dark** | 4.5:1 | `--color-on-primary`, which flips with the theme |
+| Ink on `--color-secondary` (unfilled half) | 4.10:1 light, **3.48:1 dark** | 4.5:1 | half recoloured, ink tokenised |
+| The split bar's two halves, against each other | **1.63:1 light, 1.51:1 dark** | 3:1 | filled half solid primary, unfilled `--color-muted` with a primary outline |
+
+The third is the serious one and is the same mark-on-mark blind spot that hid
+the trend band and the head-to-head dot: every colour passed against its own
+surface, and the single boundary the bar exists to show was invisible. All three
+are now assertions in the contrast suite.
+
+Touch targets on the page were 30–32px and are now 44px.
+
+⚠️ **PRE-EXISTING, UNRELATED, BLOCKS DEPLOY BUT NOT THE DEMO.** `next build` on
+`apps/public` fails prerendering `/404` and `/500` with `<Html> should not be
+imported outside of pages/_document`, which is the pages-router error fallback
+masking the real cause. Confirmed pre-existing: it reproduces identically at
+`6060f1a` with this work stashed. `next dev` is unaffected, so the demo runs;
+ADR-0002's Cloudflare Pages deploy cannot ship until it is diagnosed. Its own
+task.
+
+598 tests, 30 files. Typecheck clean on both apps.
+
 ---
 
 ## 3. Tools and services, and why

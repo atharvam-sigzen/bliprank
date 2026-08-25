@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { MIN_N_FOR_COMPARISON, wilson, type Metric } from '@bliprank/stats'
 import { COMPETITORS, GRADER_SCAN, GRADER_SCAN_N, SCAN_BASIS, SUBJECT_METRIC } from './fixtures'
-import { CHART, VERDICT_GLYPH, VERDICT_WORDS, buildHeadToHead, chartHeight, xOf, yOf, type Verdict } from './head-to-head'
+import { CHART, VERDICT_GLYPH, VERDICT_WORDS, buildHeadToHead, chartHeight, reasonFor, xOf, yOf, type Verdict } from './head-to-head'
 import { IS_LIVE, SCAN, scanFor } from './scan-result'
 
 const m = (k: number, n: number, over: Partial<Metric> = {}): Metric => {
@@ -330,7 +330,7 @@ const SURFACES = {
  * stroke is what this asserts — and asserting it is what caught that the stroke
  * was at 2.98:1 while its own comment claimed 3:1.
  */
-const MARKS: readonly { selector: string; prop: 'stroke' | 'fill' | 'background'; on: (keyof typeof SURFACES)[] }[] = [
+const MARKS: readonly { selector: string; prop: 'stroke' | 'fill' | 'background' | 'border-left-color'; on: (keyof typeof SURFACES)[] }[] = [
   { selector: '.chart__band', prop: 'stroke', on: ['card', 'gridline'] },
   { selector: '.chart__line', prop: 'stroke', on: ['card', 'gridline'] },
   { selector: '.chart__dot', prop: 'fill', on: ['card', 'gridline'] },
@@ -344,6 +344,10 @@ const MARKS: readonly { selector: string; prop: 'stroke' | 'fill' | 'background'
   // against the card — and this suite could not see it, because this suite reads
   // CSS. That is why it is CSS now, and why the inline rule below exists.
   { selector: '.range__span', prop: 'background', on: ['card', 'gridline'] },
+  // The rule beside a refused comparison. It sits inside `.tip`, whose own
+  // background is --color-muted, i.e. the 'band' surface. It is the only thing
+  // marking that panel as a refusal rather than a reading, so it has to be seen.
+  { selector: '.tip__row--refused', prop: 'border-left-color', on: ['band'] },
 ]
 
 describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface it lands on', () => {
@@ -378,6 +382,19 @@ describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface 
     }
   }
 
+  it('the two halves of the split bar can actually be told apart', () => {
+    // The bar exists to show ONE boundary — curated against your own — and it
+    // shipped as --color-primary beside --color-secondary: two blues at 1.63:1
+    // light and 1.51:1 dark. Every mark on it passed its own surface check and
+    // the thing the bar is FOR was invisible, which is the same mark-on-mark
+    // blind spot that hid the trend band and the head-to-head dot.
+    for (const theme of THEMES) {
+      const t = themeTokens(CSS, theme)
+      const ratio = contrastRatio(rgb(t['--color-primary']!), rgb(t['--color-muted']!))
+      expect(ratio, `${theme}: filled half beside unfilled is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
   it('TEXT clears 4.5:1 in both themes, on every surface it is printed on', () => {
     // Marks are 3:1; text is 4.5:1 and was never checked at all. A dark theme is
     // where that bites — a muted-foreground tuned for a white card is unreadable
@@ -396,6 +413,14 @@ describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface 
       for (const [ink, ground] of [
         ['--color-delta-ink', '--color-delta-bg'],
         ['--color-notice-ink', '--color-notice-bg'],
+        // Pricing: the "Most chosen" flag, the primary CTA and the filled half
+        // of the split bar all print ink on --color-primary. They shipped as
+        // literal #fff, which is 6.70:1 on the light theme's primary and 2.31:1
+        // on the dark theme's lighter blue — unreadable, on the only button the
+        // page wants pressed.
+        ['--color-on-primary', '--color-primary'],
+        // ...and the unfilled half prints normal ink on --color-muted.
+        ['--color-foreground', '--color-muted'],
       ] as const) {
         const ratio = contrastRatio(rgb(t[ink]!), rgb(t[ground]!))
         expect(ratio, `${theme}: ${ink} on ${ground} is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
@@ -716,5 +741,71 @@ describe('a mark drawn ON another mark, which no surface check can see', () => {
     // cannot be found at a glance, which defeats the point of keeping it big.
     expect(v['position'] ?? 'static').not.toBe('absolute')
     expect(declarations('.rail__needle')['position']).toBe('absolute')
+  })
+})
+
+/**
+ * EVERY VERDICT MUST BE PRESENTABLE.
+ *
+ * Six verdicts, and only four of them appear in the committed scan — so the two
+ * that do not are exactly the ones that rot. A verdict that reaches the UI with
+ * no glyph, an empty phrase, or a phrase shared with another verdict renders as
+ * a blank cell or a wrong claim, and nobody notices until a scan produces it in
+ * front of an audience.
+ */
+describe('all six verdicts are renderable', () => {
+  const ALL: Verdict[] = ['you', 'ahead', 'behind', 'indistinguishable', 'insufficient-data', 'not-comparable']
+
+  it('every verdict has a distinct glyph and a distinct phrase', () => {
+    for (const v of ALL) {
+      expect(VERDICT_GLYPH[v]?.trim()).toBeTruthy()
+      expect(VERDICT_WORDS[v]?.trim()).toBeTruthy()
+    }
+    expect(new Set(ALL.map((v) => VERDICT_GLYPH[v])).size).toBe(ALL.length)
+    expect(new Set(ALL.map((v) => VERDICT_WORDS[v])).size).toBe(ALL.length)
+  })
+
+  it('the glyph never carries meaning on its own', () => {
+    // WCAG 1.4.1 and the reason every row is also a tabbable hotspot: the marks
+    // are aria-hidden, so the phrase is the only thing a screen reader gets.
+    for (const v of ALL) expect(VERDICT_WORDS[v].length).toBeGreaterThan(VERDICT_GLYPH[v].length)
+  })
+
+  it('both refusal verdicts give a reason, and it is not the generic fallback', () => {
+    expect(reasonFor({ verdict: 'insufficient-data', comparison: null })).toContain('too few')
+    // The real Close case: compare() refused on precision divergence.
+    const close = { verdict: 'not-comparable' as const, comparison: { label: 'precision differs too much' } as never }
+    expect(reasonFor(close)).toBe('its range is far tighter than yours')
+    expect(reasonFor({ verdict: 'not-comparable', comparison: null })).toBe('measured on a different basis')
+  })
+})
+
+/**
+ * THE MARKS STAY INSIDE THE PLOT.
+ *
+ * Close really is at 0.0% in the collected scan, and a mark positioned by its
+ * centre loses half its body there. Unclamped, the head-to-head collar reached
+ * 5.5px past the plot edge and drew over the row's own label; the rail needle
+ * lost 3.5px of 7 at both ends of the scale. Both ends are where a sceptic
+ * looks hardest, so both are asserted rather than eyeballed.
+ */
+describe('marks are clamped to their plot at the extremes', () => {
+  const R = 6.5 // the widest collar (the subject's)
+
+  it('a collar at 0% or 100% never crosses the plot edge', () => {
+    for (const value of [0, 1]) {
+      const clamped = Math.min(CHART.width - CHART.padRight - R, Math.max(CHART.padLeft + R, xOf(value)))
+      expect(clamped - R).toBeGreaterThanOrEqual(CHART.padLeft)
+      expect(clamped + R).toBeLessThanOrEqual(CHART.width - CHART.padRight)
+    }
+  })
+
+  it('the rail needle travels the track minus its own width', () => {
+    const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
+    // margin-left: -3.5px centred the needle and hung it outside the track.
+    expect(/\.rail__needle\s*\{[^}]*margin-left/.test(css)).toBe(false)
+    const rr = readFileSync(new URL('../components/range-rail.tsx', import.meta.url), 'utf8')
+    expect(rr).toContain('calc((100% - 7px) * ')
+    expect(rr).not.toContain('left: pct(metric.value)')
   })
 })

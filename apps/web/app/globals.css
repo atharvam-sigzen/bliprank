@@ -1186,7 +1186,6 @@ tbody tr:last-child th {
   top: -3px;
   width: 7px;
   height: 18px;
-  margin-left: -3.5px;
   border-radius: 2px;
   background: var(--color-card);
 }

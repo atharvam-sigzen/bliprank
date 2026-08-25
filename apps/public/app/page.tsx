@@ -7,7 +7,7 @@ import { HeadToHeadChart } from '@/components/head-to-head-chart'
 import { RangeRail } from '@/components/range-rail'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
-import { buildHeadToHead } from '@/lib/head-to-head'
+import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
 import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 // Module scope on purpose: the grade is only computed after a user submits, so
@@ -333,22 +333,6 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
  * from the same scan: every brand here was scored over the SAME answers, so
  * they share one `comparison_basis` and `compare()` will actually compare them.
  */
-/**
- * Why a row could not be ranked, taken from what `compare()` actually decided
- * rather than assumed. `format.ts` is HUMAN-OWNED, so its wording is read, not
- * rewritten — see the note in PROGRESS.md about its "(n=… then n=…)" phrasing
- * being misleading for brand-vs-brand, where the cause is interval width.
- */
-function reasonFor(row: { verdict: string; comparison: { label: string } | null }): string {
-  if (row.verdict === 'insufficient-data') return 'too few answers to compare'
-  const label = row.comparison?.label ?? ''
-  if (label.includes('precision')) return 'its range is far tighter than yours'
-  if (label.includes('engine set') || label.includes('locale') || label.includes('geo')) return 'measured over a different engine set'
-  if (label.includes('scored by')) return 'scored by a different algorithm version'
-  if (label.includes('collected via')) return 'collected by a different path'
-  return 'measured on a different basis'
-}
-
 function HeadToHead({ scan }: { scan: ScanResultFile }) {
   const subject = subjectOf(scan)
   const data = buildHeadToHead(

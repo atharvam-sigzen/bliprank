@@ -22,7 +22,14 @@ import { formatInterval, formatProvenance, formatValue, type Metric } from '@bli
  * version and its collection path.
  */
 export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Metric; dp?: number }) {
-  const pct = (x: number) => `${Math.min(100, Math.max(0, x * 100))}%`
+  const clamp = (x: number) => Math.min(1, Math.max(0, x))
+  const pct = (x: number) => `${clamp(x) * 100}%`
+  // The needle is 7px wide and has to stay INSIDE the track it marks. Positioned
+  // by its centre it loses half its body at either end of the scale, and the
+  // ends are exactly where it matters: a brand at 0.0% (Close, in the collected
+  // result) or a saturated 100% is the reading a sceptic checks hardest. So the
+  // travel is the track minus the needle, the way a slider thumb is placed.
+  const needle = (x: number) => `calc((100% - 7px) * ${clamp(x)})`
 
   return (
     <div className="rail">
@@ -40,7 +47,7 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
       */}
       <div className="rail__track" aria-hidden="true">
         <div className="rail__band" style={{ left: pct(metric.ci_low), width: pct(metric.ci_high - metric.ci_low) }} />
-        <div className="rail__needle" style={{ left: pct(metric.value) }} />
+        <div className="rail__needle" style={{ left: needle(metric.value) }} />
       </div>
 
       <p className="rail__bounds" aria-hidden="true">

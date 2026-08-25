@@ -1,0 +1,137 @@
+import type { Metadata } from 'next'
+import { ProductBar } from '@/components/chrome'
+import { CapSplit } from '@/components/cap-split'
+import { CHECKS_PER_DAY, ENGINE_COUNT, TIERS, exampleSplit } from '@/lib/pricing'
+
+export const metadata: Metadata = {
+  title: 'Pricing — BlipRank',
+  description: 'Three plans, priced on tracked prompts. Every prompt re-checked daily across five AI answer surfaces.',
+}
+
+/**
+ * PRICING — a static page, and static in the strong sense.
+ *
+ * There is no checkout here, no Stripe or Razorpay call, no plan stored against
+ * an account and nothing that counts a workspace's prompts against its cap. The
+ * buttons go to a mail link. That is the whole of it, on purpose: a page that
+ * looks like it can take money and cannot is worse than one that plainly says
+ * where to write.
+ *
+ * It follows the same rule as every other surface in this product: the thing
+ * being sold is stated with its units attached. "40 prompts" alone is not a
+ * quantity a buyer can reason about — 40 prompts times 5 engines times 30 days
+ * is, and that is the number the invoice is really about.
+ */
+export default function Pricing() {
+  return (
+    <main className="shell" style={{ maxWidth: 1000 }}>
+      <ProductBar current="pricing" />
+
+      <header className="masthead">
+        <div>
+          <h1>Pricing</h1>
+          <p className="cycle" style={{ marginTop: 'var(--space-1)' }}>
+            Priced on tracked prompts. Every plan re-checks every prompt daily, across all {ENGINE_COUNT} answer surfaces.
+          </p>
+        </div>
+      </header>
+
+      {/*
+        The pledge sits above the prices, not below them. Reproducibility is the
+        reason this costs what it costs, and a buyer comparing tools needs it
+        before the number rather than after.
+      */}
+      <section className="stamp" aria-labelledby="pledge">
+        <span className="stamp__eyebrow" id="pledge">
+          What you are buying
+        </span>
+        <div className="stamp__body">
+          <p style={{ margin: 0 }}>
+            Every figure ships with its 95% confidence interval, the sample size behind it, and the version of the scoring algorithm that produced
+            it. Movements inside the interval are reported as no significant change, not as growth. No plan changes that, and no plan buys a
+            narrower interval than the sample supports.
+          </p>
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="plans">
+        <h2 id="plans">Plans</h2>
+        <div className="grid tiers">
+          {TIERS.map((t) => {
+            const split = exampleSplit(t.prompts)
+            return (
+              <article key={t.id} className={`card tier${t.id === 'pro' ? ' tier--featured' : ''}`}>
+                {t.id === 'pro' ? <span className="tier__flag">Most chosen</span> : null}
+                <h3 className="tier__name">{t.name}</h3>
+
+                <p className="tier__price">
+                  <span className="tier__amount">${t.usdPerMonth}</span>
+                  <span className="tier__unit">/month</span>
+                </p>
+                <p className="tier__for">{t.forWhom}</p>
+
+                <p className="tier__cap">
+                  <span className="tier__capnum">{t.prompts}</span> tracked prompts
+                </p>
+
+                {/*
+                  The cap drawn as ONE track. This is the same idea as the range
+                  rail elsewhere in the product: the shape carries the meaning and
+                  the number sits inside it. Here the shape says the allowance is a
+                  single pool, which is the part of the offer most easily misread.
+                */}
+                <div className="tier__pool" aria-hidden="true">
+                  <div className="tier__pool-curated" style={{ width: `${(split.curated / t.prompts) * 100}%` }} />
+                </div>
+                <p className="tier__poolkey">
+                  <span>
+                    <span className="tier__key tier__key--curated" aria-hidden="true" /> curated
+                  </span>
+                  <span>
+                    <span className="tier__key tier__key--custom" aria-hidden="true" /> your own
+                  </span>
+                </p>
+                <p className="tier__note">
+                  Shown as {split.curated} and {split.custom}. That split is an example, not a rule — any split of the {t.prompts} works.
+                </p>
+
+                <ul className="tier__list">
+                  <li>
+                    <strong className="num">{CHECKS_PER_DAY(t.prompts).toLocaleString('en-GB')}</strong> answer checks a day
+                    <span className="tier__sub">
+                      {t.prompts} prompts × {ENGINE_COUNT} engines, every day
+                    </span>
+                  </li>
+                  <li>ChatGPT, Gemini, Copilot, Google AI Mode and AI Overviews</li>
+                  <li>Confidence interval, sample size and algorithm version on every metric</li>
+                  <li>Competitor export reconciliation</li>
+                </ul>
+
+                <a className={`tier__cta${t.id === 'pro' ? ' tier__cta--primary' : ''}`} href={`mailto:hello@bliprank.com?subject=${t.name}%20plan`}>
+                  Talk to us about {t.name}
+                </a>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="cap">
+        <h2 id="cap">How the prompt cap works</h2>
+        <p>
+          A tracked prompt is one question we ask the answer engines on your behalf, every day. Your plan&apos;s cap is a single pool, shared
+          between prompts BlipRank curates for your category and prompts you write yourself. Move the split to see it.
+        </p>
+        <CapSplit />
+      </section>
+
+      <section className="section" aria-labelledby="notsold">
+        <h2 id="notsold">What is not on this page</h2>
+        <p>
+          There is no checkout here yet. These plans are not wired to a payment provider, nothing on this page creates an account, and no cap is
+          enforced anywhere in the product today. Prices are in US dollars and exclude tax.
+        </p>
+      </section>
+    </main>
+  )
+}
