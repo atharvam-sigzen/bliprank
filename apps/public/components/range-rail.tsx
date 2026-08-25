@@ -31,6 +31,23 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
   // travel is the track minus the needle, the way a slider thumb is placed.
   const needle = (x: number) => `calc((100% - 7px) * ${clamp(x)})`
 
+  /*
+   * THE SIGNATURE MOTION. The band grows OUTWARD FROM THE ESTIMATE to its true
+   * bounds, rather than sweeping in from the left.
+   *
+   * That is not decoration, it is the product's whole argument played once: a
+   * measurement starts as a point and the honest version of it is the range that
+   * opens around that point. Every competitor animates a bar filling up, which
+   * says "bigger is better"; this says "here is what we know, and here is how
+   * much we do not".
+   *
+   * Implemented as `scaleX` about a computed origin, never as an animation of
+   * `width` or `left` — those two run layout on every frame, and this sits on a
+   * page that may be rendering a chart at the same time.
+   */
+  const span = metric.ci_high - metric.ci_low
+  const origin = span > 0 ? `${clamp((metric.value - metric.ci_low) / span) * 100}%` : '50%'
+
   return (
     <div className="rail">
       <div className="rail__head">
@@ -46,7 +63,7 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
         well would be the same fact three times.
       */}
       <div className="rail__track" aria-hidden="true">
-        <div className="rail__band" style={{ left: pct(metric.ci_low), width: pct(metric.ci_high - metric.ci_low) }} />
+        <div className="rail__band" style={{ left: pct(metric.ci_low), width: pct(span), transformOrigin: `${origin} center` }} />
         <div className="rail__needle" style={{ left: needle(metric.value) }} />
       </div>
 

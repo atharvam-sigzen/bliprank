@@ -891,6 +891,69 @@ so it is tested rather than reasoned about:
 
 607 tests, 31 files. Typecheck clean.
 
+### The flag that could not be turned on, and a personality pass (2026-08-25)
+
+**⚠️ THE FLAGS WERE UNREACHABLE BY THE DOCUMENTED METHOD.** `.env.local` was
+edited correctly and live scanning stayed off, silently, with no error. Two
+independent causes:
+
+1. `.claude/settings.json` injected `COLLECTION_ENABLED` into every spawned
+   process, and Next never lets `.env.local` override a variable already in
+   `process.env`. (Resolved by the operator removing the override.)
+2. **The route read `process.env` only** — but Next loads env files from the
+   directory it runs in, `apps/public`, never from the repo root where
+   `.env.local` actually lives. Meanwhile `loadApiKey` reads the root file
+   explicitly. So the KEY resolved from root and the FLAGS GOVERNING IT did not.
+   CLAUDE.md §7 documents the flags as living in `.env.local`; `load-key.ts`
+   documented its refusal to read them from there. Both were in the repo at once.
+
+`readFlag` closes it: environment first, then the repo-root `.env.local`, then
+`.env` — the same precedence and root as the key. It keeps the "deliberate act"
+property by other means: an **allow-list** of exactly two names (a cap or a plan
+read from a stale file is still refused), and it reports which source set each
+value, so the disabled message now says *why* rather than just *that*. Verified:
+both flags resolve `true` from `.env.local` even with a completely clean
+environment. **Live scanning is ON.**
+
+**Design — a personality pass.** Three moves, no gradients, nothing competing
+with a number:
+
+- **Type.** Fira Sans/Code, loaded through a render-blocking `@import`, replaced
+  by self-hosted `next/font`: **Instrument Serif** on headings (editorial
+  register — the words, never the data), **IBM Plex Sans** for interface, **IBM
+  Plex Mono** for every figure and provenance line. No third-party request at
+  runtime and no flash of fallback text.
+- **The signature motion.** The interval band now grows **outward from the point
+  estimate** to its true bounds, rather than sweeping in from the left. That is
+  the product's argument played once: a measurement starts as a point and the
+  honest version is the range that opens around it. Competitors animate a bar
+  filling up, which says *bigger is better*. Implemented as `scaleX` about a
+  computed origin, never `width`/`left`, so it never runs layout.
+- **The ruler.** Hairline ticks every 5% with longer quarter marks — the texture
+  of something calibrated. Decorative and drawn under the band, so it cannot
+  lower any mark's contrast.
+
+⚠️ **A regression was introduced and caught by arithmetic, not by looking.** The
+tick texture arrived with `overflow: hidden` on `.rail__track`, which is 12px
+tall — and the needle is 18px and deliberately overhangs it. That silently
+cropped a third off the one mark required to be readable in under a second.
+**There is no browser in this toolchain**, so nothing else here could have seen
+it. Removed, and pinned by a test that rejects any clipping `overflow` on that
+selector in either app. The first tick colour had the same shape of fault:
+`--color-border` computes 1.13:1 against the track, which is not subtle but
+absent; it is mixed down from the text token instead.
+
+616 tests, 32 files. Contrast suite green in both themes after every change.
+
+**`.agents/skills/design-taste-frontend/` — already resolved, no action needed.**
+Deleted in `261f558` and recorded below. Not restored to `.claude/skills/`
+deliberately: its own scope line reads *"Landing pages, portfolios, and
+redesigns. Not dashboards, not data tables, not multi-step product UI"*, which
+excludes nearly all of this repo, and `ui-ux-pro-max` already covers the
+dashboard and chart cases properly.
+
+---
+
 ⚠️ **BLOCKED, NOT DONE — the env flags could not be set from this session.**
 `.claude/settings.json` denies `Read(./.env*)`, so `.env.local` cannot be read or
 written here. Worse, that same file injects `COLLECTION_ENABLED: "false"` into

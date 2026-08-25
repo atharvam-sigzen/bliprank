@@ -275,7 +275,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   const { grade, note } = confidenceGrade(metric)
 
   return (
-    <section className="card" aria-live="polite">
+    <section className="card result-card" aria-live="polite">
       <h2>{scan.domain}</h2>
       <p className="metric__interval" style={{ marginTop: 2 }}>
         {scan.categoryName} · {scan.counts.answersScored} answers · {scan.run.engines.length} engines

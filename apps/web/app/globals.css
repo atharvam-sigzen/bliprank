@@ -7,8 +7,6 @@
  * thing that needs attention, and nothing decorative competing with a number.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-
 :root {
   --color-primary: #1e40af;
   --color-on-primary: #ffffff;
@@ -37,8 +35,11 @@
   --space-5: 2rem;
 
   --radius: 6px;
-  --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Fira Code', ui-monospace, 'SF Mono', monospace;
+  /* Loaded and self-hosted by next/font in app/layout.tsx — see the note there.
+     The *-src variables are what next/font defines; these are the roles. */
+  --font-display: var(--font-display-src), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-sans-src), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono-src), ui-monospace, 'SF Mono', monospace;
 }
 
 *,
@@ -1318,3 +1319,124 @@ tbody tr:last-child th {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   PERSONALITY LAYER
+   Everything above is the instrument. This is the part that makes it look like
+   OUR instrument. Three moves only: a display face on the words, one signature
+   motion that argues the product's point, and a ruler texture on the track.
+   No gradients, no glow, nothing competing with a number.
+   ========================================================================== */
+
+/*
+ * The display serif goes on the WORDS, never on the DATA. An editorial face at
+ * a headline size reads as a published record rather than app chrome — which is
+ * the register this product wants — but the same face on a figure would cost the
+ * tabular alignment that makes a column of intervals scannable.
+ */
+.masthead h1,
+main > h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 1.4rem + 2vw, 2.75rem);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+}
+
+/* The scanned domain, set as a headline. It is the subject of the whole page. */
+.result-card > h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.375rem);
+  line-height: 1.05;
+  letter-spacing: -0.012em;
+  color: var(--color-foreground);
+  text-transform: none;
+}
+
+/*
+ * THE RULER. Hairline ticks every 5% of the scale, with a longer one at each
+ * quarter — the texture of something calibrated.
+ *
+ * Purely decorative and deliberately near-invisible: the real scale is the
+ * numeric bounds printed underneath. It is drawn UNDER the band and the needle,
+ * so it cannot lower the contrast of either, and the track is already
+ * aria-hidden. This is the detail that makes the component recognisable at a
+ * glance in a screenshot.
+ */
+.rail__track {
+  /*
+   * NO `overflow: hidden` HERE, EVER. The needle is 18px tall and deliberately
+   * overhangs a 12px track (top: -3px), so clipping the track removes a third of
+   * the one mark that has to be readable in under a second. It was added here
+   * for the tick texture, which does not need it — a background is bounded by
+   * its own box already. The test below pins this.
+   */
+  /*
+   * --color-border was the obvious token and the wrong one: it computes 1.13:1
+   * against the track, which is not subtle, it is absent. --color-muted-foreground
+   * is a TEXT token held at 4.5:1, far too loud for a texture, so it is mixed
+   * down. If a browser cannot do color-mix the whole background-image is dropped
+   * and the track is simply plain, which is a fine thing to degrade to.
+   */
+  background-image:
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--color-muted-foreground) 38%, transparent) 0 1px, transparent 1px 5%),
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--color-muted-foreground) 55%, transparent) 0 1px, transparent 1px 25%);
+  background-size: 100% 4px, 100% 100%;
+  background-position: left bottom, left top;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/*
+ * The settle. Origin comes from the component: the estimate's position INSIDE
+ * its own interval, so the band opens from the number rather than from an edge.
+ */
+.rail__band {
+  animation: rail-settle 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rail-settle {
+  from {
+    transform: scaleX(0.02);
+    opacity: 0.4;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/*
+ * The needle lands first and stays. It is the fastest datum on the card and it
+ * must not appear to move — a headline number that slides is a number nobody
+ * can find in under a second, which was the explicit requirement when the
+ * range became the hero.
+ */
+.rail__needle {
+  animation: needle-drop 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes needle-drop {
+  from {
+    transform: scaleY(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* The value itself does not animate at all. See above. */
+
+/*
+ * REDUCED MOTION IS NOT A DEGRADED VERSION, IT IS THE SAME INFORMATION WITHOUT
+ * THE ARGUMENT. Everything lands in its final position immediately.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .rail__band,
+  .rail__needle {
+    animation: none;
+  }
+}
+

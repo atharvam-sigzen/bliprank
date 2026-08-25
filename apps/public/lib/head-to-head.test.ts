@@ -800,6 +800,21 @@ describe('marks are clamped to their plot at the extremes', () => {
     }
   })
 
+  it('the track never clips the needle that overhangs it', () => {
+    // Caught by arithmetic, not by looking — there is no browser in this
+    // toolchain, so a mark being visually cropped is invisible to every other
+    // check here. The needle is intentionally taller than its track and hangs
+    // over both edges; an `overflow: hidden` on the track silently removes a
+    // third of it. That happened once, added for a background texture that did
+    // not need it.
+    for (const rel of ['../app/globals.css', '../../web/app/globals.css']) {
+      const css = readFileSync(new URL(rel, import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
+      for (const m of css.matchAll(/\.rail__track\s*\{([^}]*)\}/g)) {
+        expect([rel, /overflow\s*:\s*(hidden|clip|auto|scroll)/.test(m[1]!)]).toEqual([rel, false])
+      }
+    }
+  })
+
   it('the rail needle travels the track minus its own width', () => {
     const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
     // margin-left: -3.5px centred the needle and hung it outside the track.

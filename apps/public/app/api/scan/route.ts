@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
-import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
+import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
 
 /**
@@ -32,7 +32,29 @@ const ROOT = join(process.cwd(), '..', '..')
 const DATA = join(ROOT, 'services', 'grader', 'data-live')
 const RESULTS = join(DATA, 'results')
 
-const enabled = (env: NodeJS.ProcessEnv) => env['COLLECTION_ENABLED'] === 'true' && env['GRADER_LIVE_SCAN'] === 'true'
+/**
+ * Both flags, resolved the same way the API key is: environment first, then the
+ * repo-root `.env.local`.
+ *
+ * ⚠️ THIS WAS BROKEN AND SILENT. It read `process.env` only, but Next loads env
+ * files from the directory it runs in — `apps/public` — and never from the repo
+ * root where `.env.local` actually lives. So editing the documented file
+ * (CLAUDE.md §7) changed nothing, produced no error, and the page just went on
+ * saying live scanning was off. A safety flag that cannot be turned on by the
+ * documented method is not a safety property, it is a bug that happens to fail
+ * closed.
+ *
+ * Still TWO flags, still both required, and `sources` records where each came
+ * from so "is it on, and why" is answerable without guessing.
+ */
+const resolveFlags = (env: NodeJS.ProcessEnv) => {
+  const collection = readFlag(ROOT, 'COLLECTION_ENABLED', env)
+  const live = readFlag(ROOT, 'GRADER_LIVE_SCAN', env)
+  return {
+    enabled: collection.value === 'true' && live.value === 'true',
+    sources: `COLLECTION_ENABLED=${collection.value ?? 'unset'} (${collection.from}), GRADER_LIVE_SCAN=${live.value ?? 'unset'} (${live.from})`,
+  }
+}
 
 const normalise = (d: string): string =>
   d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
@@ -97,10 +119,14 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
-        if (!enabled(env)) {
+        const flags = resolveFlags(env)
+        if (!flags.enabled) {
           send(c, 'error', {
             kind: 'disabled',
-            message: 'Live scanning is off. This build serves scans a runner already produced; nothing here contacts a provider.',
+            // Says WHICH flag is off and where it was read from. The previous
+            // message could not distinguish "deliberately off" from "your edit
+            // never loaded", which is the failure that actually happened.
+            message: `Live scanning is off, so nothing was collected. Resolved: ${flags.sources}. Both must be "true" in the environment or in the repo-root .env.local.`,
           })
           return done(c)
         }

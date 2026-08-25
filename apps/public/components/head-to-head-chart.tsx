@@ -64,7 +64,7 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
         <line className="h2h__band-edge" x1={bandRight} x2={bandRight} y1={plotTop} y2={plotBottom} />
 
         {rows.map((row, i) => (
-          <Row key={row.label} row={row} y={yOf(i)} />
+          <Row key={row.label} row={row} y={yOf(i)} index={i} />
         ))}
 
         {/*
@@ -182,7 +182,7 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
   )
 }
 
-function Row({ row, y }: { row: HeadToHeadRow; y: number }) {
+function Row({ row, y, index }: { row: HeadToHeadRow; y: number; index: number }) {
   const lo = xOf(row.metric.ci_low)
   const hi = xOf(row.metric.ci_high)
   const mid = xOf(row.metric.value)
@@ -196,7 +196,9 @@ function Row({ row, y }: { row: HeadToHeadRow; y: number }) {
   const dot = Math.min(CHART.width - CHART.padRight - r, Math.max(CHART.padLeft + r, mid))
 
   return (
-    <g>
+    // `--row` drives the reveal stagger; the CSS owns the timing so reduced
+    // motion can switch the whole sequence off in one place.
+    <g className="h2h__row" style={{ '--row': index } as React.CSSProperties}>
       <text
         className={`h2h__label${row.isSubject ? ' h2h__label--subject' : ''}${uncompared ? ' h2h__label--uncompared' : ''}`}
         x={CHART.padLeft - 8}
