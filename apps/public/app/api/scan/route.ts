@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
-import { checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
+import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
 
@@ -137,7 +137,7 @@ export async function POST(req: Request): Promise<Response> {
           plan: (env['OPENWEBNINJA_PLAN'] as 'payg' | 'pro' | 'ultra' | 'mega') ?? 'payg',
           mode: 'live',
           apiKey: found.key,
-          capUsd: Number(env['GRADER_CAP_USD'] ?? 2),
+          capUsd: Number(env['GRADER_CAP_USD'] ?? DEFAULT_CAP_USD),
           maxPrompts: cfg.callsPerEngine,
           dataDir: DATA,
           outFile: join(DATA, 'latest.json'),

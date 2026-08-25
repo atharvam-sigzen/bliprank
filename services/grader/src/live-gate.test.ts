@@ -169,17 +169,63 @@ describe('a stranded run lock does not brick collection', () => {
     expect(existsSync(lock)).toBe(false)
   })
 
-  it('a lock held by a LIVE process is still obeyed', async () => {
+  it('a lock with a FRESH heartbeat is obeyed, whoever owns it', async () => {
     const { runGrader } = await import('./run.js')
     const dir = mkdtempSync(join(tmpdir(), 'lock2-'))
-    // A pid that is definitely alive and is not us would be ideal; the parent
-    // process id is exactly that on every platform this runs on.
-    writeFileSync(join(dir, 'run.lock'), String(process.ppid))
+    writeFileSync(join(dir, 'run.lock'), JSON.stringify({ pid: process.pid, at: Date.now() }))
     await expect(
       runGrader({
         domain: 'pipedrive.com', engines: ['chatgpt'], day: '2026-08-25', plan: 'mega', mode: 'fixture',
         apiKey: '', capUsd: 1, maxPrompts: 1, dataDir: dir, outFile: join(dir, 'out.json'), log: () => {},
       }),
     ).rejects.toThrow(/another scan holds/)
+  })
+
+  it('THE ONE THAT BIT: a LIVE owner whose scan stopped is reclaimed', async () => {
+    // The pid check alone obeyed this forever. A browser disconnecting mid-scan
+    // makes the server abort the handler, so the lock is never released — but
+    // the owner is the long-lived dev server and is very much alive. Verified by
+    // disconnecting a real client and watching the next scan get refused.
+    const { runGrader } = await import('./run.js')
+    const dir = mkdtempSync(join(tmpdir(), 'lock3-'))
+    const lock = join(dir, 'run.lock')
+    writeFileSync(lock, JSON.stringify({ pid: process.pid, at: Date.now() - 5 * 60_000 }))
+    const r = await runGrader({
+      domain: 'pipedrive.com', engines: ['chatgpt'], day: '2026-08-25', plan: 'mega', mode: 'fixture',
+      apiKey: '', capUsd: 1, maxPrompts: 1, dataDir: dir, outFile: join(dir, 'out.json'), log: () => {},
+    })
+    expect(r.status).toBe('scanned')
+    expect(existsSync(lock)).toBe(false)
+  })
+
+  it('a legacy bare-pid lock is reclaimed, because it cannot prove it is held', async () => {
+    // Older builds wrote just a pid. Without a heartbeat there is no way to tell
+    // a running scan from an abandoned one, and obeying it risks the stranding
+    // bug forever while reclaiming it risks a concurrency that no current build
+    // can produce. Reclaim is the safer of the two.
+    const { runGrader } = await import('./run.js')
+    const dir = mkdtempSync(join(tmpdir(), 'lock4-'))
+    writeFileSync(join(dir, 'run.lock'), String(process.pid))
+    const r = await runGrader({
+      domain: 'pipedrive.com', engines: ['chatgpt'], day: '2026-08-25', plan: 'mega', mode: 'fixture',
+      apiKey: '', capUsd: 1, maxPrompts: 1, dataDir: dir, outFile: join(dir, 'out.json'), log: () => {},
+    })
+    expect(r.status).toBe('scanned')
+  })
+
+  it('an offline run never touches the live ledger', async () => {
+    // A fixture run charges $0 but was rewriting the shared ledger's capUsd to
+    // its own default, and Budget then refused every later live run that asked
+    // for more. A fixture scan broke live collection while spending nothing.
+    const { runGrader } = await import('./run.js')
+    const dir = mkdtempSync(join(tmpdir(), 'ledger-'))
+    writeFileSync(join(dir, 'ledger.json'), JSON.stringify({ capUsd: 5, spentUsd: 0.5, calls: 1, byEngine: {}, updatedAt: '' }))
+    await runGrader({
+      domain: 'pipedrive.com', engines: ['chatgpt'], day: '2026-08-25', plan: 'mega', mode: 'fixture',
+      apiKey: '', capUsd: 1, maxPrompts: 1, dataDir: dir, outFile: join(dir, 'out.json'), log: () => {},
+    })
+    const live = JSON.parse(readFileSync(join(dir, 'ledger.json'), 'utf8'))
+    expect([live.capUsd, live.spentUsd]).toEqual([5, 0.5])
+    expect(existsSync(join(dir, 'ledger.fixture.json'))).toBe(true)
   })
 })

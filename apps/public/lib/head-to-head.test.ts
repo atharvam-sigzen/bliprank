@@ -541,29 +541,42 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     }
   })
 
-  it('THE DEMO POINT: the top brands overlap, so the chart refuses to rank them', () => {
-    // If the shipped scan ever separates cleanly, the page stops demonstrating
-    // the one thing it exists to demonstrate, and nobody would notice.
+  it('THE DEMO POINT: the chart still refuses to rank at least one pair', () => {
+    // The shipped scan is real collected data now, so the exact verdicts follow
+    // the engines rather than a fixture — which is the point, and also why this
+    // asserts the PROPERTY rather than the old fixture's specific answers.
+    // What must survive any data is that overlapping intervals are not ranked.
     const subject = SCAN.brands.find((b) => b.isSubject)!
     const h = buildHeadToHead(
       { label: subject.name, metric: subject.metric },
       SCAN.brands.filter((b) => !b.isSubject).map((b) => ({ label: b.name, metric: b.metric })),
     )
-    // Two brands overlap the subject and cannot be ranked against it; the five
-    // that appear in no answer are refused too, because a 0/85 interval is far
-    // tighter than a 43/85 one and separating them would be an ordinary 95% test
-    // wearing a 99.4% badge. Both refusals are the demo.
     expect(h.rows.some((r) => r.verdict === 'indistinguishable')).toBe(true)
-    expect(h.rows.some((r) => r.verdict === 'not-comparable')).toBe(true)
-    expect(h.rows.every((r) => r.verdict !== 'ahead')).toBe(true)
+
+    // And every 'ahead' or 'behind' must be genuinely separated — a ranked pair
+    // whose intervals touch would be the exact dishonesty this product sells
+    // against, and it would reach the screen looking like a finding.
+    for (const r of h.rows) {
+      if (r.verdict !== 'ahead' && r.verdict !== 'behind') continue
+      const separated = r.metric.ci_low > subject.metric.ci_high || r.metric.ci_high < subject.metric.ci_low
+      expect([r.label, separated]).toEqual([r.label, true])
+    }
   })
 
   it('the banner tells the truth about where the answers came from', () => {
-    // fixture, and spent nothing. If a live scan were ever committed here by
-    // accident this flips, and the page copy flips with it.
-    expect(SCAN.run.mode).toBe('fixture')
-    expect(SCAN.run.spentUsd).toBe(0)
-    expect(IS_LIVE).toBe(false)
+    // The invariant is CONSISTENCY, not a particular mode. The page renders
+    // different copy for a live scan than for a fixture one, and the failure
+    // that matters is those two disagreeing — a page claiming fixture answers
+    // over real ones, or the reverse. Pinning the mode instead would fail every
+    // time a real scan is committed, which is not a defect.
+    expect(IS_LIVE).toBe(SCAN.run.mode === 'live')
+    if (SCAN.run.mode === 'live') {
+      expect(SCAN.run.spentUsd).toBeGreaterThan(0)
+      expect(SCAN.counts.providerCalls).toBeGreaterThan(0)
+    } else {
+      expect(SCAN.run.spentUsd).toBe(0)
+      expect(SCAN.counts.providerCalls).toBe(0)
+    }
   })
 })
 

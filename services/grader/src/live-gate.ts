@@ -25,6 +25,17 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 
 export const USAGE_URL = 'https://api.openwebninja.com/usage'
 
+/**
+ * The USD ceiling both entry points open the ledger with.
+ *
+ * `Budget` refuses to widen a cap silently, which is correct — but it means the
+ * CLI and the route have to agree or the second one to run is refused. They did
+ * not: the route defaulted to 2 and the documented CLI command passes 5, so
+ * whichever ran second failed. It surfaced as a dead scan rather than a review
+ * comment, which is the wrong place to find out.
+ */
+export const DEFAULT_CAP_USD = 5
+
 /** Provider api_id -> our EngineId. `ai_answers` is a separate aggregate product. */
 const API_ID: Record<string, EngineId> = {
   chatgpt: 'chatgpt',

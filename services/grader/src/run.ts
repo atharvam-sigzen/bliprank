@@ -46,6 +46,7 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { fixtureAdapter } from '@bliprank/collector/fixture'
 import { loadApiKey } from './load-key.js'
 import { FileBlobStore, FileKV } from './local-store.js'
+import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult } from './scan.js'
 
 /** Provider ceiling for one API key, shared across engines. */
@@ -116,7 +117,7 @@ export function parseArgs(
 
   const capArg = args.get('cap')
   if (!offline && !capArg) return { refuse: 'no --cap given: this run may spend, and a run that may spend states its ceiling.' }
-  const capUsd = Number(capArg ?? 1)
+  const capUsd = Number(capArg ?? DEFAULT_CAP_USD)
   if (!Number.isFinite(capUsd) || capUsd <= 0) return { refuse: `--cap must be > 0, got ${capArg}` }
 
   const engines = (args.get('engines')?.split(',').filter(Boolean) ?? [...ENGINES]) as EngineId[]
@@ -157,31 +158,78 @@ export function estimateUsd(o: Pick<RunnerOptions, 'plan' | 'engines' | 'mode'>,
 export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
   mkdirSync(o.dataDir, { recursive: true })
   const lock = join(o.dataDir, 'run.lock')
+  const touchLock = () => {
+    try {
+      writeFileSync(lock, JSON.stringify({ pid: process.pid, at: Date.now() }))
+    } catch {
+      /* losing a heartbeat must not kill a scan that is otherwise fine */
+    }
+  }
+
   if (existsSync(lock)) {
-    const owner = Number(readFileSync(lock, 'utf8').trim())
-    // A lock whose owner is gone is not a lock, it is litter — and litter that
-    // refuses every future scan. A crashed run, a killed dev server or a
-    // disconnected client would otherwise brick collection until someone found
-    // the file by hand, which on the morning of a demo is indistinguishable
-    // from the product being broken.
+    // A lock is stale in TWO ways and the pid alone only catches one.
+    //
+    // Dead owner: a crashed run or a killed server. `process.kill(pid, 0)`
+    // sees that.
+    //
+    // Live owner, dead scan: this is the one that bit. A browser that
+    // disconnects mid-scan makes the server abort the request handler, so the
+    // `finally` below never runs — but the owning process is the long-lived dev
+    // server, which is still very much alive. The pid check therefore obeys a
+    // lock nobody is holding, forever, and every later scan is refused. Found by
+    // disconnecting a client and watching the next scan fail.
+    //
+    // So the lock carries a heartbeat, refreshed as cells complete. A lock not
+    // touched for longer than the slowest imaginable cell is not being held.
+    const STALE_MS = 3 * 60_000
+    const raw = readFileSync(lock, 'utf8').trim()
+    let owner = Number(raw)
+    let at = 0
+    try {
+      const parsed = JSON.parse(raw) as { pid: number; at: number }
+      owner = parsed.pid
+      at = parsed.at
+    } catch {
+      /* an older lock held a bare pid and no heartbeat */
+    }
+
     let alive = false
     try {
       process.kill(owner, 0)
-      alive = owner !== process.pid
+      alive = true
     } catch {
       alive = false
     }
-    if (alive) {
-      throw new Error(`another scan holds ${lock} (pid ${owner}). The cap is per data dir, so two concurrent runs would each see prior spend of 0.`)
+    // No self-exemption. It used to say `owner !== process.pid` so a process
+    // could re-enter its own lock — but the route runs every scan inside ONE
+    // long-lived server, so that exemption let two concurrent scans in the same
+    // process each reclaim the other's lock and each see prior spend of 0. The
+    // heartbeat makes the exemption unnecessary: it already distinguishes my own
+    // ACTIVE scan from my own ABANDONED one, which is the real question.
+    const fresh = at > 0 && Date.now() - at < STALE_MS
+
+    if (alive && fresh) {
+      const age = Math.round((Date.now() - at) / 1000)
+      throw new Error(`another scan holds ${lock} (pid ${owner}, last active ${age}s ago). The cap is per data dir, so two concurrent runs would each see prior spend of 0.`)
     }
-    o.log(`reclaiming a stale run.lock left by pid ${owner}, which is no longer running`)
+    o.log(alive ? `reclaiming run.lock: pid ${owner} is alive but its scan stopped ${at ? Math.round((Date.now() - at) / 1000) + 's ago' : 'without a heartbeat'}` : `reclaiming a stale run.lock left by pid ${owner}, which is no longer running`)
     unlinkSync(lock)
   }
-  writeFileSync(lock, String(process.pid))
+  touchLock()
 
   try {
     const offline = o.mode !== 'live'
-    const budget = new Budget(join(o.dataDir, 'ledger.json'), o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+    // An offline run gets its OWN ledger, and that is not tidiness.
+    //
+    // A fixture run charges $0, so its only effect on the shared ledger was to
+    // rewrite `capUsd` to whatever default it happened to carry — and `Budget`
+    // then refuses every later run that asks for more, correctly, because it
+    // will not widen a cap silently. One `--fixture` scan with the default cap
+    // of $1 therefore blocked every live scan afterwards, which is a fixture
+    // run breaking live collection while spending nothing. Found by doing
+    // exactly that during a lock test.
+    const ledgerFile = join(o.dataDir, offline ? `ledger.${o.mode}.json` : 'ledger.json')
+    const budget = new Budget(ledgerFile, o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
 
     // Share one key's ceiling across the engines in play, then take a fraction
     // of it — the published per-engine ceilings sum to more than one key allows.
@@ -243,6 +291,9 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
         blob,
         adapterFor,
         onProgress: (p) => {
+          // The heartbeat. A lock that stops being touched is a scan that
+          // stopped, whether or not the process holding it is still alive.
+          touchLock()
           o.onProgress?.(p)
           if (p.done % 10 === 0 || p.done === p.total) o.log(`  ${p.done}/${p.total} cells · ${p.outcome}`)
         },

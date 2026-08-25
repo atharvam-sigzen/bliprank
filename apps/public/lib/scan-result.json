@@ -1,37 +1,37 @@
 {
   "status": "scanned",
-  "domain": "salesforce.com",
+  "domain": "pipedrive.com",
   "category": "crm-software",
   "categoryName": "CRM software",
   "classification": {
     "status": "classified",
     "slug": "crm-software",
     "signal": "leader-domain",
-    "evidence": "salesforce.com"
+    "evidence": "pipedrive.com"
   },
   "subjectSource": "leader",
   "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
   "algoVersion": "det-1",
-  "collectedAt": "2026-08-24T10:43:11.687Z",
+  "collectedAt": "2026-08-25T06:18:56.874Z",
   "counts": {
     "cellsRequested": 85,
-    "cacheHits": 85,
-    "collected": 0,
+    "cacheHits": 66,
+    "collected": 19,
     "failed": 0,
     "answersScored": 85,
-    "providerCalls": 0
+    "providerCalls": 22
   },
   "brands": [
     {
-      "id": "salesforce",
-      "name": "Salesforce",
+      "id": "pipedrive",
+      "name": "Pipedrive",
       "isSubject": true,
-      "mentions": 43,
-      "citations": 0,
+      "mentions": 38,
+      "citations": 1,
       "metric": {
-        "value": 0.5058823529411764,
-        "ci_low": 0.40166435808548967,
-        "ci_high": 0.609591647987286,
+        "value": 0.4470588235294118,
+        "ci_low": 0.3459365569169934,
+        "ci_high": 0.552759388428024,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -42,12 +42,28 @@
       "id": "hubspot",
       "name": "HubSpot",
       "isSubject": false,
-      "mentions": 40,
-      "citations": 0,
+      "mentions": 62,
+      "citations": 8,
       "metric": {
-        "value": 0.47058823529411764,
-        "ci_low": 0.36806170013762113,
-        "ci_high": 0.5756582694984995,
+        "value": 0.7294117647058823,
+        "ci_low": 0.6265804034631292,
+        "ci_high": 0.8124038333751294,
+        "n": 85,
+        "algo_version": "det-1",
+        "collection_path": "third-party-grounded",
+        "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
+      }
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "isSubject": false,
+      "mentions": 37,
+      "citations": 1,
+      "metric": {
+        "value": 0.43529411764705883,
+        "ci_low": 0.3349577742719609,
+        "ci_high": 0.5412261589275047,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -58,28 +74,12 @@
       "id": "zoho-crm",
       "name": "Zoho CRM",
       "isSubject": false,
-      "mentions": 41,
+      "mentions": 36,
       "citations": 0,
       "metric": {
-        "value": 0.4823529411764706,
-        "ci_low": 0.3792074367906816,
-        "ci_high": 0.587024544990991,
-        "n": 85,
-        "algo_version": "det-1",
-        "collection_path": "third-party-grounded",
-        "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
-      }
-    },
-    {
-      "id": "pipedrive",
-      "name": "Pipedrive",
-      "isSubject": false,
-      "mentions": 0,
-      "citations": 0,
-      "metric": {
-        "value": 0,
-        "ci_low": 0,
-        "ci_high": 0.04323948381405151,
+        "value": 0.4235294117647059,
+        "ci_low": 0.3240354231287895,
+        "ci_high": 0.5296364979251242,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -90,12 +90,12 @@
       "id": "freshsales",
       "name": "Freshsales",
       "isSubject": false,
-      "mentions": 0,
-      "citations": 0,
+      "mentions": 16,
+      "citations": 1,
       "metric": {
-        "value": 0,
-        "ci_low": 0,
-        "ci_high": 0.04323948381405151,
+        "value": 0.18823529411764706,
+        "ci_low": 0.11932143444884925,
+        "ci_high": 0.28411024369402993,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -106,12 +106,12 @@
       "id": "monday-crm",
       "name": "monday CRM",
       "isSubject": false,
-      "mentions": 0,
-      "citations": 0,
+      "mentions": 7,
+      "citations": 2,
       "metric": {
-        "value": 0,
-        "ci_low": 0,
-        "ci_high": 0.04323948381405151,
+        "value": 0.08235294117647059,
+        "ci_low": 0.040463723499160636,
+        "ci_high": 0.16035984533375297,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -122,12 +122,12 @@
       "id": "dynamics-365-sales",
       "name": "Microsoft Dynamics 365 Sales",
       "isSubject": false,
-      "mentions": 0,
+      "mentions": 5,
       "citations": 0,
       "metric": {
-        "value": 0,
-        "ci_low": 0,
-        "ci_high": 0.04323948381405151,
+        "value": 0.058823529411764705,
+        "ci_low": 0.0253851600334125,
+        "ci_high": 0.13041438450839765,
         "n": 85,
         "algo_version": "det-1",
         "collection_path": "third-party-grounded",
@@ -152,9 +152,9 @@
     }
   ],
   "run": {
-    "mode": "fixture",
+    "mode": "live",
     "plan": "payg",
-    "day": "2026-08-24",
+    "day": "2026-08-25",
     "engines": [
       "chatgpt",
       "gemini",
@@ -162,8 +162,8 @@
       "google-ai-mode",
       "google-ai-overviews"
     ],
-    "spentUsd": 0,
-    "capUsd": 1,
-    "at": "2026-08-24T11:25:16.397Z"
+    "spentUsd": 0.7640000000000006,
+    "capUsd": 5,
+    "at": "2026-08-25T06:19:05.858Z"
   }
 }
