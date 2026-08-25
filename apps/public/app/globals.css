@@ -231,8 +231,8 @@ body {
    * browser cannot do color-mix the background is simply plain paper.
    */
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--color-border) 45%, transparent) 0 1px, transparent 1px 32px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--color-border) 45%, transparent) 0 1px, transparent 1px 32px);
+    linear-gradient(to right, color-mix(in srgb, var(--color-muted-foreground) 12%, transparent) 0 1px, transparent 1px 32px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-muted-foreground) 12%, transparent) 0 1px, transparent 1px 32px);
 }
 
 /*
@@ -616,6 +616,11 @@ main > h1 {
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-2);
   border-bottom: var(--hairline);
+}
+
+/* The result: typeset on the paper, never boxed. */
+.record {
+  margin-top: var(--space-4);
 }
 
 /* The scanned domain — the subject of the whole record, set as its headline. */
@@ -1035,6 +1040,36 @@ main > h1 {
   font-size: 0.6875rem;
   letter-spacing: 0.01em;
   color: var(--color-muted-foreground);
+}
+
+/*
+ * The fitted variant: each bound is printed under the band edge it describes,
+ * not at the track's corners — at the corners of a fixed 0-100 track the
+ * bounds read as the scale's endpoints, which mislabels the axis. The quiet
+ * 0 / 100 endpoints state the fixed scale instead; the component hides each
+ * whenever a bound needs its corner.
+ */
+.rail__bounds--scale {
+  display: block;
+  position: relative;
+  height: 1.1em;
+}
+
+.rail__bound {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.rail__end {
+  position: absolute;
+  left: 0;
+  font-size: 0.625rem;
+}
+
+.rail__end--hi {
+  left: auto;
+  right: 0;
 }
 
 /* ==========================================================================

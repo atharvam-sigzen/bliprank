@@ -28,9 +28,11 @@ export function ScanProgress({ stage, done, total, engines, prompts, lastCell }:
       </p>
 
       {/* The same rail the results use, so the loading state is the product's
-          own visual language rather than a borrowed spinner. */}
+          own visual language rather than a borrowed spinner. The band is
+          `--plain`: a loading bar must not perform the settle — that motion
+          means "an interval opening around an estimate", and this is neither. */}
       <div className="rail__track" aria-hidden="true">
-        <div className="rail__band" style={{ left: '0%', width: `${Math.max(2, pct)}%`, animation: 'none' }} />
+        <div className="rail__band rail__band--plain" style={{ left: '0%', width: `${Math.max(2, pct)}%` }} />
       </div>
 
       <p className="rail__bounds" aria-hidden="true">
@@ -74,7 +76,7 @@ export function ScanRefusal({ kind, message, onReset }: { kind: string; message:
   }
 
   return (
-    <section className="card" role="alert">
+    <section className="card card--refusal" role="alert">
       <div className="rail__head">
         <h2>{TITLE[kind] ?? 'Cannot scan this domain'}</h2>
       </div>

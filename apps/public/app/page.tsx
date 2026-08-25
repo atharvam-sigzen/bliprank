@@ -24,6 +24,14 @@ assertProvisionalAllowed('The AI Visibility Grader')
  * picker, no wizard. The email gate belongs on the *gap list* (P3.5), after the
  * visitor has seen something true and free.
  *
+ * THE PAGE IS A MEASUREMENT RECORD. Letterhead, then the one instrument you
+ * operate (the domain field), then the result typeset on the paper — words in
+ * the serif, figures in the mono, and everything that used to sit UNDER a
+ * number (provenance, n, the algorithm version, the fixture disclosure) set
+ * BESIDE it in the margin. R8 made spatial: on a desktop the number cannot
+ * appear without its papers, and on a phone the notes fold back inline in the
+ * same DOM position they always had.
+ *
  * The grade is a confidence grade, not a performance grade. A brand with a D is
  * not doing badly — we do not yet know enough about it to say. Calling that out
  * on the acquisition surface is the whole positioning: the competitor tools
@@ -118,89 +126,108 @@ export default function Grader() {
   }
 
   return (
-    <main className="shell" style={{ maxWidth: 860 }}>
+    <main className="shell shell--grader">
       <ProductBar current="grader" />
 
-      <header className="masthead">
-        <div>
+      {/* THE LETTERHEAD. The title in the record's serif; beside it, in the
+          margin, the record block — where these numbers came from, stated
+          before a single one is shown. A disclosure set as provenance rather
+          than as a warning label, because a warning is a thing readers learn
+          to dismiss and this one is the product's central claim about itself. */}
+      <div className="annotated masthead">
+        <div className="annotated__body">
           <h1>AI Visibility Grader</h1>
-          <p className="cycle">How often do AI answers mention your brand? Free, no signup.</p>
+          <p className="lede">How often do AI answers mention your brand? Free, no signup.</p>
         </div>
-      </header>
-
-      {/* Set as a mark of provenance, not a warning label. A disclosure that
-          looks like an error is a disclosure a reader learns to dismiss — and
-          this one is the product's central claim about itself. */}
-      <aside className="stamp">
-        <span className="stamp__eyebrow">{IS_LIVE ? 'Collected' : 'Fixture answers'}</span>
-        <p className="stamp__body">
+        <aside className={`note${IS_LIVE ? '' : ' note--flag'}`} aria-label="Where these numbers come from">
           {IS_LIVE ? (
             <>
-              <strong>
-                {SCAN.counts.answersScored} answers across {SCAN.run.engines.length} engines on {SCAN.run.day}
-              </strong>
-              , at a cost of ${SCAN.run.spentUsd.toFixed(4)}. Nothing is collected when you press the button: this page renders a scan a runner already
-              produced under an explicit budget.
+              <span className="note__cap">Collected</span>
+              <span className="note__line">
+                <strong>{SCAN.counts.answersScored} answers</strong> · {SCAN.run.engines.length} engines
+              </span>
+              <span className="note__line">day {SCAN.run.day}</span>
+              <span className="note__line">cost ${SCAN.run.spentUsd.toFixed(4)}</span>
+              <span className="note__gloss">
+                Nothing is collected when you press the button: this page renders a scan a runner already produced under an explicit budget.
+              </span>
             </>
           ) : (
             <>
-              <strong>Real pipeline, fixture answers.</strong> Every number below was classified, collected, scored and given its interval by the production
-              code path. The answers came from the offline fixture adapter rather than a provider.
+              <span className="note__cap note__cap--flag">Fixture answers</span>
+              <span className="note__gloss">
+                <strong>Real pipeline, fixture answers.</strong> Every number below was classified, collected, scored and given its interval by the
+                production code path; the answers came from the offline fixture adapter rather than a provider.
+              </span>
             </>
           )}
-        </p>
-      </aside>
+        </aside>
+      </div>
 
       {state.phase === 'refused' ? (
         <ScanRefusal kind={state.kind} message={state.message} onReset={() => setState({ phase: 'idle' })} />
       ) : state.phase === 'scanning' && state.total > 0 ? (
         <ScanProgress stage={state.stage} done={state.done} total={state.total} engines={state.engines} prompts={state.prompts} lastCell={state.lastCell} />
       ) : state.phase === 'idle' || state.phase === 'scanning' ? (
-        <form className="card" onSubmit={submit} noValidate>
-          {/* Visible label, not a placeholder: a placeholder disappears the
-              moment it is needed, which is when the user starts typing. */}
-          <label className="field__label" htmlFor="domain">
-            Your domain
-          </label>
-          <p id="domain-help" className="metric__interval" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
-            We check the prompts buyers in your category actually ask. This build holds one collected scan: <strong>{SCAN.domain}</strong>.
-          </p>
-          <div className="field__row">
-            <input
-              id="domain"
-              name="domain"
-              type="text"
-              inputMode="url"
-              autoComplete="url"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              aria-describedby={error ? 'domain-help domain-error' : 'domain-help'}
-              aria-invalid={error ? true : undefined}
-              placeholder={SCAN.domain}
-              disabled={state.phase === 'scanning'}
-              // Class, not an inline style. Inline colours are invisible to the
-              // contrast suite — that is exactly how a 1.39:1 bar shipped once —
-              // and an inline `transition` cannot be reached by
-              // prefers-reduced-motion at all.
-              className={`field${error ? ' field--invalid' : ''}`}
-            />
-            <button type="submit" disabled={state.phase === 'scanning'} className="btn btn--primary">
-              {state.phase === 'scanning' ? 'Checking…' : 'Grade my brand'}
-            </button>
-          </div>
-
-          {/* Error next to the field it belongs to, announced when it appears. */}
-          {error ? (
-            <p id="domain-error" role="alert" className="field__error">
-              {error}
+        <div className="annotated">
+          {/* The one instrument you operate, so the one panel on the page. */}
+          <form className="card annotated__body" onSubmit={submit} noValidate>
+            {/* Visible label, not a placeholder: a placeholder disappears the
+                moment it is needed, which is when the user starts typing. */}
+            <label className="field__label" htmlFor="domain">
+              Your domain
+            </label>
+            <p id="domain-help" className="metric__interval" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
+              We check the prompts buyers in your category actually ask.
             </p>
-          ) : null}
+            <div className="field__row">
+              <input
+                id="domain"
+                name="domain"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                aria-describedby={error ? 'domain-help domain-error' : 'domain-help'}
+                aria-invalid={error ? true : undefined}
+                placeholder={SCAN.domain}
+                disabled={state.phase === 'scanning'}
+                // Class, not an inline style. Inline colours are invisible to the
+                // contrast suite — that is exactly how a 1.39:1 bar shipped once —
+                // and an inline `transition` cannot be reached by
+                // prefers-reduced-motion at all.
+                className={`field${error ? ' field--invalid' : ''}`}
+              />
+              <button type="submit" disabled={state.phase === 'scanning'} className="btn btn--primary">
+                {state.phase === 'scanning' ? 'Checking…' : 'Grade my brand'}
+              </button>
+            </div>
 
-          {/* Progress is announced, not just animated. */}
-          <p aria-live="polite" className="metric__interval">
-            {state.phase === 'scanning' ? `Checking ${state.domain} across five answer engines…` : ''}
-          </p>
-        </form>
+            {/* Error next to the field it belongs to, announced when it appears. */}
+            {error ? (
+              <p id="domain-error" role="alert" className="field__error">
+                {error}
+              </p>
+            ) : null}
+
+            {/* Progress is announced, not just animated. */}
+            <p aria-live="polite" className="metric__interval">
+              {state.phase === 'scanning' ? `Checking ${state.domain} across five answer engines…` : ''}
+            </p>
+          </form>
+          <aside className="note">
+            <span className="note__cap">This build</span>
+            <span className="note__line">holds one collected scan:</span>
+            <span className="note__line">
+              <strong>{SCAN.domain}</strong>
+            </span>
+            <span className="note__line">
+              {SCAN.categoryName} · {SCAN.counts.answersScored} answers
+            </span>
+            <span className="note__gloss">Try that domain to see a full record.</span>
+          </aside>
+        </div>
       ) : state.phase === 'not-scanned' ? (
         <NotScanned domain={state.domain} onReset={() => setState({ phase: 'idle' })} />
       ) : (
@@ -242,11 +269,10 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   const { grade, note } = confidenceGrade(metric)
 
   return (
-    <section className="card result-card" aria-live="polite">
-      <h2>{scan.domain}</h2>
-      <p className="metric__interval" style={{ marginTop: 2 }}>
-        {scan.categoryName} · {scan.counts.answersScored} answers · {scan.run.engines.length} engines
-      </p>
+    <section className="record" aria-live="polite">
+      {/* The scanned domain is the subject of the whole record, so it is set
+          as its headline — on the paper, not in a box. */}
+      <h2 className="record__domain">{scan.domain}</h2>
 
       {/*
         A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the
@@ -258,7 +284,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         wider is the honest disclosure.
       */}
       {scan.counts.failed > 0 ? (
-        <p className="notice notice--info" style={{ marginTop: 'var(--space-2)' }}>
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
           {scan.counts.failed} of {scan.counts.cellsRequested} requests did not come back, so this is measured on a smaller sample than a full
           scan and the interval below is correspondingly wider. The number is real; there is just less of it.
         </p>
@@ -270,7 +296,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         being shown an empty chart to interpret.
       */}
       {scan.fallback ? (
-        <p className="notice notice--info" style={{ marginTop: 'var(--space-2)' }}>
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
           {scan.fallback.reason === 'ambiguous'
             ? `${scan.domain} leads more than one category at once (${scan.fallback.candidates.join(', ')}), so picking one would be inventing a fact.`
             : `We could not identify a category for ${scan.domain}.`}{' '}
@@ -280,14 +306,24 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         </p>
       ) : null}
 
-      {/* The rail, on the surface most likely to be screenshotted beside a
-          competitor's tool. Their headline is a confident figure; this one
-          cannot be photographed without the range around it. */}
-      <RangeRail label="Mention rate" metric={metric} />
-      {/* The free surface is the one most likely to be screenshotted and
-          compared against another tool, so it is the last place provenance
-          should be missing. */}
-      <p className="metric__provenance">{formatProvenance(metric)}</p>
+      {/* The rail, with its papers in the margin beside it. This is the surface
+          most likely to be screenshotted beside a competitor's tool: their
+          headline is a confident figure; this one cannot be photographed
+          without the range around it — or without its provenance. */}
+      <div className="annotated" style={{ marginTop: 'var(--space-2)' }}>
+        <div className="annotated__body">
+          <RangeRail label="Mention rate" metric={metric} />
+        </div>
+        <aside className="note">
+          <span className="note__cap">Record</span>
+          <span className="note__line">{scan.categoryName}</span>
+          <span className="note__line">
+            {scan.counts.answersScored} answers · {scan.run.engines.length} engines
+          </span>
+          <span className="note__line">day {scan.run.day}</span>
+          <span className="note__line">{formatProvenance(metric)}</span>
+        </aside>
+      </div>
 
       <div className="gradeline">
         <span className="gradebadge" aria-hidden="true">
@@ -303,18 +339,20 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         </div>
       </div>
 
-      {/* The honest caveat, on the acquisition surface rather than buried in a
-          methodology page nobody opens. */}
-      <p className="notice" style={{ marginTop: 'var(--space-4)', marginBottom: 0 }}>
-        This is a measure of how much {metric.n} answers can tell us, not a mark out of ten. At this sample the interval is wide: it places you in a range, and
-        cannot separate you from a competitor whose range overlaps yours. Anyone quoting a precise number off a sample this size is guessing.
+      {/* The honest caveat, in the record's own voice, on the acquisition
+          surface rather than buried in a methodology page nobody opens. */}
+      <p className="prose" style={{ marginTop: 'var(--space-4)' }}>
+        This is a measure of how much <span className="num">{metric.n}</span> answers can tell us, not a mark out of ten. At this sample the interval is
+        wide: it places you in a range, and cannot separate you from a competitor whose range overlaps yours. Anyone quoting a precise number off a
+        sample this size is guessing.
       </p>
 
       {subject.mentions === 0 ? (
-        <p className="metric__interval" style={{ marginTop: 'var(--space-3)' }}>
+        <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
           {/* Zero is a finding, not a missing value, and it still carries an
               interval: the upper bound is what says how confidently zero. */}
-          Not mentioned in any of the {metric.n} answers. That is a real result with a real upper bound of {formatInterval(metric).split('–')[1]}, not an error.
+          Not mentioned in any of the <span className="num">{metric.n}</span> answers. That is a real result with a real upper bound of{' '}
+          <span className="num">{formatInterval(metric).split('–')[1]}</span>, not an error.
           {scan.subjectSource === 'domain-label'
             ? ' Note the brand was identified from the domain label alone, so a trading name that differs from the domain would be undercounted.'
             : ''}
@@ -335,6 +373,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
  * a competitor whose range overlaps yours". This is the picture of it, drawn
  * from the same scan: every brand here was scored over the SAME answers, so
  * they share one `comparison_basis` and `compare()` will actually compare them.
+ * The margin carries the basis; the prose under the chart carries the reading.
  */
 function HeadToHead({ scan }: { scan: ScanResultFile }) {
   const subject = subjectOf(scan)
@@ -348,23 +387,32 @@ function HeadToHead({ scan }: { scan: ScanResultFile }) {
     <section className="section" aria-labelledby="h2h-heading">
       <h2 id="h2h-heading">How that compares in {scan.categoryName.toLowerCase()}</h2>
 
-      <HeadToHeadChart data={data} subjectLabel={subject.name} />
+      <div className="annotated">
+        <div className="annotated__body">
+          <HeadToHeadChart data={data} subjectLabel={subject.name} />
+        </div>
+        <aside className="note">
+          <span className="note__cap">Basis</span>
+          <span className="note__line">every brand scored over</span>
+          <span className="note__line">the same {scan.counts.answersScored} answers</span>
+          <span className="note__gloss">
+            {/* The prompt subset is the honest part: a share-of-voice number
+                taken from prompts that name brands would measure our own
+                phrasing. */}
+            From prompts that name no brand — the unprompted set. Comparison and verification prompts are excluded from this number by
+            construction.
+          </span>
+        </aside>
+      </div>
 
-      <p className="metric__interval" style={{ marginTop: 'var(--space-3)' }}>
+      <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
         {data.allIndistinguishable
           ? `On this scan, not one brand in the category can be told apart from ${subject.name}. That is a fact about the sample size, not about the brands.`
           : `Where a range crosses the shaded band, that brand and ${subject.name} cannot be told apart on this scan — whatever order they appear in.`}
       </p>
 
-      <p className="metric__interval">
-        {/* The prompt subset is the honest part: a share-of-voice number taken
-            from prompts that name brands would measure our own phrasing. */}
-        Measured on {scan.counts.answersScored} answers from prompts that name no brand — the unprompted set. Comparison and verification prompts are excluded
-        from this number by construction.
-      </p>
-
       {uncompared.length > 0 ? (
-        <p className="metric__interval">
+        <p className="prose" style={{ marginTop: 'var(--space-2)' }}>
           {/* The reason is DERIVED, not guessed. This previously printed
               "different engine set" for every uncompared row, which was simply
               false for the common case: these brands share the engine set
@@ -372,8 +420,8 @@ function HeadToHead({ scan }: { scan: ScanResultFile }) {
               far too different in width to separate honestly. Stating a wrong
               reason on a page about measurement integrity is worse than stating
               none. */}
-          Not ranked against you: {uncompared.map((r) => `${r.label} (${reasonFor(r)})`).join(', ')}. Their ranges are drawn, dashed, because the measurement is
-          real — it is the comparison that would not be. Every other tool in this category would give you a number here anyway.
+          Not ranked against you: {uncompared.map((r) => `${r.label} (${reasonFor(r)})`).join(', ')}. Their ranges are drawn, dashed, because the
+          measurement is real — it is the comparison that would not be. Every other tool in this category would give you a number here anyway.
         </p>
       ) : null}
     </section>

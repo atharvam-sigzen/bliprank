@@ -25,7 +25,6 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
   const [active, setActive] = useState<number | null>(null)
   const { rows } = data
   const H = chartHeight(rows.length)
-  const plotRight = CHART.width - CHART.padRight
   const ticks = [0, 0.25, 0.5, 0.75, 1]
 
   const bandLeft = xOf(data.subject.metric.ci_low)
@@ -73,6 +72,9 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
           and a bar 3px tall is not a pointer target on a phone either. The row
           band is.
         */}
+        {/* No axis caption inside the plot: it sat at the same baseline as the
+            100% tick and collided with it, and it repeated what the section
+            heading and the legend already say. Deleted rather than moved. */}
         {rows.map((row, i) => (
           <rect
             key={`hit-${row.label}`}
@@ -101,9 +103,6 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
           />
         ))}
 
-        <text className="chart__tick" x={plotRight} y={H - 14} textAnchor="end">
-          mention rate
-        </text>
       </svg>
 
       <RowTip rows={rows} active={active} subjectLabel={subjectLabel} />

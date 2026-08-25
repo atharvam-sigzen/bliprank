@@ -24,22 +24,30 @@ export const metadata: Metadata = {
  */
 export default function Pricing() {
   return (
-    <main className="shell" style={{ maxWidth: 1000 }}>
+    <main className="shell shell--pricing">
       <ProductBar current="pricing" />
 
-      <header className="masthead">
-        <div>
+      {/* The letterhead: title and subject line in the record's serif, the
+          terms in the margin — currency, tax, and the fact that nothing here
+          takes money, stated before a price is shown rather than under it. */}
+      <div className="annotated masthead">
+        <header className="annotated__body">
           <h1>Pricing</h1>
-          <p className="cycle" style={{ marginTop: 'var(--space-1)' }}>
-            Priced on tracked prompts. Every plan re-checks every prompt daily, across all {ENGINE_COUNT} answer surfaces.
-          </p>
-        </div>
-      </header>
+          <p className="lede">Priced on tracked prompts. Every plan re-checks every prompt daily, across all {ENGINE_COUNT} answer surfaces.</p>
+        </header>
+        <aside className="note" aria-label="Terms">
+          <span className="note__cap">Terms</span>
+          <span className="note__line">prices in US dollars</span>
+          <span className="note__line">excluding tax</span>
+          <span className="note__gloss">No checkout yet — every plan starts with an email, and this page creates nothing.</span>
+        </aside>
+      </div>
 
       {/*
         The pledge sits above the prices, not below them. Reproducibility is the
         reason this costs what it costs, and a buyer comparing tools needs it
-        before the number rather than after.
+        before the number rather than after. Set as a mark of provenance on the
+        paper — eyebrow, rule, sentence — not as a boxed callout.
       */}
       <section className="stamp" aria-labelledby="pledge">
         <span className="stamp__eyebrow" id="pledge">
@@ -127,16 +135,24 @@ export default function Pricing() {
 
       <section className="section" aria-labelledby="cap">
         <h2 id="cap">How the prompt cap works</h2>
-        <p>
-          A tracked prompt is one question we ask the answer engines on your behalf, every day. Your plan&apos;s cap is a single pool, shared
-          between prompts BlipRank curates for your category and prompts you write yourself. Move the split to see it.
-        </p>
-        <CapSplit />
+        <div className="annotated">
+          <div className="annotated__body">
+            <p className="prose" style={{ marginBottom: 'var(--space-3)' }}>
+              A tracked prompt is one question we ask the answer engines on your behalf, every day. Your plan&apos;s cap is a single pool, shared
+              between prompts BlipRank curates for your category and prompts you write yourself. Move the split to see it.
+            </p>
+            <CapSplit />
+          </div>
+          <aside className="note">
+            <span className="note__cap">This control</span>
+            <span className="note__gloss">Explains the offer; it configures nothing. No plan is selected and nothing is stored.</span>
+          </aside>
+        </div>
       </section>
 
       <section className="section" aria-labelledby="notsold">
         <h2 id="notsold">What is not on this page</h2>
-        <p>
+        <p className="prose">
           There is no checkout here yet. These plans are not wired to a payment provider, nothing on this page creates an account, and no cap is
           enforced anywhere in the product today. Prices are in US dollars and exclude tax.
         </p>

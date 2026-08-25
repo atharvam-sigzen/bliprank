@@ -67,14 +67,50 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
         <div className="rail__needle" style={{ left: needle(metric.value) }} />
       </div>
 
-      <p className="rail__bounds" aria-hidden="true">
-        <span>{(metric.ci_low * 100).toFixed(dp)}</span>
-        <span>{(metric.ci_high * 100).toFixed(dp)}</span>
-      </p>
+      {/*
+        THE BOUNDS SIT UNDER THE EDGES THEY DESCRIBE. They used to sit at the
+        far corners of the track, where on a fixed 0-100 scale they read as
+        the scale's endpoints — "34.6" under the 0 end is a mislabelled axis,
+        not a bound. Each figure is now positioned at its own edge (clamped so
+        it never leaves the track), a narrow interval merges the two into one
+        label rather than overprinting them, and the quiet 0 / 100 endpoints
+        state the fixed scale — yielding whenever a bound needs their corner.
+      */}
+      <BoundsRow lo={metric.ci_low * 100} hi={metric.ci_high * 100} dp={dp} />
 
       <p className="visually-hidden">
         95% confidence interval {formatInterval(metric, dp)}, sample size {metric.n}.
       </p>
+    </div>
+  )
+}
+
+function BoundsRow({ lo, hi, dp }: { lo: number; hi: number; dp: number }) {
+  // Below ~10 points of separation two mono labels overprint, so a narrow
+  // interval prints once, as the range it is.
+  const narrow = hi - lo < 10
+  const at = (x: number) => `${Math.min(97, Math.max(3, x))}%`
+  const leftmost = narrow ? (lo + hi) / 2 : lo
+  const rightmost = narrow ? (lo + hi) / 2 : hi
+
+  return (
+    <div className="rail__bounds rail__bounds--scale" aria-hidden="true">
+      {leftmost >= 10 ? <span className="rail__end">0</span> : null}
+      {narrow ? (
+        <span className="rail__bound" style={{ left: at((lo + hi) / 2) }}>
+          {lo.toFixed(dp)}–{hi.toFixed(dp)}
+        </span>
+      ) : (
+        <>
+          <span className="rail__bound" style={{ left: at(lo) }}>
+            {lo.toFixed(dp)}
+          </span>
+          <span className="rail__bound" style={{ left: at(hi) }}>
+            {hi.toFixed(dp)}
+          </span>
+        </>
+      )}
+      {rightmost <= 90 ? <span className="rail__end rail__end--hi">100</span> : null}
     </div>
   )
 }
