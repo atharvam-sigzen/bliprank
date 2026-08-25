@@ -49,6 +49,9 @@ async function shoot(browser, { name, path, viewport, theme, prepare }) {
     return route.continue()
   })
 
+  // page.route is consulted before context.route, so `refuse` can answer
+  // /api/scan with a synthetic frame while the context guard still blocks
+  // everything else — including any request to the provider.
   const page = await context.newPage()
   const problems = []
   page.on('console', (m) => {
@@ -82,8 +85,30 @@ async function shoot(browser, { name, path, viewport, theme, prepare }) {
     return { scrollW: d.scrollWidth, clientW: d.clientWidth, offenders: [...new Set(offenders)].slice(0, 6) }
   })
 
+  /*
+   * COMPUTED STYLE, NOT DECLARED STYLE. The CSS tests read the stylesheet and
+   * cannot see the cascade resolve — `.panel__title` lost to `.card h2` on
+   * specificity and rendered the refusal's headline as an 11px uppercase field
+   * label. Only the browser knows who won, so the browser is asked.
+   */
+  const typography = await page.evaluate(() => {
+    const out = []
+    for (const el of document.querySelectorAll('.panel__title')) {
+      const c = getComputedStyle(el)
+      const px = Number.parseFloat(c.fontSize)
+      if (px < 15 || c.textTransform === 'uppercase') {
+        out.push(`.panel__title renders ${c.fontSize}/${c.textTransform} — losing the cascade to a label rule`)
+      }
+    }
+    for (const el of document.querySelectorAll('.prose')) {
+      const c = getComputedStyle(el)
+      if (!/Newsreader|serif/i.test(c.fontFamily)) out.push(`.prose is not the serif voice: ${c.fontFamily.slice(0, 40)}`)
+    }
+    return [...new Set(out)]
+  })
+
   await context.close()
-  return { file, blocked, problems, overflow }
+  return { file, blocked, problems, overflow, typography }
 }
 
 const browser = await chromium.launch()
@@ -95,10 +120,37 @@ const typeDomain = async (page) => {
   await page.waitForSelector('.record__domain, .record, [role=alert]', { timeout: 8000 })
 }
 
+/*
+ * The refusal state, WITHOUT touching the provider.
+ *
+ * Reaching it for real needs a server round trip, and live scanning is on with
+ * about one scan of quota left — so the request is intercepted in the browser
+ * and answered with a synthetic SSE error frame instead. The page cannot tell
+ * the difference: it parses the same stream it would have got, and nothing
+ * leaves the machine. The message is copied from live-gate's real quota text so
+ * what gets photographed is what a visitor would actually read.
+ */
+const QUOTA_MESSAGE =
+  'The provider quota for this cycle is used up: a full scan needs 17 requests per engine and chatgpt has 4 of 50 left. ' +
+  'Quota resets 2026-09-21. Nothing was collected and nothing was charged. Domains that have already been scanned are ' +
+  'cached and still load instantly.'
+
+const QUOTA_SSE = ['event: error', `data: ${JSON.stringify({ kind: 'quota', message: QUOTA_MESSAGE })}`, '', ''].join('\n')
+
+const refuse = async (page) => {
+  await page.route('**/api/scan', (route) =>
+    route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream' }, body: QUOTA_SSE }),
+  )
+  await page.fill('#domain', 'example.com')
+  await page.click('button[type=submit]')
+  await page.waitForSelector('[role=alert]', { timeout: 8000 })
+}
+
 const SHOTS = [
   { name: '1-grader-landing', path: '/' },
   { name: '2-grader-result', path: '/', prepare: typeDomain },
-  { name: '3-pricing', path: '/pricing' },
+  { name: '3-grader-refusal', path: '/', prepare: refuse },
+  { name: '4-pricing', path: '/pricing' },
 ]
 
 let failures = 0
@@ -109,6 +161,7 @@ for (const shot of SHOTS) {
       const flags = []
       if (r.blocked.length) flags.push(`BLOCKED ${r.blocked.length} forbidden request(s)`)
       if (r.problems.length) flags.push(...r.problems)
+      if (r.typography.length) flags.push(...r.typography)
       if (r.overflow.scrollW > r.overflow.clientW + 1) {
         flags.push(`H-SCROLL ${r.overflow.scrollW}>${r.overflow.clientW}: ${r.overflow.offenders.join(' | ')}`)
       }

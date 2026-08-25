@@ -17,37 +17,44 @@ export function ScanProgress({ stage, done, total, engines, prompts, lastCell }:
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
   return (
-    <section className="card" aria-live="polite" aria-busy="true">
-      <div className="rail__head">
-        <h2>Scanning</h2>
-        <span className="rail__n">{total > 0 ? `${done} / ${total} answers` : stage}</span>
-      </div>
+    <div className="annotated">
+      <section className="card annotated__body" aria-live="polite" aria-busy="true">
+        <div className="rail__head">
+          <h2 className="panel__title">Scanning</h2>
+          <span className="rail__n">{total > 0 ? `${done} / ${total} answers` : stage}</span>
+        </div>
 
-      <p className="rail__value" style={{ marginBottom: 'var(--space-2)' }}>
-        {total > 0 ? `${pct}%` : '—'}
-      </p>
+        <p className="rail__value">{total > 0 ? `${pct}%` : '—'}</p>
 
       {/* The same rail the results use, so the loading state is the product's
           own visual language rather than a borrowed spinner. The band is
           `--plain`: a loading bar must not perform the settle — that motion
           means "an interval opening around an estimate", and this is neither. */}
-      <div className="rail__track" aria-hidden="true">
-        <div className="rail__band rail__band--plain" style={{ left: '0%', width: `${Math.max(2, pct)}%` }} />
-      </div>
+        <div className="rail__track" aria-hidden="true">
+          <div className="rail__band rail__band--plain" style={{ left: '0%', width: `${Math.max(2, pct)}%` }} />
+        </div>
 
-      <p className="rail__bounds" aria-hidden="true">
-        <span>{total > 0 ? `${engines} engines × ${prompts} prompts` : 'preparing'}</span>
-        <span>{total > 0 ? `${total} answers` : ''}</span>
-      </p>
+        <p className="rail__bounds" aria-hidden="true">
+          <span>{total > 0 ? `${engines} engines × ${prompts} prompts` : 'preparing'}</span>
+          <span>{total > 0 ? `${total} answers` : ''}</span>
+        </p>
 
-      <p className="metric__interval" style={{ marginTop: 'var(--space-3)' }}>
-        {lastCell ? <>Last: {lastCell}</> : <>{stage || 'Starting'}…</>}
-      </p>
+        <p className="panel__status">{lastCell ? <>Last: {lastCell}</> : <>{stage || 'Starting'}…</>}</p>
+      </section>
 
-      <p className="metric__provenance">
-        Real answers are being collected from five engines now. This takes up to 90 seconds, and the page will not show a number until it has one.
-      </p>
-    </section>
+      {/* The spend disclosure moves to the margin with every other piece of
+          provenance on this page, rather than sitting under the panel as loose
+          small print. */}
+      <aside className="note">
+        <span className="note__cap">Collecting</span>
+        <span className="note__line">{total > 0 ? `${engines} engines × ${prompts} prompts` : 'preparing'}</span>
+        <span className="note__line">{total > 0 ? `${done} / ${total} answers` : stage}</span>
+        <span className="note__gloss">
+          Real answers are being collected from five engines now. This takes up to 90 seconds, and the page will not show a number until it has
+          one.
+        </span>
+      </aside>
+    </div>
   )
 }
 
@@ -75,18 +82,37 @@ export function ScanRefusal({ kind, message, onReset }: { kind: string; message:
     input: 'Check the domain',
   }
 
+  /*
+   * A REFUSAL IS CHASSIS, NOT PAPER — and that is the plan's rule, not a
+   * shortcut. The PANELS block reserves the panel material for instruments:
+   * "the form, the progress readout, a refusal, the plan panels, the splitter.
+   * Results are typeset on the paper and get none of this." A refusal is the
+   * instrument answering, not a record of a measurement, because there is no
+   * measurement. Setting it on the paper would say the opposite.
+   *
+   * What was genuinely missing is everything INSIDE it. The message was
+   * unstyled body text, the reasoning was a provenance line under the panel,
+   * and the spacing was inline. Now the message takes the serif prose voice
+   * every other caveat on the page uses, and the reasoning moves to the margin
+   * as an annotation — the same treatment the rail's provenance gets, so the
+   * refusal is annotated exactly like a result is.
+   */
   return (
-    <section className="card card--refusal" role="alert">
-      <div className="rail__head">
-        <h2>{TITLE[kind] ?? 'Cannot scan this domain'}</h2>
-      </div>
-      <p style={{ marginTop: 'var(--space-2)', marginBottom: 0 }}>{message}</p>
-      <p className="metric__provenance">
-        No number is shown because there is no measurement behind one. Nothing here falls back to sample data.
-      </p>
-      <button type="button" onClick={onReset} className="btn btn--quiet" style={{ marginTop: 'var(--space-3)' }}>
-        Try another domain
-      </button>
-    </section>
+    <div className="annotated">
+      <section className="card card--refusal annotated__body" role="alert">
+        <h2 className="panel__title">{TITLE[kind] ?? 'Cannot scan this domain'}</h2>
+        <p className="prose">{message}</p>
+        <button type="button" onClick={onReset} className="btn btn--quiet panel__action">
+          Try another domain
+        </button>
+      </section>
+      <aside className="note note--flag">
+        <span className="note__cap note__cap--flag">Why no number</span>
+        <span className="note__gloss">
+          No number is shown because there is no measurement behind one. Nothing here falls back to sample data.
+        </span>
+        <span className="note__line">refused · {kind}</span>
+      </aside>
+    </div>
   )
 }

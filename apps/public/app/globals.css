@@ -2046,3 +2046,48 @@ tbody tr:hover {
     justify-content: flex-start;
   }
 }
+
+/*
+ * A panel's own heading, in the chassis voice.
+ *
+ * `.rail__head h2` is a 0.6875rem tracked label, which is right over a readout
+ * ("MENTION RATE") and wrong over a refusal: "Provider quota exhausted" is a
+ * statement someone has to read from across a room, not a field label. Plex
+ * Sans keeps it chassis lettering — the serif is for the record and its prose,
+ * and the two never trade jobs.
+ */
+/*
+ * ⚠️ THE ELEMENT QUALIFIER IS LOAD-BEARING, NOT STYLE.
+ *
+ * `.card h2` and `.rail__head h2` are both (0,1,1); a bare `.panel__title` is
+ * (0,1,0) and LOSES to them. It shipped that way for one capture and the
+ * refusal's headline rendered as an 11px uppercase field label — the panel's
+ * most important line, set as its least important one. `h2.panel__title` ties
+ * on specificity and wins on source order, which is why this block sits at the
+ * end of the sheet. Asserted on computed style by scripts/shoot.mjs.
+ */
+h2.panel__title,
+.panel__title {
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.006em;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  margin: 0 0 var(--space-2);
+  text-transform: none;
+}
+
+/* A panel's live status line: mono, because it reports counts and cell names. */
+.panel__status {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  margin: var(--space-3) 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* The action that closes a panel. A class, so the spacing is not inline. */
+.panel__action {
+  margin-top: var(--space-3);
+}

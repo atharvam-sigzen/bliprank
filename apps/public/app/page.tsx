@@ -239,25 +239,35 @@ export default function Grader() {
 
 function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }) {
   return (
-    <section className="card" aria-live="polite">
-      <h2>{domain}</h2>
-      {/* No number is invented for an unscanned domain. Showing a placeholder
-          here would be the same dishonesty as a point estimate with no interval:
-          a shape that looks like a measurement and is not one. */}
-      <p style={{ marginTop: 'var(--space-2)' }}>
-        This build has no scan for {domain}. Collection runs in a budgeted runner, not from this form, so nothing was bought when you pressed the button.
-      </p>
-      <p className="metric__interval" style={{ marginTop: 'var(--space-2)' }}>
-        Scanned in this build: <strong>{SCAN.domain}</strong> — {SCAN.categoryName}, {SCAN.counts.answersScored} answers. Try that one to see a full result.
-      </p>
-      <ResetButton onReset={onReset} />
-    </section>
+    // Chassis, like the refusal: there is no measurement here, so there is no
+    // record to typeset. The domain is NOT set as `.record__domain` — that
+    // headline means "this is the subject of a measurement", and claiming it for
+    // a domain we never scanned is the same shape of lie as a bare estimate.
+    <div className="annotated">
+      <section className="card annotated__body" aria-live="polite">
+        <h2 className="panel__title">No scan for {domain}</h2>
+        {/* No number is invented for an unscanned domain. Showing a placeholder
+            here would be the same dishonesty as a point estimate with no interval:
+            a shape that looks like a measurement and is not one. */}
+        <p className="prose">
+          Collection runs in a budgeted runner, not from this form, so nothing was bought when you pressed the button.
+        </p>
+        <ResetButton onReset={onReset} />
+      </section>
+      <aside className="note">
+        <span className="note__cap">In this build</span>
+        <span className="note__line">{SCAN.domain}</span>
+        <span className="note__line">{SCAN.categoryName}</span>
+        <span className="note__line">{SCAN.counts.answersScored} answers</span>
+        <span className="note__gloss">Try that one to see a full result.</span>
+      </aside>
+    </div>
   )
 }
 
 function ResetButton({ onReset }: { onReset: () => void }) {
   return (
-    <button type="button" onClick={onReset} className="btn btn--quiet" style={{ marginTop: 'var(--space-3)' }}>
+    <button type="button" onClick={onReset} className="btn btn--quiet panel__action">
       Check another domain
     </button>
   )
