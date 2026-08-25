@@ -151,6 +151,7 @@ const SHOTS = [
   { name: '2-grader-result', path: '/', prepare: typeDomain },
   { name: '3-grader-refusal', path: '/', prepare: refuse },
   { name: '4-pricing', path: '/pricing' },
+  { name: '5-agency-concept', path: '/agency' },
 ]
 
 let failures = 0

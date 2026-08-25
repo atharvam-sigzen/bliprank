@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react'
  * bar, one mark, and each surface names the other.
  */
 
-export type Surface = 'dashboard' | 'grader' | 'pricing'
+export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
 const HREF = {
@@ -25,6 +25,9 @@ const HREF = {
 // Pages rather than with the paid app (ADR-0002) — hence off the Grader origin
 // from both surfaces, not a relative path that would 404 from the dashboard.
 const PRICING = `${HREF.grader}/pricing`
+// The agency view is a concept screen and ships beside the free tools, not in
+// the paid app — there is no agency product to put it in yet.
+const AGENCY = `${HREF.grader}/agency`
 
 export function ProductBar({ current }: { current: Surface }) {
   return (
@@ -50,6 +53,9 @@ export function ProductBar({ current }: { current: Surface }) {
         </a>
         <a className="productbar__link" href={PRICING} {...(current === 'pricing' ? { 'aria-current': 'page' as const } : {})}>
           Pricing
+        </a>
+        <a className="productbar__link" href={AGENCY} {...(current === 'agency' ? { 'aria-current': 'page' as const } : {})}>
+          Agency
         </a>
         <ThemeToggle />
       </div>

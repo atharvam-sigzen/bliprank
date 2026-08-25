@@ -8,6 +8,7 @@ import { RangeRail } from '@/components/range-rail'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
 import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
+import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
 import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 // Module scope on purpose: the grade is only computed after a user submits, so
@@ -277,6 +278,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
+  const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
 
   return (
     <section className="record" aria-live="polite">
@@ -332,6 +334,52 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           </span>
           <span className="note__line">day {scan.run.day}</span>
           <span className="note__line">{formatProvenance(metric)}</span>
+        </aside>
+      </div>
+
+      {/*
+        THE PREVIEW SCORE — on the paper, annotated in the margin, and NOT on a
+        rail.
+        
+        The rail means "this is a measurement and here is its interval". This
+        number has no interval, because nobody has derived one for it, so it gets
+        a plain figure and the composition of that figure sits beside it. Same
+        provenance discipline as everything else on the sheet: the number cannot
+        be read without the working.
+        
+        It sits ABOVE the Precision grade rather than beside it, so the two are
+        never scanned as one compound verdict. They answer different questions —
+        how visible, and how much the sample knows.
+      */}
+      <div className="annotated" style={{ marginTop: 'var(--space-5)' }}>
+        <div className="annotated__body">
+          <p className="readout__cap">Visibility</p>
+          <p className="score">
+            <span className="score__value num">{preview.score}</span>
+            <span className="score__of">/ 100</span>
+            <span className="score__flag">preview</span>
+          </p>
+          <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
+            {PREVIEW_SCORE_CAPTION}. It combines the mention rate with competitive position on placeholder weights, carries no confidence
+            interval, and is not comparable with anyone else&apos;s score — including a later version of this one.
+          </p>
+        </div>
+        <aside className="note note--flag">
+          <span className="note__cap note__cap--flag">How it is made</span>
+          {preview.parts.map((part) => (
+            <span className="note__line" key={part.label}>
+              {part.label} {(part.weight * 100).toFixed(0)}% · {part.points.toFixed(1)} pts
+            </span>
+          ))}
+          {preview.parts.map((part) => (
+            <span className="note__line" key={`${part.label}-detail`}>
+              {part.detail}
+            </span>
+          ))}
+          <span className="note__gloss">
+            {preview.missing.join(', ')} is not collected in this build, so its weight is redistributed across the components above rather than
+            scoring the brand down for a missing input.
+          </span>
         </aside>
       </div>
 
