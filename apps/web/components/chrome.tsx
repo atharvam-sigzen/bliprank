@@ -28,14 +28,40 @@ export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
 const GRADER = process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001'
 
+/**
+ * Carry the stored theme choice across the origin boundary. The theme lives in
+ * per-origin localStorage, so :3000's choice cannot reach :3001 on its own —
+ * every cross-origin link appends ?theme=dark|light when an explicit choice is
+ * stored. Nothing is appended for "system". Mirrors withTheme in
+ * apps/public/components/chrome.tsx; the two apps cannot share the import.
+ */
+export function withTheme(url: string): string {
+  try {
+    const t = window.localStorage.getItem('bliprank-theme')
+    if (t === 'light' || t === 'dark') {
+      return url + (url.includes('?') ? '&' : '?') + 'theme=' + t
+    }
+  } catch {
+    // No window (SSR) or no readable storage: the link goes out unthemed.
+  }
+  return url
+}
+
 export function ProductBar({ current: _current }: { current: Surface }) {
+  // withTheme reads localStorage, so applying it during render would make the
+  // server and client disagree on href. Render the bare URL first, theme the
+  // links after mount.
+  const [ready, setReady] = useState(false)
+  useEffect(() => setReady(true), [])
+  const themed = (url: string) => (ready ? withTheme(url) : url)
+
   return (
     <nav className="navbar" aria-label="BlipRank">
       <div className="navbar__strip">
         {/* Plain anchors, not next/link: every link here crosses an origin in
             dev (3000 to 3001) and a host in production (Vercel to Cloudflare
             Pages), and next/link's client navigation cannot do either. */}
-        <a className="navbar__mark" href={GRADER}>
+        <a className="navbar__mark" href={themed(GRADER)}>
           <span className="navbar__dot" aria-hidden="true" />
           BlipRank
         </a>
@@ -51,10 +77,10 @@ export function ProductBar({ current: _current }: { current: Surface }) {
         </div>
 
         <div className="navbar__util">
-          <a className="navbar__link" href={GRADER}>
+          <a className="navbar__link" href={themed(GRADER)}>
             Grader
           </a>
-          <a className="navbar__link" href={`${GRADER}/pricing`}>
+          <a className="navbar__link" href={themed(`${GRADER}/pricing`)}>
             Pricing
           </a>
         </div>
@@ -153,4 +179,4 @@ export function ThemeToggle() {
  * Inline and synchronous on purpose — a `useEffect` runs after paint, which is
  * exactly too late.
  */
-export const THEME_BOOT = `(function(){try{var t=localStorage.getItem('bliprank-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()`
+export const THEME_BOOT = `(function(){try{var m=location.search.match(/[?&]theme=(dark|light)(&|$)/);var t=m?m[1]:localStorage.getItem('bliprank-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);if(m){localStorage.setItem('bliprank-theme',t)}}}catch(e){}})()`
