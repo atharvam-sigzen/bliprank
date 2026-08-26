@@ -891,6 +891,20 @@ so it is tested rather than reasoned about:
 
 607 tests, 31 files. Typecheck clean.
 
+### Review item 4 — the interaction-design pass (2026-08-26)
+
+Approved on before/after captures before commit, per the standing process. The
+link system: primary-ink links with always-visible same-colour underlines
+(8.74:1 dark / 6.89:1 light, computed), the grey hairline underline gone; the
+back control restyled as a control (sans, no underline, aligned chevron with a
+reduced-motion escape); ActionLink as the standalone-action pattern. Six
+sentence-links split into short destination labels plus unlinked disclosure
+prose, with a reviewer verifying no honesty clause shrank. In passing, the pass
+surfaced a real red root typecheck (a union read without narrowing in
+live-gate.test.ts, unseen because vitest never typechecks and per-app tsc never
+looked) - fixed and committed separately. Parked minors: em-dashes in UI copy,
+the web 404's sentence-link.
+
 ### The user's application review, batch 1 (2026-08-26)
 
 Six review items were verified against the codebase before discussion, per the
