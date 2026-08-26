@@ -1,21 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
+import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadChart } from '@/components/head-to-head-chart'
 import { RangeRail } from '@/components/range-rail'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
 import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
-import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
-import { IS_LIVE, SCAN, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
+import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
+import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
 
 // Module scope on purpose: the grade is only computed after a user submits, so
 // relying on confidenceGrade to throw would mean discovering the block in front
 // of a customer rather than at build time. This fails `next build` instead.
 assertProvisionalAllowed('The AI Visibility Grader')
+
+/** The reference scan's run block, read once. It HAS one; a live-scanned file
+ * cached by /api/scan does not, which is why every read goes through runInfoOf. */
+const MASTHEAD_RUN = runInfoOf(SCAN)
 
 /**
  * The free Grader — P3.3, the acquisition path.
@@ -45,7 +49,6 @@ type State =
   | { phase: 'idle' }
   | { phase: 'scanning'; domain: string; stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string; cached: boolean }
   | { phase: 'done'; domain: string; scan: ScanResultFile }
-  | { phase: 'not-scanned'; domain: string }
   | { phase: 'refused'; domain: string; kind: string; message: string }
 
 export default function Grader() {
@@ -122,7 +125,16 @@ export default function Grader() {
               ? `All ${c.cellsRequested} requests for ${value} failed, so nothing was collected and there is nothing to measure. This is a collection failure, not a score of zero — the most likely cause is the provider quota running out part-way through. Try again after the quota resets.`
               : `The engines returned answers for ${value} but none could be scored. Nothing is shown because there is nothing measured.`,
           })
-        } else setState({ phase: 'done', domain: value, scan: e.result as ScanResultFile })
+        } else {
+          // The dashboard and the agency portfolio decide `hasData` through
+          // `scanFor`, and neither can read the directory /api/scan cached this
+          // into. Without this, the visitor reads a full record here and then a
+          // "no cycle collected" page one click later, for the domain they just
+          // paid to measure.
+          const scan = e.result as ScanResultFile
+          rememberScan(scan)
+          setState({ phase: 'done', domain: value, scan })
+        }
       }
     })
   }
@@ -141,17 +153,36 @@ export default function Grader() {
           <h1>AI Visibility Grader</h1>
           <p className="lede">How often do AI answers mention your brand? Free, no signup.</p>
         </div>
+        {/* NOT RENDERED OVER A RESULT. These are the REFERENCE scan's figures,
+            and sigzen's record happens to match every one of them except the
+            cost - so above that record the money line read as sigzen's, for a
+            scan whose file records no spend at all. A result carries its own
+            provenance in its own margin; this block belongs to the states that
+            have no record on screen.
+
+            The FIXTURE flag below is not scoped away: it is a disclosure about
+            the whole build, not a figure belonging to one scan, and a result on
+            screen is exactly when it most needs to be visible. */}
+        {state.phase === 'done' && IS_LIVE ? null : (
         <aside className={`note${IS_LIVE ? '' : ' note--flag'}`} aria-label="Where these numbers come from">
           {IS_LIVE ? (
             <>
-              <span className="note__cap">Collected</span>
+              <span className="note__cap">Reference scan</span>
               <span className="note__line">
-                <strong>{SCAN.counts.answersScored} answers</strong> · {SCAN.run.engines.length} engines
+                <strong>{SCAN.domain}</strong>
               </span>
-              <span className="note__line">day {SCAN.run.day}</span>
-              <span className="note__line">cost ${SCAN.run.spentUsd.toFixed(4)}</span>
+              <span className="note__line">
+                {SCAN.counts.answersScored} answers
+                {MASTHEAD_RUN.engines.length > 0 ? ` · ${MASTHEAD_RUN.engines.length} engines` : ''}
+              </span>
+              {MASTHEAD_RUN.day ? <span className="note__line">day {MASTHEAD_RUN.day}</span> : null}
+              {/* No cost line when the run block does not record spend. A
+                  `$0.0000` for a scan that spent real money is a lie, and a
+                  dash in a money slot still reads as a measurement. */}
+              {MASTHEAD_RUN.spentUsd === null ? null : <span className="note__line">cost ${MASTHEAD_RUN.spentUsd.toFixed(4)}</span>}
               <span className="note__gloss">
-                Nothing is collected when you press the button: this page renders a scan a runner already produced under an explicit budget.
+                A domain this build already holds is served from that record and costs nothing. Anything else is collected by a budgeted runner
+                under a hard cap, or refused - never collected from this form directly.
               </span>
             </>
           ) : (
@@ -164,6 +195,7 @@ export default function Grader() {
             </>
           )}
         </aside>
+        )}
       </div>
 
       {state.phase === 'refused' ? (
@@ -218,53 +250,26 @@ export default function Grader() {
               {state.phase === 'scanning' ? `Checking ${state.domain} across five answer engines…` : ''}
             </p>
           </form>
+          {/* THE COUNT IS THE REGISTRY'S, NOT A LITERAL. This said "one
+              collected scan" while the build shipped two, on the acquisition
+              surface, as a statement of fact about what it contains. */}
           <aside className="note">
             <span className="note__cap">This build</span>
-            <span className="note__line">holds one collected scan:</span>
             <span className="note__line">
-              <strong>{SCAN.domain}</strong>
+              holds {BUNDLED_SCANS.length} collected {BUNDLED_SCANS.length === 1 ? 'scan' : 'scans'}:
             </span>
-            <span className="note__line">
-              {SCAN.categoryName} · {SCAN.counts.answersScored} answers
-            </span>
-            <span className="note__gloss">Try that domain to see a full record.</span>
+            {BUNDLED_SCANS.map((s) => (
+              <span className="note__line" key={s.domain}>
+                <strong>{s.domain}</strong> · {s.categoryName} · {s.counts.answersScored} answers
+              </span>
+            ))}
+            <span className="note__gloss">Try either to see a full record.</span>
           </aside>
         </div>
-      ) : state.phase === 'not-scanned' ? (
-        <NotScanned domain={state.domain} onReset={() => setState({ phase: 'idle' })} />
       ) : (
         <Result scan={state.scan} onReset={() => setState({ phase: 'idle' })} />
       )}
     </main>
-  )
-}
-
-function NotScanned({ domain, onReset }: { domain: string; onReset: () => void }) {
-  return (
-    // On the paper, like every other outcome. The domain is still NOT set as
-    // `.record__domain` — that headline means "this is the subject of a
-    // measurement", and claiming it for a domain we never scanned is the same
-    // shape of lie as a bare estimate. It gets the quieter record title instead.
-    <div className="annotated">
-      <section className="record annotated__body" aria-live="polite">
-        <h2 className="record__title">No scan for {domain}</h2>
-        {/* No number is invented for an unscanned domain. Showing a placeholder
-            here would be the same dishonesty as a point estimate with no interval:
-            a shape that looks like a measurement and is not one. */}
-        <p className="prose">
-          Collection runs in a budgeted runner, not from this form, so nothing was bought when you pressed the button.
-        </p>
-        <OpenWorkspaceButton domain={domain} label="Open pre-flight workspace" />
-        <ResetButton onReset={onReset} />
-      </section>
-      <aside className="note">
-        <span className="note__cap">In this build</span>
-        <span className="note__line">{SCAN.domain}</span>
-        <span className="note__line">{SCAN.categoryName}</span>
-        <span className="note__line">{SCAN.counts.answersScored} answers</span>
-        <span className="note__gloss">Try that one to see a full result.</span>
-      </aside>
-    </div>
   )
 }
 
@@ -310,10 +315,16 @@ function ResetButton({ onReset }: { onReset: () => void }) {
 }
 
 function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }) {
+  // Never `scan.run`: a result cached by /api/scan before this fix has no run
+  // block at all, and reading through it is what crashed this page.
+  const run = runInfoOf(scan)
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
   const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
+  // Counted once. The zero-competitor branch of HeadToHead computes the same
+  // thing, and the caveat above it may not imply a comparison it refuses.
+  const competitors = scan.brands.filter((b) => !b.isSubject).length
 
   return (
     <section className="record" aria-live="polite">
@@ -365,9 +376,9 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           <span className="note__cap">Record</span>
           <span className="note__line">{scan.categoryName}</span>
           <span className="note__line">
-            {scan.counts.answersScored} answers · {scan.run.engines.length} engines
+            {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
-          <span className="note__line">day {scan.run.day}</span>
+          {run.day ? <span className="note__line">day {run.day}</span> : null}
           <span className="note__line">{formatProvenance(metric)}</span>
         </aside>
       </div>
@@ -411,10 +422,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
               {part.detail}
             </span>
           ))}
-          <span className="note__gloss">
-            {preview.missing.join(', ')} is not collected in this build, so its weight is redistributed across the components above rather than
-            scoring the brand down for a missing input.
-          </span>
+          <span className="note__gloss">{missingNote(preview)}</span>
         </aside>
       </div>
 
@@ -433,11 +441,19 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       </div>
 
       {/* The honest caveat, in the record's own voice, on the acquisition
-          surface rather than buried in a methodology page nobody opens. */}
+          surface rather than buried in a methodology page nobody opens.
+
+          DERIVED, NOT ASSERTED. This used to say "the interval is wide" and
+          "cannot separate you from a competitor" unconditionally - directly
+          under a Precision A reading "tight enough to act on", on a scan with
+          no competitors at all. Two contradictions on one screen, and the
+          second implies a comparison set that does not exist. Both clauses now
+          come from the same metric and brand list the rest of the record does. */}
       <p className="prose" style={{ marginTop: 'var(--space-4)' }}>
-        This is a measure of how much <span className="num">{metric.n}</span> answers can tell us, not a mark out of ten. At this sample the interval is
-        wide: it places you in a range, and cannot separate you from a competitor whose range overlaps yours. Anyone quoting a precise number off a
-        sample this size is guessing.
+        This is a measure of how much <span className="num">{metric.n}</span> answers can tell us, not a mark out of ten. It places you in a range,{' '}
+        <span className="num">{formatInterval(metric)}</span>, and the Precision grade above says how much of one
+        {competitors > 0 ? '. A competitor whose range overlaps yours cannot be told apart from you on this sample' : ''}. Anyone quoting a precise
+        number off a sample this size is guessing.
       </p>
 
       {subject.mentions === 0 ? (
@@ -471,9 +487,31 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
  */
 function HeadToHead({ scan }: { scan: ScanResultFile }) {
   const subject = subjectOf(scan)
+  const competitors = scan.brands.filter((b) => !b.isSubject)
+
+  /*
+   * NO COMPETITORS IS NOT AN EMPTY CHART. The fallback bank carries no leaders
+   * by design, so a domain we could not categorise is measured alone. Drawing
+   * the chart anyway put one row on it and printed "not one brand in the
+   * category can be told apart from you" — which is a claim about a comparison
+   * that never happened. The absence is stated instead.
+   */
+  if (competitors.length === 0) {
+    return (
+      <section className="section" aria-labelledby="h2h-heading">
+        <h2 id="h2h-heading">How that compares</h2>
+        <p className="prose prose--flag">
+          There is no comparison on this scan. {scan.domain} was measured against the general business-software prompt set, which carries no
+          competitor list, so there is no brand to rank it against. An empty chart is not drawn in its place and no rivals are named for a
+          business we could not categorise — the mention rate above stands on its own.
+        </p>
+      </section>
+    )
+  }
+
   const data = buildHeadToHead(
     { label: subject.name, metric: subject.metric },
-    scan.brands.filter((b) => !b.isSubject).map((b) => ({ label: b.name, metric: b.metric })),
+    competitors.map((b) => ({ label: b.name, metric: b.metric })),
   )
   const uncompared = data.rows.filter((r) => r.verdict === 'insufficient-data' || r.verdict === 'not-comparable')
 

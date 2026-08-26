@@ -1,0 +1,45 @@
+{
+  "status": "scanned",
+  "domain": "sigzen.com",
+  "category": "general-business-software",
+  "categoryName": "General business software",
+  "classification": {
+    "status": "unclassified",
+    "reason": "no known brand and no category keyword in the domain"
+  },
+  "fallback": {
+    "reason": "unclassified",
+    "detail": "no known brand and no category keyword in the domain",
+    "candidates": []
+  },
+  "subjectSource": "domain-label",
+  "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|general-business-software@1|unprompted=17|runs=1",
+  "algoVersion": "det-1",
+  "collectedAt": "2026-08-25T12:29:15.604Z",
+  "counts": {
+    "cellsRequested": 85,
+    "cacheHits": 0,
+    "collected": 85,
+    "failed": 0,
+    "answersScored": 85,
+    "providerCalls": 90
+  },
+  "brands": [
+    {
+      "id": "domain:sigzen.com",
+      "name": "sigzen",
+      "isSubject": true,
+      "mentions": 0,
+      "citations": 0,
+      "metric": {
+        "value": 0,
+        "ci_low": 0,
+        "ci_high": 0.04323948381405151,
+        "n": 85,
+        "algo_version": "det-1",
+        "collection_path": "third-party-grounded",
+        "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|general-business-software@1|unprompted=17|runs=1"
+      }
+    }
+  ]
+}

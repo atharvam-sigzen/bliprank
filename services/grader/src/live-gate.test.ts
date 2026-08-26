@@ -213,6 +213,30 @@ describe('a stranded run lock does not brick collection', () => {
     expect(r.status).toBe('scanned')
   })
 
+  it('THE FABRICATED COST: run.spentUsd is THIS scan, not the ledger total', async () => {
+    // `Budget` loads the ledger off disk and only ever adds to it, so
+    // `state.spentUsd` after a scan is everything the data dir has ever spent.
+    // Stamping that into the result made pipedrive's 22-call scan record
+    // $0.7640 - 4.3x its own cost at the dearest payg rate - and /api/scan then
+    // cached that number as the domain's own, rising with every later run.
+    //
+    // Seeded with $0.50 of prior spend and run offline, so this scan's true
+    // marginal cost is exactly $0. Before the fix this returned 0.5.
+    const { runGrader } = await import('./run.js')
+    const dir = mkdtempSync(join(tmpdir(), 'delta-'))
+    writeFileSync(join(dir, 'ledger.fixture.json'), JSON.stringify({ capUsd: 1, spentUsd: 0.5, calls: 60, byEngine: {}, updatedAt: '' }))
+    const r = await runGrader({
+      domain: 'pipedrive.com', engines: ['chatgpt'], day: '2026-08-25', plan: 'mega', mode: 'fixture',
+      apiKey: '', capUsd: 1, maxPrompts: 1, dataDir: dir, outFile: join(dir, 'out.json'), log: () => {},
+    })
+    expect(r.run.spentUsd).toBe(0)
+    // The ledger itself is still cumulative - the delta is a view of it, not a
+    // reset. A reset would break the cap, which is per data dir.
+    expect(JSON.parse(readFileSync(join(dir, 'ledger.fixture.json'), 'utf8')).spentUsd).toBe(0.5)
+    // And no scan may ever record more than its own calls could have cost.
+    expect(r.run.spentUsd).toBeLessThanOrEqual(r.counts.providerCalls * 0.008 + 1e-9)
+  })
+
   it('an offline run never touches the live ledger', async () => {
     // A fixture run charges $0 but was rewriting the shared ledger's capUsd to
     // its own default, and Budget then refused every later live run that asked

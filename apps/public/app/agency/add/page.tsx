@@ -229,7 +229,7 @@ function Preflight({ workspace, onConfirm, onReset }: { workspace: Workspace; on
     <div className="annotated addclient__result">
       <section className="record annotated__body" aria-live="polite">
         {/* `.record__title`, not `.record__domain`. That headline means "the
-            subject of a measurement" (see the Grader's `NotScanned`), and a
+            subject of a measurement", and a
             sheet whose own next sentence may say nothing has been collected
             cannot wear it. */}
         <h2 className="record__title">{workspace.domain}</h2>

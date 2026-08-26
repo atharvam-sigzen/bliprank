@@ -7,7 +7,7 @@ import { RangeRail } from '@/components/range-rail'
 import { CONCEPT_NOTICE, PORTFOLIO } from '@/lib/agency-fixture'
 import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
 import { TIERS } from '@/lib/pricing'
-import { scanFor, subjectOf } from '@/lib/scan-result'
+import { runInfoOf, scanFor, subjectOf } from '@/lib/scan-result'
 import { collectionStatus, readAgencyDomains, removeAgencyDomain, workspaceFor, type Workspace } from '@/lib/workspace'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
 
@@ -323,6 +323,7 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
   // row eventually renders undefined as a number.
   if (!scan) return null
 
+  const run = runInfoOf(scan)
   const subject = subjectOf(scan)
   const { grade } = confidenceGrade(subject.metric)
   const preview = previewScore(
@@ -335,7 +336,8 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
       <div className="portfolio__head">
         <span className="portfolio__client">{workspace.domain}</span>
         <span className="portfolio__category">
-          {scan.categoryName} · day {scan.run.day} · {scan.counts.answersScored} answers
+          {scan.categoryName}
+          {run.day ? ` · day ${run.day}` : ''} · {scan.counts.answersScored} answers
         </span>
         <span className="portfolio__category">{formatProvenance(subject.metric)}</span>
         <RemoveButton domain={workspace.domain} onRemove={onRemove} />
@@ -410,17 +412,13 @@ function QueuedRow({ workspace, onRemove }: { workspace: Workspace; onRemove: (d
           <dd className="wsfact__val num">{workspace.promptCount * workspace.engines.length}</dd>
         </dl>
 
-        {/* NO "Cycles collected: 0" ROW. This app has two stores of collected
-            answers — the committed artefact this page reads, and the files
-            /api/scan writes under services/grader/data-live/results — and a
-            domain scanned live sits in the second one only. A hard `0` in the
-            mono figure voice therefore asserted "nothing was collected" for
-            domains this product had collected, charged for and cached. The
+        {/* NO "Cycles collected: 0" ROW. A scanned domain resolves through the
+            registry now, so this row is only ever the queued state — but the
+            count of cycles behind a domain still is not knowable from a scan
+            file, which records one cycle and not how many exist. A hard `0` in
+            the mono figure voice would assert "nothing was collected". The
             count is not knowable here, so it is not printed; the status line
-            above says what is known.
-            ponytail: one lookup over both stores would let the row come back —
-            teach `scanFor` to read what /api/scan cached, then derive it from
-            `workspace.answersCollected` like every other screen. */}
+            above says what is known. */}
 
         {workspace.confident ? null : <p className="prose prose--flag">{workspace.fallbackReason}</p>}
       </div>

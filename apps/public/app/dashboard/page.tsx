@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
 import { RangeRail } from '@/components/range-rail'
-import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
-import { scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
+import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
+import { runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { ACTIVE_STORAGE_KEY, PROMPTS_PER_CYCLE, preflightPrompts, readActiveDomain, workspaceFor, type Workspace } from '@/lib/workspace'
 
 // Module scope, exactly as the Grader does it. This page renders a Confidence
@@ -119,8 +119,8 @@ function NoWorkspace() {
 /**
  * STATE A — a cycle has been collected.
  *
- * Reachable only for a domain with a committed scan, which in this build is
- * pipedrive.com and nothing else.
+ * Reachable for any domain this build holds a scan for — the committed one and
+ * anything /api/scan cached into the registry.
  */
 function Measured({ workspace }: { workspace: Workspace }) {
   const scan: ScanResultFile | null = scanFor(workspace.domain)
@@ -129,6 +129,10 @@ function Measured({ workspace }: { workspace: Workspace }) {
   // to the pre-flight screen is the correct behaviour if it ever changes.
   if (!scan) return <Preflight workspace={workspace} />
 
+  // A scan cached by /api/scan carries no run block. Everything the cycle note
+  // needs is derived from what the file does hold, and what it does not hold is
+  // omitted rather than defaulted.
+  const run = runInfoOf(scan)
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
@@ -144,16 +148,35 @@ function Measured({ workspace }: { workspace: Workspace }) {
         <aside className="note">
           <span className="note__cap">Cycle</span>
           <span className="note__line">
-            <strong>{scan.counts.answersScored} answers</strong> · {scan.run.engines.length} engines
+            <strong>{scan.counts.answersScored} answers</strong>
+            {run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
-          <span className="note__line">day {scan.run.day}</span>
+          {run.day ? <span className="note__line">day {run.day}</span> : null}
           <span className="note__line">{formatProvenance(metric)}</span>
-          <span className="note__line">cost ${scan.run.spentUsd.toFixed(4)}</span>
+          {/* THE COST LINE IS OMITTED, NOT ZEROED. This file may not record
+              spend; `$0.0000` would state that a scan which bought 85 answers
+              cost nothing, and an empty slot in the mono figure voice still
+              reads as a measurement. No line at all is the only honest option. */}
+          {run.spentUsd === null ? null : <span className="note__line">cost ${run.spentUsd.toFixed(4)}</span>}
           <span className="note__gloss">
             One cycle, collected by a budgeted runner. Opening this page collects nothing and costs nothing.
           </span>
         </aside>
       </header>
+
+      {/* THE FALLBACK, CARRIED THROUGH TO THE WORKSPACE. The category was not
+          identified, so this cycle ran against the general bank and has no
+          competitor set. Without this line the lede reads "General business
+          software" as if it had been determined. */}
+      {scan.fallback ? (
+        <p className="prose prose--flag" style={{ marginBottom: 'var(--space-4)' }}>
+          {scan.fallback.reason === 'ambiguous'
+            ? `${scan.domain} leads more than one category at once (${scan.fallback.candidates.join(', ')}), so none was chosen for it.`
+            : `We could not identify a category for ${scan.domain}: ${scan.fallback.detail}.`}{' '}
+          It was measured against the general business-software prompt set, which carries no competitor set — so the rate below is real, and there
+          is nothing on this page ranking it against a rival. It is also not comparable with a scan run on a category prompt set.
+        </p>
+      ) : null}
 
       <section className="record">
         {/* The rail with its papers beside it. Same instrument as the Grader,
@@ -167,9 +190,9 @@ function Measured({ workspace }: { workspace: Workspace }) {
             <span className="note__cap">Basis</span>
             <span className="note__line">{scan.categoryName}</span>
             <span className="note__line">
-              {scan.counts.answersScored} answers · {scan.run.engines.length} engines
+              {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
             </span>
-            <span className="note__line">day {scan.run.day}</span>
+            {run.day ? <span className="note__line">day {run.day}</span> : null}
             <span className="note__line">{formatProvenance(metric)}</span>
             <span className="note__gloss">
               From prompts that name no brand, so the number measures what the engines volunteer rather than what we prompted them with.
@@ -204,8 +227,7 @@ function Measured({ workspace }: { workspace: Workspace }) {
               </span>
             ))}
             <span className="note__gloss">
-              {preview.missing.join(', ')} is not collected in this build, so its weight is redistributed across the components above rather
-              than scoring the brand down for a missing input.
+              {missingNote(preview)}
             </span>
           </aside>
         </div>
@@ -239,11 +261,17 @@ function Measured({ workspace }: { workspace: Workspace }) {
       <section className="section">
         <h2>What is not on this page</h2>
         <p className="prose prose--flag">
-          There is no trend chart. A trend needs at least two cycles to compare and this workspace has one, collected on{' '}
-          <span className="num">{scan.run.day}</span>. A line through a single point would be drawing movement that has not been measured.
+          There is no trend chart. A trend needs at least two cycles to compare and this workspace has one
+          {run.day ? (
+            <>
+              , collected on <span className="num">{run.day}</span>
+            </>
+          ) : null}
+          . A line through a single point would be drawing movement that has not been measured.
         </p>
         <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          There is no breakdown by engine either. The {scan.run.engines.length} surfaces were scored together into one rate of{' '}
+          There is no breakdown by engine either. {run.engines.length > 0 ? `The ${run.engines.length} surfaces` : 'The answer surfaces'} were
+          scored together into one rate of{' '}
           <span className="num">{scan.counts.answersScored}</span> answers, and the per-engine split is not in this cycle&apos;s stored payload.
           Splitting the total five ways would be arithmetic presented as evidence.
         </p>
@@ -305,8 +333,9 @@ function Preflight({ workspace }: { workspace: Workspace }) {
         <div className="preflight">
           <p className="readout__cap">Status: no cycle collected</p>
           <p className="preflight__lead">
-            No collected cycle for {workspace.domain} is in this record, so there is no mention rate, no interval and no score on this page.
-            Nothing is shown because nothing has been measured, and a placeholder figure here would be indistinguishable from a real one.
+            No collected cycle for {workspace.domain} is in this build, so there is no mention rate, no interval and no score on this page.
+            Nothing is shown because this browser holds no measurement of it, and a placeholder figure here would be indistinguishable from a
+            real one. That is a statement about what this record contains, not a claim that the domain was never measured.
           </p>
         </div>
       </section>

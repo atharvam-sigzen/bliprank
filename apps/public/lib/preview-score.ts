@@ -130,5 +130,22 @@ export function previewScore(subject: ScanBrand, competitors: readonly ScanBrand
   }
 }
 
+/**
+ * The sentence naming what the score could NOT use, for the margin beside it.
+ *
+ * `preview.missing.join(', ')` used to be dropped into a sentence ending "is not
+ * collected in this build" — which reads as a build limitation for BOTH entries,
+ * and for competitive position that is false. It is missing because nothing
+ * could be ranked against this brand: on a fallback scan there is no competitor
+ * set at all. Two different absences, so two different clauses, in one place
+ * because three surfaces print it.
+ */
+export function missingNote(p: PreviewScore): string {
+  const unrankable = p.missing.includes('competitive position')
+  return unrankable
+    ? 'Sentiment is not collected in this build, and no competitor could be ranked against this brand on this scan, so both weights are redistributed across the component above rather than scoring the brand down for inputs it never had.'
+    : 'Sentiment is not collected in this build, so its weight is redistributed across the components above rather than scoring the brand down for a missing input.'
+}
+
 /** The label every surface must print beside the number. One source, one wording. */
 export const PREVIEW_SCORE_CAPTION = 'Preview score — methodology being finalised'

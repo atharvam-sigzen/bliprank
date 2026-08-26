@@ -596,12 +596,19 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     // time a real scan is committed, which is not a defect.
     expect(IS_LIVE).toBe(SCAN.run.mode === 'live')
     if (SCAN.run.mode === 'live') {
-      expect(SCAN.run.spentUsd).toBeGreaterThan(0)
       expect(SCAN.counts.providerCalls).toBeGreaterThan(0)
     } else {
-      expect(SCAN.run.spentUsd).toBe(0)
       expect(SCAN.counts.providerCalls).toBe(0)
+      expect(SCAN.run.spentUsd ?? 0).toBe(0)
     }
+    // SPEND IS BOUNDED BY THE CALLS THIS SCAN MADE, or it is not recorded.
+    //
+    // It used to be asserted only as `> 0`, which passed happily while the
+    // runner was stamping the data dir's LIFETIME ledger total onto every
+    // result - $0.7640 on a scan whose 22 calls could not have cost more than
+    // $0.176 at the dearest payg rate. An unrecorded spend is the honest state
+    // for a file whose figure was that total; it is omitted, never zeroed.
+    if (SCAN.run.spentUsd !== undefined) expect(SCAN.run.spentUsd).toBeLessThanOrEqual(SCAN.counts.providerCalls * 0.008 + 1e-9)
   })
 })
 

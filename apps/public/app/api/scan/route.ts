@@ -176,6 +176,14 @@ export async function POST(req: Request): Promise<Response> {
         //    consume the day's allowance.
         if (result.status === 'scanned' || result.status === 'no-answers') recordScan(domain, cfg, new Date())
 
+        // 4. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
+        //    read back by the Grader, the dashboard and the agency portfolio,
+        //    and it must carry a run block or those pages cannot say which day,
+        //    which engines or what it cost. `runGrader` returns one — mode,
+        //    plan, day, engines, cap, and the spend its own ledger recorded,
+        //    which is the only place that figure exists. It is written whole or
+        //    not at all: a partial block with an invented spentUsd would print
+        //    a cost this scan did not incur.
         if (result.status === 'scanned') {
           mkdirSync(RESULTS, { recursive: true })
           writeFileSync(resultFile(domain), JSON.stringify(result, null, 2) + '\n')

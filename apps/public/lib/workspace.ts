@@ -37,7 +37,7 @@ import {
   DEMO_TAXONOMY,
   FALLBACK_SLUG,
 } from '@bliprank/taxonomy'
-import { scanFor } from './scan-result'
+import { runInfoOf, scanFor } from './scan-result'
 
 export type Role = 'brand' | 'agency'
 
@@ -133,7 +133,10 @@ export function workspaceFor(domain: string): Workspace | null {
     // A completed scan reports its own engine list on its own result.
     engines: ENGINES,
     hasData: scan !== null,
-    lastRunDay: scan?.run.day ?? null,
+    // Through runInfoOf: a live-scanned file records no run block, and its day
+    // comes from `collectedAt` instead. Empty means the file says nothing about
+    // when it ran, which is null here rather than a blank in a date slot.
+    lastRunDay: scan ? runInfoOf(scan).day || null : null,
     answersCollected: scan?.counts.answersScored ?? null,
   }
 }

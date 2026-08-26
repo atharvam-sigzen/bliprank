@@ -155,7 +155,29 @@ export function estimateUsd(o: Pick<RunnerOptions, 'plan' | 'engines' | 'mode'>,
   return o.engines.reduce((sum, e) => sum + PRICE_USD_PER_CALL[o.plan][e] * promptCount * runsPerCell, 0)
 }
 
-export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
+/**
+ * What the runner knows about the run behind a result — the shape the Grader UI
+ * reads as `ScanRun`.
+ *
+ * RETURNED, not only written to `outFile`. It used to exist solely inside the
+ * envelope this function writes to disk, so `/api/scan` — which caches what this
+ * function RETURNS — cached a file with no run block, and the dashboard that
+ * read `scan.run.engines.length` threw on it. `spentUsd` is the ledger's own
+ * figure and is knowable nowhere else, which is why the block is built here
+ * rather than reconstructed by the caller from what it happens to remember.
+ */
+export interface GraderRun {
+  readonly mode: RunnerOptions['mode']
+  readonly plan: OwnPlan
+  readonly day: string
+  readonly engines: readonly EngineId[]
+  /** THIS run's marginal provider spend: the ledger delta, never its total. */
+  readonly spentUsd: number
+  readonly capUsd: number
+  readonly at: string
+}
+
+export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readonly run: GraderRun }> {
   mkdirSync(o.dataDir, { recursive: true })
   const lock = join(o.dataDir, 'run.lock')
   const touchLock = () => {
@@ -230,6 +252,15 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
     // exactly that during a lock test.
     const ledgerFile = join(o.dataDir, offline ? `ledger.${o.mode}.json` : 'ledger.json')
     const budget = new Budget(ledgerFile, o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+    // THE LEDGER IS CUMULATIVE FOR THE DATA DIR, THIS RUN IS NOT.
+    //
+    // `Budget` loads the existing ledger off disk and only ever adds to it, so
+    // `state.spentUsd` after a scan is everything that dir has ever paid for.
+    // Stamping that into the result made a 22-call scan report $0.7640 - 4.3x
+    // its own cost, and growing with every later run - and /api/scan then
+    // cached that figure as the domain's own. The delta is the only per-scan
+    // number the ledger can honestly yield.
+    const spentBefore = budget.state.spentUsd
 
     // Share one key's ceiling across the engines in play, then take a fraction
     // of it — the published per-engine ceilings sum to more than one key allows.
@@ -300,11 +331,14 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult> {
       },
     )
 
-    const spent = budget.state.spentUsd
-    const envelope = { ...result, run: { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spent, capUsd: o.capUsd, at: new Date().toISOString() } }
+    const spentThisRun = budget.state.spentUsd - spentBefore
+    const run: GraderRun = { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spentThisRun, capUsd: o.capUsd, at: new Date().toISOString() }
+    const envelope = { ...result, run }
     writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
-    o.log(`\nspent $${spent.toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${blob.size} stored cells · wrote ${o.outFile}`)
-    return result
+    // Cumulative here, deliberately: "of the cap" is a statement about the cap,
+    // which is per data dir and not per scan.
+    o.log(`\nspent $${budget.state.spentUsd.toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${blob.size} stored cells · wrote ${o.outFile}`)
+    return envelope
   } finally {
     if (existsSync(lock)) unlinkSync(lock)
   }

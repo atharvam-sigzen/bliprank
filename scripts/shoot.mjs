@@ -215,6 +215,12 @@ const QUOTA_MESSAGE =
 
 const QUOTA_SSE = ['event: error', `data: ${JSON.stringify({ kind: 'quota', message: QUOTA_MESSAGE })}`, '', ''].join('\n')
 
+const typeSigzen = async (page) => {
+  await page.fill('#domain', 'sigzen.com')
+  await page.click('button[type=submit]')
+  await page.waitForSelector('.record__domain, .record, [role=alert]', { timeout: 8000 })
+}
+
 const refuse = async (page) => {
   await page.route('**/api/scan', (route) =>
     route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream' }, body: QUOTA_SSE }),
@@ -272,6 +278,17 @@ const SHOTS = [
   { name: '7-dashboard-fallback', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'nike.com' } },
   { name: '8-agency-portfolio', path: '/agency', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
   { name: '9-agency-add', path: '/agency/add', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com']) } },
+  /*
+   * sigzen.com — the third demo domain, and the one that proves the product's
+   * argument hardest. It is a real collected scan of a company AI answers never
+   * mention: 0.0% with a real interval, ONE brand, no competitors, because it
+   * classified into the fallback bank which has no leaders by design.
+   *
+   * It is also the file that used to crash the result page, so it is captured in
+   * both places that render it.
+   */
+  { name: '10-grader-sigzen', path: '/', prepare: typeSigzen },
+  { name: '11-dashboard-sigzen', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'sigzen.com' } },
 ]
 
 let failures = 0
