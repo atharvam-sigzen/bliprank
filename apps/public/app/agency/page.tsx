@@ -306,6 +306,16 @@ export default function AgencyPortfolio() {
           isolation is the one thing a trust-positioned product cannot prototype casually, so the data model behind this screen gets designed
           before the screen does.
         </p>
+
+        {/* A link to a mockup, not to a feature. It sits at the end of the
+            caveat section rather than beside "Add a client" for that reason:
+            next to a working control it would read as a second working control,
+            and the sentence around it has to do the work the position does. */}
+        <p className="prose">
+          Adding a client is the only step of the client lifecycle that runs today.{' '}
+          <Link href="/agency/lifecycle">The rest of the arc is drawn as a mockup</Link>: a scheduled cycle, a collection run, a first result and the
+          first comparison, each stage marked as intent rather than shown as a feature. Nothing on it has been collected or scheduled.
+        </p>
       </section>
     </main>
   )

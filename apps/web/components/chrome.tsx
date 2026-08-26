@@ -13,12 +13,15 @@ import { useEffect, useState } from 'react'
  * reader should never have to infer it from two pages that look unrelated. One
  * bar, one mark, and each surface names the other.
  *
- * WHY THIS ONE IS SIMPLER THAN THE GRADER'S. Same two tiers and the same class
- * names, so the two deploys do not look like two products — but the workspace
- * lives entirely in `apps/public`: the role, the active domain and the client
- * list are stored in that origin's `localStorage` and cannot be read from here.
- * A role switch on this bar could only pretend, so there is not one. This app
- * has exactly one screen, and tier one says so: a worked example.
+ * WHY THIS ONE IS SIMPLER THAN THE GRADER'S. Same single strip and the same
+ * class names, so the two deploys do not look like two products — but the
+ * workspace lives entirely in `apps/public`: the role, the active domain and
+ * the client list are stored in that origin's `localStorage` and cannot be read
+ * from here. So the switcher is not a switcher here. It is the same slot in the
+ * same place, holding the one true thing this app can say about itself — that
+ * it is a worked example — with no disclosure affordance, because a control
+ * that opened onto nothing would be claiming a capability this deploy does not
+ * have.
  */
 
 export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
@@ -30,16 +33,22 @@ export function ProductBar({ current }: { current: Surface }) {
   const here = current === 'dashboard'
   return (
     <nav className="navbar" aria-label="BlipRank">
-      <div className="navbar__identity">
+      <div className="navbar__strip">
         <span className="navbar__mark">
           <span className="navbar__dot" aria-hidden="true" />
           BlipRank
         </span>
-        <span className="navbar__active">worked example</span>
-        <ThemeToggle />
-      </div>
 
-      <div className="navbar__nav">
+        {/* The switcher slot, static. Same wrapper, same metrics, no button and
+            no caret: there is nothing here to switch between. */}
+        <div className="navbar__ws">
+          <span className="navbar__wsstatic">worked example</span>
+        </div>
+
+        <div className="navbar__theme">
+          <ThemeToggle />
+        </div>
+
         {/*
           Plain anchors, not next/link: every one of these crosses an origin in
           dev (3000 to 3001) and a host in production (Vercel to Cloudflare
@@ -47,12 +56,15 @@ export function ProductBar({ current }: { current: Surface }) {
           and agency workspaces both live over there, so this bar links to them
           rather than pretending to hold them.
         */}
-        <a className="navbar__link" href={`${GRADER}/dashboard`}>
-          Brand dashboard
-        </a>
-        <a className="navbar__link" href={`${GRADER}/agency`}>
-          Portfolio
-        </a>
+        <div className="navbar__links">
+          <a className="navbar__link" href={`${GRADER}/dashboard`}>
+            Brand dashboard
+          </a>
+          <a className="navbar__link" href={`${GRADER}/agency`}>
+            Portfolio
+          </a>
+        </div>
+
         <div className="navbar__util">
           <a className="navbar__link" href={GRADER}>
             Grader

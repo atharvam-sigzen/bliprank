@@ -3,6 +3,7 @@ import { MetricCard, DeltaBadge } from '@/components/metric-card'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { ProductBar } from '@/components/chrome'
 import { BY_ENGINE, HEADLINE, SOURCE_MIX, TREND } from '@/lib/fixtures'
+import { NO_SCHEDULER_NOTE, PLANNED_CAPTION, Planned } from '@/lib/planned'
 
 export default function Dashboard() {
   return (
@@ -12,7 +13,9 @@ export default function Dashboard() {
       <header className="masthead">
         <div>
           <h1>Acme CRM — AI search visibility</h1>
-          <p className="cycle">Cycle 2026-08-15 · 30 prompts × 5 runs × 5 engines · compared with 2026-08-01</p>
+          <p className="cycle">
+            Cycle 2026-08-15 · 30 prompts × 5 runs × 5 engines · compared with 2026-08-01 <Planned />
+          </p>
         </div>
       </header>
 
@@ -27,14 +30,34 @@ export default function Dashboard() {
         </p>
       </aside>
 
+      {/* THE TIMER CLAIM IS A PAGE-LEVEL CLAIM, SO THE MARKER IS TOO.
+          The stamp above discloses the DATA: none of these numbers came from a
+          provider. The claim a reader actually takes from this page is a
+          CAPABILITY claim, that something has been running on a timer, and it is
+          not made by the chart alone. It is made by the masthead's two dated
+          cycles, by every delta badge below ("vs previous"), by the "vs previous
+          cycle" column in the by-engine table, and by six dated points on the
+          trend. Marking one of those five taught a reader that the other four
+          were real. So the notice sits here, above all of them, and each of the
+          headings that carries the claim keeps the `planned` marker so a reader
+          scrolled past this paragraph still sees it. */}
+      <p className="notice">
+        <strong>{PLANNED_CAPTION}.</strong> {NO_SCHEDULER_NOTE} Nothing on this page was collected on a timer, so the cycle dates above, every
+        comparison with a previous cycle, and the trend below describe the intended cadence rather than a record of it.
+      </p>
+
       <section className="grid" aria-label="Headline metrics">
         <MetricCard label="Mention rate" metric={HEADLINE.mentionRate.current} previous={HEADLINE.mentionRate.previous} />
         <MetricCard label="Citation rate" metric={HEADLINE.citationRate.current} previous={HEADLINE.citationRate.previous} />
         <MetricCard label="Share of voice" metric={HEADLINE.shareOfVoice.current} previous={HEADLINE.shareOfVoice.previous} />
       </section>
 
+      {/* The chart stays, and carries the marker; the wording of the gap is the
+          page-level notice above rather than a second copy here. */}
       <section className="section">
-        <h2>Mention rate over cycles</h2>
+        <h2>
+          Mention rate over cycles <Planned />
+        </h2>
         <div className="card">
           <CiTrendChart points={TREND} title="Mention rate over cycles, with 95% confidence band" />
         </div>
@@ -53,7 +76,14 @@ export default function Dashboard() {
                     nowrap table it scrolled off a 375px screen entirely, so a
                     phone reader saw four numbers and never the one conclusion
                     the product exists to draw. */}
-                <th scope="col">vs previous cycle</th>
+                {/* The one column on this page that is purely a timer claim:
+                    it exists only if a second cycle was collected, and none
+                    was. Marked at the column rather than the section, because
+                    the rest of the table is fixture data the stamp already
+                    discloses. */}
+                <th scope="col">
+                  vs previous cycle <Planned />
+                </th>
                 <th scope="col">95% interval</th>
                 <th scope="col">n</th>
               </tr>

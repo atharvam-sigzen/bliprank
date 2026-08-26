@@ -921,9 +921,76 @@ describe('every control is big enough to hit', () => {
     // `declarations` merges nothing and takes the first rule, which is where the
     // box model for each of these is declared. Reusing it rather than building a
     // second CSS parser in the same file.
-    for (const sel of ['.btn', '.field', '.capsplit__tier', '.tier__cta']) {
+    // The chrome is in the list now. It was not, and `.themetoggle` shipped at
+    // 32px on every page of both apps - the one interactive element on the
+    // identity strip, sitting beside a `.navbar__wsbtn` whose own comment
+    // claimed 44px "like every other control on the sheet". A loop that only
+    // knows about the demo path certifies the rest by construction.
+    for (const sel of ['.btn', '.field', '.capsplit__tier', '.tier__cta', '.themetoggle', '.navbar__wsbtn', '.navbar__item', '.navbar__link']) {
       expect([sel, declarations(sel)['min-height']]).toEqual([sel, '44px'])
     }
+  })
+
+  it('the toggle is 44px in the other sheet too, since the chrome ships from both', () => {
+    expect(declarationsIn(SHEETS[1]!.css, '.themetoggle')?.['min-height']).toBe('44px')
+  })
+})
+
+/**
+ * THE CASCADE, WHICH NO DECLARATION CAN SHOW YOU.
+ *
+ * `.card h2, .card h3` is (0,1,1) and a bare class is (0,1,0), so a heading
+ * class used on an h2 or h3 inside a card loses every declaration the two share.
+ * The sheet already knew this - `h2.record__title` carries the qualifier and
+ * says why - and `.tier__name` did not, so every plan name on the pricing page
+ * rendered as an 11px uppercase field label instead of a 15px plan name.
+ *
+ * Guarded on the sheet rather than on the one page that broke: any heading class
+ * that bothers to set a font-size must carry its element qualifier, because the
+ * markup around it can move under a `.card` at any time.
+ */
+describe('a heading class does not lose to `.card h2`', () => {
+  const HEADINGS = [
+    '../app/page.tsx',
+    '../app/pricing/page.tsx',
+    '../app/agency/page.tsx',
+    '../app/dashboard/page.tsx',
+    '../components/scan-progress.tsx',
+  ]
+
+  /**
+   * Only the elements the sheet actually contests. `.card h2, .card h3` names
+   * two; there is no `.card h1`, so an h1 class cannot lose and flagging it
+   * would be a rule about nothing. Read off the sheet rather than hard-coded,
+   * so adding `.card h4` there brings h4 under the guard here.
+   */
+  const CONTESTED = new Set([...CSS.matchAll(/\.card\s+(h[1-6])\s*[,{]/g)].map((m) => m[1]!))
+
+  it('the sheet does contest at least one heading element, or this guard is vacuous', () => {
+    expect([...CONTESTED].sort()).toEqual(['h2', 'h3'])
+  })
+
+  it('every heading class that sets a font-size is qualified by its element', () => {
+    const offenders: string[] = []
+    for (const rel of HEADINGS) {
+      const src = readFileSync(new URL(rel, import.meta.url), 'utf8')
+      for (const m of src.matchAll(/<(h[1-6])\s+className="([^"{]+)"/g)) {
+        if (!CONTESTED.has(m[1]!)) continue
+        for (const cls of m[2]!.trim().split(/\s+/)) {
+          if (!/^[a-z][\w-]*$/.test(cls)) continue
+          if (!declarationsIn(CSS, `.${cls}`)?.['font-size']) continue
+          if (!new RegExp(`${m[1]}\\.${cls}\\s*[,{]`).test(CSS)) offenders.push(`${rel}: <${m[1]} className=\"${cls}\"> is (0,1,0) and unqualified`)
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('the plan name keeps its own size, which is not the card-label size', () => {
+    const tier = declarations('.tier__name')
+    const cardLabel = declarations('.card h3')
+    expect(tier['font-size']).not.toBe(cardLabel['font-size'])
+    expect(CSS).toContain('h3.tier__name,')
   })
 })
 

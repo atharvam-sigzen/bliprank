@@ -394,7 +394,10 @@ table {
 .themetoggle {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
+  /* 44px, like every other control on the sheet. It shipped at 32px, which made
+     the one interactive element on the identity strip the only one below the
+     target-size floor - and it is on every page of both apps. */
+  min-height: 44px;
   gap: 6px;
   padding: 0 10px;
   /* A control boundary, not a rule between sections: --color-border is 1.24:1
@@ -559,7 +562,11 @@ main > h1 {
   margin-top: var(--space-4);
 }
 
-/* The scanned domain — the subject of the whole record, set as its headline. */
+/* The scanned domain — the subject of the whole record, set as its headline.
+   Element-qualified for the same reason `.record__title` is: `.card h2` is
+   (0,1,1) and this bare class is (0,1,0), so the day this headline sits inside
+   a card it would silently render at the 11px field-label size. */
+h2.record__domain,
 .record__domain {
   font-family: var(--font-display);
   font-weight: 420;
@@ -1551,6 +1558,11 @@ tbody tr:hover {
   text-transform: uppercase;
 }
 
+/* The element qualifier is load-bearing, exactly as it is on `.record__title`
+   below: `.card h3` is (0,1,1) and a bare class is (0,1,0), and this heading is
+   a direct child of `.card tier`. Without it every plan name rendered as an 11px
+   uppercase field label and all three declarations here were inert. */
+h3.tier__name,
 .tier__name {
   margin: 0;
   font-size: 0.9375rem;
@@ -1890,7 +1902,9 @@ tbody tr:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .navbar__link,
-  .navbar__rolebtn,
+  .navbar__wsbtn,
+  .navbar__wscaret,
+  .navbar__item,
   .themetoggle,
   .card,
   .field,
@@ -1978,6 +1992,7 @@ tbody tr:hover {
  * stylesheet tests cannot see it resolve.
  */
 h2.record__title,
+h3.record__title,
 .record__title {
   font-family: var(--font-display);
   font-size: 1.5rem;
@@ -2085,6 +2100,56 @@ h2.record__title,
 }
 
 /* ==========================================================================
+   THE PLANNED MARKER — the other kind of provisional
+   ==========================================================================
+   `.score__flag` says THE METHOD IS NOT SETTLED: the number is real, produced
+   by code that ran, and the rubric behind it may still move. This says
+   something stricter and worse — THE CAPABILITY IS NOT BUILT. Nothing produced
+   what is on screen; it is the shape of a view.
+
+   The two will appear on the same screen, so they must be separable at a
+   glance, and the choice is FILLED against OUTLINED rather than a second
+   colour: amber is this sheet's one attention colour and giving the stricter
+   claim a second hue would say they are unrelated, when they are the same
+   family at two strengths. Outlined amber is the softer claim; solid amber is
+   the harder one, and it is the one that must stop a reader who is about to
+   believe a chart.
+
+   Measured, both themes: ink on the fill is 5.30:1 light and 8.24:1 dark
+   (--color-on-accent on --color-accent), so the word clears 4.5:1 as text; the
+   chip's own edge against the surfaces it sits on is 3.10:1 on the paper,
+   3.36:1 on a card and 2.83:1 on the muted surface in light, 8.02 / 7.12 /
+   6.27:1 in dark. The muted case is under 3:1 and is deliberately not load
+   bearing: the marker is a WORD at 5.30:1, never a shape a reader has to find.
+
+   `.flag` carries the shape and `.flag--planned` the amber, so a future
+   `.flag--preview` can take the base without inheriting this claim. It sits
+   inline inside an <h2> and inside a <dd> rather than in a flex `.score` row,
+   which is the whole difference from `.score__flag`: vertical-align and a
+   nowrap instead of `align-self`.
+   ========================================================================== */
+
+.flag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 1px 5px;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.flag--planned {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* ==========================================================================
    THE AGENCY PORTFOLIO — concept
    ==========================================================================
    One sheet of client rows, separated by rules rather than boxed into tiles.
@@ -2185,37 +2250,52 @@ h2.record__title,
 }
 
 /* ==========================================================================
-   THE CHASSIS STRIP — two tiers
+   THE CHASSIS STRIP — one row
    ==========================================================================
-   Replaces `.productbar`, which listed four surfaces as peers and therefore
-   could not say who you are or which domain is on screen: a brand director and
-   an agency operator read the same four words and had to work out for
-   themselves which two were theirs.
+   Replaces the two-tier bar, which cost 116px on desktop and 201px at 390px to
+   carry, on every page, a bordered segmented role switch that was the loudest
+   object on screen — while the one fact that matters, WHICH RECORD AM I
+   LOOKING AT, was an unlabelled mono string floating beside it.
 
-   Tier one is IDENTITY — the mark, the mode, the subject. Tier two is the
-   navigation for that mode. Both are hairline strip on the paper: no panel
-   fill, no shadow, nothing floating, because this is the one component on the
-   page that must not be looked at. It takes the smallest type on the sheet and
-   the muted ink, and its only saturated mark is the 2px rule under whichever
-   surface you are actually on.
+   So identity, active context and switching collapse into ONE control, and the
+   strip becomes a single 52px hairline of chrome: mark, switcher, theme, the
+   links for your role, the links that belong to nobody. No panel fill, no
+   shadow, nothing floating. This is the one component on the page that must
+   not be looked at, so it takes the smallest type on the sheet and the muted
+   ink, and its only saturated mark is the 2px rule under the surface you are
+   actually on.
 
-   EVERY TIER WRAPS RATHER THAN SCROLLS. At 390px the identity row breaks after
-   the role switch and the utility group drops to a row of its own; nothing is
-   ever pushed past the edge, because a chrome strip that induces sideways body
-   scroll is the "never opened on a phone" tell this sheet already fixed once.
+   IT WRAPS, IT NEVER SCROLLS. At 390px the two link groups each drop to a line
+   of their own and the mark, the switcher and the theme control keep the first:
+   three rows, 140px, against 201px, with the switcher visible on every one of
+   them. A chrome strip that induces sideways body scroll is the "never opened
+   on a phone" tell this sheet already fixed once.
    ========================================================================== */
 
+/*
+ * The stacking context for the switcher panel. Without it the panel is behind
+ * any card the page has hovered into a transform, which is a menu that
+ * disappears under the thing the reader is pointing at.
+ */
 .navbar {
+  position: relative;
+  z-index: 20;
   border-bottom: var(--hairline);
   margin: 0 0 var(--space-4);
 }
 
-.navbar__identity {
+/*
+ * ONE flex line. Padding on the top only: the links are 44px boxes with a
+ * transparent 2px bottom border, and that border has to land ON the strip's own
+ * hairline for the current surface to read as a tab rather than as an
+ * underlined link. A bottom padding here would float it off the rule.
+ */
+.navbar__strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1) var(--space-3);
-  padding: var(--space-2) 0;
+  gap: 0 var(--space-3);
+  padding-top: var(--space-1);
 }
 
 .navbar__mark {
@@ -2239,97 +2319,240 @@ h2.record__title,
   box-shadow: inset 0 0 0 2px var(--color-primary), inset 3px 0 0 var(--color-background);
 }
 
-/*
- * THE ROLE SWITCH. Two states of ONE control, so it is drawn as one control:
- * a single border around the pair and a hairline between the halves, not two
- * buttons that happen to be adjacent.
- *
- * The group boundary is --color-field-border (3.41:1 on the paper, 3.69:1 on
- * a card, 3.12:1 on the muted surface) and never --color-border, which is
- * 1.24:1 — a rule between sections, not an edge a reader can find. WCAG 1.4.11
- * wants 3:1 on exactly this.
- *
- * The selected half is marked THREE ways — filled, heavier, and underscored in
- * the data colour at 6.30:1 on that fill — because a mode switch that signals
- * in colour alone is unreadable to precisely the reader most likely to be
- * running two workspaces at once. `aria-pressed` carries it for a screen
- * reader; none of the three is load-bearing on its own.
- */
-.navbar__role {
-  display: inline-flex;
-  border: 1px solid var(--color-field-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-card);
+/* ==========================================================================
+   THE WORKSPACE SWITCHER
+   ==========================================================================
+   The only element on the strip with any weight, and even this is understated:
+   a label with a disclosure affordance, not a button that shouts. The LABEL is
+   the fact — the domain on screen, or the client count — and the panel behind
+   it is where that fact gets changed.
+
+   Its boundary is --color-field-border (3.69:1 on a card, 3.41:1 on the paper,
+   3.12:1 on the muted surface) and never --color-border, which is 1.24:1: a
+   rule between sections, not an edge a reader can find. WCAG 1.4.11 wants 3:1
+   on exactly this, and this button is the whole navigation model now.
+   ========================================================================== */
+
+.navbar__ws {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
-.navbar__rolebtn {
+.navbar__wsbtn {
   display: inline-flex;
   align-items: center;
-  /* 44px, like every other control on the sheet. A segmented control is the
-     easiest place to talk yourself into 28px because it "looks tidier". */
+  gap: 6px;
+  /* 44px, like every other control on the sheet. */
   min-height: 44px;
+  max-width: 100%;
   padding: 0 var(--space-2);
-  border: 0;
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-muted-foreground);
   font: inherit;
   font-size: 0.8125rem;
+  text-align: left;
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
 }
 
-/* The corners belong to the GROUP; only its ends are round. */
-.navbar__rolebtn:first-child {
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-}
-
-.navbar__rolebtn:last-child {
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.navbar__rolebtn + .navbar__rolebtn {
-  border-left: 1px solid var(--color-field-border);
-}
-
-.navbar__rolebtn:hover {
+.navbar__wsbtn:hover {
   background: var(--color-muted);
   color: var(--color-foreground);
 }
 
-.navbar__rolebtn--on {
+/* Open is a state, so it is drawn as one: the same fill and ink as hover, held.
+   The caret rotation says it a second way and `aria-expanded` a third — none of
+   the three is load-bearing on its own. */
+.navbar__wsbtn--open {
   background: var(--color-muted);
   color: var(--color-foreground);
-  font-weight: 650;
-  box-shadow: inset 0 -2px 0 var(--color-primary);
 }
 
-/*
- * What the reader is looking at, phrased in their own role: a tracked domain,
- * or a client count. It is a FACT ABOUT STATE, so it is mono like every other
- * fact on this sheet — and it wraps rather than truncating, because an elided
- * domain is a domain the reader cannot check.
- */
-.navbar__active {
+/* The label is a FACT ABOUT STATE, so it is mono like every other fact on this
+   sheet — and it wraps rather than truncating, because an elided domain is a
+   domain the reader cannot check. */
+.navbar__wsfig {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.04em;
-  color: var(--color-muted-foreground);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-/* The theme control closes the identity row, wherever that row ends up
-   ending. Two classes deep so it does not restyle the toggle anywhere else. */
-.navbar__identity .themetoggle {
-  margin-left: auto;
+.navbar__wscaret {
+  flex: none;
+  transition: transform 150ms ease;
 }
 
-.navbar__nav {
+/* (0,2,0), so the reduced-motion rule further down — which is (0,1,0) — takes
+   the TRANSITION away without taking the state away. A caret that stopped
+   pointing at the open panel would be a cue removed from the readers who most
+   need cues. */
+.navbar__wsbtn--open .navbar__wscaret {
+  transform: rotate(180deg);
+}
+
+/* apps/web's slot: the same wrapper and the same metrics, no button and no
+   caret, because there is nothing over there to switch between. Unbordered on
+   purpose — a control boundary drawn around something that cannot be operated
+   is exactly the implied capability this product does not ship. */
+.navbar__wsstatic {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+}
+
+/*
+ * THE PANEL is chassis, and the only chassis on the strip: card fill, the lit
+ * top edge, the pop shadow, sitting above the page. It is rendered only while
+ * open, so `aria-controls` never points at a live-but-hidden node.
+ */
+.navbar__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: auto;
+  z-index: 1;
+  margin-top: 4px;
+  min-width: 15rem;
+  /* An open panel must not widen the viewport either. */
+  max-width: calc(100vw - 2 * var(--space-3));
+  padding: var(--space-2);
+  background: var(--color-card);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-pop), var(--edge-light);
+}
+
+/* Chassis lettering: sans, tracked, the machine's label for a section. */
+.navbar__panelcap {
+  margin: var(--space-2) var(--space-2) 4px;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+.navbar__panelcap:first-child {
+  margin-top: 0;
+}
+
+/* The empty case: one sentence in the record's voice, saying what is not there.
+   Never a fabricated list of workspaces this build cannot open. */
+.navbar__panelnote {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 450;
+  line-height: 1.5;
+  color: var(--color-muted-foreground);
+}
+
+/*
+ * A panel row. It wraps rather than truncating: name and flag on the first
+ * line, the gloss pushed onto its own by a 100% basis.
+ */
+.navbar__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.navbar__item:hover {
+  background: var(--color-muted);
+}
+
+/*
+ * The current row, marked FOUR ways: the rule in the data colour (7.46:1 on
+ * the card it sits on), the muted fill, the word "current", and `aria-current`.
+ * The fill on its own is 1.19:1 and carries nothing — it is texture; the rule
+ * and the word are what a reader actually reads.
+ */
+.navbar__item--on {
+  background: var(--color-muted);
+  border-left-color: var(--color-primary);
+}
+
+.navbar__itemname {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* One serif clause saying what a mode IS. The panel is where a reader learns
+   the difference between a workspace and a portfolio. */
+.navbar__itemgloss {
+  flex: 1 0 100%;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 450;
+  line-height: 1.4;
+  color: var(--color-muted-foreground);
+}
+
+/* A domain is a figure by this sheet's rules: mono, and it wraps. */
+.navbar__itemfig {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.navbar__itemflag {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* ==========================================================================
+   THE LINKS
+   ========================================================================== */
+
+.navbar__links {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0 var(--space-1);
-  border-top: var(--hairline);
+}
+
+/*
+ * The theme control is third in the DOM and last on the line. Ordering it here
+ * rather than moving it in the markup is what lets it stay on the identity row
+ * at 390px — see the media block, where the order is simply released.
+ */
+.navbar__theme {
+  order: 1;
+  display: flex;
+  align-items: center;
 }
 
 .navbar__link {
@@ -2376,21 +2599,42 @@ h2.record__title,
 }
 
 @media (max-width: 640px) {
+  /* The order is released, so the DOM order returns: mark, switcher, theme on
+     line one. The two link groups then take a full line each below it. */
+  .navbar__theme {
+    order: 0;
+    margin-left: auto;
+  }
+
+  .navbar__links,
+  .navbar__util {
+    flex: 0 0 100%;
+  }
+
   /* The fence becomes a floor: at this width `margin-left: auto` buys nothing,
      and a left rule would sit under the product links rather than beside
      them. Same DOM, one row lower. */
   .navbar__util {
-    width: 100%;
     margin-left: 0;
     padding-left: 0;
     border-left: none;
     border-top: var(--hairline);
   }
 
-  /* Pinning the toggle right once the row has wrapped strands it alone on a
-     line with the paper showing through the gap. */
-  .navbar__identity .themetoggle {
-    margin-left: 0;
+  /*
+   * The panel hangs off the whole strip rather than off the button. Anchored to
+   * a control sitting ~120px in, a 358px panel would run 90px past the right
+   * edge and be clipped by the body's own overflow guard — the reader would
+   * lose the right-hand end of every domain in the list. `static` here hands
+   * the containing block back to `.navbar`, so `top: 100%` means "under the
+   * bar" and the panel spans it.
+   */
+  .navbar__ws {
+    position: static;
+  }
+
+  .navbar__panel {
+    right: 0;
   }
 }
 
@@ -2591,4 +2835,47 @@ h2.record__title,
 
 .addclient__result {
   margin-top: var(--space-5);
+}
+
+/* ==========================================================================
+   THE CLIENT LIFECYCLE — a sequence, not a set
+   ==========================================================================
+   Five stages, one live and four planned, and the only thing this needs to add
+   is that they read as ONE RUN rather than as five unrelated sections. Two
+   declarations do it: the stages sit closer to each other than the page's other
+   sections do, and each heading opens with its number.
+
+   No rule down the left, no card per stage, no connector. A continuous vertical
+   rule is the broadsheet move this sheet deliberately is not, and boxing a
+   planned stage would give an unbuilt capability the same material as a
+   working control. The weight difference between live and planned is carried
+   where it belongs — `.flag--planned` in the heading and `note--flag` in the
+   margin — not by the container.
+   ========================================================================== */
+
+.lifecycle {
+  margin-top: var(--space-6);
+}
+
+/* (0,1,1) against `.section`'s (0,1,0), so it wins: stages group tighter than
+   the sections around them, which is the whole of the sequence device. */
+.lifecycle > .section {
+  margin-top: var(--space-5);
+}
+
+/*
+ * The stage number. A structural label rather than a figure, so it is marginal
+ * to the heading it sits in: the mono, one step smaller, tracked, and at the
+ * interface weight against the heading's 650. Same ink as the heading
+ * (--color-muted-foreground, 5.94:1 on the paper), because dropping the
+ * contrast of a numeral to make it quiet is the one way to make it quiet that
+ * this sheet does not allow.
+ */
+.lifecycle__ordinal {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--color-muted-foreground);
+  margin-right: 2px;
 }

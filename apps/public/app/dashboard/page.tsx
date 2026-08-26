@@ -5,6 +5,7 @@ import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bl
 import { ProductBar } from '@/components/chrome'
 import { RangeRail } from '@/components/range-rail'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
+import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { ACTIVE_STORAGE_KEY, PROMPTS_PER_CYCLE, preflightPrompts, readActiveDomain, workspaceFor, type Workspace } from '@/lib/workspace'
 
@@ -48,12 +49,20 @@ export default function BrandDashboard() {
   useEffect(() => {
     const active = readActiveDomain()
     setWorkspace(active ? workspaceFor(active) : null)
-    // THE HASH HAS TO BE RESOLVED TWICE. The bar's "Workspace" link is a full
-    // page load of /dashboard#settings; the browser looks for #settings while
-    // the page is still <Booting />, finds nothing, and never retries. So the
-    // scroll is redone once the state that owns the anchor exists.
-    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView()
   }, [])
+
+  // THE HASH HAS TO BE RESOLVED TWICE. The bar's "Workspace" link is a full page
+  // load of /dashboard#settings; the browser looks for #settings while the page
+  // is still <Booting />, finds nothing, and never retries.
+  //
+  // The retry has to wait for the state that OWNS the anchor to be committed,
+  // which is why it keys on `workspace` instead of sharing the effect above.
+  // Inside that effect the `setWorkspace` render has not flushed yet, so the DOM
+  // is still <Booting /> and the second lookup misses exactly like the first.
+  useEffect(() => {
+    if (workspace === undefined) return
+    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView()
+  }, [workspace])
 
   return (
     <main className="shell shell--grader">
@@ -347,8 +356,8 @@ function Preflight({ workspace }: { workspace: Workspace }) {
             <div className="annotated__body">
               <p className="prose">
                 These are the {prompts.length} prompts from the {workspace.categoryName.toLowerCase()} bank, asked on every one of the{' '}
-                {workspace.engines.length} answer surfaces, daily. Not a sample of them, and not a paraphrase: this is the list, exactly as it
-                would be sent.
+                {workspace.engines.length} answer surfaces. Not a sample of them, and not a paraphrase: this is the list, exactly as it would be
+                sent.
               </p>
               <ol className="promptlist">
                 {prompts.map((prompt) => (
@@ -413,8 +422,13 @@ function WorkspaceFacts({ workspace }: { workspace: Workspace }) {
         <dt className="wsfact__key">Engines</dt>
         <dd className="wsfact__val">{workspace.engines.join(' · ')}</dd>
 
+        {/* "daily" alone was a status claim for a workspace nothing schedules.
+            The cadence is what a cycle is meant to run at; the clause after it
+            is what is true today. Both, or the row lies by omission. */}
         <dt className="wsfact__key">Schedule</dt>
-        <dd className="wsfact__val">daily</dd>
+        <dd className="wsfact__val">
+          {SCHEDULE_FACT} <Planned />
+        </dd>
 
         <dt className="wsfact__key">Last run</dt>
         {/* "no cycle in this record", not "never". This page reads the
@@ -444,8 +458,8 @@ function WorkspaceFacts({ workspace }: { workspace: Workspace }) {
 function WorkedExample() {
   return (
     <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-      <a href={DASHBOARD_URL}>See a worked example with three months of cycles</a>. The figures there are illustrative, not collected, and belong
-      to no real brand.
+      <a href={DASHBOARD_URL}>See a worked example of the multi-cycle view</a>. The figures there are illustrative, not collected, they belong to
+      no real brand, and the run of cycles they are drawn on was never collected on a schedule.
     </p>
   )
 }
