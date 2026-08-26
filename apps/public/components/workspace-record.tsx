@@ -1,10 +1,13 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
+import { withTheme } from '@/components/chrome'
+import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { RangeRail } from '@/components/range-rail'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
-import { runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
+import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
 
 // Module scope, exactly as the Grader does it. This component renders a
@@ -17,8 +20,10 @@ assertProvisionalAllowed('The workspace record')
 const DASHBOARD_URL = process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000'
 
 /**
- * Which side of the plan the surrounding page sells. It changes COPY ONLY —
- * the paragraphs that name the plan — never a figure, a state, or a rule.
+ * Which side of the plan the surrounding page sells. It changes the copy that
+ * names the plan, and one placement: on a brand page the workspace facts live
+ * on /dashboard/workspace and the record carries a pointer to them, while an
+ * agency client page keeps them inline. Never a figure, a state, or a rule.
  */
 export type WorkspaceContext = 'brand' | 'agency-client'
 
@@ -84,6 +89,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
   const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
+  // Object identity against the compiled-in constants, the same derivation the
+  // chrome's switcher uses: scans() returns the bundled files by reference, so
+  // a scan not in BUNDLED_SCANS is one this browser collected this session.
+  const bundled = BUNDLED_SCANS.includes(scan)
 
   return (
     <>
@@ -108,6 +117,22 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
           <span className="note__gloss">
             One cycle, collected by a budgeted runner. Opening this page collects nothing and costs nothing.
           </span>
+          {/* A DEMO IS LABELLED AS ONE. The bundled scans resolve for every
+              visitor identically, so a reader who opened one from the switcher
+              must not mistake it for a record of their own workspace. Session
+              scans carry no such note: those really were collected from this
+              browser. */}
+          {bundled ? (
+            <>
+              <span className="note__cap note__cap--flag" style={{ marginTop: 'var(--space-3)' }}>
+                Reference scan
+              </span>
+              <span className="note__gloss">
+                A demonstration record bundled with this build, shown to every visitor. It is a real collected scan, but it is not a measurement
+                of this visitor&apos;s own workspace.
+              </span>
+            </>
+          ) : null}
         </aside>
       </header>
 
@@ -196,6 +221,11 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
         </div>
       </section>
 
+      {/* The same comparison the Grader renders, from the same scan file. The
+          zero-competitor branch inside it keeps its honest prose: a fallback
+          scan is measured alone and says so rather than drawing a chart. */}
+      <HeadToHeadSection scan={scan} />
+
       {/*
         ⚠️ THE TWO CHARTS THIS COMPONENT REFUSES TO DRAW.
 
@@ -207,7 +237,16 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       */}
       <section className="section">
         <h2>What is not on this page</h2>
-        <p className="prose prose--flag">
+        {/* Only claimed when the comparison actually rendered. A fallback scan
+            has no competitor set, and the section above already states that
+            absence in its own words. */}
+        {scan.brands.some((b) => !b.isSubject) ? (
+          <p className="prose">
+            The head-to-head comparison is not in this list: it is above, drawn from this same cycle. What follows is what genuinely cannot be
+            drawn yet.
+          </p>
+        ) : null}
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
           There is no trend chart. A trend needs at least two cycles to compare and this workspace has one
           {run.day ? (
             <>
@@ -225,7 +264,7 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
         <WorkedExample />
       </section>
 
-      <WorkspaceFacts workspace={workspace} context={context} />
+      {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
     </>
   )
 }
@@ -319,7 +358,7 @@ function Preflight({ workspace, context }: { workspace: Workspace; context: Work
         </section>
       ) : null}
 
-      <WorkspaceFacts workspace={workspace} context={context} />
+      {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
 
       <section className="section">
         <h2>A worked example</h2>
@@ -330,15 +369,38 @@ function Preflight({ workspace, context }: { workspace: Workspace; context: Work
 }
 
 /**
+ * THE POINTER THAT REPLACED THE INLINE FACTS, brand side only. The workspace's
+ * fixed facts moved to /dashboard/workspace — a real page for what the bar's
+ * anchor pretended to be — and the record keeps one line saying where they
+ * went. It keeps `id="settings"` because the brand bar's "Workspace" link is a
+ * full page load of /dashboard#settings, and a nav anchor that scrolls nowhere
+ * is a page claiming a surface it has not built.
+ */
+function WorkspacePointer() {
+  return (
+    <section className="section" id="settings">
+      <h2>Workspace</h2>
+      <p className="prose">
+        The tracked domain, the category bank, the engines and the schedule for this workspace are on the{' '}
+        <a href="/dashboard/workspace">Workspace page</a>, along with prompt management.
+      </p>
+    </section>
+  )
+}
+
+/**
  * The settings, as a record rather than a form. Nothing here is editable,
  * because none of it is stored anywhere an edit could go yet, and a disabled
  * input that looks operable is a worse lie than a printed fact.
+ *
+ * Exported: on the brand side these facts render on /dashboard/workspace, and
+ * the record above carries only the pointer to them. Agency client pages keep
+ * them inline.
  */
-function WorkspaceFacts({ workspace, context }: { workspace: Workspace; context: WorkspaceContext }) {
-  // `id` because the brand bar's "Workspace" link lands here. The dashboard has
-  // four states, not two, and this section is in two of them — `NoWorkspace`
-  // carries the same id for its own, and `Booting` resolves into one of the
-  // three a tick later, which is why the page's effect re-runs the scroll.
+export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; context: WorkspaceContext }) {
+  // `id` because the brand bar's "Workspace" link lands on /dashboard#settings.
+  // On the brand overview that anchor is now `WorkspacePointer`; here it serves
+  // the agency client pages and the workspace page, where this section renders.
   return (
     <section className="section" id="settings">
       <h2>Workspace</h2>
@@ -412,9 +474,19 @@ function WorkspaceFacts({ workspace, context }: { workspace: Workspace; context:
  * it from here must not mistake its charts for their own measurements.
  */
 export function WorkedExample() {
+  // withTheme reads localStorage, so the server renders the bare URL. On
+  // /agency/client/[domain] this component is in the first server-rendered
+  // paint, so applying the param during hydration would mismatch the server
+  // HTML; it goes on after mount instead — same pattern as apps/web's bar.
+  const [ready, setReady] = useState(false)
+  useEffect(() => setReady(true), [])
   return (
     <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-      <a href={DASHBOARD_URL}>See a worked example of the multi-cycle view</a>. The figures there are illustrative, not collected, they belong to
+      {/* withTheme: the worked example is a different origin, so the theme
+          chosen here cannot reach its localStorage. The query parameter is how
+          the choice crosses; `system` sends nothing and the media query
+          decides there as it does here. */}
+      <a href={ready ? withTheme(DASHBOARD_URL) : DASHBOARD_URL}>See a worked example of the multi-cycle view</a>. The figures there are illustrative, not collected, they belong to
       no real brand, and the run of cycles they are drawn on was never collected on a schedule.
     </p>
   )

@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
-import { HeadToHeadChart } from '@/components/head-to-head-chart'
+import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { RangeRail } from '@/components/range-rail'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
-import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
@@ -322,7 +321,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
   const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
-  // Counted once. The zero-competitor branch of HeadToHead computes the same
+  // Counted once. The zero-competitor branch of HeadToHeadSection computes the same
   // thing, and the caveat above it may not imply a comparison it refuses.
   const competitors = scan.brands.filter((b) => !b.isSubject).length
 
@@ -468,7 +467,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         </p>
       ) : null}
 
-      <HeadToHead scan={scan} />
+      <HeadToHeadSection scan={scan} />
 
       <OpenWorkspaceButton domain={scan.domain} label="Open in dashboard" />
       <ResetButton onReset={onReset} />
@@ -476,86 +475,3 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   )
 }
 
-/**
- * PHASES 3.4 — the head-to-head, sitting directly under the caveat it proves.
- *
- * The paragraph above it already promises the number "cannot separate you from
- * a competitor whose range overlaps yours". This is the picture of it, drawn
- * from the same scan: every brand here was scored over the SAME answers, so
- * they share one `comparison_basis` and `compare()` will actually compare them.
- * The margin carries the basis; the prose under the chart carries the reading.
- */
-function HeadToHead({ scan }: { scan: ScanResultFile }) {
-  const subject = subjectOf(scan)
-  const competitors = scan.brands.filter((b) => !b.isSubject)
-
-  /*
-   * NO COMPETITORS IS NOT AN EMPTY CHART. The fallback bank carries no leaders
-   * by design, so a domain we could not categorise is measured alone. Drawing
-   * the chart anyway put one row on it and printed "not one brand in the
-   * category can be told apart from you" — which is a claim about a comparison
-   * that never happened. The absence is stated instead.
-   */
-  if (competitors.length === 0) {
-    return (
-      <section className="section" aria-labelledby="h2h-heading">
-        <h2 id="h2h-heading">How that compares</h2>
-        <p className="prose prose--flag">
-          There is no comparison on this scan. {scan.domain} was measured against the general business-software prompt set, which carries no
-          competitor list, so there is no brand to rank it against. An empty chart is not drawn in its place and no rivals are named for a
-          business we could not categorise — the mention rate above stands on its own.
-        </p>
-      </section>
-    )
-  }
-
-  const data = buildHeadToHead(
-    { label: subject.name, metric: subject.metric },
-    competitors.map((b) => ({ label: b.name, metric: b.metric })),
-  )
-  const uncompared = data.rows.filter((r) => r.verdict === 'insufficient-data' || r.verdict === 'not-comparable')
-
-  return (
-    <section className="section" aria-labelledby="h2h-heading">
-      <h2 id="h2h-heading">How that compares in {scan.categoryName.toLowerCase()}</h2>
-
-      <div className="annotated">
-        <div className="annotated__body">
-          <HeadToHeadChart data={data} subjectLabel={subject.name} />
-        </div>
-        <aside className="note">
-          <span className="note__cap">Basis</span>
-          <span className="note__line">every brand scored over</span>
-          <span className="note__line">the same {scan.counts.answersScored} answers</span>
-          <span className="note__gloss">
-            {/* The prompt subset is the honest part: a share-of-voice number
-                taken from prompts that name brands would measure our own
-                phrasing. */}
-            From prompts that name no brand — the unprompted set. Comparison and verification prompts are excluded from this number by
-            construction.
-          </span>
-        </aside>
-      </div>
-
-      <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-        {data.allIndistinguishable
-          ? `On this scan, not one brand in the category can be told apart from ${subject.name}. That is a fact about the sample size, not about the brands.`
-          : `Where a range crosses the shaded band, that brand and ${subject.name} cannot be told apart on this scan — whatever order they appear in.`}
-      </p>
-
-      {uncompared.length > 0 ? (
-        <p className="prose" style={{ marginTop: 'var(--space-2)' }}>
-          {/* The reason is DERIVED, not guessed. This previously printed
-              "different engine set" for every uncompared row, which was simply
-              false for the common case: these brands share the engine set
-              exactly, and what compare() refused was a pair whose intervals are
-              far too different in width to separate honestly. Stating a wrong
-              reason on a page about measurement integrity is worse than stating
-              none. */}
-          Not ranked against you: {uncompared.map((r) => `${r.label} (${reasonFor(r)})`).join(', ')}. Their ranges are drawn, dashed, because the
-          measurement is real — it is the comparison that would not be. Every other tool in this category would give you a number here anyway.
-        </p>
-      ) : null}
-    </section>
-  )
-}
