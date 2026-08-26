@@ -291,6 +291,8 @@ const SHOTS = [
   { name: '11-dashboard-sigzen', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'sigzen.com' } },
   { name: '12-agency-pricing', path: '/agency/pricing' },
   { name: '13-agency-lifecycle', path: '/agency/lifecycle', seed: { [KEY.role]: 'agency' } },
+  { name: '14-manage-prompts', path: '/dashboard/prompts', seed: { [KEY.role]: 'brand', [KEY.active]: 'zendesk.com' } },
+  { name: '15-agency-client', path: '/agency/client/zendesk.com', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
 ]
 
 let failures = 0
