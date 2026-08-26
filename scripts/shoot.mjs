@@ -289,6 +289,8 @@ const SHOTS = [
    */
   { name: '10-grader-sigzen', path: '/', prepare: typeSigzen },
   { name: '11-dashboard-sigzen', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'sigzen.com' } },
+  { name: '12-agency-pricing', path: '/agency/pricing' },
+  { name: '13-agency-lifecycle', path: '/agency/lifecycle', seed: { [KEY.role]: 'agency' } },
 ]
 
 let failures = 0
