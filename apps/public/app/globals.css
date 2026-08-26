@@ -449,6 +449,41 @@ main > h1 {
 }
 
 /*
+ * THE WAY BACK — quiet chrome above the letterhead. The sans label voice, not
+ * the record's serif, because this is navigation, not content. Visible without
+ * hover: the chevron plus the underline convention every quiet link on the
+ * sheet uses — 1px in --color-field-border (3.41:1 on the paper light, 4.13:1
+ * dark) at rest, currentColor on hover. Muted ink at rest (5.94:1 light,
+ * 8.23:1 dark on the paper) so it never competes with the title beneath it;
+ * full ink on hover. 44px minimum target like every control.
+ */
+.backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--color-field-border);
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.backlink:hover {
+  color: var(--color-foreground);
+  text-decoration-color: currentColor;
+}
+
+/* The chevron rides the label's colour through currentColor; it never shrinks
+   when the label wraps. */
+.backlink__arrow {
+  flex: none;
+}
+
+/*
  * THE PRICING FORK — the letterhead stating which book of plans this page is.
  * Two pills after the capsplit tier pattern, but bounded by --color-field-border
  * (3.41:1 on the paper light, 4.13:1 dark) rather than the 1.24:1 hairline: a
@@ -1944,6 +1979,7 @@ h3.tier__name,
   .navbar__link,
   .navbar__link--door,
   .navbar__wsbtn,
+  .backlink,
   .navbar__wscaret,
   .navbar__item,
   .pricefork__opt,
@@ -2539,6 +2575,16 @@ h3.record__title,
   font-weight: 450;
   line-height: 1.5;
   color: var(--color-muted-foreground);
+}
+
+/* The fence between your workspaces and the bundled reference records. A
+   hairline, not a control boundary — it separates sections, nobody operates
+   it — so it takes --color-border like every other rule between sections,
+   and spans the panel's full width past the padding. */
+.navbar__paneldivider {
+  margin: var(--space-2) calc(-1 * var(--space-2));
+  border: 0;
+  border-top: var(--hairline);
 }
 
 /*

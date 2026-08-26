@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
@@ -5,9 +6,25 @@ import { defineConfig } from 'vitest/config'
 // Resolve react the way apps/public does, once, so every specifier below is
 // pinned to the SAME copy. `resolve.dedupe` cannot do this here: it resolves
 // from the workspace root, where pnpm hoists no react.
-const resolveReact = createRequire(new URL('./apps/public/package.json', import.meta.url)).resolve
+// Forward slashes, even on win32: vite's externalization test looks for
+// '/node_modules/' in the id, and a backslashed path sails past it — the
+// aliased react is then transformed as project source, a SECOND evaluation
+// beside the CJS copy react-dom/server requires natively.
+const require_ = createRequire(new URL('./apps/public/package.json', import.meta.url))
+const resolveReact = (id: string) => require_.resolve(id).replace(/\\/g, '/')
 
 export default defineConfig({
+  // THE DRIVE LETTER'S CASE IS LOAD-BEARING (win32). Vite derives module ids
+  // from the cwd as typed — `d:\bliprank` in one shell, `D:\bliprank` in
+  // another — and externalized modules are imported natively by that id. But
+  // react-dom/server's own `require('react')` crosses a pnpm symlink, which
+  // node realpaths to the CANONICAL case. `d:/…/react/index.js` and
+  // `D:\…\react\index.js` are then two distinct cache keys, two evaluations of
+  // React, and a null hooks dispatcher in every renderToStaticMarkup — in a
+  // lowercase-cwd shell only, which is why this suite was "green and red
+  // depending on cache state". Pinning root to the realpathed cwd makes every
+  // id canonical regardless of how the shell spelt the drive.
+  root: realpathSync.native(process.cwd()).replace(/\\/g, '/'),
   // apps/public's `@/*` path alias, so a component can be rendered in a test the
   // same way Next resolves it. Regex-anchored on `@/` rather than keyed on `@`:
   // a bare `@` key is a prefix match and would rewrite every `@bliprank/*`

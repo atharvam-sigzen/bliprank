@@ -177,10 +177,35 @@ function isScanResultFile(s: unknown): s is ScanResultFile {
   return (
     typeof f.domain === 'string' &&
     typeof f.status === 'string' &&
+    typeof f.categoryName === 'string' &&
     Array.isArray(f.brands) &&
     f.brands.length > 0 &&
+    f.brands.every(isScanBrand) &&
     typeof f.counts === 'object' &&
-    f.counts !== null
+    f.counts !== null &&
+    typeof f.counts.answersScored === 'number'
+  )
+}
+
+/**
+ * A brand a record surface can render without throwing: a string name and a
+ * metric whose numeric fields are finite, because intervalWidth and
+ * confidenceGrade subtract and compare them unconditionally. A shallow check
+ * here let brands:[{}] through and every surface white-screened on
+ * `undefined - undefined`.
+ */
+function isScanBrand(b: unknown): b is ScanBrand {
+  if (typeof b !== 'object' || b === null) return false
+  const x = b as Partial<ScanBrand>
+  const m = x.metric as Partial<Metric> | undefined
+  return (
+    typeof x.name === 'string' &&
+    typeof m === 'object' &&
+    m !== null &&
+    Number.isFinite(m.value) &&
+    Number.isFinite(m.ci_low) &&
+    Number.isFinite(m.ci_high) &&
+    Number.isFinite(m.n)
   )
 }
 

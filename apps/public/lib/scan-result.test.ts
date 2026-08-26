@@ -260,6 +260,15 @@ describe('a scan collected this session is visible on every surface', () => {
       JSON.stringify([{ status: 'scanned' }]),
       JSON.stringify([{ status: 'scanned', domain: 'x.com', brands: [] }]),
       JSON.stringify([{ status: 'scanned', domain: 'x.com', brands: [{ id: 'x' }] }]), // no counts
+      // Passed the old shallow guard, then crashed intervalWidth on
+      // `undefined - undefined` in every record surface.
+      JSON.stringify([{ domain: 'x.com', status: 'scanned', brands: [{}], counts: {} }]),
+      // Rendered '−NaN% / +NaN%': metric present but empty.
+      JSON.stringify([{ ...SIGZEN, domain: 'x.com', brands: [{ ...SIGZEN.brands[0], metric: {} }] }]),
+      // Crashed HeadToHeadSection at scan.categoryName.toLowerCase().
+      JSON.stringify([{ ...SIGZEN, domain: 'x.com', categoryName: undefined }]),
+      // counts present but answersScored missing (stale-build shape drift).
+      JSON.stringify([{ ...SIGZEN, domain: 'x.com', counts: {} }]),
     ]
     for (const raw of cases) {
       vi.stubGlobal('sessionStorage', { getItem: () => raw, setItem: () => undefined })
