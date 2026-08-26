@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 
 /**
  * The 404 is a page a demo can reach by accident, so it is a designed page
@@ -8,6 +8,8 @@ import Link from 'next/link'
 export default function NotFound() {
   return (
     <main className="shell">
+      <BackLink href="/" label="Back to the free Grader" />
+
       <header className="masthead">
         <div>
           <h1>Page not found</h1>
@@ -15,9 +17,6 @@ export default function NotFound() {
         </div>
       </header>
       <p>That page does not exist.</p>
-      <p className="metric__interval">
-        <Link href="/">Back to the free Grader</Link>
-      </p>
     </main>
   )
 }

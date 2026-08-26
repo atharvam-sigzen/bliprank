@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { ScanRefusal } from '@/components/scan-progress'
 import {
@@ -101,6 +101,8 @@ export default function AddClient() {
   return (
     <main className="shell shell--grader">
       <ProductBar current="agency" />
+
+      <BackLink href="/agency" label="Back to the portfolio" />
 
       <div className="annotated masthead">
         <div className="annotated__body">
@@ -342,11 +344,6 @@ function Added({ workspace, onReset }: { workspace: Workspace; onReset: () => vo
           </button>
         </div>
 
-        {/* A link, not a button wearing `.btn`: `.btn` sets no text-decoration,
-            so an anchor in it arrives underlined through a filled panel. */}
-        <p className="prose">
-          <Link href="/agency">Back to the portfolio</Link>
-        </p>
       </section>
 
       <aside className="note">

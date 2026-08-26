@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { Planned } from '@/lib/planned'
 import type { AgencyTier } from '@/lib/agency-pricing'
@@ -60,6 +61,8 @@ export default function AgencyPricing() {
   return (
     <main className="shell shell--pricing">
       <ProductBar current="pricing" />
+
+      <BackLink href="/" label="Back to the Grader" />
 
       {/* The letterhead. Same order as the brand page: title, subject line, and
           the terms in the margin before any price is shown. */}

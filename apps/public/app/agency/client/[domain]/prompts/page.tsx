@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { ManagePrompts } from '@/components/manage-prompts'
 import { normaliseTyped } from '@/lib/scan-result'
@@ -35,12 +36,15 @@ export default function AgencyClientPromptsPage() {
       <ProductBar current="agency" />
 
       {workspace === null ? (
+        <>
+        <BackLink href="/agency" label="Back to the portfolio" />
         <section className="record">
           <h1 className="record__title">Not a client workspace</h1>
           <p className="prose">
             This address names no client, so there is no prompt sheet to show. Go back to <Link href="/agency">the portfolio</Link>.
           </p>
         </section>
+        </>
       ) : (
         /* backHref is the explicit client-record path rather than "..": a
            relative href resolved from /agency/client/x/prompts (no trailing
@@ -48,7 +52,7 @@ export default function AgencyClientPromptsPage() {
         <ManagePrompts
           domain={workspace.domain}
           backHref={`/agency/client/${encodeURIComponent(workspace.domain)}`}
-          backLabel="Client record"
+          backLabel="Back to the client record"
         />
       )}
     </main>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { Planned, PLANNED_CAPTION } from '@/lib/planned'
 import { PROMPTS_PER_CYCLE } from '@/lib/workspace'
@@ -37,6 +38,8 @@ export default function ClientLifecycle() {
   return (
     <main className="shell shell--grader">
       <ProductBar current="agency" />
+
+      <BackLink href="/agency" label="Back to the portfolio" />
 
       <div className="annotated masthead">
         <div className="annotated__body">
@@ -81,9 +84,6 @@ export default function ClientLifecycle() {
         <p className="prose">
           It is not a roadmap and it carries no dates. A stage marked planned is a description of a screen that has been designed and not built. It
           is not a commitment that it will be built next, or at all, and nothing here should be read as one.
-        </p>
-        <p className="prose">
-          <Link href="/agency">Back to the portfolio</Link>, where stage one is genuinely available.
         </p>
       </section>
     </main>

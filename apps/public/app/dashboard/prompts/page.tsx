@@ -43,7 +43,7 @@ export default function BrandPromptsPage() {
           </p>
         </section>
       ) : (
-        <ManagePrompts domain={domain} backHref="/dashboard" backLabel="Overview" />
+        <ManagePrompts domain={domain} backHref="/dashboard" backLabel="Back to the overview" />
       )}
     </main>
   )

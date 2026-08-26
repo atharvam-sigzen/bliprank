@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { CapSplit } from '@/components/cap-split'
 import { CHECKS_PER_DAY, ENGINE_COUNT, TIERS, exampleSplit } from '@/lib/pricing'
@@ -33,6 +34,8 @@ export default function Pricing() {
   return (
     <main className="shell shell--pricing">
       <ProductBar current="pricing" />
+
+      <BackLink href="/" label="Back to the Grader" />
 
       {/* The letterhead: title and subject line in the record's serif, the
           terms in the margin — currency, tax, and the fact that nothing here

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { WorkspaceRecord } from '@/components/workspace-record'
 import { normaliseTyped } from '@/lib/scan-result'
@@ -45,9 +46,7 @@ export default function AgencyClientPage() {
     <main className="shell shell--grader">
       <ProductBar current="agency" />
 
-      <p className="prose">
-        <Link href="/agency">Back to the portfolio</Link>
-      </p>
+      <BackLink href="/agency" label="Back to the portfolio" />
 
       {workspace === null ? (
         <section className="record">

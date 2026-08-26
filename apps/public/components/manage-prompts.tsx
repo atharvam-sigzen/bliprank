@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { BackLink } from '@/components/back-link'
 import { TIERS } from '@/lib/pricing'
 import { addCustomPrompt, readCustomPrompts, removeCustomPrompt } from '@/lib/custom-prompts'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor } from '@/lib/workspace'
@@ -64,13 +65,12 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
 
   return (
     <>
+      <BackLink href={backHref} label={backLabel} />
+
       <header className="annotated masthead">
         <div className="annotated__body">
           <h1 className="record__title">Tracked prompts</h1>
           <p className="lede">{workspace.domain} · {workspace.categoryName}</p>
-          <p className="prose" style={{ marginTop: 'var(--space-2)' }}>
-            <a href={backHref}>{backLabel}</a>
-          </p>
         </div>
         <aside className="note">
           <span className="note__cap">Allocation</span>
