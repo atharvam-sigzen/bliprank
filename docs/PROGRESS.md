@@ -891,6 +891,71 @@ so it is tested rather than reasoned about:
 
 607 tests, 31 files. Typecheck clean.
 
+### The Measurement Record through the MVP surfaces (2026-08-25 → 2026-08-26)
+
+Fourteen commits, `b302830..9bf2fec`. Each carries its full reasoning; this is
+the state they left behind.
+
+**The Measurement Record** (`b302830`, `85fea17`, `823114a`, `81e70c2`,
+`2dd09d9`): the redesign's foundation and its pages. Prussian ink on paper
+stock, Newsreader/Plex Sans/Plex Mono as the three voices, the provenance
+margin (R8 made spatial), cards dissolved into the record sheet. The preview
+score (placeholder weights, no interval, never on a rail) and the agency
+portfolio concept. All three instrument states (refusal, progress, not-scanned)
+moved onto the paper.
+
+**Tooling that changed how this is verified** (`c004fef`, `69aee6f`,
+`e3c1625`, `f6bd000`): Playwright installed; `scripts/shoot.mjs` captures every
+state in both viewports and themes with an R8 sweep on the rendered DOM;
+`scripts/crawl.mjs` is the click-reachability gate (three personas, exits
+non-zero on any unclickable served route). The `next build` "failure" was never
+a repo defect — `.claude/settings.json` injected NODE_ENV=development; both
+apps build clean under production and the demo runs on `next start`.
+
+**Live data and the crash it exposed** (`bb94051`): sigzen.com was scanned live
+(0.0% [0.0–4.3], n=85, fallback bank, no competitors by design) and the cached
+file crashed the UI — `runGrader` returned a result without the run envelope
+the route then cached. Fixed at the runner; `scanFor` became a registry. The
+review found `run.spentUsd` had been the ledger's LIFETIME total printed as one
+scan's cost (4.3× wrong); removed rather than guessed.
+⚠️ HUMAN REVIEW REQUIRED stands on `services/grader/src/run.ts` spend
+reporting (cumulative → marginal).
+
+**The MVP surfaces** (`31e4c95`): brand dashboard (measured + pre-flight
+states), agency portfolio with add-client, role-scoped navbar, Grader→Dashboard
+handoff via localStorage workspace state. Domain LOCKED on the brand side
+(Semrush pattern, for the history-keying reason); agencies add workspaces per
+client.
+
+**Agency pricing** (`9db336a`): $199/5/75 · $499/15/200 · $999/40/500, the
+pool-versus-domains shortfall stated first (15.0/13.3/12.5 per domain against a
+17-prompt cycle), every figure derived never literal, a test asserting each
+tier IS short at max occupancy. "Most chosen" was a fabricated claim on a page
+with no checkout — both pricing pages now say "Worked below".
+
+**PLANNED, distinct from PREVIEW** (`3924e55`): preview = methodology not
+final; planned = capability not built. Applied to the trend chart (no scheduler
+exists — QStash has a handler nothing calls) and the schedule fact. The
+`/agency/lifecycle` mockup shows the five-stage arc with not one invented
+figure.
+
+**The three-chrome fork** (`9bf2fec`): route decides the chrome — neutral
+(Grader + both pricing pages, carrying the For brands / For agencies doors),
+brand, agency. No chrome reads stored role (test-enforced). Per-client records
+at `/agency/client/[domain]`; Manage Prompts (curated + custom against derived
+would-allow caps, no plan attached and it says so); cycle status split into a
+real "Last checked" and a PLANNED "Next check". The navigation audit's findings
+(agency side reachable only via an accidental cross-app link; agency pricing
+behind a footnote) closed. Review caught the portfolio pool drawn against the
+BRAND tier and a cache-dependent two-React vitest resolution; both fixed with
+regression tests.
+
+**State now**: 736 tests / 41 files, both apps typecheck and build for
+production, crawl gate exit 0 across three personas, 15 capture states clean.
+Quota per provider `/usage` (authoritative, free): gemini 12 remaining is the
+binding constraint — a full scan needs 17, so live collection self-refuses at
+the gate. GRADER_LIVE_SCAN remains ON by explicit instruction.
+
 ### Material, interaction and pricing craft (2026-08-25)
 
 A second design pass, built on the Instrument Serif / range-growth / ruler-tick
