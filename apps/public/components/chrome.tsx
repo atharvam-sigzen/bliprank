@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { normaliseTyped, scans } from '@/lib/scan-result'
-import { readActiveDomain, readAgencyDomains, readRole, writeActiveDomain, writeRole, type Role } from '@/lib/workspace'
+import { readActiveDomain, readAgencyDomains, writeActiveDomain, writeRole } from '@/lib/workspace'
 
 /**
  * Shared chrome: the product bar and the theme toggle.
@@ -15,74 +15,45 @@ import { readActiveDomain, readAgencyDomains, readRole, writeActiveDomain, write
  * reader should never have to infer it from two pages that look unrelated. One
  * bar, one mark, and each surface names the other.
  *
- * WHY ONE ROW NOW. The two-tier bar cost 116px on desktop and 201px at 390px to
- * carry, on every page, a bordered segmented role switch that was the loudest
- * object on screen — while the single most important fact, WHICH RECORD AM I
- * LOOKING AT, was an unlabelled mono string floating beside it. Both tiers ran
- * roughly 900px of dead space.
- *
- * So role, active context and switching collapse into ONE control. The label is
- * the fact — the domain, or the client count — and the panel behind it is where
- * that fact gets changed. Chrome is not the product: it states where you are in
- * one hairline strip and then gets out of the way.
+ * THE ROUTE DECIDES THE CHROME. There are three chromes and the surface picks
+ * one: / and both pricing pages are NEUTRAL (the fork lives there as two
+ * labelled doors), /dashboard is BRAND, /agency is AGENCY. The stored role is
+ * never read here — a bar whose contents depend on storage ships the wrong
+ * links in the prerender and swaps them after mount, which is exactly the
+ * flash-of-wrong-workspace this structure removes. Entering a door WRITES the
+ * role, so the Grader handoff and the dashboard keep working; leaving a role
+ * goes back through the mark, and that one click of friction is deliberate.
  */
 
 export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 
-/** Absolute in dev so the cross-link works across two ports; env-overridable. */
-const WORKED_EXAMPLE = process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000'
+type Chrome = 'neutral' | 'brand' | 'agency'
 
-/** Where a role lives. Relative: every one of these ships in this app. */
-const HOME: Record<Role, string> = { brand: '/dashboard', agency: '/agency' }
+/** The whole architecture in one line: surface in, chrome out. Never storage. */
+const CHROME: Record<Surface, Chrome> = {
+  grader: 'neutral',
+  pricing: 'neutral',
+  dashboard: 'brand',
+  agency: 'agency',
+}
 
 type Link = { readonly href: string; readonly label: string; readonly on?: Surface }
-
-/*
- * EVERY HASH HERE HAS TO LAND ON SOMETHING, IN EVERY STATE OF ITS PAGE.
- *
- * `#prompts` and `#settings` were written against sections that do not exist —
- * a link that scrolls nowhere is a page claiming a surface it has not built,
- * which on this product is the same class of defect as a figure with nothing
- * behind it. `#settings` now points at the workspace record, which every
- * dashboard state carries and which is re-scrolled once the state that owns it
- * has mounted; the agency equivalent is the pool,
- * which is the only portfolio-wide setting there is. A "Prompts" entry is gone
- * rather than aimed at a list that only the pre-flight state draws.
- */
-const NAV: Record<Role, readonly Link[]> = {
-  brand: [
-    { href: '/dashboard', label: 'Overview', on: 'dashboard' },
-    { href: '/dashboard#settings', label: 'Workspace' },
-  ],
-  agency: [
-    { href: '/agency', label: 'Portfolio', on: 'agency' },
-    { href: '/agency/add', label: 'Add client' },
-    { href: '/agency#pool-heading', label: 'Prompt pool' },
-  ],
-}
-
-/**
- * The surface you are on IS a statement of mode: /dashboard is a brand
- * workspace and /agency is a portfolio. Without this the stored role wins, so
- * arriving at /agency from anywhere that did not set it — the worked-example
- * app links straight at both — draws the brand half of the bar over a
- * portfolio, with the switcher reporting the mode you are not in. The choice is
- * written back so the rest of the session agrees with the page.
- */
-const IMPLIED: Partial<Record<Surface, Role>> = { dashboard: 'brand', agency: 'agency' }
-
-const ROLE_LABEL: Record<Role, string> = { brand: 'Brand', agency: 'Agency' }
-/** What each role IS, in one clause. The panel is where a reader learns this. */
-const ROLE_GLOSS: Record<Role, string> = {
-  brand: 'One domain, one record',
-  agency: 'A portfolio of client records',
-}
 
 function NavLink({ link, current }: { link: Link; current: Surface }) {
   const on = link.on === current
   return (
     <a className={`navbar__link${on ? ' navbar__link--on' : ''}`} href={link.href} {...(on ? { 'aria-current': 'page' as const } : {})}>
       {link.label}
+    </a>
+  )
+}
+
+/** The mark is the way OUT of a role: one click back to neutral ground. */
+function Mark() {
+  return (
+    <a className="navbar__mark" href="/">
+      <span className="navbar__dot" aria-hidden="true" />
+      BlipRank
     </a>
   )
 }
@@ -108,32 +79,26 @@ function resolvable(): readonly string[] {
 }
 
 /**
- * THE SWITCHER. One control carrying three jobs that used to be three objects:
- * which record am I looking at (the label), which mode am I in and how do I
- * leave it (the role section), and which other record can I open (the workspace
- * section).
+ * THE SWITCHER SHELL. The label is the fact — the domain, or the client count —
+ * and the panel behind it is where that fact gets changed. The panel's contents
+ * belong to the chrome that mounted it (brand: workspaces; agency: clients);
+ * this component owns only the disclosure semantics.
  *
  * Not a `<select>`. The label is a fact about state rather than a chosen value,
- * the panel holds two different kinds of item — a mode change and a record
- * change — and a native menu can render neither the mono domain nor the
- * annotation that says what a mode is.
+ * and a native menu can render neither the mono domain nor an annotation.
  */
-function WorkspaceSwitcher({
+function Switcher({
   label,
-  role,
-  domains,
-  active,
-  onRole,
-  onDomain,
+  ariaLabel,
+  panelLabel,
   onOpen,
+  children,
 }: {
   label: string
-  role: Role
-  domains: readonly string[]
-  active: string | null
-  onRole: (next: Role) => void
-  onDomain: (domain: string) => void
+  ariaLabel: string
+  panelLabel: string
   onOpen: () => void
+  children: (close: () => void) => ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -186,7 +151,7 @@ function WorkspaceSwitcher({
         aria-controls={panelId}
         // The visible text is inside the accessible name rather than replaced by
         // it (WCAG 2.5.3): a voice-control user says what they can read.
-        aria-label={`Workspace ${label}. Change workspace or role.`}
+        aria-label={ariaLabel}
         // RE-READ ON OPEN. Storage is mutated by pages that never navigate:
         // /agency/add confirms a client, /agency removes one, the Grader
         // remembers a scan. A snapshot taken once at mount then contradicts the
@@ -210,26 +175,89 @@ function WorkspaceSwitcher({
       </button>
 
       {open ? (
-        <div className="navbar__panel" id={panelId} ref={panelRef} role="group" aria-label="Workspace and role">
-          <p className="navbar__panelcap">Role</p>
-          {(['brand', 'agency'] as const).map((r) => (
-            <button
-              key={r}
-              type="button"
-              className={`navbar__item${role === r ? ' navbar__item--on' : ''}`}
-              // The current one is marked in words as well as in ink: a state
-              // carried by colour alone is unreadable to precisely the reader
-              // most likely to be running two workspaces at once.
-              {...(role === r ? { 'aria-current': 'true' as const } : {})}
-              onClick={() => (role === r ? close() : onRole(r))}
-            >
-              <span className="navbar__itemname">{ROLE_LABEL[r]}</span>
-              <span className="navbar__itemgloss">{ROLE_GLOSS[r]}</span>
-              {role === r ? <span className="navbar__itemflag">current</span> : null}
-            </button>
-          ))}
+        <div className="navbar__panel" id={panelId} ref={panelRef} role="group" aria-label={panelLabel}>
+          {children(close)}
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
-          {role === 'brand' ? (
+/**
+ * NEUTRAL — / and both pricing pages. No switcher: there is no workspace on
+ * neutral ground to state. The fork is two labelled doors; each is a plain
+ * anchor that writes the role on the way through, so the destination and the
+ * rest of the session agree on which mode was entered.
+ */
+function NeutralBar({ current }: { current: Surface }) {
+  return (
+    <nav className="navbar" aria-label="BlipRank">
+      <div className="navbar__strip">
+        <Mark />
+
+        <div className="navbar__theme">
+          <ThemeToggle />
+        </div>
+
+        <div className="navbar__links">
+          <NavLink link={{ href: '/', label: 'Grader', on: 'grader' }} current={current} />
+          <NavLink link={{ href: '/pricing', label: 'Pricing', on: 'pricing' }} current={current} />
+        </div>
+
+        <div className="navbar__util">
+          <a className="navbar__link navbar__link--door" href="/dashboard" onClick={() => writeRole('brand')}>
+            For brands
+          </a>
+          <a className="navbar__link navbar__link--door" href="/agency" onClick={() => writeRole('agency')}>
+            For agencies
+          </a>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+/** BRAND — /dashboard. The switcher lists resolvable domains, nothing else. */
+function BrandBar({ current }: { current: Surface }) {
+  const [active, setActive] = useState<string | null>(null)
+  const [domains, setDomains] = useState<readonly string[]>([])
+  // The server has no storage, so the first client render must match the server
+  // exactly and everything stored arrives one paint later. Until then the
+  // switcher reads "workspace" — the name of the control — and never "no
+  // workspace", which would be a false statement about the reader's own account.
+  const [mounted, setMounted] = useState(false)
+
+  /** Everything the bar keeps from storage, read fresh. Mount, and every open. */
+  function readStored() {
+    setActive(readActiveDomain())
+    setDomains(resolvable())
+  }
+
+  useEffect(() => {
+    readStored()
+    // The surface IS a statement of mode; written back so a session arriving
+    // here from a link that never set the role — the worked-example app links
+    // straight in — agrees with the page from now on.
+    writeRole('brand')
+    setMounted(true)
+  }, [])
+
+  function openDomain(domain: string) {
+    writeActiveDomain(domain)
+    // Full navigation, not a router push: the dashboard reads the active domain
+    // back out of storage on load.
+    window.location.href = '/dashboard'
+  }
+
+  const label = mounted ? (active ?? 'no workspace') : 'workspace'
+
+  return (
+    <nav className="navbar" aria-label="BlipRank">
+      <div className="navbar__strip">
+        <Mark />
+
+        <Switcher label={label} ariaLabel={`Workspace ${label}. Change workspace.`} panelLabel="Workspace" onOpen={readStored}>
+          {(close) => (
             <>
               <p className="navbar__panelcap">Workspace</p>
               {domains.length === 0 ? (
@@ -242,8 +270,11 @@ function WorkspaceSwitcher({
                     key={d}
                     type="button"
                     className={`navbar__item${d === active ? ' navbar__item--on' : ''}`}
+                    // The current one is marked in words as well as in ink: a
+                    // state carried by colour alone is unreadable to precisely
+                    // the reader most likely to run two workspaces at once.
                     {...(d === active ? { 'aria-current': 'true' as const } : {})}
-                    onClick={() => (d === active ? close() : onDomain(d))}
+                    onClick={() => (d === active ? close() : openDomain(d))}
                   >
                     <span className="navbar__itemfig">{d}</span>
                     {d === active ? <span className="navbar__itemflag">current</span> : null}
@@ -251,123 +282,98 @@ function WorkspaceSwitcher({
                 ))
               )}
             </>
-          ) : (
+          )}
+        </Switcher>
+
+        <div className="navbar__theme">
+          <ThemeToggle />
+        </div>
+
+        <div className="navbar__links">
+          <NavLink link={{ href: '/dashboard', label: 'Overview', on: 'dashboard' }} current={current} />
+          {/* `#settings` lands on the workspace record, which every dashboard
+              state carries — a hash that scrolls nowhere is a page claiming a
+              surface it has not built. */}
+          <NavLink link={{ href: '/dashboard#settings', label: 'Workspace' }} current={current} />
+        </div>
+
+        <div className="navbar__util">
+          <NavLink link={{ href: '/', label: 'Grader', on: 'grader' }} current={current} />
+          <NavLink link={{ href: '/pricing', label: 'Pricing', on: 'pricing' }} current={current} />
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+/** AGENCY — /agency and /agency/add. The switcher lists clients, nothing else. */
+function AgencyBar({ current }: { current: Surface }) {
+  const [clients, setClients] = useState<readonly string[]>([])
+  // Same guard as the brand bar: "workspace" until storage has been read.
+  const [mounted, setMounted] = useState(false)
+
+  /** Everything the bar keeps from storage, read fresh. Mount, and every open. */
+  function readStored() {
+    setClients(readAgencyDomains())
+  }
+
+  useEffect(() => {
+    readStored()
+    writeRole('agency')
+    setMounted(true)
+  }, [])
+
+  const label = mounted ? `${clients.length} ${clients.length === 1 ? 'client' : 'clients'}` : 'workspace'
+
+  return (
+    <nav className="navbar" aria-label="BlipRank">
+      <div className="navbar__strip">
+        <Mark />
+
+        <Switcher label={label} ariaLabel={`Portfolio: ${label}. Open a client record.`} panelLabel="Clients" onOpen={readStored}>
+          {() => (
             <>
               <p className="navbar__panelcap">Clients</p>
+              {clients.length === 0 ? (
+                <p className="navbar__panelnote">No client is in this portfolio yet. Add one to open its record.</p>
+              ) : (
+                clients.map((d) => (
+                  <a key={d} className="navbar__item" href={`/agency/client/${encodeURIComponent(d)}`}>
+                    <span className="navbar__itemfig">{d}</span>
+                  </a>
+                ))
+              )}
               <a className="navbar__item" href="/agency/add">
                 <span className="navbar__itemname">Add client</span>
                 <span className="navbar__itemgloss">Put another domain in the portfolio</span>
               </a>
             </>
           )}
-        </div>
-      ) : null}
-    </div>
-  )
-}
+        </Switcher>
 
-export function ProductBar({ current }: { current: Surface }) {
-  // AT RENDER, NOT IN THE EFFECT. `IMPLIED[current]` depends only on the prop,
-  // so it is identical on the server and on the first client render and cannot
-  // cause a mismatch — while deferring it shipped the brand nav over /agency in
-  // the prerendered HTML, permanently so with JS off or to a crawler, and sent
-  // anyone clicking during that frame to /dashboard from the portfolio.
-  const [role, setRole] = useState<Role>(() => IMPLIED[current] ?? 'brand')
-  const [active, setActive] = useState<string | null>(null)
-  const [clients, setClients] = useState(0)
-  const [domains, setDomains] = useState<readonly string[]>([])
-  // The server has no storage, so the first client render must match the server
-  // exactly and everything stored arrives one paint later. Until then the
-  // switcher reads "workspace" — the name of the control — and never "no
-  // workspace", which would be a false statement about the reader's own account.
-  const [mounted, setMounted] = useState(false)
-
-  /** Everything the bar keeps from storage, read fresh. Mount, and every open. */
-  function readStored() {
-    setActive(readActiveDomain())
-    setClients(readAgencyDomains().length)
-    setDomains(resolvable())
-  }
-
-  useEffect(() => {
-    const implied = IMPLIED[current]
-    const actual = implied ?? readRole()
-    setRole(actual)
-    setActive(readActiveDomain())
-    setClients(readAgencyDomains().length)
-    setDomains(resolvable())
-    if (implied) writeRole(implied)
-    setMounted(true)
-  }, [current])
-
-  function switchTo(next: Role) {
-    writeRole(next)
-    // A mode change goes to that mode's home. Full navigation, not a router
-    // push: the destination reads the role back out of storage on load.
-    window.location.href = HOME[next]
-  }
-
-  function openDomain(domain: string) {
-    writeActiveDomain(domain)
-    window.location.href = HOME.brand
-  }
-
-  const label = !mounted ? 'workspace' : role === 'agency' ? `${clients} ${clients === 1 ? 'client' : 'clients'}` : (active ?? 'no workspace')
-
-  return (
-    <nav className="navbar" aria-label="BlipRank">
-      <div className="navbar__strip">
-        <span className="navbar__mark">
-          <span className="navbar__dot" aria-hidden="true" />
-          BlipRank
-        </span>
-
-        <WorkspaceSwitcher label={label} role={role} domains={domains} active={active} onRole={switchTo} onDomain={openDomain} onOpen={readStored} />
-
-        {/*
-          The toggle sits third in the DOM and is ordered last on the strip, so
-          that when the two link groups drop to their own lines on a narrow
-          screen it stays on the identity line beside the switcher instead of
-          being stranded alone on a fourth row.
-        */}
         <div className="navbar__theme">
           <ThemeToggle />
         </div>
 
-        {/*
-          GATED THE SAME WAY THE LABEL IS. `IMPLIED` covers /dashboard and
-          /agency, where the surface itself states the role and the server can
-          render the right links. On /pricing and / it does not, so `role` starts
-          at the `brand` fallback and the stored role only arrives one paint
-          later — which shipped the brand links in the prerendered HTML, visibly
-          swapped the strip after mount, and sent an agency reader clicking in
-          that frame to /dashboard. Rendering nothing until the role is known is
-          the honest state: a link group that names the wrong workspace is worse
-          than a link group that is not there yet.
-        */}
         <div className="navbar__links">
-          {mounted || IMPLIED[current]
-            ? NAV[role].map((link) => <NavLink key={link.href} link={link} current={current} />)
-            : null}
+          <NavLink link={{ href: '/agency', label: 'Portfolio', on: 'agency' }} current={current} />
+          <NavLink link={{ href: '/agency/add', label: 'Add client' }} current={current} />
         </div>
 
         <div className="navbar__util">
           <NavLink link={{ href: '/', label: 'Grader', on: 'grader' }} current={current} />
-          <NavLink link={{ href: '/pricing', label: 'Pricing', on: 'pricing' }} current={current} />
-          {/*
-            Plain anchor and an absolute URL: this one crosses an origin in dev
-            (3001 to 3000) and a host in production (Cloudflare Pages to Vercel),
-            and next/link's client navigation cannot do either. It is no longer
-            called "Dashboard" — that name belongs to the brand dashboard above,
-            and this is a worked example on committed data.
-          */}
-          <a className="navbar__link" href={WORKED_EXAMPLE}>
-            Worked example
-          </a>
+          <NavLink link={{ href: '/agency/pricing', label: 'Pricing' }} current={current} />
         </div>
       </div>
     </nav>
   )
+}
+
+export function ProductBar({ current }: { current: Surface }) {
+  const chrome = CHROME[current]
+  if (chrome === 'brand') return <BrandBar current={current} />
+  if (chrome === 'agency') return <AgencyBar current={current} />
+  return <NeutralBar current={current} />
 }
 
 type Choice = 'light' | 'dark' | 'system'

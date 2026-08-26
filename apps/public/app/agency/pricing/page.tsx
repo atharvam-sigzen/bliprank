@@ -65,6 +65,17 @@ export default function AgencyPricing() {
           the terms in the margin before any price is shown. */}
       <div className="annotated masthead">
         <header className="annotated__body">
+          {/* The fork, stated at the letterhead: same control as /pricing with
+              the marked side swapped. Chrome stays neutral; the page marks
+              itself. */}
+          <nav className="pricefork" aria-label="Plan type">
+            <a className="pricefork__opt" href="/pricing">
+              Brand plans
+            </a>
+            <a className="pricefork__opt pricefork__opt--on" href="/agency/pricing" aria-current="page">
+              Agency plans
+            </a>
+          </nav>
           <h1>Agency pricing</h1>
           <p className="lede">
             Priced on one pooled prompt allowance shared across the portfolio. The domain count is a ceiling; the pool is what actually funds

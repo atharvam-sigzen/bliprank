@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { ProductBar } from '@/components/chrome'
 import { RangeRail } from '@/components/range-rail'
 import { CONCEPT_NOTICE, PORTFOLIO } from '@/lib/agency-fixture'
+import { NO_SCHEDULER_NOTE, Planned } from '@/lib/planned'
 import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
-import { TIERS } from '@/lib/pricing'
+import { FEATURED_ID, tierById } from '@/lib/agency-pricing'
 import { runInfoOf, scanFor, subjectOf } from '@/lib/scan-result'
 import { collectionStatus, readAgencyDomains, removeAgencyDomain, workspaceFor, type Workspace } from '@/lib/workspace'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
@@ -42,8 +43,14 @@ assertProvisionalAllowed('The agency portfolio')
  * crosses a workspace boundary on every row.
  */
 
-/** The plan this pool is drawn against. One source for the cap: `pricing.ts`. */
-const GROWTH = TIERS.find((t) => t.id === 'growth')!
+/**
+ * The plan the pool is COMPARED against — never attached. This is the featured
+ * AGENCY tier from `agency-pricing.ts`, the same plan book /agency/pricing
+ * sells; the brand tiers in `pricing.ts` have no pooled prompts and drawing a
+ * portfolio against one measured it with the wrong plan book. The wording below
+ * follows ManagePrompts: what the plan WOULD allow, not an allowance held.
+ */
+const POOL_PLAN = tierById(FEATURED_ID)
 
 export default function AgencyPortfolio() {
   // Storage is read after mount, never during render: SSR has no localStorage,
@@ -95,7 +102,7 @@ export default function AgencyPortfolio() {
           <div className="annotated__body">
             {/* THE POOL WAITS FOR THE LIST IT DESCRIBES. Before the effect has
                 run, `domains` is empty because it is UNREAD, not because it is
-                empty — and an empty track reading "0 of 100 across 0 clients"
+                empty — and an empty track reading "0 of 200 across 0 clients"
                 states that as fact to an agency that has five. The margin note
                 already says "reading this browser"; the instrument has to
                 agree with it rather than contradict it in mono. */}
@@ -105,23 +112,29 @@ export default function AgencyPortfolio() {
                   {/* Layout-only inline width, the way the rail positions its
                       band. Clamped so an over-allocated pool cannot draw past
                       its own track; the legend states the true figures. */}
-                  <div className="pool__fill" style={{ width: `${Math.min(100, (allocated / GROWTH.prompts) * 100)}%` }} />
+                  <div className="pool__fill" style={{ width: `${Math.min(100, (allocated / POOL_PLAN.pooledPrompts) * 100)}%` }} />
                 </div>
                 <p className="pool__legend">
-                  <span className="num">{allocated}</span> of <span className="num">{GROWTH.prompts}</span> prompts allocated across{' '}
-                  <span className="num">{spaces.length}</span> {spaces.length === 1 ? 'client' : 'clients'} — {GROWTH.name} plan
+                  <span className="num">{allocated}</span> prompts allocated across <span className="num">{spaces.length}</span>{' '}
+                  {spaces.length === 1 ? 'client' : 'clients'}, against the <span className="num">{POOL_PLAN.pooledPrompts}</span> the{' '}
+                  {POOL_PLAN.name} plan would pool
                 </p>
               </div>
             ) : (
               <p className="pool__legend">Reading this browser&apos;s portfolio.</p>
             )}
 
-            {mounted && allocated > GROWTH.prompts ? (
+            {mounted && allocated > POOL_PLAN.pooledPrompts ? (
               <p className="prose prose--flag">
-                This portfolio allocates more prompts than the {GROWTH.name} plan carries. Nothing in this build enforces a cap, so the figure is
-                shown as it is rather than being clipped to look compliant.
+                This portfolio allocates more prompts than the {POOL_PLAN.name} pool carries. Nothing in this build enforces a cap, so the figure
+                is shown as it is rather than being clipped to look compliant.
               </p>
             ) : null}
+
+            <p className="prose prose--flag">
+              No plan is attached to this portfolio in this build, so no cap applies to it. The track above compares the allocation with what the{' '}
+              {POOL_PLAN.name} plan&apos;s pooled prompts would allow — a statement about the offer, not an allowance this portfolio holds.
+            </p>
 
             <p className="prose">
               A cycle for a client asks its category&apos;s unprompted prompt set across all five answer surfaces. The allocation above is that
@@ -151,9 +164,9 @@ export default function AgencyPortfolio() {
           </div>
 
           <aside className="note">
-            <span className="note__cap">Pool</span>
-            <span className="note__line">cap {GROWTH.prompts} prompts</span>
-            <span className="note__line">${GROWTH.usdPerMonth}/mo · {GROWTH.name}</span>
+            <span className="note__cap">Would allow</span>
+            <span className="note__line">{POOL_PLAN.pooledPrompts} pooled prompts</span>
+            <span className="note__line">${POOL_PLAN.usdPerMonth}/mo · {POOL_PLAN.name}</span>
             <span className="note__gloss">
               Added clients live in this browser only. There are no agency accounts in this build, so nothing here is billed, metered or held to a
               cap.
@@ -218,6 +231,29 @@ export default function AgencyPortfolio() {
         </section>
       ) : null}
 
+      {/* THE LIFECYCLE LEGEND — one, marked planned, below the added groups.
+          The rows above carry only the two states that can actually occur in
+          this build: a collected cycle with its real day, or queued with
+          nothing. The fuller vocabulary is described here in words, once —
+          never drawn as empty status columns, which would render an unbuilt
+          capability as table furniture. */}
+      {mounted && spaces.length > 0 ? (
+        <section className="section" aria-label="Run status legend">
+          <div className="annotated">
+            <div className="annotated__body">
+              <p className="prose">
+                <Planned /> Once recurring collection exists, every added row will carry a run status — queued, running, done or failed — with its
+                last and next run. Today a row states only what is true: the day of a collected cycle, or that no cycle exists in this record.
+              </p>
+            </div>
+            <aside className="note note--flag">
+              <span className="note__cap note__cap--flag">Planned</span>
+              <span className="note__gloss">{NO_SCHEDULER_NOTE}</span>
+            </aside>
+          </div>
+        </section>
+      ) : null}
+
       {/* 3 — THE WORKED EXAMPLE, labelled exactly as it was before. */}
       <section className="section" aria-labelledby="example-heading">
         <h2 id="example-heading">Worked example — invented clients</h2>
@@ -236,6 +272,11 @@ export default function AgencyPortfolio() {
               (six boxed tiles with a big number each) is strongest — and worst,
               because boxing them invites reading the numbers as scores out of
               ten rather than as measurements with ranges.
+
+              These rows stay NON-CLICKABLE while the added rows above are
+              anchors: the clients are invented, and a detail page for an
+              invented client would be a fabricated record wearing the same
+              chrome as a real one.
             */}
             <ul className="portfolio">
               {PORTFOLIO.map((row) => {
@@ -344,11 +385,18 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
   return (
     <li className="portfolio__row">
       <div className="portfolio__head">
-        <span className="portfolio__client">{workspace.domain}</span>
-        <span className="portfolio__category">
-          {scan.categoryName}
-          {run.day ? ` · day ${run.day}` : ''} · {scan.counts.answersScored} answers
-        </span>
+        {/* The head is the door to this client's record. The remove button
+            stays a SIBLING of the anchor, never a child — no nested
+            interactive elements. The day printed here comes from runInfoOf
+            and is the row's run status: the one state a collected row can
+            truthfully claim. */}
+        <Link className="portfolio__link" href={`/agency/client/${encodeURIComponent(workspace.domain)}`}>
+          <span className="portfolio__client">{workspace.domain}</span>
+          <span className="portfolio__category">
+            {scan.categoryName}
+            {run.day ? ` · collected — cycle of ${run.day}` : ' · collected'} · {scan.counts.answersScored} answers
+          </span>
+        </Link>
         <span className="portfolio__category">{formatProvenance(subject.metric)}</span>
         <RemoveButton domain={workspace.domain} onRemove={onRemove} />
       </div>
@@ -390,11 +438,15 @@ function QueuedRow({ workspace, onRemove }: { workspace: Workspace; onRemove: (d
   return (
     <li className="portfolio__row">
       <div className="portfolio__head">
-        <span className="portfolio__client">{workspace.domain}</span>
-        <span className="portfolio__category">
-          {workspace.categoryName}
-          {workspace.confident ? '' : ' · category not confirmed'}
-        </span>
+        {/* Same door as a collected row — a queued client still has a record
+            page (its pre-flight facts). Remove stays outside the anchor. */}
+        <Link className="portfolio__link" href={`/agency/client/${encodeURIComponent(workspace.domain)}`}>
+          <span className="portfolio__client">{workspace.domain}</span>
+          <span className="portfolio__category">
+            {workspace.categoryName}
+            {workspace.confident ? '' : ' · category not confirmed'}
+          </span>
+        </Link>
         <RemoveButton domain={workspace.domain} onRemove={onRemove} />
       </div>
 

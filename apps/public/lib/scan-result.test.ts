@@ -247,6 +247,34 @@ describe('a scan collected this session is visible on every surface', () => {
     expect(() => rememberScan(NOTION)).not.toThrow()
     expect(scans()).toEqual(BUNDLED_SCANS)
   })
+
+  it('a corrupted or stale-build session entry is dropped, never a crash', () => {
+    // Storage is a trust boundary: every one of these is legal JSON under the
+    // key, and each used to crash a different surface — '{}' the spread in
+    // scans(), '[null]' the chrome's status filter, a scan with no domain the
+    // normaliser, one with empty brands the subjectOf non-null assertion.
+    const cases = [
+      '{}',
+      '[null]',
+      '"a string"',
+      JSON.stringify([{ status: 'scanned' }]),
+      JSON.stringify([{ status: 'scanned', domain: 'x.com', brands: [] }]),
+      JSON.stringify([{ status: 'scanned', domain: 'x.com', brands: [{ id: 'x' }] }]), // no counts
+    ]
+    for (const raw of cases) {
+      vi.stubGlobal('sessionStorage', { getItem: () => raw, setItem: () => undefined })
+      expect(scans()).toEqual(BUNDLED_SCANS)
+      expect(scanFor('sigzen.com')?.domain).toBe('sigzen.com')
+      expect(workspaceFor('pipedrive.com')?.hasData).toBe(true)
+      vi.unstubAllGlobals()
+    }
+
+    // A valid entry sharing the array with a corrupt one survives the filter.
+    const NOTION_OK: ScanResultFile = { ...SIGZEN, domain: 'notion.so' }
+    vi.stubGlobal('sessionStorage', { getItem: () => JSON.stringify([null, NOTION_OK]), setItem: () => undefined })
+    expect(scanFor('notion.so')?.domain).toBe('notion.so')
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('no scan file carries a fabricated cost', () => {

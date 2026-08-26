@@ -39,6 +39,17 @@ export default function Pricing() {
           takes money, stated before a price is shown rather than under it. */}
       <div className="annotated masthead">
         <header className="annotated__body">
+          {/* The fork, stated at the letterhead: which book of plans this page
+              is, and the one-click path to the other. Chrome stays neutral;
+              this control is the page marking itself. */}
+          <nav className="pricefork" aria-label="Plan type">
+            <a className="pricefork__opt pricefork__opt--on" href="/pricing" aria-current="page">
+              Brand plans
+            </a>
+            <a className="pricefork__opt" href="/agency/pricing">
+              Agency plans
+            </a>
+          </nav>
           <h1>Pricing</h1>
           <p className="lede">
             Priced on tracked prompts. Every plan buys a daily re-check of every prompt across all {ENGINE_COUNT} answer surfaces, once collection

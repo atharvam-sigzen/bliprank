@@ -13,15 +13,14 @@ import { useEffect, useState } from 'react'
  * reader should never have to infer it from two pages that look unrelated. One
  * bar, one mark, and each surface names the other.
  *
- * WHY THIS ONE IS SIMPLER THAN THE GRADER'S. Same single strip and the same
- * class names, so the two deploys do not look like two products — but the
- * workspace lives entirely in `apps/public`: the role, the active domain and
- * the client list are stored in that origin's `localStorage` and cannot be read
- * from here. So the switcher is not a switcher here. It is the same slot in the
- * same place, holding the one true thing this app can say about itself — that
- * it is a worked example — with no disclosure affordance, because a control
- * that opened onto nothing would be claiming a capability this deploy does not
- * have.
+ * WHY THIS ONE IS NEUTRAL AND STATIC. Same single strip and the same class
+ * names, so the two deploys do not look like two products — but the workspace
+ * lives entirely in `apps/public`: the role, the active domain and the client
+ * list are stored in that origin's `localStorage` and cannot be read from here.
+ * So this bar takes no side in the brand/agency fork and links to no workspace:
+ * the switcher slot is a static label stating the one true thing this app can
+ * say about itself — that it is a worked example — and the links go to the
+ * Grader and its pricing page, where the fork actually lives.
  */
 
 export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
@@ -29,15 +28,17 @@ export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
 const GRADER = process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001'
 
-export function ProductBar({ current }: { current: Surface }) {
-  const here = current === 'dashboard'
+export function ProductBar({ current: _current }: { current: Surface }) {
   return (
     <nav className="navbar" aria-label="BlipRank">
       <div className="navbar__strip">
-        <span className="navbar__mark">
+        {/* Plain anchors, not next/link: every link here crosses an origin in
+            dev (3000 to 3001) and a host in production (Vercel to Cloudflare
+            Pages), and next/link's client navigation cannot do either. */}
+        <a className="navbar__mark" href={GRADER}>
           <span className="navbar__dot" aria-hidden="true" />
           BlipRank
-        </span>
+        </a>
 
         {/* The switcher slot, static. Same wrapper, same metrics, no button and
             no caret: there is nothing here to switch between. */}
@@ -49,31 +50,12 @@ export function ProductBar({ current }: { current: Surface }) {
           <ThemeToggle />
         </div>
 
-        {/*
-          Plain anchors, not next/link: every one of these crosses an origin in
-          dev (3000 to 3001) and a host in production (Vercel to Cloudflare
-          Pages), and next/link's client navigation cannot do either. The brand
-          and agency workspaces both live over there, so this bar links to them
-          rather than pretending to hold them.
-        */}
-        <div className="navbar__links">
-          <a className="navbar__link" href={`${GRADER}/dashboard`}>
-            Brand dashboard
-          </a>
-          <a className="navbar__link" href={`${GRADER}/agency`}>
-            Portfolio
-          </a>
-        </div>
-
         <div className="navbar__util">
           <a className="navbar__link" href={GRADER}>
             Grader
           </a>
           <a className="navbar__link" href={`${GRADER}/pricing`}>
             Pricing
-          </a>
-          <a className={`navbar__link${here ? ' navbar__link--on' : ''}`} href="/" {...(here ? { 'aria-current': 'page' as const } : {})}>
-            Worked example
           </a>
         </div>
       </div>

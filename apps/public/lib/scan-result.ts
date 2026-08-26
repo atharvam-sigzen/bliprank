@@ -164,10 +164,33 @@ export const BUNDLED_SCANS: readonly ScanResultFile[] = [SCAN, SIGZEN]
  */
 const SESSION_KEY = 'bliprank-session-scans'
 
+/**
+ * Shape guard for a stored entry. Storage is a trust boundary: a stale build or
+ * a hand-edited key can hold any legal JSON, and one malformed entry would
+ * crash every surface that calls scans() — chrome, dashboard, portfolio,
+ * client pages. Same discipline as readAgencyDomains/readCustomPrompts:
+ * validate, drop what fails, never throw.
+ */
+function isScanResultFile(s: unknown): s is ScanResultFile {
+  if (typeof s !== 'object' || s === null) return false
+  const f = s as Partial<ScanResultFile>
+  return (
+    typeof f.domain === 'string' &&
+    typeof f.status === 'string' &&
+    Array.isArray(f.brands) &&
+    f.brands.length > 0 &&
+    typeof f.counts === 'object' &&
+    f.counts !== null
+  )
+}
+
 function sessionScans(): readonly ScanResultFile[] {
   try {
     const raw = globalThis.sessionStorage?.getItem(SESSION_KEY)
-    return raw ? (JSON.parse(raw) as ScanResultFile[]) : []
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(isScanResultFile)
   } catch {
     // No storage (SSR, node, a browser with site data blocked), or unparseable.
     // The bundled scans still resolve; nothing is invented to cover the gap.
