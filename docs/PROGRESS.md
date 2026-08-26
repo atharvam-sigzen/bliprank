@@ -891,6 +891,20 @@ so it is tested rather than reasoned about:
 
 607 tests, 31 files. Typecheck clean.
 
+### First Vercel deployment (2026-08-26)
+
+apps/public deployed to Vercel as project bliprank-public (root directory
+apps/public), a conscious interim deviation from ADR-0002's Cloudflare Pages
+placement - the cost reasoning there is about acquisition-scale traffic, which
+does not exist yet. Live scanning is expected OFF on this deploy (no flags, no
+key set): the runner's ledger and lock are filesystem state serverless does not
+have, so the public site is the fixture-honest build - bundled scans instant,
+everything else refused honestly. First build failed on ERR_PNPM_IGNORED_BUILDS
+(sharp): pnpm in CI hard-fails on unapproved dependency build scripts where the
+same install locally only warns; fixed by recording pnpm.onlyBuiltDependencies
+in the root package.json. Cross-link env vars (NEXT_PUBLIC_*) still to set once
+both apps have URLs.
+
 ### Review item 4 — the interaction-design pass (2026-08-26)
 
 Approved on before/after captures before commit, per the standing process. The
