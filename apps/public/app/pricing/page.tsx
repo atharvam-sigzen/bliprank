@@ -5,7 +5,7 @@ import { CHECKS_PER_DAY, ENGINE_COUNT, TIERS, exampleSplit } from '@/lib/pricing
 
 export const metadata: Metadata = {
   title: 'Pricing — BlipRank',
-  description: 'Three plans, priced on tracked prompts. Every prompt re-checked daily across five AI answer surfaces.',
+  description: 'Three plans, priced on tracked prompts. A daily re-check of every prompt across five AI answer surfaces, once collection is scheduled.',
 }
 
 /**
@@ -21,6 +21,13 @@ export const metadata: Metadata = {
  * being sold is stated with its units attached. "40 prompts" alone is not a
  * quantity a buyer can reason about — 40 prompts times 5 engines times 30 days
  * is, and that is the number the invoice is really about.
+ *
+ * AND THE CADENCE IS AN OFFER, NOT A FACT. This is the most public, indexable
+ * surface in the product and it stated recurring daily collection in the
+ * present tense five times over. Nothing schedules a cycle: there is no
+ * scheduler in this build. So every cadence line here is worded as what a plan
+ * buys once collection is scheduled, and the disclosure at the foot says the
+ * gap outright rather than caveating only the checkout.
  */
 export default function Pricing() {
   return (
@@ -33,7 +40,10 @@ export default function Pricing() {
       <div className="annotated masthead">
         <header className="annotated__body">
           <h1>Pricing</h1>
-          <p className="lede">Priced on tracked prompts. Every plan re-checks every prompt daily, across all {ENGINE_COUNT} answer surfaces.</p>
+          <p className="lede">
+            Priced on tracked prompts. Every plan buys a daily re-check of every prompt across all {ENGINE_COUNT} answer surfaces, once collection
+            is scheduled.
+          </p>
         </header>
         <aside className="note" aria-label="Terms">
           <span className="note__cap">Terms</span>
@@ -69,7 +79,15 @@ export default function Pricing() {
             const split = exampleSplit(t.prompts)
             return (
               <article key={t.id} className={`card tier${t.id === 'pro' ? ' tier--featured' : ''}`}>
-                {t.id === 'pro' ? <span className="tier__flag">Most chosen</span> : null}
+                {/*
+                  NOT "Most chosen" — that was a fabricated customer-behaviour
+                  claim on a page whose own closing section says no checkout
+                  exists and nothing can be bought. Nobody has chosen anything,
+                  so there is no population over which "most" could be measured.
+                  "Worked below" is true of this page: Pro is the tier the
+                  cap splitter opens on and works through.
+                */}
+                {t.id === 'pro' ? <span className="tier__flag">Worked below</span> : null}
                 <h3 className="tier__name">{t.name}</h3>
 
                 {/*
@@ -116,7 +134,7 @@ export default function Pricing() {
                   <li>
                     <strong className="num">{CHECKS_PER_DAY(t.prompts).toLocaleString('en-GB')}</strong> answer checks a day
                     <span className="tier__sub">
-                      {t.prompts} prompts × {ENGINE_COUNT} engines, every day
+                      {t.prompts} prompts × {ENGINE_COUNT} engines, once daily cycles run
                     </span>
                   </li>
                   <li>ChatGPT, Gemini, Copilot, Google AI Mode and AI Overviews</li>
@@ -131,6 +149,14 @@ export default function Pricing() {
             )
           })}
         </div>
+
+        {/* The other pricing page. An agency landing here is being quoted per
+            workspace for something it buys per portfolio, so the link belongs
+            beside the panels rather than in a footer. */}
+        <p className="prose" style={{ marginTop: 'var(--space-4)' }}>
+          Running a book of clients rather than one brand? The <a href="/agency/pricing">agency plans</a> pool one prompt allowance across the
+          whole portfolio.
+        </p>
       </section>
 
       <section className="section" aria-labelledby="cap">
@@ -138,7 +164,8 @@ export default function Pricing() {
         <div className="annotated">
           <div className="annotated__body">
             <p className="prose" style={{ marginBottom: 'var(--space-3)' }}>
-              A tracked prompt is one question we ask the answer engines on your behalf, every day. Your plan&apos;s cap is a single pool, shared
+              A tracked prompt is one question your plan puts to the answer engines on your behalf, once a day, once collection is scheduled. Your
+              plan&apos;s cap is a single pool, shared
               between prompts BlipRank curates for your category and prompts you write yourself. Move the split to see it.
             </p>
             <CapSplit />
@@ -154,7 +181,8 @@ export default function Pricing() {
         <h2 id="notsold">What is not on this page</h2>
         <p className="prose">
           There is no checkout here yet. These plans are not wired to a payment provider, nothing on this page creates an account, and no cap is
-          enforced anywhere in the product today. Prices are in US dollars and exclude tax.
+          enforced anywhere in the product today. Nor does any scheduler run a cycle today: recurring collection is not built yet, so the daily
+          cadence described above is what a plan buys once it exists, not something running now. Prices are in US dollars and exclude tax.
         </p>
       </section>
     </main>

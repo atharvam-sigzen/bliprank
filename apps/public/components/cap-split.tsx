@@ -81,7 +81,7 @@ export function CapSplit() {
       <p className="capsplit__daily">
         Either way that is <strong className="num">{CHECKS_PER_DAY(tier.prompts).toLocaleString('en-GB')}</strong> answer checks a day
         <span className="capsplit__op"> · </span>
-        {tier.prompts} × {ENGINE_COUNT} engines, re-run daily.
+        {tier.prompts} × {ENGINE_COUNT} engines, once daily cycles run.
       </p>
     </div>
   )

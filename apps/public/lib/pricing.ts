@@ -31,7 +31,7 @@ export const TIERS: readonly Tier[] = [
   { id: 'growth', name: 'Growth', usdPerMonth: 349, prompts: 100, forWhom: 'Several categories, or an agency running a client.' },
 ]
 
-/** Every tier re-checks every tracked prompt against every engine, daily. */
+/** What a tier buys: a daily re-check of every tracked prompt on every engine, once collection is scheduled. */
 export const ENGINE_COUNT = 5
 export const CHECKS_PER_DAY = (prompts: number): number => prompts * ENGINE_COUNT
 
