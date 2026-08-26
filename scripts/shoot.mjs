@@ -293,6 +293,7 @@ const SHOTS = [
   { name: '13-agency-lifecycle', path: '/agency/lifecycle', seed: { [KEY.role]: 'agency' } },
   { name: '14-manage-prompts', path: '/dashboard/prompts', seed: { [KEY.role]: 'brand', [KEY.active]: 'zendesk.com' } },
   { name: '15-agency-client', path: '/agency/client/zendesk.com', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
+  { name: '16-workspace-page', path: '/dashboard/workspace', seed: { [KEY.role]: 'brand', [KEY.active]: 'pipedrive.com' } },
 ]
 
 let failures = 0

@@ -32,6 +32,9 @@ const SERVED = [
   // gate exists to force. The client instance is the seeded agency persona's
   // zendesk.com, since a dynamic route is only clickable as a concrete URL.
   `${PUB}/dashboard/prompts`,
+  // Item 6a: Workspace stopped being a scroll-anchor and became a page; the
+  // gate now fails if the nav's Workspace link ever stops resolving to it.
+  `${PUB}/dashboard/workspace`,
   `${PUB}/agency`,
   `${PUB}/agency/add`,
   `${PUB}/agency/client/zendesk.com`,
