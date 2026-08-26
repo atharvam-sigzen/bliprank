@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { normaliseTyped, scans } from '@/lib/scan-result'
+import { BUNDLED_SCANS, normaliseTyped, scans } from '@/lib/scan-result'
 import { readActiveDomain, readAgencyDomains, writeActiveDomain, writeRole } from '@/lib/workspace'
 
 /**
@@ -25,7 +25,7 @@ import { readActiveDomain, readAgencyDomains, writeActiveDomain, writeRole } fro
  * goes back through the mark, and that one click of friction is deliberate.
  */
 
-export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
+export type Surface = 'dashboard' | 'workspace' | 'grader' | 'pricing' | 'agency'
 
 type Chrome = 'neutral' | 'brand' | 'agency'
 
@@ -34,6 +34,7 @@ const CHROME: Record<Surface, Chrome> = {
   grader: 'neutral',
   pricing: 'neutral',
   dashboard: 'brand',
+  workspace: 'brand',
   agency: 'agency',
 }
 
@@ -59,23 +60,30 @@ function Mark() {
 }
 
 /**
- * The domains this build can actually resolve a record for: every scan compiled
- * in or collected this session, plus whatever is stored as active.
+ * The switcher panel's two groups, honestly separated.
  *
- * NOT a list of "your workspaces" — this build has no account and no server
- * list, and a switcher offering a domain nothing can render would be a control
- * promising a capability that does not exist. The stored domain is included
- * even when no scan matches it, because it genuinely is the one selected; the
- * dashboard is then the surface that says whether a cycle has been collected
- * for it.
+ * `yours` is what this browser scanned this session — the only domains that are
+ * in any sense the visitor's own work — plus the stored active domain when a
+ * session scan backs it. `reference` is every bundled demo domain not already
+ * claimed by the first group: records this build ships identically to every
+ * visitor. A flat list presented both as one set, which read as an account
+ * holding workspaces this visitor never opened. Both groups still resolve and
+ * still select — the split is labelling, not capability.
  */
-function resolvable(): readonly string[] {
+export function workspaceGroups(): { yours: readonly string[]; reference: readonly string[] } {
   const active = readActiveDomain()
-  const scanned = scans()
-    .filter((s) => s.status === 'scanned')
-    .map((s) => normaliseTyped(s.domain))
-    .filter(Boolean)
-  return [...new Set(active ? [...scanned, active] : scanned)]
+  // Session scans are exactly the entries of scans() that are not the bundled
+  // constants — scans() is defined as bundled followed by session.
+  const session = scans().filter((s) => !BUNDLED_SCANS.includes(s))
+  const yours = new Set(
+    session
+      .filter((s) => s.status === 'scanned')
+      .map((s) => normaliseTyped(s.domain))
+      .filter(Boolean),
+  )
+  if (active && session.some((s) => normaliseTyped(s.domain) === active)) yours.add(active)
+  const reference = [...new Set(BUNDLED_SCANS.map((s) => normaliseTyped(s.domain)))].filter((d) => d && !yours.has(d))
+  return { yours: [...yours], reference }
 }
 
 /**
@@ -217,10 +225,10 @@ function NeutralBar({ current }: { current: Surface }) {
   )
 }
 
-/** BRAND — /dashboard. The switcher lists resolvable domains, nothing else. */
+/** BRAND — /dashboard*. The switcher lists the two groups from workspaceGroups. */
 function BrandBar({ current }: { current: Surface }) {
   const [active, setActive] = useState<string | null>(null)
-  const [domains, setDomains] = useState<readonly string[]>([])
+  const [groups, setGroups] = useState<ReturnType<typeof workspaceGroups>>({ yours: [], reference: [] })
   // The server has no storage, so the first client render must match the server
   // exactly and everything stored arrives one paint later. Until then the
   // switcher reads "workspace" — the name of the control — and never "no
@@ -230,7 +238,7 @@ function BrandBar({ current }: { current: Surface }) {
   /** Everything the bar keeps from storage, read fresh. Mount, and every open. */
   function readStored() {
     setActive(readActiveDomain())
-    setDomains(resolvable())
+    setGroups(workspaceGroups())
   }
 
   useEffect(() => {
@@ -257,32 +265,41 @@ function BrandBar({ current }: { current: Surface }) {
         <Mark />
 
         <Switcher label={label} ariaLabel={`Workspace ${label}. Change workspace.`} panelLabel="Workspace" onOpen={readStored}>
-          {(close) => (
-            <>
-              <p className="navbar__panelcap">Workspace</p>
-              {domains.length === 0 ? (
-                <p className="navbar__panelnote">
-                  No domain has been scanned in this browser yet, so there is nothing to switch to. Run the Grader to open one.
-                </p>
-              ) : (
-                domains.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    className={`navbar__item${d === active ? ' navbar__item--on' : ''}`}
-                    // The current one is marked in words as well as in ink: a
-                    // state carried by colour alone is unreadable to precisely
-                    // the reader most likely to run two workspaces at once.
-                    {...(d === active ? { 'aria-current': 'true' as const } : {})}
-                    onClick={() => (d === active ? close() : openDomain(d))}
-                  >
-                    <span className="navbar__itemfig">{d}</span>
-                    {d === active ? <span className="navbar__itemflag">current</span> : null}
-                  </button>
-                ))
-              )}
-            </>
-          )}
+          {(close) => {
+            // One row shape for both groups: the reference records select
+            // exactly like the visitor's own — the distinction is labelling.
+            const row = (d: string) => (
+              <button
+                key={d}
+                type="button"
+                className={`navbar__item${d === active ? ' navbar__item--on' : ''}`}
+                // The current one is marked in words as well as in ink: a
+                // state carried by colour alone is unreadable to precisely
+                // the reader most likely to run two workspaces at once.
+                {...(d === active ? { 'aria-current': 'true' as const } : {})}
+                onClick={() => (d === active ? close() : openDomain(d))}
+              >
+                <span className="navbar__itemfig">{d}</span>
+                {d === active ? <span className="navbar__itemflag">current</span> : null}
+              </button>
+            )
+            return (
+              <>
+                <p className="navbar__panelcap">Your workspaces</p>
+                {groups.yours.length === 0 ? (
+                  <p className="navbar__panelnote">
+                    No domain has been scanned in this browser yet, so there is nothing to switch to. Run the Grader to open one.
+                  </p>
+                ) : (
+                  groups.yours.map(row)
+                )}
+                <hr className="navbar__paneldivider" />
+                <p className="navbar__panelcap">Reference scans</p>
+                <p className="navbar__panelnote">Demo reference records bundled with this build, not your data.</p>
+                {groups.reference.map(row)}
+              </>
+            )
+          }}
         </Switcher>
 
         <div className="navbar__theme">
@@ -291,10 +308,7 @@ function BrandBar({ current }: { current: Surface }) {
 
         <div className="navbar__links">
           <NavLink link={{ href: '/dashboard', label: 'Overview', on: 'dashboard' }} current={current} />
-          {/* `#settings` lands on the workspace record, which every dashboard
-              state carries — a hash that scrolls nowhere is a page claiming a
-              surface it has not built. */}
-          <NavLink link={{ href: '/dashboard#settings', label: 'Workspace' }} current={current} />
+          <NavLink link={{ href: '/dashboard/workspace', label: 'Workspace', on: 'workspace' }} current={current} />
         </div>
 
         <div className="navbar__util">
@@ -462,8 +476,33 @@ export function ThemeToggle() {
 }
 
 /**
+ * Carry the stored theme choice across the origin boundary. The theme lives in
+ * per-origin localStorage, so :3001's choice cannot reach :3000 (the worked
+ * example) on its own; a cross-origin link wrapped in this hands it over as a
+ * `?theme=` param, which the destination's THEME_BOOT reads and persists.
+ * Nothing is appended for `system` — the media query decides there too.
+ *
+ * Client-side only; on the server (or with storage blocked) the url goes out
+ * unchanged, which is the correct degradation: an unthemed link, never a crash.
+ */
+export function withTheme(url: string): string {
+  try {
+    const t = window.localStorage.getItem('bliprank-theme')
+    if (t === 'light' || t === 'dark') return `${url}${url.includes('?') ? '&' : '?'}theme=${t}`
+  } catch {
+    // SSR (no window) or blocked storage: no stored choice to carry.
+  }
+  return url
+}
+
+/**
  * Applied before first paint, so a dark-mode reader never sees a white flash.
  * Inline and synchronous on purpose — a `useEffect` runs after paint, which is
  * exactly too late.
+ *
+ * A `?theme=` param (see `withTheme`) wins over the stored choice and is
+ * persisted, so a themed cross-origin arrival keeps its theme on the next
+ * plain navigation too. The inner try keeps a persist failure from also
+ * losing the visible application of the theme.
  */
-export const THEME_BOOT = `(function(){try{var t=localStorage.getItem('bliprank-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()`
+export const THEME_BOOT = `(function(){try{var m=location.search.match(/[?&]theme=(dark|light)\\b/);var t=m?m[1]:localStorage.getItem('bliprank-theme');if(m){try{localStorage.setItem('bliprank-theme',t)}catch(e){}}if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()`
