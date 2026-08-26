@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
+import { ActionLink } from '@/components/action-link'
 import { withTheme } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { RangeRail } from '@/components/range-rail'
@@ -380,9 +381,9 @@ function WorkspacePointer() {
   return (
     <section className="section" id="settings">
       <h2>Workspace</h2>
+      <ActionLink href="/dashboard/workspace">Workspace settings</ActionLink>
       <p className="prose">
-        The tracked domain, the category bank, the engines and the schedule for this workspace are on the{' '}
-        <a href="/dashboard/workspace">Workspace page</a>, along with prompt management.
+        The tracked domain, the category bank, the engines and the schedule for this workspace live on that page, along with prompt management.
       </p>
     </section>
   )
@@ -443,9 +444,10 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
       </dl>
 
       {context === 'brand' ? (
-        <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-          <a href="/dashboard/prompts">Manage prompts</a> — the curated bank this workspace would ask, and any prompts of your own beside it.
-        </p>
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <ActionLink href="/dashboard/prompts">Manage prompts</ActionLink>
+          <p className="prose">The curated bank this workspace would ask, and any prompts of your own beside it.</p>
+        </div>
       ) : null}
 
       {/* THE LOCKED DOMAIN RULE, stated once, where the lock is shown. The
@@ -481,13 +483,18 @@ export function WorkedExample() {
   const [ready, setReady] = useState(false)
   useEffect(() => setReady(true), [])
   return (
-    <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
+    <div style={{ marginTop: 'var(--space-3)' }}>
       {/* withTheme: the worked example is a different origin, so the theme
           chosen here cannot reach its localStorage. The query parameter is how
           the choice crosses; `system` sends nothing and the media query
           decides there as it does here. */}
-      <a href={ready ? withTheme(DASHBOARD_URL) : DASHBOARD_URL}>See a worked example of the multi-cycle view</a>. The figures there are illustrative, not collected, they belong to
-      no real brand, and the run of cycles they are drawn on was never collected on a schedule.
-    </p>
+      <ActionLink href={ready ? withTheme(DASHBOARD_URL) : DASHBOARD_URL} external>
+        Worked example
+      </ActionLink>
+      <p className="prose">
+        A demonstration of the multi-cycle view. The figures there are illustrative, not collected, they belong to no real brand, and the run of
+        cycles they are drawn on was never collected on a schedule.
+      </p>
+    </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ActionLink } from '@/components/action-link'
 import { ProductBar } from '@/components/chrome'
 import { RangeRail } from '@/components/range-rail'
 import { CONCEPT_NOTICE, PORTFOLIO } from '@/lib/agency-fixture'
@@ -141,15 +142,12 @@ export default function AgencyPortfolio() {
               arithmetic run offline: it is what collection would cost this portfolio in prompts, not a record of anything collected.
             </p>
 
-            {/* A link, not a button dressed as one. `.btn` sets no
-                text-decoration, so an anchor wearing it arrives underlined
-                through a filled panel — and a navigation is not chassis: it is
-                not a control you operate on this page. */}
+            {/* A forward action on its own line: a short destination label,
+                with the disclosure kept as plain prose beside it rather than
+                folded into the link text. */}
+            <ActionLink href="/agency/add">Add a client</ActionLink>
             <p className="prose">
-              <strong>
-                <Link href="/agency/add">Add a client to this portfolio</Link>
-              </strong>{' '}
-              — classification and the prompt allocation resolve offline, and nothing is collected.
+              Adding a client to this portfolio resolves its classification and prompt allocation offline, and nothing is collected.
             </p>
 
             {mounted && spaces.length === 0 ? (
@@ -351,12 +349,13 @@ export default function AgencyPortfolio() {
         {/* A link to a mockup, not to a feature. It sits at the end of the
             caveat section rather than beside "Add a client" for that reason:
             next to a working control it would read as a second working control,
-            and the sentence around it has to do the work the position does. */}
+            and the prose around it has to do the work the position does. */}
         <p className="prose">
-          Adding a client is the only step of the client lifecycle that runs today.{' '}
-          <Link href="/agency/lifecycle">The rest of the arc is drawn as a mockup</Link>: a scheduled cycle, a collection run, a first result and the
-          first comparison, each stage marked as intent rather than shown as a feature. Nothing on it has been collected or scheduled.
+          Adding a client is the only step of the client lifecycle that runs today. The rest of the arc is drawn as a mockup: a scheduled cycle, a
+          collection run, a first result and the first comparison, each stage marked as intent rather than shown as a feature. Nothing on it has
+          been collected or scheduled.
         </p>
+        <ActionLink href="/agency/lifecycle">Client lifecycle</ActionLink>
       </section>
     </main>
   )

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { ActionLink } from '@/components/action-link'
 import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { WorkspaceRecord } from '@/components/workspace-record'
@@ -61,12 +62,11 @@ export default function AgencyClientPage() {
       ) : (
         <>
           <WorkspaceRecord domain={workspace.domain} context="agency-client" />
-          <p className="prose">
-            <strong>
-              <Link href={`/agency/client/${encodeURIComponent(workspace.domain)}/prompts`}>Manage this client&apos;s prompts</Link>
-            </strong>{' '}
-            — the sheet a cycle would ask for this client, and any custom prompts added to it.
-          </p>
+          {/* A forward action on its own line, as everywhere else: a short
+              destination label, with the gloss kept as plain prose beside it
+              rather than folded into the link text. */}
+          <ActionLink href={`/agency/client/${encodeURIComponent(workspace.domain)}/prompts`}>Manage prompts</ActionLink>
+          <p className="prose">The sheet a cycle would ask for this client, and any custom prompts added to it.</p>
         </>
       )}
     </main>

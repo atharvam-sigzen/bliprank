@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { ActionLink } from '@/components/action-link'
 import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { Planned, PLANNED_CAPTION } from '@/lib/planned'
@@ -107,14 +107,12 @@ function StageAdd() {
       <div className="annotated">
         <section className="record annotated__body">
           <p className="prose">
-            This runs today.{' '}
-            <strong>
-              <Link href="/agency/add">Add a client</Link>
-            </strong>{' '}
-            takes a domain, classifies it against the committed taxonomy, resolves that category&apos;s prompt bank, and shows the prompts a cycle
-            would ask before you commit to anything. All of it resolves with no network call, which is why it is free and why it can be shown up
-            front.
+            This runs today. Adding a client takes a domain, classifies it against the committed taxonomy, resolves that category&apos;s prompt
+            bank, and shows the prompts a cycle would ask before you commit to anything. All of it resolves with no network call, which is why it
+            is free and why it can be shown up front.
           </p>
+
+          <ActionLink href="/agency/add">Add a client</ActionLink>
 
           <dl className="wsfact">
             <dt className="wsfact__key">What actually happens</dt>
