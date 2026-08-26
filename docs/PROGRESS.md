@@ -891,6 +891,33 @@ so it is tested rather than reasoned about:
 
 607 tests, 31 files. Typecheck clean.
 
+### The user's application review, batch 1 (2026-08-26)
+
+Six review items were verified against the codebase before discussion, per the
+production standard; five approved decisions landed as five scoped commits
+(`ad29936..`), one per item, reviewer-audited:
+
+- **Item 2** — one shared BackLink (chevron + named destination) on all eight
+  pages that need one; both pricing pages had none, five ad-hoc shapes
+  normalised, two duplicates removed.
+- **Item 3** — the head-to-head moved into the measured record: brand dashboard
+  and client pages now carry the same comparison the Grader shows, sigzen's
+  zero-competitor prose intact and render-test-pinned.
+- **Items 1 + 6a** — the switcher splits "Your workspaces" from labelled
+  "Reference scans"; bundled demo records carry a REFERENCE SCAN margin note;
+  the nav's Workspace anchor became a real /dashboard/workspace page.
+- **Item 5a** — theme survives the origin boundary: ?theme= carried on
+  cross-origin links both directions, boots persist it before first paint.
+  Item 5b (folding the worked example into apps/public, amending ADR-0002)
+  remains an open decision.
+- **Reviewed major, fixed**: isScanResultFile validated nothing the render
+  paths dereference — a corrupt session entry white-screened every surface
+  through scans(). Full shape guard + four regression cases.
+
+Item 4 (interaction-design pass) is next, presented as before/after captures
+for approval before commit. 752 tests / 42 files; both apps typecheck and
+build for production; crawl gate 12 routes, shoot 16 states.
+
 ### The Measurement Record through the MVP surfaces (2026-08-25 → 2026-08-26)
 
 Fourteen commits, `b302830..9bf2fec`. Each carries its full reasoning; this is
