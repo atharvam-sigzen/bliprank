@@ -234,7 +234,12 @@ describe('a stranded run lock does not brick collection', () => {
     // reset. A reset would break the cap, which is per data dir.
     expect(JSON.parse(readFileSync(join(dir, 'ledger.fixture.json'), 'utf8')).spentUsd).toBe(0.5)
     // And no scan may ever record more than its own calls could have cost.
-    expect(r.run.spentUsd).toBeLessThanOrEqual(r.counts.providerCalls * 0.008 + 1e-9)
+    // The union must be narrowed first: `counts` only exists on a scanned
+    // result, and this assertion is ABOUT a scanned result - if the status ever
+    // stops being 'scanned' here, the test should fail on that line, loudly,
+    // rather than on a type error nobody compiled.
+    expect(r.status).toBe('scanned')
+    if (r.status === 'scanned') expect(r.run.spentUsd).toBeLessThanOrEqual(r.counts.providerCalls * 0.008 + 1e-9)
   })
 
   it('an offline run never touches the live ledger', async () => {
