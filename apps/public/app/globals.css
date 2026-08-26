@@ -258,10 +258,31 @@ a {
   cursor: pointer;
 }
 
-/* Links carry a visible affordance, not colour alone. */
+/*
+ * THE INLINE LINK — one ruleset for every anchor set inside running text:
+ * `.prose`, a margin note, a table cell, a legend. Chrome and controls
+ * (`.navbar__*`, `.pricefork__opt`, `.tier__cta`, `.backlink`, `.actionlink`,
+ * `.portfolio__link`) opt out with their own declarations; everything that
+ * does not opt out is a link in a sentence and gets this.
+ *
+ * The underline is currentColor at FULL strength, always visible — a grey
+ * underline under sentence-length text reads as dead prose, which is exactly
+ * what it read as. The ink is the data colour: 6.89:1 light / 8.74:1 dark on
+ * the paper, 7.46:1 / 7.76:1 on a card, 6.30:1 / 6.84:1 on the muted band —
+ * so the underline it carries clears the 3:1 object bar everywhere the ink
+ * clears 4.5:1. Hover thickens the rule rather than recolouring it: a state
+ * change that survives greyscale. Focus is the global ring.
+ */
 a {
   color: var(--color-primary);
-  text-underline-offset: 2px;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  text-decoration-thickness: 2.5px;
 }
 
 code {
@@ -450,12 +471,13 @@ main > h1 {
 
 /*
  * THE WAY BACK — quiet chrome above the letterhead. The sans label voice, not
- * the record's serif, because this is navigation, not content. Visible without
- * hover: the chevron plus the underline convention every quiet link on the
- * sheet uses — 1px in --color-field-border (3.41:1 on the paper light, 4.13:1
- * dark) at rest, currentColor on hover. Muted ink at rest (5.94:1 light,
- * 8.23:1 dark on the paper) so it never competes with the title beneath it;
- * full ink on hover. 44px minimum target like every control.
+ * the record's serif, because this is navigation, not content — and NOT
+ * underlined: an underline says "a link in a sentence", and this is a control
+ * standing alone, so underlining it dressed it as cramped prose. The chevron
+ * is the affordance; weight and position do the rest. Muted ink at rest
+ * (5.94:1 light, 8.23:1 dark on the paper) so it never competes with the
+ * title beneath it; the data colour on hover, because hover is the moment it
+ * becomes the subject. 44px minimum target like every control.
  */
 .backlink {
   display: inline-flex;
@@ -464,23 +486,65 @@ main > h1 {
   min-height: 44px;
   font-family: var(--font-sans);
   font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--color-muted-foreground);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-  text-decoration-color: var(--color-field-border);
-  transition: color 150ms ease, text-decoration-color 150ms ease;
+  text-decoration: none;
+  transition: color 150ms ease;
 }
 
 .backlink:hover {
-  color: var(--color-foreground);
-  text-decoration-color: currentColor;
+  color: var(--color-primary);
 }
 
 /* The chevron rides the label's colour through currentColor; it never shrinks
-   when the label wraps. */
+   when the label wraps. Down 1px because a centred chevron sits optically high
+   beside a 13px label. On hover it leans the way it points — the gesture the
+   control performs — with its escape in the motion inventory below. */
 .backlink__arrow {
   flex: none;
+  position: relative;
+  top: -1px;
+  transition: transform 150ms ease;
+}
+
+.backlink:hover .backlink__arrow {
+  transform: translateX(-2px);
+}
+
+/*
+ * THE FORWARD ACTION — the standing counterpart of `.backlink`: a short
+ * destination label in the link colour with a right chevron, on its own line,
+ * with the disclosure prose beside it as plain prose. It exists because the
+ * alternative was sentence-length inline links, which nobody can aim at and
+ * which bury the destination in the middle of a clause. The chevron plus the
+ * data-colour ink (6.89:1 light / 8.74:1 dark on the paper) already say
+ * "link", so the underline appears only on hover and focus — the same
+ * restatement the chrome uses. 44px minimum target like every control.
+ */
+.actionlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.actionlink:hover,
+.actionlink:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.15em;
+}
+
+/* Same optical nudge as the backlink's chevron, same reason. */
+.actionlink__chevron {
+  flex: none;
+  position: relative;
+  top: -1px;
 }
 
 /*
@@ -1980,6 +2044,8 @@ h3.tier__name,
   .navbar__link--door,
   .navbar__wsbtn,
   .backlink,
+  .backlink__arrow,
+  .backlink:hover .backlink__arrow,
   .navbar__wscaret,
   .navbar__item,
   .pricefork__opt,

@@ -491,11 +491,27 @@ main > h1 {
   margin: 0 0 var(--space-2);
 }
 
-/* Links carry a visible affordance, not colour alone: a colour-blind reader and
-   a greyscale print both need to see that this is a link. */
+/*
+ * THE INLINE LINK — mirrored from apps/public so a link reads the same on
+ * both sides of the door. One ruleset for every anchor set inside running
+ * text; the chrome (`.navbar__*`) opts out with its own declarations. The
+ * underline is currentColor at FULL strength, always visible — a grey
+ * underline under sentence-length text reads as dead prose. The ink is the
+ * data colour: 6.89:1 light / 8.74:1 dark on the paper, 7.46:1 / 7.76:1 on a
+ * card, 6.30:1 / 6.84:1 on the muted band — so the underline clears the 3:1
+ * object bar everywhere the ink clears 4.5:1. Hover thickens the rule rather
+ * than recolouring it: a state change that survives greyscale.
+ */
 a {
   color: var(--color-primary);
-  text-underline-offset: 2px;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  text-decoration-thickness: 2.5px;
 }
 
 /* ==========================================================================
