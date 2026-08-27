@@ -68,7 +68,10 @@ async function crawlPersona(browser, name, seed) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
   await context.addInitScript((entries) => {
     try {
-      for (const [k, v] of entries) window.localStorage.setItem(k, v)
+      for (const [k, v] of entries) {
+        window.localStorage.setItem(k, v)
+        window.sessionStorage?.setItem(k, v)
+      }
     } catch {}
   }, Object.entries(seed))
   await context.route('**/*', (r) => (/openwebninja|\/api\/scan/i.test(r.request().url()) ? r.abort() : r.continue()))

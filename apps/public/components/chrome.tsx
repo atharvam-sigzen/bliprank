@@ -213,7 +213,7 @@ function NeutralBar({ current }: { current: Surface }) {
         </div>
 
         <div className="navbar__util">
-          <a className="navbar__link navbar__link--door" href="/dashboard" onClick={() => writeRole('brand')}>
+          <a className="navbar__link navbar__link--door" href="/" onClick={() => writeRole('brand')}>
             For brands
           </a>
           <a className="navbar__link navbar__link--door" href="/agency" onClick={() => writeRole('agency')}>

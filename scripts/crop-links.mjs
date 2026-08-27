@@ -35,7 +35,7 @@ const SPOTS = [
 
 const b = await chromium.launch()
 const c = await b.newContext({ viewport: { width: 1000, height: 900 }, colorScheme: 'dark', deviceScaleFactor: 3, reducedMotion: 'reduce' })
-await c.addInitScript((e) => { try { for (const [k, v] of e) localStorage.setItem(k, v); localStorage.setItem('bliprank-theme', 'dark') } catch {} }, Object.entries(SEED))
+await c.addInitScript((e) => { try { for (const [k, v] of e) { localStorage.setItem(k, v); sessionStorage.setItem(k, v); } localStorage.setItem('bliprank-theme', 'dark') } catch {} }, Object.entries(SEED))
 await c.route('**/*', (r) => (/openwebninja|\/api\/scan/i.test(r.request().url()) ? r.abort() : r.continue()))
 const p = await c.newPage()
 
