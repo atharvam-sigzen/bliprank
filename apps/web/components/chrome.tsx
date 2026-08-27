@@ -28,32 +28,19 @@ export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
 const GRADER = process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001'
 
+import { ThemeToggle, THEME_BOOT, themedUrl, useTheme, readTheme } from './theme'
+export { ThemeToggle, THEME_BOOT, themedUrl, useTheme, readTheme }
+
 /**
- * Carry the stored theme choice across the origin boundary. The theme lives in
- * per-origin localStorage, so :3000's choice cannot reach :3001 on its own —
- * every cross-origin link appends ?theme=dark|light when an explicit choice is
- * stored. Nothing is appended for "system". Mirrors withTheme in
- * apps/public/components/chrome.tsx; the two apps cannot share the import.
+ * Backward compatibility wrapper. In new code, prefer `themedUrl(url, useTheme())`
+ * so the link stays reactive to live theme changes.
  */
 export function withTheme(url: string): string {
-  try {
-    const t = window.localStorage.getItem('bliprank-theme')
-    if (t === 'light' || t === 'dark') {
-      return url + (url.includes('?') ? '&' : '?') + 'theme=' + t
-    }
-  } catch {
-    // No window (SSR) or no readable storage: the link goes out unthemed.
-  }
-  return url
+  return themedUrl(url, readTheme())
 }
 
 export function ProductBar({ current: _current }: { current: Surface }) {
-  // withTheme reads localStorage, so applying it during render would make the
-  // server and client disagree on href. Render the bare URL first, theme the
-  // links after mount.
-  const [ready, setReady] = useState(false)
-  useEffect(() => setReady(true), [])
-  const themed = (url: string) => (ready ? withTheme(url) : url)
+  const theme = useTheme()
 
   return (
     <nav className="navbar" aria-label="BlipRank">
@@ -61,7 +48,7 @@ export function ProductBar({ current: _current }: { current: Surface }) {
         {/* Plain anchors, not next/link: every link here crosses an origin in
             dev (3000 to 3001) and a host in production (Vercel to Cloudflare
             Pages), and next/link's client navigation cannot do either. */}
-        <a className="navbar__mark" href={themed(GRADER)}>
+        <a className="navbar__mark" href={themedUrl(GRADER, theme)}>
           <span className="navbar__dot" aria-hidden="true" />
           BlipRank
         </a>
@@ -77,10 +64,10 @@ export function ProductBar({ current: _current }: { current: Surface }) {
         </div>
 
         <div className="navbar__util">
-          <a className="navbar__link" href={themed(GRADER)}>
+          <a className="navbar__link" href={themedUrl(GRADER, theme)}>
             Grader
           </a>
-          <a className="navbar__link" href={themed(`${GRADER}/pricing`)}>
+          <a className="navbar__link" href={themedUrl(`${GRADER}/pricing`, theme)}>
             Pricing
           </a>
         </div>
@@ -88,95 +75,3 @@ export function ProductBar({ current: _current }: { current: Surface }) {
     </nav>
   )
 }
-
-type Choice = 'light' | 'dark' | 'system'
-const NEXT: Record<Choice, Choice> = { system: 'light', light: 'dark', dark: 'system' }
-const LABEL: Record<Choice, string> = { system: 'System', light: 'Light', dark: 'Dark' }
-/**
- * Inline SVG, not `☀`/`☾`/`◐`.
- *
- * Those are Unicode symbols pressed into service as icons, and they render at
- * whatever size, weight and colour the platform's emoji or symbol font decides —
- * on some Windows builds `☀` arrives as a full-colour emoji. An icon in a
- * control has to inherit `currentColor` and the surrounding type size, which
- * only a real vector does. 1.5px strokes to match the interface weight.
- */
-const ICON: Record<Choice, React.ReactNode> = {
-  system: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  light: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4.2" />
-      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
-    </svg>
-  ),
-  dark: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2Z" />
-    </svg>
-  ),
-}
-
-/**
- * Three states, not two. A binary toggle cannot express "I chose light on a
- * dark-mode machine", and that is the one a reader notices. `system` removes the
- * attribute entirely so the media query decides again.
- */
-export function ThemeToggle() {
-  const [choice, setChoice] = useState<Choice>('system')
-
-  useEffect(() => {
-    // A private window throws on the `localStorage` property itself, not on the
-    // call — and this control is on every page in the app, so an unguarded read
-    // here is a white screen everywhere rather than a lost preference. Same
-    // reasoning as `readRaw` in lib/workspace.ts, and the same as THEME_BOOT
-    // below, which has always had its try.
-    try {
-      const stored = window.localStorage.getItem('bliprank-theme')
-      if (stored === 'light' || stored === 'dark') setChoice(stored)
-    } catch {
-      // Nothing stored that we are allowed to see; the media query decides.
-    }
-  }, [])
-
-  function apply(next: Choice) {
-    setChoice(next)
-    const root = document.documentElement
-    // The attribute is what actually changes the theme, so it is set first and
-    // outside the try: the toggle must work in a window that cannot persist.
-    if (next === 'system') root.removeAttribute('data-theme')
-    else root.setAttribute('data-theme', next)
-    try {
-      if (next === 'system') window.localStorage.removeItem('bliprank-theme')
-      else window.localStorage.setItem('bliprank-theme', next)
-    } catch {
-      // The choice holds for this page and does not survive a reload.
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      className="themetoggle"
-      onClick={() => apply(NEXT[choice])}
-      // The label carries the current state, not the next one: a control that
-      // announces its own action rather than its value leaves a screen-reader
-      // user unable to tell what the theme currently is.
-      aria-label={`Theme: ${LABEL[choice]}. Activate for ${LABEL[NEXT[choice]]}.`}
-    >
-      {ICON[choice]}
-      {LABEL[choice]}
-    </button>
-  )
-}
-
-/**
- * Applied before first paint, so a dark-mode reader never sees a white flash.
- * Inline and synchronous on purpose — a `useEffect` runs after paint, which is
- * exactly too late.
- */
-export const THEME_BOOT = `(function(){try{var m=location.search.match(/[?&]theme=(dark|light)(&|$)/);var t=m?m[1]:localStorage.getItem('bliprank-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);if(m){localStorage.setItem('bliprank-theme',t)}}}catch(e){}})()`
