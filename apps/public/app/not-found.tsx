@@ -8,7 +8,7 @@ import { BackLink } from '@/components/back-link'
 export default function NotFound() {
   return (
     <main className="shell">
-      <BackLink href="/" label="Back to the free Grader" />
+      <BackLink href="/" label="Back to the Grader" />
 
       <header className="masthead">
         <div>
