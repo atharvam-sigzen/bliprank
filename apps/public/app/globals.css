@@ -540,11 +540,18 @@ main > h1 {
   text-underline-offset: 0.15em;
 }
 
+.actionlink:hover .actionlink__arrow,
+.actionlink:hover .actionlink__chevron {
+  transform: translateX(2px);
+}
+
 /* Same optical nudge as the backlink's chevron, same reason. */
+.actionlink__arrow,
 .actionlink__chevron {
   flex: none;
   position: relative;
   top: -1px;
+  transition: transform 150ms ease;
 }
 
 /*
