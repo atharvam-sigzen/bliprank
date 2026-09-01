@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { FALLBACK_SLUG } from '@bliprank/taxonomy'
+import { DEMO_BANKS, FALLBACK_SLUG } from '@bliprank/taxonomy'
 import {
   GENERATED_DISCOVERY,
   GENERATED_PROBLEM_LED,
@@ -10,8 +10,10 @@ import {
   readCategoryRecord,
   readGeneratedBanks,
   recordCategory,
+  namesTrackedBrand,
   rejectionReason,
   resolveCategory,
+  trackedBrands,
   slugify,
   type GeneratedBank,
 } from './resolve-category.js'
@@ -299,6 +301,174 @@ describe('⚠️ AN AUTHORED CATEGORY NEVER HAS COMPETITORS', () => {
     expect(readGeneratedBanks(dir)).toHaveLength(0)
     // And it is the reviewed bank, with its real competitors.
     expect(r.bank.leaders.length).toBeGreaterThan(0)
+  })
+})
+
+describe('⚠️ A GENERATED PROMPT MAY NOT NAME A BRAND WE ALREADY TRACK', () => {
+  /*
+   * The gap the first live run exposed. `rejectionReason` checked the subject
+   * naming ITSELF and nothing else, so a bank authored for one domain could
+   * name somebody else's tracked brand and pass every refusal - through the
+   * prompt TEXT, which is not where the three `leaders` refusals look.
+   */
+  const withPrompt = (text: string): GeneratedBank => {
+    const base = goodBank()
+    return { ...base, prompts: [{ text, intent: 'discovery' as const }, ...base.prompts.slice(1)] }
+  }
+
+  it('refuses a deliberately injected competitor name', () => {
+    // HubSpot is a leader of crm-software. A prompt naming it guarantees it a
+    // mention, and its mention rate is a number this product publishes.
+    const refused = rejectionReason(withPrompt('Best gaming keyboard, or should I just use HubSpot?'), 'acmegear.com', DEMO_BANKS)
+    expect(refused).toContain('HubSpot')
+    expect(refused).toContain('already tracks')
+  })
+
+  it('refuses the comparison phrasing a model is most likely to produce', () => {
+    const refused = rejectionReason(withPrompt('How does this compare to Salesforce for a small sales team?'), 'acmegear.com', DEMO_BANKS)
+    expect(refused).not.toBeNull()
+    expect(refused).toContain('Salesforce')
+  })
+
+  it('catches a brand tracked in a category unrelated to the one being authored', () => {
+    // The point of checking the WHOLE taxonomy rather than the subject's own
+    // bank: an authored gaming-peripherals bank has no neighbours, so a
+    // per-bank check would have found nothing to compare against.
+    const refused = rejectionReason(withPrompt('Which help desk do gaming brands use, is Zendesk any good?'), 'acmegear.com', DEMO_BANKS)
+    expect(refused).toContain('Zendesk')
+  })
+
+  it('refuses on an ALIAS, not only on the display name', () => {
+    // A bank may list `HubSpot` as the name and `HubSpot CRM` as an alias. The
+    // matcher takes both, and the refusal says which one it saw.
+    const brands = trackedBrands(DEMO_BANKS)
+    const withAlias = brands.find((b) => b.aliases.some((a) => a !== b.name))!
+    const alias = withAlias.aliases.find((a) => a !== withAlias.name)!
+    const hit = namesTrackedBrand(`Is ${alias} worth paying for in 2026?`, brands)
+    expect(hit).not.toBeNull()
+    expect(hit!.name).toBe(withAlias.name)
+  })
+
+  it('PERMITS a market-defining platform that is in no leader table', () => {
+    /*
+     * The distinction the whole check rests on. ERPNext and Frappe are the
+     * platform an ERP-implementation market is defined BY - the way "WordPress
+     * hosting" is a real category - and naming one is not naming a rival. They
+     * are in no leader table, so nothing refuses them.
+     *
+     * This is the real bank Nemotron authored for sigzen.com on 2026-09-01.
+     */
+    const erp: GeneratedBank = {
+      model: AUTHOR.model,
+      displayName: 'ERP Implementation Services',
+      description: 'Consultancies that implement and support ERP systems.',
+      prompts: [
+        ...Array.from({ length: GENERATED_DISCOVERY }, (_, i) => ({
+          text: `Best ERPNext implementation partner for small manufacturing firms, option ${i}`,
+          intent: 'discovery' as const,
+        })),
+        ...Array.from({ length: GENERATED_PROBLEM_LED }, (_, i) => ({
+          text: `Our Frappe based records are scattered across paper and Excel, how do we centralise them, case ${i}`,
+          intent: 'problem-led' as const,
+        })),
+      ],
+    }
+    expect(rejectionReason(erp, 'sigzen.com', DEMO_BANKS)).toBeNull()
+  })
+
+  it('uses the scorer\'s whole-token rule, so a longer word is not a mention', () => {
+    // `Zoho1` is not `Zoho`, and `#HubSpot_CRM` is a handle. Reusing
+    // `findMentions` means the refusal and the measurement share one definition
+    // of "this text names that brand" rather than drifting apart.
+    const brands = trackedBrands(DEMO_BANKS)
+    expect(namesTrackedBrand('Is Xero any good for a small team?', brands)).not.toBeNull()
+    expect(namesTrackedBrand('Is Xeroish any good for a small team?', brands)).toBeNull()
+    // `Zoho` alone is deliberately NOT an alias anywhere - the taxonomy's own
+    // rule is that an alias must be a form a human would write and must not
+    // collide, so the banks carry `Zoho Books`, `Zoho CRM` and so on. Pinned
+    // here because a later edit adding a bare `Zoho` would silently widen every
+    // refusal AND every mention count.
+    expect(namesTrackedBrand('Zoho makes several products', brands)).toBeNull()
+  })
+
+  it('⚠️ INHERITS FIVE ALIAS COLLISIONS FROM THE TAXONOMY, and this test exists to make them visible', () => {
+    /*
+     * NOT AN ASSERTION THAT THIS IS CORRECT. It is a pin on behaviour that is
+     * wrong upstream, so the wrongness is countable and cannot be rediscovered
+     * as a surprise.
+     *
+     * Five leaders carry a bare single-word alias that is also ordinary English:
+     * Wave, Sage, Notion, Asana and Close. `Close` is the worst of them - "our
+     * monthly close" is ACCOUNTING vocabulary, in a taxonomy that has an
+     * accounting-software category.
+     *
+     * The taxonomy's own docblock warns about exactly this and names the case it
+     * caught: "an alias must be a form a human would write - `monday.com`, never
+     * a bare `monday`, which collides with the weekday." These five were missed.
+     *
+     * ⚠️ THE COST IS NOT PRIMARILY HERE. `findMentions` is what decides
+     * `mentioned` in `scoreAnswer`, so a COLLECTED ANSWER containing "a wave of
+     * interest" already counts as a mention of Wave, inflating a published
+     * mention rate and its interval. This refusal merely inherits the same
+     * table. Fixing it means editing leader aliases, which is scoring rule set
+     * and human-owned (CLAUDE.md §4) - so it is reported, not quietly changed.
+     *
+     * The consequence for THIS check is a false refusal, which degrades to the
+     * general bucket. Safe direction, real cost.
+     */
+    const brands = trackedBrands(DEMO_BANKS)
+    const collisions = [
+      ['we saw a wave of interest from buyers', 'Wave'],
+      ['sage advice from an accountant', 'Sage'],
+      ['the notion that this is simple', 'Notion'],
+      ['an asana pose between meetings', 'Asana'],
+      ['how do we speed up our monthly close', 'Close'],
+    ] as const
+    for (const [prose, brand] of collisions) {
+      expect([prose, namesTrackedBrand(prose, brands)?.name]).toEqual([prose, brand])
+    }
+    // And ordinary prose that does NOT collide stays clean, so the check is not
+    // simply matching everything.
+    for (const clean of ['how do we keep our team in sync across two offices', 'which tool helps a small business file its taxes']) {
+      expect([clean, namesTrackedBrand(clean, brands)]).toEqual([clean, null])
+    }
+  })
+
+  it('ignores a URL, because the scorer masks them before matching', () => {
+    // A prompt is prose; a link inside one is not the brand being asked about,
+    // and `normaliseForMatch` blanks URLs so the citation signal is not
+    // double-counted. The refusal inherits that for free.
+    const brands = trackedBrands(DEMO_BANKS)
+    expect(namesTrackedBrand('See https://hubspot.com/crm for context', brands)).toBeNull()
+  })
+
+  it('collects every leader once, across every bank', () => {
+    const brands = trackedBrands(DEMO_BANKS)
+    expect(brands.length).toBeGreaterThan(20)
+    expect(new Set(brands.map((b) => b.id)).size).toBe(brands.length)
+    // No domains: this matches prose, and `Leader.domains` is narrowed for
+    // citation attribution, which a prompt cannot do.
+    expect(brands.every((b) => b.domains.length === 0)).toBe(true)
+  })
+
+  it('is a no-op when no banks are passed, so the old two-argument call still means something', () => {
+    expect(rejectionReason(withPrompt('Best keyboard, or should I use HubSpot?'), 'acmegear.com')).toBeNull()
+  })
+
+  it('END TO END: an authored bank naming a tracked brand degrades to the bucket', async () => {
+    // Not a unit check of the predicate - the whole rung 4, refusing and falling
+    // back exactly as it does when the model is unreachable.
+    const r = await resolveCategory('acmegear.com', {
+      dataDir: dir,
+      author: AUTHOR,
+      fetchSite: async () => page('Acme Gaming', 'Keyboards and mice', 'Built for play', 'We make gaming keyboards.'),
+      generate: async () => withPrompt('Best gaming keyboard, or is HubSpot better?'),
+    })
+    expect(r.bank.category).toBe(FALLBACK_SLUG)
+    expect(r.record.generated).toBe(false)
+    expect(r.fallback?.detail).toContain('HubSpot')
+    // And nothing was written: a refused bank must not exist on disk.
+    expect(readGeneratedBanks(dir)).toHaveLength(0)
   })
 })
 

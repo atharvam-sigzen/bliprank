@@ -110,6 +110,12 @@ constraint, and it is enforced three times over rather than trusted:
 > `competitors` array. The parser reads three keys and ignores every other one,
 > so the field reaches nothing; the second and third refusals are untouched. See
 > Amendment 1 → "The competitor rule survives a looser provider".
+>
+> **Amendment 2 adds a fourth, guarding a different door.** All three above watch
+> the `leaders` field. A rival can also arrive through the prompt **text** — "how
+> does this compare to Salesforce" — which none of them looks at. A generated bank
+> naming any brand already tracked anywhere in the taxonomy is now discarded
+> whole. See Amendment 2.
 
 This is the rule the fallback bank already follows and the rule `/category-bank`
 states: do not invent competitor names; derive them from collected answers or a
@@ -373,14 +379,110 @@ and `sigzen` correctly does not appear.
 
 Arguably correct in this instance: ERPNext is the *platform the market is defined
 by*, the way "WordPress hosting" is a real category, and it is neither the subject
-nor a competitor of it. But it is a concrete instance of the limitation this ADR
-already recorded, and it points at a check that is worth building and is not built:
-**refuse a generated prompt naming any leader already tracked in the taxonomy.**
-Those are known brand names on file, so that subset is detectable — unlike brands
-in general.
+nor a competitor of it. But it pointed at a check that was worth building — and it
+is now built. See Amendment 2.
 
 - **Still unmeasured:** how reliably any of these models stays inside the shape.
   The refusals above mean an unreliable model degrades to the general bucket
   rather than producing something wrong, so the cost of being wrong about this is
   bounded — but the rate is not known, and a bank whose prompts quietly name a
   rival is not something `rejectionReason` can detect.
+
+
+---
+
+# Amendment 2 — a fourth refusal: no prompt may name a brand we already track
+
+**Status:** Accepted · **Date:** 2026-09-01
+
+## Context
+
+Amendment 1 recorded a gap that the first live run made concrete. `rejectionReason`
+checked whether a generated prompt named **the subject** — and nothing else. A bank
+authored for one domain could name somebody *else's* tracked brand and pass every
+refusal, because the three refusals that guard `leaders` look at the `leaders`
+field, and this arrives through the prompt **text**.
+
+## Decision
+
+A fourth refusal. A generated bank is discarded whole if any of its prompts names
+a brand already tracked as a leader anywhere in the taxonomy — all 113 of them,
+across every bank, not just the subject's own.
+
+### Two distinct harms, and they are worth separating
+
+**Measurement.** Every prompt a scan sends is `discovery` or `problem-led`
+precisely so that it names no brand (`scan.ts` PROPERTY 2). A prompt naming HubSpot
+guarantees HubSpot a mention in the answer — and HubSpot's mention rate is a number
+this product publishes, as a leader of `crm-software`. So an authored bank could
+silently move a *tracked brand's* number by asking about it. Share of voice has to
+be unprompted or it is not share of voice, and that holds for every brand in the
+answer, not only for the one being graded.
+
+**Honesty.** `/category-bank`'s do-not-invent rule exists so a rival never appears
+beside a number nobody measured them against. A generated prompt reading "how does
+this compare to Salesforce" reintroduces exactly that, through the prompt text
+instead of through `leaders`.
+
+### Matched with the scorer's own matcher
+
+`namesTrackedBrand` calls `findMentions` from `@bliprank/scorer` — the same
+function that decides whether a brand counts as mentioned in a collected answer.
+The refusal and the measurement therefore share **one** definition of "this text
+names that brand", including the whole-token boundaries that stop `Zoho1` matching
+`Zoho`, the NFKC folding, the URL masking and the longest-match-wins overlap rule.
+A hand-rolled `includes()` would have been a second definition, and two definitions
+drift in the direction that lets something through.
+
+### The list is what makes it safe, and its limits are the design
+
+It refuses only brands **already on file**. `ERPNext` and `Frappe` are in no leader
+table, so an ERP-implementation bank may name them — correctly, because they are the
+platform the market is defined *by* and naming one is not naming a rival. Nothing
+here attempts to detect brands in general: that is not a decidable check, and a
+heuristic that guessed would refuse good banks for imagined reasons.
+
+A partial guard, deliberately, over the subset that *is* decidable — and it is the
+subset that matters, because the brands whose mention rates we publish are exactly
+the brands a prompt must not conjure.
+
+## ⚠️ It surfaced a pre-existing scoring defect, and that is the bigger finding
+
+Building this required enumerating every leader alias, which made five collisions
+visible:
+
+| Leader | Bare alias | Ordinary English that matches it |
+|---|---|---|
+| Wave | `Wave` | "we saw a **wave** of interest from buyers" |
+| Sage | `Sage` | "**sage** advice from an accountant" |
+| Notion | `Notion` | "the **notion** that this is simple" |
+| Asana | `Asana` | "an **asana** pose between meetings" |
+| Close | `Close` | "how do we speed up our monthly **close**" |
+
+`Close` is the worst: *monthly close* is accounting vocabulary, in a taxonomy that
+has an accounting-software category.
+
+**The cost is not primarily in this refusal.** `findMentions` is what sets
+`mentioned` in `scoreAnswer`, so a **collected answer** containing "a wave of
+interest" already counts as a mention of Wave — inflating a published mention rate
+and its Wilson interval. That is true today, independently of anything in this
+amendment; enumerating the aliases is simply what made it visible.
+
+The taxonomy's own docblock warns about precisely this failure and names the case
+it *did* catch: "an alias must be a form a human would write — `monday.com`, never
+a bare `monday`, which collides with the weekday." These five were missed.
+
+**Not fixed here.** Editing leader aliases changes what every historical and future
+number means, and the scoring rule set is human-owned (CLAUDE.md §4). It is
+reported, pinned by a test so the count cannot drift unnoticed, and left for a
+human. The consequence for *this* refusal is a false refusal, which degrades to the
+general bucket — safe direction, real cost.
+
+## Consequences
+
+- A generated bank naming a tracked brand degrades to the general bucket, exactly
+  as an unreachable model does. Tested end to end, and nothing is written to disk.
+- `rejectionReason` takes a third argument, defaulting to `[]`, so a two-argument
+  call is still valid and still means "no tracked-brand check" — asserted, so the
+  default cannot become a silent no-op nobody notices.
+- Five leaders will falsely trigger it until their aliases are tightened.

@@ -70,6 +70,7 @@ import {
   type CategoryDef,
   type PromptBank,
 } from '@bliprank/taxonomy'
+import { findMentions, normaliseForMatch, type BrandSpec } from '@bliprank/scorer'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
 import {
   GENERATED_DISCOVERY,
@@ -310,7 +311,59 @@ export function slugify(displayName: string): string {
  * guarantee has to hold for whichever model the environment happens to name
  * today.
  */
-export function rejectionReason(candidate: GeneratedBank, host: string): string | null {
+/**
+ * Every brand the taxonomy already tracks, as the scorer's own `BrandSpec`.
+ *
+ * One entry per leader across every bank, deduplicated by id - a leader listed
+ * in two banks is one brand, and matching it twice would only make the refusal
+ * message repeat itself.
+ *
+ * `domains` is deliberately empty. This matches PROSE, not citations: a prompt
+ * cannot cite anything, and carrying the domains would tempt a later reader into
+ * using this list for attribution, which is the one job `Leader.domains` is
+ * narrowed for.
+ */
+export function trackedBrands(banks: readonly PromptBank[]): readonly BrandSpec[] {
+  const byId = new Map<string, BrandSpec>()
+  for (const bank of banks) {
+    for (const l of bank.leaders) {
+      if (byId.has(l.id)) continue
+      // The name as well as the aliases: a bank may list `HubSpot` as the name
+      // and only `HubSpot CRM` as an alias, and the bare name is the form a
+      // generated prompt is most likely to use.
+      const aliases = [...new Set([l.name, ...l.aliases].map((a) => a.trim()).filter(Boolean))]
+      byId.set(l.id, { id: l.id, name: l.name, aliases, domains: [] })
+    }
+  }
+  return [...byId.values()]
+}
+
+/**
+ * Does this prompt name a brand the taxonomy already tracks?
+ *
+ * MATCHED WITH THE SCORER'S OWN MATCHER, NOT A SECOND ONE.
+ *
+ * `findMentions` is the function that decides whether a brand counts as
+ * mentioned in a collected answer. Using it here means the refusal and the
+ * measurement share one definition of "this text names that brand" - including
+ * the whole-token boundaries that stop `Zoho1` matching `Zoho`, the NFKC
+ * folding, and the longest-match-wins overlap rule. A hand-rolled `includes()`
+ * here would be a second definition, and the two would drift in the direction
+ * that lets something through.
+ *
+ * Returns the brand's name and the alias that matched, so the refusal can say
+ * exactly what it saw.
+ */
+export function namesTrackedBrand(text: string, brands: readonly BrandSpec[]): { name: string; alias: string } | null {
+  const normalised = normaliseForMatch(text)
+  for (const brand of brands) {
+    const hit = findMentions(normalised, brand)
+    if (hit) return { name: hit.name, alias: hit.matchedAlias }
+  }
+  return null
+}
+
+export function rejectionReason(candidate: GeneratedBank, host: string, banks: readonly PromptBank[] = []): string | null {
   if (!candidate.displayName?.trim() || !slugify(candidate.displayName)) return 'no usable category name'
   if (candidate.displayName.length > 60) return 'category name is implausibly long'
 
@@ -334,6 +387,55 @@ export function rejectionReason(candidate: GeneratedBank, host: string): string 
     const needle = new RegExp(String.raw`\b${label.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}\b`, 'i')
     const named = candidate.prompts.find((p) => needle.test(p.text))
     if (named) return `a prompt names the subject brand ("${named.text}"), which would measure our own phrasing`
+  }
+
+  /*
+   * NOR MAY IT NAME A BRAND WE ALREADY TRACK SOMEWHERE ELSE.
+   *
+   * The check above catches the subject naming ITSELF. This one catches the
+   * subject's prompts naming somebody else's tracked brand, which is the same
+   * failure pointed at a different victim - and it is the one an author will
+   * actually produce, because a model writing buyer questions reaches for the
+   * brands buyers know.
+   *
+   * Two distinct harms, and it is worth being clear that they are different:
+   *
+   *   MEASUREMENT. Every prompt a scan sends is `discovery` or `problem-led`
+   *   precisely so it names no brand (scan.ts PROPERTY 2). A prompt naming
+   *   HubSpot guarantees HubSpot a mention in the answer, and HubSpot is scored
+   *   as a leader of crm-software - so an authored bank could silently move a
+   *   TRACKED brand's mention rate by asking about it. Share of voice has to be
+   *   unprompted or it is not share of voice, and that holds for every brand in
+   *   the answer, not only for the one being graded.
+   *
+   *   HONESTY. `/category-bank`'s do-not-invent rule exists so a rival never
+   *   appears beside a number nobody measured them against. A generated prompt
+   *   reading "how does this compare to Salesforce" reintroduces exactly that,
+   *   through the prompt TEXT instead of through `leaders` - and would have
+   *   walked straight past all three refusals that guard `leaders`.
+   *
+   * THE LIST IS WHAT MAKES THIS SAFE, AND ITS LIMITS ARE THE DESIGN.
+   *
+   * It refuses only brands ALREADY ON FILE. `ERPNext` and `Frappe` are in no
+   * leader table, so an ERP-implementation bank may name them - correctly,
+   * because they are the platform the market is defined BY, the way "WordPress
+   * hosting" is a real category, and naming one is not naming a rival. Nothing
+   * here tries to detect brands in general: that is not a decidable check, and a
+   * heuristic that guessed would refuse good banks for imagined reasons.
+   *
+   * So this is a partial guard, deliberately, over the subset that IS decidable -
+   * and it is the subset that matters, because the brands whose mention rates we
+   * publish are exactly the brands a prompt must not conjure.
+   */
+  const tracked = trackedBrands(banks)
+  for (const p of candidate.prompts) {
+    const named = namesTrackedBrand(p.text, tracked)
+    // The WHOLE BANK, not the offending prompt, for the reason the check above
+    // gives: a bank that lost prompts to filtering is a different sample size
+    // from every other bank, and `n` is not something to lose quietly.
+    if (named) {
+      return `a prompt names ${named.name}, a brand this taxonomy already tracks ("${p.text}" matched "${named.alias}") - a prompt that names a brand guarantees it a mention`
+    }
   }
 
   const empty = candidate.prompts.find((p) => !p.text?.trim() || p.text.length > 200)
@@ -512,7 +614,10 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   }
   if (!candidate) return fallbackResult('unclassified', `${weakReason}, and no new category was produced`, [])
 
-  const refused = rejectionReason(candidate, host)
+  // The banks in scope for THIS resolve, so a category authored earlier in the
+  // same session is covered too. Its leaders are always empty so it contributes
+  // nothing, but the list must not depend on load order.
+  const refused = rejectionReason(candidate, host, banks)
   if (refused) {
     log(`category: the authored bank for ${host} was refused (${refused})`)
     return fallbackResult('unclassified', `${weakReason}, and the authored category was refused: ${refused}`, [])
