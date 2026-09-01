@@ -60,16 +60,33 @@ export interface CachedDecision {
 }
 
 /*
- * sessionStorage, matching `readActiveDomain` and the session scan registry.
+ * localStorage, matching `readActiveDomain` and the scan registry — changed
+ * 2026-09-01, and it reverses what this comment used to argue.
  *
- * localStorage would outlive the visit, and a decision cached in March that the
- * server has since had reason to revisit is worse than no cache: the page would
- * confidently show a category nothing on the server still agrees with. A session
- * is the window in which the server has demonstrably just answered.
+ * The old reasoning: "a decision cached in March that the server has since had
+ * reason to revisit is worse than no cache". That premise is false in this
+ * codebase. `recordCategory` REFUSES TO OVERWRITE an existing record — that
+ * refusal is the stability guarantee R5 requires, and it means the server
+ * cannot revisit a decision. Asking again in March returns the same slug it
+ * returned today. A cache of an answer that cannot change is not a staleness
+ * risk; it is just the answer.
+ *
+ * What the session scoping cost instead was real. The prompts live under the
+ * BANK key, and a generated bank exists ONLY here on the client — there is no
+ * `gaming-peripherals-india` in DEMO_BANKS. So on the next visit
+ * `preflightPrompts` found no cached bank, fell through to the demo banks,
+ * matched nothing, and Manage Prompts rendered an EMPTY list for a domain whose
+ * seventeen prompts had already been authored and paid for. The visitor's own
+ * scan looked like it had no prompts at all.
+ *
+ * Still a CACHE, not the record. The record is the server's
+ * `domain-categories.json`; clearing site data loses nothing, because the next
+ * preview reads the same decision back. Nothing may WRITE a category here that
+ * the server did not decide.
  */
 function read(key: string): unknown {
   try {
-    const raw = globalThis.sessionStorage?.getItem(key)
+    const raw = globalThis.localStorage?.getItem(key)
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -78,7 +95,7 @@ function read(key: string): unknown {
 
 function write(key: string, value: unknown): void {
   try {
-    globalThis.sessionStorage?.setItem(key, JSON.stringify(value))
+    globalThis.localStorage?.setItem(key, JSON.stringify(value))
   } catch {
     // Private window, exhausted quota, or SSR. The caller already holds the
     // value for this render; the only loss is agreement after a reload, and the
@@ -99,7 +116,7 @@ export function readDecision(host: string): CachedDecision | null {
   }
 }
 
-/** The bank for this slug, or null. Present only for a category this session previewed. */
+/** The bank for this slug, or null. Present for any category this BROWSER has previewed, including past visits. */
 export function readBank(slug: string): CachedBank | null {
   const v = read(BANK_KEY_PREFIX + slug) as Partial<CachedBank> | null
   if (!v || typeof v.slug !== 'string' || !Array.isArray(v.prompts)) return null
