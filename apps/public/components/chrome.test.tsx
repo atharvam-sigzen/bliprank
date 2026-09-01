@@ -71,7 +71,7 @@ describe('ProductBar, before any effect runs', () => {
   it('the doors write the role on the way through', () => {
     // Entering a door is what sets the mode — the Grader handoff and the
     // dashboard both read it back out of storage.
-    expect(src).toMatch(/href="\/dashboard" onClick=\{\(\) => writeRole\('brand'\)\}/)
+    expect(src).toMatch(/href="\/" onClick=\{\(\) => writeRole\('brand'\)\}/)
     expect(src).toMatch(/href="\/agency" onClick=\{\(\) => writeRole\('agency'\)\}/)
   })
 

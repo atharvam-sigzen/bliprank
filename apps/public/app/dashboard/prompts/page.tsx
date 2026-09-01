@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed } from '@bliprank/stats'
+import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { ManagePrompts } from '@/components/manage-prompts'
 import { readActiveDomain } from '@/lib/workspace'
@@ -36,12 +37,15 @@ export default function BrandPromptsPage() {
           <p className="prose">Opening the workspace saved in this browser.</p>
         </section>
       ) : domain === null ? (
-        <section className="record">
-          <h1 className="record__title">No workspace yet</h1>
-          <p className="prose">
-            Prompts belong to a workspace, and this browser has none set. Scan a domain in the <a href="/">Grader</a> and its bank appears here.
-          </p>
-        </section>
+        <>
+          <BackLink href="/dashboard" label="Back to the overview" />
+          <section className="record">
+            <h1 className="record__title">No workspace yet</h1>
+            <p className="prose">
+              Prompts belong to a workspace, and this browser has none set. Scan a domain in the <a href="/">Grader</a> and its bank appears here.
+            </p>
+          </section>
+        </>
       ) : (
         <ManagePrompts domain={domain} backHref="/dashboard" backLabel="Back to the overview" />
       )}

@@ -194,6 +194,22 @@ function writeRaw(key: string, value: string): void {
   }
 }
 
+function readRawSession(key: string): string | null {
+  try {
+    return globalThis.sessionStorage?.getItem(key) ?? null
+  } catch {
+    return null
+  }
+}
+
+function writeRawSession(key: string, value: string): void {
+  try {
+    globalThis.sessionStorage?.setItem(key, value)
+  } catch {
+    // Private window, exhausted quota, or SSR.
+  }
+}
+
 export function readRole(): Role {
   return readRaw(ROLE_STORAGE_KEY) === 'agency' ? 'agency' : 'brand'
 }
@@ -206,12 +222,15 @@ export function readActiveDomain(): string | null {
   // Normalised on the way out as well as in: a value written by an older build,
   // or edited by hand in devtools, must not become a lookup key that no scan can
   // match.
-  return normaliseHost(readRaw(ACTIVE_STORAGE_KEY) ?? '') || null
+  //
+  // Scoped to this session: a domain is only locked once genuinely entered
+  // during this visit, so prior localStorage / tests never leak into fresh sessions.
+  return normaliseHost(readRawSession(ACTIVE_STORAGE_KEY) ?? '') || null
 }
 
 export function writeActiveDomain(domain: string): void {
   const host = normaliseHost(domain)
-  if (host) writeRaw(ACTIVE_STORAGE_KEY, host)
+  if (host) writeRawSession(ACTIVE_STORAGE_KEY, host)
 }
 
 export function readAgencyDomains(): readonly string[] {

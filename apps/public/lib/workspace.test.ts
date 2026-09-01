@@ -27,13 +27,15 @@ import {
  * it without a test turning red.
  */
 
-const ORIGINAL = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+const ORIGINAL_LOCAL = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+const ORIGINAL_SESSION = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage')
 
 function stubStorage(impl: unknown): void {
   Object.defineProperty(globalThis, 'localStorage', { value: impl, configurable: true, writable: true })
+  Object.defineProperty(globalThis, 'sessionStorage', { value: impl, configurable: true, writable: true })
 }
 
-/** A localStorage that throws on every access, as a private window does. */
+/** A storage that throws on every access, as a private window does. */
 const THROWING = {
   getItem() {
     throw new Error('The operation is insecure.')
@@ -53,8 +55,10 @@ function memoryStorage(seed: Record<string, string> = {}): { getItem(k: string):
 }
 
 afterEach(() => {
-  if (ORIGINAL) Object.defineProperty(globalThis, 'localStorage', ORIGINAL)
+  if (ORIGINAL_LOCAL) Object.defineProperty(globalThis, 'localStorage', ORIGINAL_LOCAL)
   else delete (globalThis as { localStorage?: unknown }).localStorage
+  if (ORIGINAL_SESSION) Object.defineProperty(globalThis, 'sessionStorage', ORIGINAL_SESSION)
+  else delete (globalThis as { sessionStorage?: unknown }).sessionStorage
 })
 
 describe('workspaceFor', () => {
@@ -252,6 +256,14 @@ describe('storage helpers', () => {
 
     // Junk left by an older build or by hand must not become a lookup key.
     stubStorage(memoryStorage({ [ACTIVE_STORAGE_KEY]: 'acme' }))
+    expect(readActiveDomain()).toBeNull()
+  })
+
+  it('active domain is strictly session-scoped and ignores localStorage remnants', () => {
+    // If localStorage has an old active domain left over from prior testing or visits,
+    // readActiveDomain must return null if sessionStorage has no entry.
+    Object.defineProperty(globalThis, 'localStorage', { value: memoryStorage({ [ACTIVE_STORAGE_KEY]: 'pipedrive.com' }), configurable: true, writable: true })
+    Object.defineProperty(globalThis, 'sessionStorage', { value: memoryStorage(), configurable: true, writable: true })
     expect(readActiveDomain()).toBeNull()
   })
 
