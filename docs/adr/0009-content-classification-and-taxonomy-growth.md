@@ -128,8 +128,8 @@ filtering is a different sample size from every other bank.
 The model is `claude-sonnet-5`, per CLAUDE.md §6's "customer-facing generation".
 **Superseded by Amendment 1:** the model is now chosen by `BANK_AUTHOR_MODEL`,
 defaulting to `nvidia/nemotron-3-super-120b-a12b:free` on OpenRouter with
-`meta-llama/llama-3.3-70b-instruct:free` behind it. Anthropic remains a
-selectable provider. The reasoning below is unaffected.
+`minimax/minimax-m3:free` behind it. Anthropic remains a selectable provider.
+The reasoning below is unaffected.
 
 This does not violate R2 (batch what can batch): R2 governs **scoring**, which is
 high-volume and latency-insensitive. This is a one-off authoring step on an
