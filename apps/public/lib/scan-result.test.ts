@@ -78,10 +78,20 @@ describe('scanFor — a registry, not one constant', () => {
   it('resolves every scan this build holds, in any typed form', () => {
     expect(scanFor('pipedrive.com')?.domain).toBe('pipedrive.com')
     expect(scanFor('https://www.Pipedrive.com/')?.domain).toBe('pipedrive.com')
+
     // The one that used to be invisible: scanned through the UI, cached, and
     // then unreachable because `scanFor` only ever matched the committed scan.
+    // sigzen is no longer bundled, so this now exercises the path it was always
+    // really about — a SESSION scan resolving in any typed form.
+    const store = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    })
+    rememberScan(SIGZEN)
     expect(scanFor('sigzen.com')?.domain).toBe('sigzen.com')
     expect(scanFor(' SIGZEN.com ')?.domain).toBe('sigzen.com')
+    vi.unstubAllGlobals()
   })
 
   it('returns null for a domain this build has not scanned', () => {
@@ -92,11 +102,24 @@ describe('scanFor — a registry, not one constant', () => {
 
 describe('the live-scanned domain is COLLECTED everywhere, not just on the Grader', () => {
   it('workspaceFor(sigzen.com) reports data and the day it was collected', () => {
+    // Through the session registry, which is where a live-scanned domain now
+    // lives: sigzen was dropped from BUNDLED_SCANS because rung 4 reclassifies
+    // it, and the claim under test — a scan the Grader collected is COLLECTED on
+    // the dashboard too — is about the cached path, not about being bundled.
+    const store = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    })
+    rememberScan(SIGZEN)
+
     const w = workspaceFor('sigzen.com')
     expect(w).not.toBeNull()
     expect(w!.hasData).toBe(true)
     expect(w!.lastRunDay).toBe('2026-08-25')
     expect(w!.answersCollected).toBe(85)
+
+    vi.unstubAllGlobals()
   })
 
   it('THE ZERO-COMPETITOR PATH: one brand is measured, ranked against nothing, and says so', () => {
@@ -273,7 +296,10 @@ describe('a scan collected this session is visible on every surface', () => {
     for (const raw of cases) {
       vi.stubGlobal('sessionStorage', { getItem: () => raw, setItem: () => undefined })
       expect(scans()).toEqual(BUNDLED_SCANS)
-      expect(scanFor('sigzen.com')?.domain).toBe('sigzen.com')
+      // The BUNDLED scan still resolves through a corrupt session entry — that
+      // is the claim. It was asserted on sigzen, which stopped being bundled;
+      // pipedrive is the domain that actually carries the property now.
+      expect(scanFor('pipedrive.com')?.domain).toBe('pipedrive.com')
       expect(workspaceFor('pipedrive.com')?.hasData).toBe(true)
       vi.unstubAllGlobals()
     }

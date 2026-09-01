@@ -140,13 +140,28 @@ export function runInfoOf(scan: ScanResultFile): RunInfo {
  */
 export const SCAN = raw as unknown as ScanResultFile & { readonly run: ScanRun }
 
-/** A live-scanned domain, cached by /api/scan with no run block. Bundled
- * because a static export cannot read `services/grader/data-live` at runtime,
- * and because a file of THIS shape is the one the app used to crash on. */
+/**
+ * A live-scanned domain cached by /api/scan with no run block — kept as the
+ * FIXTURE for that shape, which is the one the app used to crash on, and for
+ * the zero-competitor record the fallback bank produces.
+ *
+ * ⚠️ NO LONGER A BUNDLED DEMO DOMAIN, removed 2026-09-01. It was collected
+ * against `general-business-software`, and rung 4 of the classifier now resolves
+ * sigzen.com to an authored `erp-software` instead. Since the Grader previews
+ * every domain — including the ones this build already holds — keeping it
+ * bundled put two different categories on two consecutive screens: the preview
+ * saying ERP Software, the record one click later saying General business
+ * software. A demo record that disagrees with the live classifier about what a
+ * business IS is worse than no demo record, on the surface whose whole argument
+ * is that its numbers reconcile.
+ *
+ * Re-bundling it means re-collecting it under the category the resolver decides
+ * today, not editing this file.
+ */
 export const SIGZEN = sigzenRaw as unknown as ScanResultFile
 
 /** The scans compiled into this build: the committed demo domains. */
-export const BUNDLED_SCANS: readonly ScanResultFile[] = [SCAN, SIGZEN]
+export const BUNDLED_SCANS: readonly ScanResultFile[] = [SCAN]
 
 /**
  * Scans this browser collected through /api/scan during this session.
