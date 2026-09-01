@@ -124,6 +124,7 @@ export async function POST(req: Request): Promise<Response> {
       categoryDescription: resolved.bank.description,
       source: resolved.record.source,
       evidence: resolved.record.evidence,
+      previouslyDecided: resolved.fromRecord,
       verified: resolved.bank.verified,
       generated: resolved.record.generated,
       decidedAt: resolved.record.decidedAt,

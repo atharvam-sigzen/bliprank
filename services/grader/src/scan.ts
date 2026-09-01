@@ -101,7 +101,7 @@ export interface ScanDeps {
 export interface CategoryResolution {
   readonly slug: string
   readonly bank: PromptBank
-  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback` | `record`. */
+  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`. */
   readonly signal: string
   readonly evidence: string
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }

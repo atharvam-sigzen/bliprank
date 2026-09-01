@@ -25,6 +25,15 @@ export interface PreviewResponse {
   /** How the category was decided, and what matched. Shown, not logged. */
   readonly source: string
   readonly evidence: string
+  /**
+   * True when this decision was READ back rather than made now.
+   *
+   * Separate from `source`, which stays what it always was: reading a decision
+   * does not change how it was made. Together they let a page say "matched a
+   * tracked brand, on 12 March, and reused since" — which is the sentence that
+   * makes the stability guarantee visible instead of merely true.
+   */
+  readonly previouslyDecided: boolean
   /** True when a human wrote this bank. Generated banks are `false`, and say so. */
   readonly verified: boolean
   /** True when the bank was authored for this domain rather than chosen for it. */

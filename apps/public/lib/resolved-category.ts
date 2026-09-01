@@ -52,7 +52,7 @@ export interface CachedBank {
 
 export interface CachedDecision {
   readonly slug: string
-  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback` | `record`. */
+  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`. */
   readonly source: string
   readonly evidence: string
   readonly decidedAt: string
@@ -133,6 +133,7 @@ export function rememberDecision(preview: {
   verified: boolean
   generated: boolean
   decidedAt: string
+  previouslyDecided: boolean
   fallback?: { reason: 'unclassified' | 'ambiguous'; detail: string; candidates: readonly string[] }
   prompts: readonly { text: string; intent: string }[]
   competitors: readonly string[]

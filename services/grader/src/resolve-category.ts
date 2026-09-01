@@ -80,7 +80,16 @@ export const BANK_AUTHOR_MODEL = 'claude-sonnet-5'
 export const GENERATED_DISCOVERY = 10
 export const GENERATED_PROBLEM_LED = 7
 
-export type CategorySource = 'record' | 'leader-domain' | 'domain-token' | 'site-content' | 'generated' | 'fallback'
+/**
+ * HOW a category was decided — permanent, and never `record`.
+ *
+ * Reading a decision back does not change how it was made, so a later resolve
+ * still reports `leader-domain` or `generated`. WHETHER this particular call
+ * read it back is `ResolvedCategory.fromRecord`, which is a different fact:
+ * provenance is about the decision, freshness is about this lookup, and
+ * collapsing them loses the one a reader actually wants first.
+ */
+export type CategorySource = 'leader-domain' | 'domain-token' | 'site-content' | 'generated' | 'fallback'
 
 /** What gets written down, permanently, the first time a domain is seen. */
 export interface CategoryRecord {
@@ -99,6 +108,14 @@ export interface ResolvedCategory {
   readonly record: CategoryRecord
   readonly bank: PromptBank
   readonly category: CategoryDef
+  /**
+   * True when this call READ the decision rather than making it.
+   *
+   * The visible half of the stability guarantee: a surface can say "decided on
+   * 12 March and reused since" instead of implying every scan re-derives the
+   * category. Nothing was fetched and nothing was authored when this is true.
+   */
+  readonly fromRecord: boolean
   /** Set when the resolved bank is the fallback, carrying why. Mirrors `ScanResult.fallback`. */
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
 }
@@ -472,6 +489,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
       record,
       bank: bankFor(record.slug)!,
       category: categoryFor(record.slug)!,
+      fromRecord: false,
       fallback: { reason, detail, candidates },
     }
   }
@@ -488,8 +506,8 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     const resolvedCategory = categoryFor(record.slug)
     if (!resolvedBank || !resolvedCategory) return null
     return record.slug === FALLBACK_SLUG
-      ? { record, bank: resolvedBank, category: resolvedCategory, fallback: { reason: 'unclassified', detail: record.evidence, candidates: [] } }
-      : { record, bank: resolvedBank, category: resolvedCategory }
+      ? { record, bank: resolvedBank, category: resolvedCategory, fromRecord: false, fallback: { reason: 'unclassified', detail: record.evidence, candidates: [] } }
+      : { record, bank: resolvedBank, category: resolvedCategory, fromRecord: false }
   }
 
   // RUNG 0. Already decided. Nothing is fetched, nothing is generated, nothing
@@ -502,14 +520,14 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     if (bank && category) {
       log(`category: ${host} -> ${existing.slug} (from the record, decided ${existing.decidedAt.slice(0, 10)} by ${existing.source})`)
       return existing.slug === FALLBACK_SLUG
-        ? { record: existing, bank, category, fallback: { reason: 'unclassified', detail: existing.evidence, candidates: [] } }
-        : { record: existing, bank, category }
+        ? { record: existing, bank, category, fromRecord: true, fallback: { reason: 'unclassified', detail: existing.evidence, candidates: [] } }
+        : { record: existing, bank, category, fromRecord: true }
     }
     // The recorded slug no longer has a bank — a generated bank file was deleted,
     // or the demo taxonomy was replaced. Say so rather than silently re-deriving
     // a DIFFERENT category for a domain that already has history.
     log(`category: ${host} has a record for ${existing.slug} but no bank exists for it; falling back for this scan and leaving the record alone`)
-    return { record: existing, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fallback: { reason: 'unclassified', detail: `the recorded category ${existing.slug} has no prompt bank in this build`, candidates: [] } }
+    return { record: existing, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: true, fallback: { reason: 'unclassified', detail: `the recorded category ${existing.slug} has no prompt bank in this build`, candidates: [] } }
   }
 
   // RUNGS 1 AND 2. Free and deterministic, so always first.
@@ -529,7 +547,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     // way, and carried into the result so the page can say which three.
     const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byDomain.evidence, decidedAt, generated: false })
     log(`category: ${host} -> fallback (ambiguous across ${byDomain.candidates.join(', ')})`)
-    return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fallback: { reason: 'ambiguous', detail: byDomain.evidence, candidates: byDomain.candidates } }
+    return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: false, fallback: { reason: 'ambiguous', detail: byDomain.evidence, candidates: byDomain.candidates } }
   }
 
   // RUNG 3. The homepage. One GET, hard-bounded, through the SSRF boundary.
@@ -552,7 +570,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   if (byContent.status === 'ambiguous') {
     const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byContent.evidence, decidedAt, generated: false })
     log(`category: ${host} -> fallback (page content ambiguous: ${byContent.evidence})`)
-    return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fallback: { reason: 'ambiguous', detail: byContent.evidence, candidates: byContent.candidates } }
+    return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: false, fallback: { reason: 'ambiguous', detail: byContent.evidence, candidates: byContent.candidates } }
   }
 
   // RUNG 4. Nothing in the taxonomy fits. Grow it.
@@ -613,5 +631,5 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
 
   const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage`, decidedAt, generated: true })
   log(`category: ${host} -> ${slug} (generated: ${candidate.displayName}, ${candidate.prompts.length} prompts, no competitors)`)
-  return { record, bank: written.bank, category: written.category }
+  return { record, bank: written.bank, category: written.category, fromRecord: false }
 }

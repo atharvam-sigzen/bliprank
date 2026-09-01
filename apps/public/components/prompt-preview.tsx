@@ -54,13 +54,6 @@ function sourceLine(preview: PreviewResponse): { cap: string; line: string; glos
           'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human, and no competitors were named — we will not guess who you compete with.',
         flag: true,
       }
-    case 'record':
-      return {
-        cap: 'Decided earlier',
-        line: `${preview.categoryName}${preview.decidedAt ? ` on ${preview.decidedAt.slice(0, 10)}` : ''}`,
-        gloss: 'This domain already has a category on record. It is reused rather than re-derived, so two scans of this domain stay comparable.',
-        flag: false,
-      }
     default:
       return {
         cap: 'No category',
@@ -105,7 +98,23 @@ export function PromptPreview({
         <aside className={`note${source.flag ? ' note--flag' : ''}`} aria-label="How this category was decided">
           <span className={`note__cap${source.flag ? ' note__cap--flag' : ''}`}>{source.cap}</span>
           {source.line ? <span className="note__line">{source.line}</span> : null}
-          <span className="note__gloss">{source.gloss}</span>
+          {/* FRESHNESS, BESIDE PROVENANCE, NOT INSTEAD OF IT. `source` says how
+              the category was decided and never changes; this says whether that
+              happened now or earlier. Collapsing the two into one "decided
+              earlier" label lost the more useful half — a reader wants to know
+              it was a tracked brand match first, and that it has been stable
+              since second. */}
+          {preview.previouslyDecided ? (
+            <span className="note__line">
+              decided{preview.decidedAt ? ` ${preview.decidedAt.slice(0, 10)}` : ' earlier'}, reused since
+            </span>
+          ) : null}
+          <span className="note__gloss">
+            {source.gloss}
+            {preview.previouslyDecided
+              ? ' This domain already had a category on record, so nothing was fetched and nothing was re-derived — which is what keeps two scans of it comparable.'
+              : ''}
+          </span>
         </aside>
       </div>
 

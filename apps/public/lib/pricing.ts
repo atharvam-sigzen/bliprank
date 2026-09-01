@@ -46,3 +46,28 @@ export const exampleSplit = (prompts: number): { curated: number; custom: number
   const curated = Math.round(prompts * (2 / 3))
   return { curated, custom: prompts - curated }
 }
+
+/**
+ * May another tracked prompt be added, if this workspace is being held to `tier`?
+ *
+ * Returns the refusal in words, or null to allow. In this module rather than in
+ * the component for two reasons, and neither is tidiness: the cap is a statement
+ * about the OFFER and every statement about the offer is written down here once;
+ * and the component's version was reachable only through a click, which the SSR
+ * test harness cannot make, so a rule about an allowance had no runnable check
+ * behind it.
+ *
+ * ONE POOL, ANY SPLIT — the curated bank counts. `curated + custom` against the
+ * cap is the whole rule; a check against `custom` alone would let a Starter
+ * workspace carry 17 curated and 15 of its own and call it fifteen.
+ *
+ * `tier` undefined means no plan is being checked against, which is the default
+ * and allows everything: there is no billing in this build and a cap presented
+ * as a held allowance would describe a purchase that has not happened.
+ */
+export function capRefusal(tier: Tier | undefined, curated: number, custom: number): string | null {
+  if (!tier) return null
+  const total = curated + custom
+  if (total < tier.prompts) return null
+  return `${tier.name} allows ${tier.prompts} tracked prompts in total and this workspace already has ${total} — ${curated} curated plus ${custom} of your own. Remove one, or check against a larger plan.`
+}
