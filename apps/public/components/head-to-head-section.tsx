@@ -29,13 +29,48 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
    * that never happened. The absence is stated instead.
    */
   if (competitors.length === 0) {
+    /*
+     * ⚠️ TWO CAUSES, AND THIS USED TO ASSERT THE WRONG ONE.
+     *
+     * The copy here said, unconditionally, that the domain "was measured against
+     * the general business-software prompt set" and was "a business we could not
+     * categorise". That was true when the fallback bank was the only thing that
+     * carried no leaders. ADR-0009 added a second: a GENERATED category has
+     * `leaders: []` by design, because we will not name rivals nobody measured —
+     * and it is a SUCCESSFUL classification, into a bank authored for that
+     * business.
+     *
+     * So thecosmicbyte.com, correctly placed in an authored "Gaming Peripherals
+     * India" and measured against its own seventeen prompts, was told on its own
+     * dashboard that we could not categorise it and had fallen back to the
+     * general set. Both halves false, under a heading a customer reads as a
+     * verdict. The reason is now derived from the same record the rest of the
+     * sheet is drawn from.
+     */
+    const fellBack = scan.fallback !== undefined
+    const authored = scan.categorySource?.signal === 'generated'
     return (
       <section className="section" aria-labelledby="h2h-heading">
         <h2 id="h2h-heading">How that compares</h2>
         <p className="prose prose--flag">
-          There is no comparison on this scan. {scan.domain} was measured against the general business-software prompt set, which carries no
-          competitor list, so there is no brand to rank it against. An empty chart is not drawn in its place and no rivals are named for a
-          business we could not categorise — the mention rate above stands on its own.
+          There is no comparison on this scan.{' '}
+          {fellBack ? (
+            <>
+              {scan.domain} was measured against the general business-software prompt set, which carries no competitor list, so there is no brand
+              to rank it against. No rivals are named for a business we could not categorise.
+            </>
+          ) : authored ? (
+            <>
+              {scan.domain} was measured against {scan.categoryName}, a category authored for it because the taxonomy had no home for this
+              business. An authored category never carries a competitor set: naming rivals we have not measured is the one thing this product
+              will not do, so they can only ever arrive from brands the engines actually name in collected answers.
+            </>
+          ) : (
+            <>
+              {scan.categoryName} carries no competitor set in this build, so there is no brand to rank {scan.domain} against.
+            </>
+          )}{' '}
+          An empty chart is not drawn in its place — the mention rate above stands on its own.
         </p>
       </section>
     )

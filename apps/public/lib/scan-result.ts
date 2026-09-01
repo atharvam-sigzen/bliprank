@@ -60,6 +60,17 @@ export interface ScanResultFile {
   /** Present only when the scan ran against the fallback bank — see `scan.ts`. */
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
   readonly subjectSource: 'leader' | 'domain-label'
+  /**
+   * Which rung of the classifier decided the category, and what it matched.
+   *
+   * `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`.
+   * Declared here because "no competitors" has two entirely different causes and
+   * a surface may not conflate them: the FALLBACK bank has no leaders because we
+   * could not place the business, while a GENERATED category has none because we
+   * refuse to name rivals nobody measured (ADR-0009). Saying the first when the
+   * second is true tells a categorised customer they were not categorised.
+   */
+  readonly categorySource?: { readonly signal: string; readonly evidence: string }
   readonly comparisonBasis: string
   readonly algoVersion: string
   readonly counts: {
