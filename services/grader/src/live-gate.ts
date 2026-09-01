@@ -53,24 +53,88 @@ export interface EngineQuota {
   readonly resetAt: string
 }
 
+interface UsageQuota {
+  readonly used: number
+  readonly limit: number
+  readonly remaining: number
+  readonly reset_at: string
+}
+interface UsageItem {
+  readonly api_id: string
+  readonly quotas?: readonly UsageQuota[]
+}
+
 /**
- * Live remaining quota per engine.
+ * Every quota row in a `/usage` body, whichever shape the provider is serving.
  *
- * Undocumented endpoint, found by probing while diagnosing a 403 — the provider
- * publishes no quota headers on its answer endpoints, so this is the only way to
- * know what is left without spending to find out. It costs nothing and is not
- * itself metered.
+ * ⚠️ THIS ENDPOINT HAS ALREADY CHANGED SHAPE ONCE UNDER US, which is why it is
+ * parsed defensively rather than destructured. It is undocumented — found by
+ * probing while diagnosing a 403 — and on 2026-09-01 it began answering the
+ * bare URL with `400 Missing required parameter: api_id`. Every live scan was
+ * refused from that moment, correctly and uselessly, because the aggregate call
+ * this was written against no longer exists.
+ *
+ *   OLD  { data: { items: [ { api_id, quotas: [...] }, ... ] } }   one call, all
+ *   NEW  { data: { api_id, plan, status, quotas: [...] } }         one call each
+ *
+ * Both are accepted. The old branch costs four lines and is not dead weight: a
+ * provider that changed this once can change it back, and the failure mode is
+ * total — no quota read means no scan runs at all.
+ */
+function usageItems(body: unknown): readonly UsageItem[] {
+  const data = (body as { data?: unknown })?.data
+  if (typeof data !== 'object' || data === null) return []
+  const items = (data as { items?: unknown }).items
+  if (Array.isArray(items)) return items as readonly UsageItem[]
+  return typeof (data as UsageItem).api_id === 'string' ? [data as UsageItem] : []
+}
+
+/**
+ * Live remaining quota per engine, one call per product.
+ *
+ * The provider publishes no quota headers on its answer endpoints, so this is
+ * the only way to know what is left without spending to find out. `/usage` is
+ * free and not itself metered, so five calls cost exactly what one did.
+ *
+ * ⚠️ FAILS CLOSED, AND THE TWO FAILURES ARE KEPT APART.
+ *
+ * A transport error or a non-2xx THROWS, naming the product — not knowing the
+ * remaining quota is not permission to spend it, and `checkGate` turns that
+ * into "could not read the quota, refused rather than run blind".
+ *
+ * A clean 2xx carrying no quota row is DIFFERENT and is not an error here: it
+ * means the account holds no active subscription for that product. It is left
+ * out of the result, and `checkGate` already reports exactly that, with the
+ * action attached ("Subscribe on the provider dashboard"). Collapsing the two
+ * would answer a subscription problem with a network message.
  */
 export async function readQuota(apiKey: string, fetchImpl: typeof fetch = fetch): Promise<readonly EngineQuota[]> {
-  const res = await fetchImpl(USAGE_URL, { headers: { 'x-api-key': apiKey, Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`usage endpoint returned ${res.status}`)
-  const body = (await res.json()) as { data?: { items?: readonly { api_id: string; quotas?: readonly { used: number; limit: number; remaining: number; reset_at: string }[] }[] } }
+  const bodies = await Promise.all(
+    // The map's own keys: the set of products we collect from is defined once,
+    // and a sixth engine added to API_ID is queried here without a second edit.
+    Object.keys(API_ID).map(async (apiId) => {
+      const url = `${USAGE_URL}?api_id=${encodeURIComponent(apiId)}`
+      const res = await fetchImpl(url, { headers: { 'x-api-key': apiKey, Accept: 'application/json' } })
+      // Named, because a partial failure is otherwise indistinguishable from a
+      // total one and they need different fixes.
+      if (!res.ok) throw new Error(`usage endpoint returned ${res.status} for ${apiId}`)
+      return res.json()
+    }),
+  )
+
   const out: EngineQuota[] = []
-  for (const item of body.data?.items ?? []) {
-    const engine = API_ID[item.api_id]
-    const q = item.quotas?.[0]
-    if (!engine || !q) continue
-    out.push({ engine, used: q.used, limit: q.limit, remaining: q.remaining, resetAt: q.reset_at })
+  for (const body of bodies) {
+    for (const item of usageItems(body)) {
+      const engine = API_ID[item.api_id]
+      const q = item.quotas?.[0]
+      // `ai_answers` is a separate aggregate subscription this pipeline never
+      // calls. Counting it would report quota we cannot actually spend.
+      if (!engine || !q) continue
+      // One product answers once. A duplicate would double-count nothing useful
+      // and could only come from the old aggregate shape overlapping the new.
+      if (out.some((e) => e.engine === engine)) continue
+      out.push({ engine, used: q.used, limit: q.limit, remaining: q.remaining, resetAt: q.reset_at })
+    }
   }
   return out
 }
@@ -193,7 +257,10 @@ export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = proc
    * sequence.
    */
   maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 12),
-  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 17),
+  // ⚠️ TEMPORARY — 2026-09-01, testing only. Default lowered 17 -> 10 to halve
+  // the quota a live scan draws while domains are being tested.
+  // REVERT WITH: git checkout -- services/grader/src/live-gate.ts
+  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 10),
   ledgerFile: join(dataDir, 'live-cap.json'),
   engines: [...ENGINES],
 })

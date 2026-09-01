@@ -5,4 +5,11 @@ packages:
 
 allowBuilds:
   esbuild: true
-  sharp: set this to true or false
+  # sharp is Next's image-optimisation dependency and legitimately needs its
+  # build step. pnpm 11 moved this decision here from `pnpm.onlyBuiltDependencies`
+  # in package.json and left a literal placeholder string behind, which is not a
+  # boolean and therefore did not allow anything -- so the deploy fix in a24db97
+  # was inert from the moment the pinned pnpm was upgraded. In CI an ignored
+  # build script is ERR_PNPM_IGNORED_BUILDS and fails the install outright;
+  # locally it is only a warning, which is why this looked clean here.
+  sharp: true

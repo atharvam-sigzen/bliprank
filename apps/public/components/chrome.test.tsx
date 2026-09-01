@@ -71,7 +71,7 @@ describe('ProductBar, before any effect runs', () => {
   it('the doors write the role on the way through', () => {
     // Entering a door is what sets the mode — the Grader handoff and the
     // dashboard both read it back out of storage.
-    expect(src).toMatch(/href="\/dashboard" onClick=\{\(\) => writeRole\('brand'\)\}/)
+    expect(src).toMatch(/href="\/" onClick=\{\(\) => writeRole\('brand'\)\}/)
     expect(src).toMatch(/href="\/agency" onClick=\{\(\) => writeRole\('agency'\)\}/)
   })
 
@@ -131,7 +131,7 @@ describe('ProductBar, before any effect runs', () => {
 
 describe('workspaceGroups', () => {
   it('with no session scans, every bundled domain is reference and none is yours', () => {
-    // Node has no sessionStorage, which is exactly the fresh-browser case.
+    // Node has no localStorage, which is exactly the fresh-browser case.
     const { yours, reference } = workspaceGroups()
     expect(yours).toEqual([])
     expect(reference).toEqual([...new Set(BUNDLED_SCANS.map((s) => normaliseTyped(s.domain)))])
@@ -145,8 +145,8 @@ describe('workspaceGroups', () => {
       { ...BUNDLED_SCANS[0]!, domain: 'example.com' },
       { ...BUNDLED_SCANS[0]!, domain: bundled },
     ])
-    const g = globalThis as { sessionStorage?: Storage }
-    g.sessionStorage = { getItem: () => stash } as unknown as Storage
+    const g = globalThis as { localStorage?: Storage }
+    g.localStorage = { getItem: () => stash } as unknown as Storage
     try {
       const { yours, reference } = workspaceGroups()
       expect(yours).toContain('example.com')
@@ -155,7 +155,7 @@ describe('workspaceGroups', () => {
       expect(yours).toContain(bundled)
       expect(reference).not.toContain(bundled)
     } finally {
-      delete g.sessionStorage
+      delete g.localStorage
     }
   })
 })

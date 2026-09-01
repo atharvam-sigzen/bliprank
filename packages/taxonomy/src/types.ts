@@ -84,4 +84,23 @@ export interface CategoryDef {
   readonly displayName: string
   readonly description: string
   readonly domainKeywords: readonly string[]
+  /**
+   * Phrases matched against the site's own PAGE TEXT, not its host.
+   *
+   * A different signal with different rules, which is why it is a different
+   * field rather than `domainKeywords` reused. A host has five tokens and a
+   * homepage has two thousand words, so a single hit means almost nothing here
+   * and a multi-word phrase is affordable: `domainKeywords` cannot carry
+   * `customer relationship management` because no host contains it, and page
+   * text carries it constantly.
+   *
+   * Matched as WHOLE-TOKEN SEQUENCES after the text is normalised to lowercase
+   * `[a-z0-9]` tokens — so `crm` matches "our CRM" and never "microm", the same
+   * substring refusal `domainKeywords` makes for the same reason.
+   *
+   * As with `domainKeywords`, no phrase may appear in two categories; the tests
+   * assert it. A shared phrase makes every site carrying it permanently
+   * ambiguous, which is the one outcome worse than not classifying at all.
+   */
+  readonly contentKeywords: readonly string[]
 }

@@ -21,7 +21,7 @@ import { isOnDomain } from './domain.js'
  * Bumped whenever a rule changes what an existing answer would score (R5).
  * Never mutate historical rows: bump, re-score forward, changelog the diff.
  */
-export const SCORING_ALGO_VERSION = 'det-1'
+export const SCORING_ALGO_VERSION = 'det-2'
 
 export interface BrandSpec {
   readonly id: string
@@ -32,8 +32,135 @@ export interface BrandSpec {
    * 'HubSpot', 'Hub Spot', 'hubspot crm'. Not a substring fragment.
    */
   readonly aliases: readonly string[]
+  /**
+   * Forms to match IGNORING separators, for a brand whose domain runs its words
+   * together. Compared against the answer with all non-alphanumerics removed,
+   * then boundary-checked against the ORIGINAL text.
+   *
+   * ⚠️ THIS EXISTS BECAUSE OF A FALSE ZERO, which is the worst thing this
+   * scorer can produce. `thecosmicbyte.com` is not a tracked leader, so its only
+   * alias was the domain label `thecosmicbyte`. The engines write "Cosmic Byte".
+   * Whole-token matching found nothing, and a brand named 139 times across 31 of
+   * 50 answers was published as 0.0% — mentioned in none of them. A low number
+   * is a finding; a zero that should be 62% is a broken instrument.
+   *
+   * Kept SEPARATE from `aliases` rather than applied to all of them, because
+   * squashing is a weaker rule and the leader tables are hand-reviewed. A brand
+   * that needs it says so; nothing else changes behaviour.
+   */
+  readonly squashedAliases?: readonly string[]
   /** Domains the brand owns, for citation detection. Subdomains count. */
   readonly domains: readonly string[]
+}
+
+/**
+ * Leading words a domain bolts onto a brand name because the bare name was
+ * taken. Stripping one yields the form the world actually writes.
+ *
+ * `thecosmicbyte` -> `cosmicbyte`, which is what "Cosmic Byte" squashes to.
+ * Without this the squashed alias is `thecosmicbyte`, the answers say "Cosmic
+ * Byte", and the two never meet — the false zero.
+ */
+const DOMAIN_PREFIXES = ['the', 'get', 'try', 'use', 'my', 'go', 'join', 'hey', 'we', 'app'] as const
+
+/**
+ * The shortest a prefix-stripped remainder may be before it is trusted.
+ *
+ * `google` minus `go` is `ogle` — a real four-letter string that could stand
+ * alone in a sentence and be counted as a mention of Google. Five characters is
+ * not a proof, it is a floor: it keeps the accidental strippings of short
+ * domains out while leaving real compound names (`cosmicbyte`) well clear.
+ */
+const MIN_STRIPPED_LENGTH = 5
+
+/**
+ * The floor for a stripped remainder the SITE TITLE independently names.
+ *
+ * ⚠️ WHY TWO FLOORS RATHER THAN ONE LOWER ONE. Reviewing the single floor of 5
+ * exposed a real cost: `getlago.com` minus `get` is `lago`, four characters, so
+ * it was refused and every "Lago handles usage-based billing" went uncounted —
+ * the same false zero this whole change exists to end, one letter further down.
+ * Lowering the floor to 4 outright fixes that and simultaneously breaks
+ * `google.com`, whose remainder after `go` is `ogle`: an ordinary English word
+ * that would score a mention of Google every time somebody ogles something.
+ *
+ * The floor alone cannot separate those two — both are four letters. What
+ * separates them is EVIDENCE. `getlago.com`'s homepage title says "Lago";
+ * `google.com`'s does not say "Ogle". So a four-character remainder is not
+ * refused outright, it is held as PROVISIONAL and admitted only when the title
+ * independently names it. Nothing is trusted on its length alone.
+ */
+const MIN_CORROBORATED_LENGTH = 4
+
+/** Lowercase, letters and digits only. The form squashed matching compares. */
+export const squash = (s: string): string => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+
+/**
+ * Brand forms for a domain that is NOT a tracked leader, so has no reviewed
+ * alias table — the `domain-label` case in `subjectFor`.
+ *
+ * ⚠️ THE FALSE ZERO THIS EXISTS TO END. The subject's only alias used to be the
+ * bare domain label. `thecosmicbyte.com` therefore looked for `thecosmicbyte`
+ * while every engine wrote "Cosmic Byte", and a brand named in 31 of 50 answers
+ * was published as mentioned in none of them.
+ *
+ * Two signals, and they check each other:
+ *
+ *   THE DOMAIN gives squashed candidates — the label, and the label minus a
+ *   leading `the`/`get`/`use`. Separator-insensitive, so any spacing of the
+ *   same letters matches. Never shorter than MIN_STRIPPED_LENGTH.
+ *
+ *   THE SITE'S OWN TITLE gives the real trading name, but ONLY when a phrase in
+ *   it squashes to one of those candidates. That corroboration is the whole
+ *   safety property: the title is not trusted to name the brand, it is trusted
+ *   to CONFIRM a name the domain already implies. A title reading "Best Gaming
+ *   Gear in India" contributes nothing, because nothing in it matches the host.
+ *
+ * Pure, so the same host and title always yield the same forms. The caller is
+ * responsible for recording the title-derived name, because a re-scan that
+ * reads the decision instead of re-fetching must score identically (R5).
+ */
+export function domainBrandForms(host: string, siteTitle?: string): { name: string; aliases: string[]; squashedAliases: string[] } {
+  const label = squash((host.toLowerCase().replace(/^www\./, '').split('.')[0] ?? '').trim())
+  if (!label) return { name: host, aliases: [], squashedAliases: [] }
+
+  // TRUSTED on length alone. PROVISIONAL until the title vouches for it.
+  const trusted = [label]
+  const provisional: string[] = []
+  for (const p of DOMAIN_PREFIXES) {
+    if (!label.startsWith(p)) continue
+    const rest = label.slice(p.length)
+    if (rest.length >= MIN_STRIPPED_LENGTH) trusted.push(rest)
+    else if (rest.length >= MIN_CORROBORATED_LENGTH) provisional.push(rest)
+  }
+
+  // Every candidate the title names, plus the longest phrase that named one —
+  // longest so "Cosmic Byte" is preferred over "Cosmic" for the display name.
+  const named = new Set<string>()
+  let traded = ''
+  const words = (siteTitle ?? '').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  for (let i = 0; i < words.length; i++) {
+    for (let n = Math.min(4, words.length - i); n >= 1; n--) {
+      const phrase = words.slice(i, i + n).join(' ')
+      const sq = squash(phrase)
+      if (!trusted.includes(sq) && !provisional.includes(sq)) continue
+      named.add(sq)
+      if (phrase.length > traded.length) traded = phrase
+    }
+  }
+
+  // A provisional candidate is admitted ONLY on the title's evidence. This is
+  // the line that lets `lago` in for getlago.com and keeps `ogle` out for
+  // google.com: both are four letters, and only one of them is on its homepage.
+  const promoted = provisional.filter((c) => named.has(c))
+
+  return {
+    // The corroborated trading name is what a reader should see. Falling back to
+    // the label is honest rather than pretty: it is what we actually know.
+    name: traded || label,
+    aliases: [...new Set([label, ...(traded ? [traded] : [])])],
+    squashedAliases: [...new Set([...trusted, ...promoted])],
+  }
 }
 
 export interface ScoreInput {
@@ -119,6 +246,71 @@ function aliasRegex(alias: string): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{N}_])${a}(?![\\p{L}\\p{N}_])`, 'giu')
 }
 
+/** True for a character that may not flank a match — same rule as `aliasRegex`. */
+const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}_]/u.test(c)
+
+/**
+ * Occurrences of a separator-insensitive alias, as spans in the ORIGINAL text.
+ *
+ * The text is squashed — every non-alphanumeric removed — and searched for the
+ * squashed alias, so `cosmicbyte` finds "Cosmic Byte", "Cosmic-Byte",
+ * "CosmicByte" and "Cosmic  Byte" without anyone enumerating those forms.
+ *
+ * ⚠️ SQUASHING DESTROYS WORD BOUNDARIES, AND THAT IS THE DANGEROUS PART.
+ * "smart station" squashes to `smartstation`, which CONTAINS `artstation`. A
+ * naive squash-and-search would report a mention of ArtStation in a sentence
+ * about a smart station — inventing a mention, which is worse than missing one
+ * and is the failure mode this whole product argues against.
+ *
+ * So every hit is mapped back to its original offsets through `origin` and
+ * boundary-checked THERE, against the untouched text: the character before the
+ * match and the character after it must not be a letter, digit or underscore.
+ * `artstation` inside "smart station" starts immediately after `m` and is
+ * rejected; "Cosmic Byte" is flanked by spaces and is kept.
+ *
+ * Overlapping occurrences of one alias are skipped, so a repeated squashed form
+ * cannot be counted twice from a single stretch of text.
+ */
+export function findSquashedSpans(
+  normalisedText: string,
+  squashedAliases: readonly string[],
+): { start: number; end: number; alias: string }[] {
+  const usable = squashedAliases.filter((a) => a.trim())
+  if (usable.length === 0) return []
+
+  // Squashed text plus, per squashed character, its index in the original. Both
+  // are built in one pass so the mapping cannot drift from the string.
+  let squashed = ''
+  const origin: number[] = []
+  for (let i = 0; i < normalisedText.length; i++) {
+    const c = normalisedText[i]!
+    if (/[\p{L}\p{N}]/u.test(c)) {
+      squashed += c.toLowerCase()
+      origin.push(i)
+    }
+  }
+
+  const out: { start: number; end: number; alias: string }[] = []
+  for (const alias of usable) {
+    const needle = alias.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+    // A one or two character needle squash-matches far too much to be evidence.
+    if (needle.length < 3) continue
+    let from = 0
+    for (;;) {
+      const at = squashed.indexOf(needle, from)
+      if (at === -1) break
+      const start = origin[at]!
+      const end = origin[at + needle.length - 1]! + 1
+      // THE GUARD. Checked in the original text, where the boundaries survive.
+      if (!isWordChar(normalisedText[start - 1]) && !isWordChar(normalisedText[end])) {
+        out.push({ start, end, alias })
+      }
+      from = at + needle.length
+    }
+  }
+  return out
+}
+
 /**
  * All occurrences of any alias, as non-overlapping spans.
  *
@@ -141,6 +333,7 @@ export function findMentions(normalisedText: string, brand: BrandSpec): BrandMen
       if (m.index !== undefined) spans.push({ start: m.index, end: m.index + m[0].length, alias })
     }
   }
+  spans.push(...findSquashedSpans(normalisedText, brand.squashedAliases ?? []))
   if (spans.length === 0) return null
 
   // Earliest first; at equal start the longer span wins; then alias name, so

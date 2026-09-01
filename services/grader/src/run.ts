@@ -48,6 +48,8 @@ import { loadApiKey } from './load-key.js'
 import { FileBlobStore, FileKV } from './local-store.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult } from './scan.js'
+import { allBanks, allCategories, resolveCategory } from './resolve-category.js'
+import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
 
 /** Provider ceiling for one API key, shared across engines. */
 const KEY_RPS_CEILING = 15
@@ -68,6 +70,13 @@ export interface RunnerOptions {
   readonly dataDir: string
   readonly outFile: string
   readonly log: (s: string) => void
+  /**
+   * Which model authors a bank when no category in the taxonomy fits (rung 4 of
+   * `resolve-category.ts`), resolved from the environment by `bankAuthorConfig`.
+   * Absent disables authoring only — the homepage signal still runs, and an
+   * unauthorable domain falls back exactly as before.
+   */
+  readonly author?: BankAuthorConfig | undefined
 }
 
 export function parseArgs(
@@ -111,6 +120,7 @@ export function parseArgs(
   const apiKey = found?.key ?? ''
   if (!offline && !apiKey) return { refuse: `OPENWEBNINJA_API_KEY not found in the environment, .env.local or .env` }
   if (!offline) keySource = found?.from ?? 'unknown'
+  const author = bankAuthorConfig(env, (n) => loadApiKey(repoRoot, env, n)?.key) ?? undefined
   if (!offline && env['COLLECTION_ENABLED'] !== 'true') {
     return { refuse: 'COLLECTION_ENABLED is not "true" (rule R3). Enable it deliberately for this run, or pass --fixture.' }
   }
@@ -144,6 +154,20 @@ export function parseArgs(
       apiKey,
       dataDir,
       outFile: args.get('out') ?? join(dataDir, 'latest.json'),
+      /*
+       * The bank author, from the environment and the same repo-root dotenv the
+       * provider key comes from. Absent when no key is configured, which
+       * disables rung 4 and nothing else.
+       *
+       * SECRETS FROM THE FILE, DECISIONS FROM THE COMMAND LINE still holds.
+       * Every DECISION this runner makes -- plan, cap, mode -- is still a flag it
+       * refuses to default. Which model authors a bank is not that kind of
+       * decision: it spends no provider quota, it cannot change what a scan
+       * costs, and the whole point of the seam is that swapping a rate-limited
+       * free tier is an env edit rather than a new flag on every command anyone
+       * has already written down.
+       */
+      ...(author ? { author } : {}),
       log: (s) => process.stdout.write(`${s}\n`),
     },
   }
@@ -315,12 +339,50 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     const adapterFor = (engine: EngineId) =>
       o.mode === 'fixture' ? fixtureAdapter(engine) : o.mode === 'stub' ? stubAdapter(engine) : openWebNinjaAdapter(engine, { apiKey: o.apiKey, plan: o.plan })
 
+    /*
+     * THE RICHER CLASSIFIER, ON LIVE RUNS ONLY.
+     *
+     * Not a capability gate — it is that the other two modes must stay offline.
+     * `--fixture` is what CI and every test use, and its whole promise is that
+     * nothing leaves the machine; a homepage GET would break that quietly and
+     * make the suite depend on someone else's uptime. `--stub` is the same
+     * bargain. A live run is already reaching the network by definition.
+     *
+     * The fixture adapter also only holds answers for the hand-authored banks,
+     * so a generated bank on a fixture run would collect nothing and report
+     * `no-answers` — a confusing way to say "this mode cannot do that".
+     */
+    const resolver =
+      o.mode === 'live'
+        ? async (domain: string) => {
+            const r = await resolveCategory(domain, {
+              dataDir: o.dataDir,
+              author: o.author,
+              log: o.log,
+            })
+            return {
+              slug: r.record.slug,
+              bank: r.bank,
+              signal: r.record.source,
+              evidence: r.record.evidence,
+              ...(r.record.brandName ? { brandName: r.record.brandName } : {}),
+              ...(r.fallback ? { fallback: r.fallback } : {}),
+            }
+          }
+        : undefined
+
     const result = await runScan(
       { domain: o.domain, engines: o.engines, day: o.day, runsPerCell: 1, ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}) },
       {
         orchestrator,
         blob,
         adapterFor,
+        // Banks grown by earlier scans are in scope for this one, so the second
+        // domain in an authored category joins it rather than authoring a
+        // duplicate — and `compare()` can then put the two side by side.
+        banks: allBanks(o.dataDir),
+        taxonomy: allCategories(o.dataDir),
+        ...(resolver ? { resolveCategory: resolver } : {}),
         onProgress: (p) => {
           // The heartbeat. A lock that stops being touched is a scan that
           // stopped, whether or not the process holding it is still alive.

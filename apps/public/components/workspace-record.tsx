@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
 import { ActionLink } from '@/components/action-link'
-import { withTheme } from '@/components/chrome'
+import { themedUrl, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { RangeRail } from '@/components/range-rail'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
@@ -476,19 +476,14 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
  * it from here must not mistake its charts for their own measurements.
  */
 export function WorkedExample() {
-  // withTheme reads localStorage, so the server renders the bare URL. On
-  // /agency/client/[domain] this component is in the first server-rendered
-  // paint, so applying the param during hydration would mismatch the server
-  // HTML; it goes on after mount instead — same pattern as apps/web's bar.
-  const [ready, setReady] = useState(false)
-  useEffect(() => setReady(true), [])
+  const theme = useTheme()
   return (
     <div style={{ marginTop: 'var(--space-3)' }}>
-      {/* withTheme: the worked example is a different origin, so the theme
+      {/* themedUrl: the worked example is a different origin, so the theme
           chosen here cannot reach its localStorage. The query parameter is how
           the choice crosses; `system` sends nothing and the media query
           decides there as it does here. */}
-      <ActionLink href={ready ? withTheme(DASHBOARD_URL) : DASHBOARD_URL} external>
+      <ActionLink href={themedUrl(DASHBOARD_URL, theme)} external>
         Worked example
       </ActionLink>
       <p className="prose">

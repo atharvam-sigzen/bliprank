@@ -51,7 +51,10 @@ async function shoot(browser, { name, path, viewport, theme, prepare, seed }) {
   if (seed) {
     await context.addInitScript((entries) => {
       try {
-        for (const [k, v] of entries) window.localStorage.setItem(k, v)
+        for (const [k, v] of entries) {
+          window.localStorage.setItem(k, v)
+          window.sessionStorage?.setItem(k, v)
+        }
       } catch {
         /* private window; the page must cope, and the capture will show whether it does */
       }

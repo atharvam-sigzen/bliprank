@@ -64,14 +64,111 @@ const normalise = (u) => {
   }
 }
 
+/**
+ * What the preview endpoint answers during a crawl.
+ *
+ * Shaped like a real authored category — the case with no competitors, which is
+ * the branch the preview screen has the most to say about. Fixed, so the gate's
+ * result does not depend on what a live site happens to say today.
+ */
+const CANNED_PREVIEW = {
+  domain: 'acme-example.test',
+  category: 'gaming-peripherals',
+  categoryName: 'Gaming peripherals',
+  categoryDescription: 'Keyboards, mice and headsets built for gaming.',
+  source: 'generated',
+  evidence: 'authored from the acme-example.test homepage',
+  previouslyDecided: false,
+  verified: false,
+  generated: true,
+  decidedAt: '2026-09-01T00:00:00.000Z',
+  prompts: Array.from({ length: 17 }, (_, i) => ({ text: `Best gaming keyboard for a small desk, option ${i + 1}`, intent: i < 10 ? 'discovery' : 'problem-led' })),
+  engines: ['chatgpt', 'gemini', 'copilot', 'google-ai-mode', 'google-ai-overviews'],
+  competitors: [],
+}
+
+/**
+ * Submit a domain on the Grader and harvest what the resulting screen offers.
+ *
+ * ⚠️ THE WAIT IS ON THE CONDITION, NOT ON A SELECTOR APPEARING.
+ *
+ * This used to be `waitForSelector('.record__domain, [role=alert]')` followed
+ * immediately by reading the DOM, and it resolved while NEITHER was present —
+ * so every run harvested the still-submitting form instead of the screen after
+ * it. /dashboard, /dashboard/prompts and /dashboard/workspace were reported
+ * UNREACHABLE BY CLICK on every persona, for months, and they are all reachable:
+ * one extra second and the "Open in dashboard" button is there. A gate that
+ * reports phantom failures gets its failures ignored, which is worse than not
+ * having the gate.
+ */
+async function harvestGraderState(page, domain, label, from, reached, queue, edges) {
+  await page.goto(`${PUB}/`, { waitUntil: 'networkidle' }).catch(() => {})
+  const input = await page.$('#domain')
+  if (!input) return
+  await input.fill(domain)
+  await page.click('button[type=submit]').catch(() => {})
+
+  // Settled means: the form is gone AND something that replaces it is on screen.
+  await page
+    .waitForFunction(
+      () => {
+        const submitting = [...document.querySelectorAll('button[type=submit]')].length > 0
+        const arrived =
+          document.querySelector('.record__domain') !== null ||
+          document.querySelector('[role=alert]') !== null ||
+          [...document.querySelectorAll('button')].some((b) => /run this scan|open in dashboard|check a(nother)? different|check another/i.test(b.textContent ?? ''))
+        return !submitting && arrived
+      },
+      { timeout: 15000 },
+    )
+    .catch(() => {})
+
+  for (const h of await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href))) {
+    const k = normalise(h)
+    if (k) {
+      edges.push({ from: `${from} (${label})`, to: k })
+      if (!reached.has(k)) queue.push(k)
+    }
+  }
+
+  // Buttons that navigate (the handoff) count as clickable too.
+  const buttons = await page.evaluate(() => [...document.querySelectorAll('button')].map((b) => b.textContent?.trim() ?? ''))
+  if (buttons.some((b) => /open in dashboard/i.test(b))) {
+    edges.push({ from: `${from} (${label})`, to: `${PUB}/dashboard` })
+    if (!reached.has(`${PUB}/dashboard`)) queue.push(`${PUB}/dashboard`)
+  }
+}
+
 async function crawlPersona(browser, name, seed) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
   await context.addInitScript((entries) => {
     try {
-      for (const [k, v] of entries) window.localStorage.setItem(k, v)
+      for (const [k, v] of entries) {
+        window.localStorage.setItem(k, v)
+        window.sessionStorage?.setItem(k, v)
+      }
     } catch {}
   }, Object.entries(seed))
-  await context.route('**/*', (r) => (/openwebninja|\/api\/scan/i.test(r.request().url()) ? r.abort() : r.continue()))
+  /*
+   * NOTHING MAY SPEND, AND THE PREVIEW MUST STILL RENDER.
+   *
+   * /api/scan and the provider are aborted outright — the one scan this crawl
+   * performs is pipedrive.com, answered from the committed result client-side
+   * before any fetch reaches here.
+   *
+   * /api/preview is FULFILLED with a canned body rather than aborted. It spends
+   * no provider quota, but it does make an outbound request to whatever domain
+   * is typed and may make a model call, and a crawl is not the place for either.
+   * Aborting it instead would leave the preview screen — a real state with real
+   * links, and the only route to a scan for any domain this build does not
+   * already hold — permanently unreachable by this gate.
+   */
+  await context.route('**/*', (r) => {
+    const url = r.request().url()
+    if (/openwebninja|\/api\/scan/i.test(url)) return r.abort()
+    if (/\/api\/preview/i.test(url)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CANNED_PREVIEW) })
+    return r.continue()
+  })
 
   const page = await context.newPage()
   const reached = new Set()
@@ -107,30 +204,15 @@ async function crawlPersona(browser, name, seed) {
       }
     }
 
-    // The Grader's result state exists only after a scan; its links (Open in
-    // dashboard) are part of what a person can click. Run it once, on the page
-    // where it lives.
+    // The Grader's states after a submit — the preview, then the result — exist
+    // only after interaction, and both carry links a person can click. Run the
+    // flow once, on the page where it lives.
     if (key === `${PUB}/`) {
-      const input = await page.$('#domain')
-      if (input) {
-        await input.fill('pipedrive.com')
-        await page.click('button[type=submit]').catch(() => {})
-        await page.waitForSelector('.record__domain, [role=alert]', { timeout: 8000 }).catch(() => {})
-        const resultHrefs = await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href))
-        for (const h of resultHrefs) {
-          const k = normalise(h)
-          if (k) {
-            edges.push({ from: `${key} (result state)`, to: k })
-            if (!reached.has(k)) queue.push(k)
-          }
-        }
-        // Buttons that navigate (the handoff) count as clickable too.
-        const buttons = await page.evaluate(() => [...document.querySelectorAll('button')].map((b) => b.textContent?.trim() ?? ''))
-        if (buttons.some((b) => /open in dashboard/i.test(b))) {
-          edges.push({ from: `${key} (result state)`, to: `${PUB}/dashboard` })
-          if (!reached.has(`${PUB}/dashboard`)) queue.push(`${PUB}/dashboard`)
-        }
-      }
+      // A domain this build ALREADY HOLDS goes straight to the record; a domain
+      // it does not goes through the preview first. Both paths are crawled,
+      // because they are two different screens with two different ways onward.
+      await harvestGraderState(page, 'pipedrive.com', 'result state', key, reached, queue, edges)
+      await harvestGraderState(page, 'acme-example.test', 'preview state', key, reached, queue, edges)
     }
   }
 

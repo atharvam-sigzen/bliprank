@@ -35,6 +35,19 @@ import { join } from 'node:path'
 
 const NAME = 'OPENWEBNINJA_API_KEY'
 
+/**
+ * Secrets this may be asked for. An allow-list, mirroring `FILE_FLAGS` below and
+ * for the same reason: a general "read any variable from the dotenv file"
+ * loader is a way for a name typed at a call site to reach a value nobody
+ * intended to expose. Every key here is named in CLAUDE.md §7.
+ *
+ * `BANK_AUTHOR_API_KEY` and `OPENROUTER_API_KEY` arrived with the swappable
+ * bank-author (ADR-0009 Amendment 1): the model can be changed with an env edit,
+ * so the KEY has to be reachable the same way, from the same repo-root file, or
+ * swapping providers would mean editing two things in two places.
+ */
+const SECRETS = new Set([NAME, 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'BANK_AUTHOR_API_KEY'])
+
 /** Parse one variable out of dotenv-format text. Quotes and CRLF stripped. */
 export function readVar(text: string, name: string): string | undefined {
   for (const line of text.split(/\r?\n/)) {
@@ -54,13 +67,19 @@ export function readVar(text: string, name: string): string | undefined {
  * `.env`. `.env.local` wins because that is the conventional per-machine
  * override and the file least likely to be shared.
  */
-export function loadApiKey(root: string, env: NodeJS.ProcessEnv = process.env): { key: string; from: string } | undefined {
-  const fromEnv = env[NAME]?.trim()
+export function loadApiKey(root: string, env: NodeJS.ProcessEnv = process.env, name: string = NAME): { key: string; from: string } | undefined {
+  // Parameterised rather than copied. `resolve-category.ts` needs
+  // ANTHROPIC_API_KEY from the same two files, with the same precedence and the
+  // same CRLF handling, and a second loader is a second thing to keep correct —
+  // the one that would drift is whichever is touched less, which is exactly the
+  // shape of the bug this file's own docblock describes.
+  if (!SECRETS.has(name)) return undefined
+  const fromEnv = env[name]?.trim()
   if (fromEnv) return { key: fromEnv, from: 'environment' }
   for (const f of ['.env.local', '.env']) {
     const p = join(root, f)
     if (!existsSync(p)) continue
-    const v = readVar(readFileSync(p, 'utf8'), NAME)
+    const v = readVar(readFileSync(p, 'utf8'), name)
     if (v) return { key: v, from: f }
   }
   return undefined

@@ -16,21 +16,44 @@ const dir = () => mkdtempSync(join(tmpdir(), 'gate-'))
 const cfg = (over: Partial<ReturnType<typeof defaultGateConfig>> = {}) => ({ ...defaultGateConfig(dir(), {} as NodeJS.ProcessEnv), ...over })
 const NOW = new Date('2026-08-25T09:00:00Z')
 
-const usage = (per: Record<string, number>) =>
-  ({
-    ok: true,
-    json: async () => ({
-      data: {
-        items: Object.entries(per).map(([api_id, remaining]) => ({
-          api_id,
-          quotas: [{ used: 50 - remaining, limit: 50, remaining, reset_at: '2026-09-21T11:07:00.000Z' }],
-        })),
-      },
-    }),
-  }) as unknown as Response
+const quotaRow = (remaining: number) => ({ name: 'Requests', used: 50 - remaining, limit: 50, remaining, reset_at: '2026-09-21T11:07:00.000Z' })
+
+/**
+ * THE SHAPE THE PROVIDER ACTUALLY SERVES, captured from a real response on
+ * 2026-09-01. One product per call, `data` a single object rather than a list:
+ *
+ *   {"status":"OK","data":{"api_id":"chatgpt","plan":{...},"status":"active",
+ *    "quotas":[{"name":"Requests","limit":50,"used":0,"remaining":50,...}]}}
+ *
+ * A product the account does not hold answers 2xx with no quota row, which is a
+ * missing SUBSCRIPTION and not a failed read — the two are asserted apart below.
+ */
+const usagePerProduct = (per: Record<string, number>) =>
+  ((async (input: string) => {
+    const apiId = new URL(String(input)).searchParams.get('api_id') ?? ''
+    const remaining = per[apiId]
+    return {
+      ok: true,
+      json: async () => ({
+        status: 'OK',
+        data:
+          remaining === undefined
+            ? { api_id: apiId, status: 'inactive' }
+            : { api_id: apiId, plan: { key: 'basic', is_free: true }, status: 'active', quotas: [quotaRow(remaining)] },
+      }),
+    } as unknown as Response
+  }) as unknown as typeof fetch)
+
+/** The retired aggregate shape, kept because `usageItems` still accepts it. */
+const usageAggregate = (per: Record<string, number>) =>
+  ((async () =>
+    ({
+      ok: true,
+      json: async () => ({ data: { items: Object.entries(per).map(([api_id, remaining]) => ({ api_id, quotas: [quotaRow(remaining)] })) } }),
+    }) as unknown as Response) as unknown as typeof fetch)
 
 const FULL = { chatgpt: 50, gemini: 50, copilot: 50, google_ai_mode: 50, ai_overviews: 50 }
-const fetchOK = (per: Record<string, number> = FULL) => (async () => usage(per)) as unknown as typeof fetch
+const fetchOK = (per: Record<string, number> = FULL) => usagePerProduct(per)
 
 describe('the quota is read from the provider, not tallied locally', () => {
   it('maps every provider api_id onto our engine ids', async () => {
@@ -315,5 +338,137 @@ describe('running out of quota mid-demo', () => {
     const r = await checkGate('y.com', cfg(), 'k', NOW, dead)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.message).toContain('rather than run blind')
+  })
+})
+
+/**
+ * THE DAY THE ENDPOINT MOVED — 2026-09-01.
+ *
+ * `/usage` began answering the bare URL with `400 Missing required parameter:
+ * api_id`. Every live scan was refused from that moment: correctly, because the
+ * gate fails closed, and uselessly, because no quota could be read at all. The
+ * aggregate call this was written against no longer exists.
+ */
+describe('readQuota asks per product, and keeps a dead read apart from a dead subscription', () => {
+  it('sends one request per product, each carrying its own api_id', async () => {
+    const asked: string[] = []
+    const spy = (async (input: string) => {
+      asked.push(new URL(String(input)).searchParams.get('api_id') ?? '')
+      return {
+        ok: true,
+        json: async () => ({ data: { api_id: new URL(String(input)).searchParams.get('api_id'), quotas: [quotaRow(50)] } }),
+      } as unknown as Response
+    }) as unknown as typeof fetch
+
+    const q = await readQuota('k', spy)
+    // The bare URL is what started returning 400. Nothing may request it.
+    expect(asked.sort()).toEqual(['ai_overviews', 'chatgpt', 'copilot', 'gemini', 'google_ai_mode'])
+    expect([...q.map((x) => x.engine)].sort()).toEqual(['chatgpt', 'copilot', 'gemini', 'google-ai-mode', 'google-ai-overviews'])
+  })
+
+  it('reads the real per-product body, quotas and all', async () => {
+    const q = await readQuota('k', fetchOK({ ...FULL, gemini: 12 }))
+    const gemini = q.find((x) => x.engine === 'gemini')
+    expect(gemini).toEqual({ engine: 'gemini', used: 38, limit: 50, remaining: 12, resetAt: '2026-09-21T11:07:00.000Z' })
+  })
+
+  it('still parses the retired aggregate shape, because this endpoint moves', async () => {
+    const q = await readQuota('k', usageAggregate(FULL))
+    // Five calls each returning all five products must not report 25 engines.
+    expect(q).toHaveLength(5)
+  })
+
+  it('a NON-2xx throws and names the product, so the gate refuses rather than guesses', async () => {
+    const dead = (async (input: string) =>
+      ({ ok: new URL(String(input)).searchParams.get('api_id') !== 'copilot', status: 400, json: async () => ({}) }) as unknown as Response) as unknown as typeof fetch
+
+    await expect(readQuota('k', dead)).rejects.toThrow(/400 for copilot/)
+
+    // And end to end: the gate turns that into 'unreadable', never into a spend.
+    const verdict = await checkGate('a.com', cfg({ maxNewPerDay: 2 }), 'k', NOW, dead)
+    expect(verdict.ok).toBe(false)
+    if (!verdict.ok) expect(verdict.reason).toBe('unreadable')
+  })
+
+  it('a CLEAN 2xx with no quota row is a missing subscription, not a failed read', async () => {
+    // The distinction is the whole point: one says "try again", the other says
+    // "subscribe". Answering a billing problem with a network message helps
+    // nobody standing in front of an audience.
+    const q = await readQuota('k', fetchOK({ chatgpt: 50, gemini: 50, copilot: 50, google_ai_mode: 50 }))
+    expect(q.map((x) => x.engine)).not.toContain('google-ai-overviews')
+    expect(q).toHaveLength(4)
+
+    const verdict = await checkGate('a.com', cfg({ maxNewPerDay: 2 }), 'k', NOW, fetchOK({ chatgpt: 50, gemini: 50, copilot: 50, google_ai_mode: 50 }))
+    expect(verdict.ok).toBe(false)
+    if (!verdict.ok) {
+      expect(verdict.reason).toBe('quota')
+      expect(verdict.message).toContain('No active subscription found for: google-ai-overviews')
+    }
+  })
+})
+
+/**
+ * THE HUMAN-REVIEW ITEM, MADE EXECUTABLE.
+ *
+ * `live-gate.ts` is the gate between a public form and paid collection, so the
+ * property that matters is not "the happy path works" but "no path says yes
+ * without evidence". Reading the code and agreeing is how a gap survives a
+ * refactor; this fails instead.
+ *
+ * THE INVARIANT: checkGate returns ok:true ONLY when every engine in
+ * cfg.engines has a real quota row with remaining >= callsPerEngine. Asserted
+ * over the whole power set of present/absent engines, so a future edit cannot
+ * open a hole for one combination and pass because nobody wrote that case.
+ */
+describe('INVARIANT: ok:true requires a quota row for EVERY engine in cfg.engines', () => {
+  const ALL = ['chatgpt', 'gemini', 'copilot', 'google_ai_mode', 'ai_overviews'] as const
+
+  it('holds across all 32 subsets of engines the provider answers for', async () => {
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 17 })
+    for (let mask = 0; mask < 1 << ALL.length; mask++) {
+      const present: Record<string, number> = {}
+      for (const [i, id] of ALL.entries()) if (mask & (1 << i)) present[id] = 50
+
+      const verdict = await checkGate(`d${mask}.com`, c, 'k', NOW, fetchOK(present))
+      const complete = Object.keys(present).length === ALL.length
+
+      // The only shape allowed to pass is the complete one.
+      expect(verdict.ok, `mask ${mask} had ${Object.keys(present).length}/5 engines`).toBe(complete)
+      if (!verdict.ok && !complete) expect(verdict.reason).toBe('quota')
+    }
+  })
+
+  it('a present engine that is SHORT is still a refusal, at every boundary', async () => {
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 17 })
+    for (const id of ALL) {
+      // One below the requirement refuses; exactly the requirement passes.
+      const short = await checkGate('a.com', c, 'k', NOW, fetchOK({ ...FULL, [id]: 16 }))
+      expect(short.ok, `${id} at 16`).toBe(false)
+      const exact = await checkGate('a.com', c, 'k', NOW, fetchOK({ ...FULL, [id]: 17 }))
+      expect(exact.ok, `${id} at 17`).toBe(true)
+    }
+  })
+
+  it('a zero-remaining engine can never be read as absent-and-therefore-fine', async () => {
+    // 0 is falsy. A membership test written as `if (!q.remaining)` would drop
+    // the row, and a dropped row is a MISSING engine — which the subset test
+    // above already refuses. Belt and braces, because this is the gate.
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 1 })
+    const verdict = await checkGate('a.com', c, 'k', NOW, fetchOK({ ...FULL, copilot: 0 }))
+    expect(verdict.ok).toBe(false)
+    if (!verdict.ok) expect(verdict.reason).toBe('quota')
+  })
+
+  it('an unreadable quota can never pass, whatever else is true', async () => {
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 1 })
+    for (const bad of [
+      (async () => { throw new Error('offline') }) as unknown as typeof fetch,
+      (async () => ({ ok: false, status: 400, json: async () => ({}) }) as unknown as Response) as unknown as typeof fetch,
+      (async () => ({ ok: true, json: async () => ({}) }) as unknown as Response) as unknown as typeof fetch,
+      (async () => ({ ok: true, json: async () => { throw new Error('not json') } }) as unknown as Response) as unknown as typeof fetch,
+    ]) {
+      const verdict = await checkGate('a.com', c, 'k', NOW, bad)
+      expect(verdict.ok).toBe(false)
+    }
   })
 })

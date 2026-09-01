@@ -540,11 +540,18 @@ main > h1 {
   text-underline-offset: 0.15em;
 }
 
+.actionlink:hover .actionlink__arrow,
+.actionlink:hover .actionlink__chevron {
+  transform: translateX(2px);
+}
+
 /* Same optical nudge as the backlink's chevron, same reason. */
+.actionlink__arrow,
 .actionlink__chevron {
   flex: none;
   position: relative;
   top: -1px;
+  transition: transform 150ms ease;
 }
 
 /*
@@ -817,6 +824,33 @@ h2.record__domain,
 
 .field::placeholder {
   color: var(--color-muted-foreground);
+}
+
+/*
+ * A SELECT WEARING .field.
+ *
+ * The native control is kept — no `appearance: none` and no hand-drawn chevron.
+ * `color-scheme` is declared on :root in both themes, so the browser paints the
+ * popup, the chevron and the highlight correctly in dark mode for free, and the
+ * keyboard and screen-reader behaviour is the platform's rather than something
+ * this repo would own. Only two things need saying: do not stretch to the
+ * input's 260px flex basis (a plan picker is not a text field), and leave room
+ * on the right so the chevron does not sit on the last character.
+ */
+select.field {
+  flex: 0 1 auto;
+  min-width: 13rem;
+  padding-right: var(--space-1);
+  cursor: pointer;
+}
+
+/* A row whose label sits beside its control rather than above it. */
+.field__row--inline {
+  align-items: center;
+}
+
+.field__row--inline .field__label {
+  margin-bottom: 0;
 }
 
 .field__error {
@@ -2046,6 +2080,11 @@ h3.tier__name,
   .backlink,
   .backlink__arrow,
   .backlink:hover .backlink__arrow,
+  .actionlink,
+  .actionlink__arrow,
+  .actionlink__chevron,
+  .actionlink:hover .actionlink__arrow,
+  .actionlink:hover .actionlink__chevron,
   .navbar__wscaret,
   .navbar__item,
   .pricefork__opt,

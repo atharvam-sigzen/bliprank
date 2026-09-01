@@ -1,9 +1,19 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
+import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
+import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
+import { readCategoryRecord } from '../../../../../services/grader/src/resolve-category.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
+import { measuresCurrentCategory } from '@/lib/scan-result'
+import {
+  checkVisitorThrottle,
+  defaultVisitorThrottleConfig,
+  extractClientIp,
+  recordVisitorScan,
+} from '../../../../../services/grader/src/visitor-throttle.js'
 
 /**
  * Live Grader scans, for a demo, over Server-Sent Events.
@@ -28,7 +38,15 @@ import { runGrader } from '../../../../../services/grader/src/run.js'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const ROOT = join(process.cwd(), '..', '..')
+const resolveRoot = (): string => {
+  let curr = process.cwd()
+  while (curr && curr !== dirname(curr)) {
+    if (existsSync(join(curr, 'services', 'grader'))) return curr
+    curr = dirname(curr)
+  }
+  return join(process.cwd(), '..', '..')
+}
+const ROOT = resolveRoot()
 const DATA = join(ROOT, 'services', 'grader', 'data-live')
 const RESULTS = join(DATA, 'results')
 
@@ -61,19 +79,55 @@ const normalise = (d: string): string =>
 
 const resultFile = (domain: string) => join(RESULTS, `${domain.replace(/[^a-z0-9.-]/g, '_')}.json`)
 
-/** A finished scan for this domain, if one was ever produced. */
+/**
+ * A finished scan for this domain, if one was ever produced AND it still
+ * measures the same thing.
+ *
+ * ⚠️ THE CATEGORY IS PART OF THE CACHE KEY, BECAUSE IT IS PART OF THE QUESTION.
+ *
+ * This used to key on the domain alone, and that is not a cache — it is a
+ * promise that a domain has one answer forever. It does not. `resolveCategory`
+ * grew a site-content rung and an authoring rung (ADR-0009), so a domain
+ * scanned before those existed carries a result measured against a bank nobody
+ * would choose for it today. sigzen.com is the specimen: collected under
+ * `general-business-software`, recorded since as `erp-software`. The preview
+ * showed the ERP prompts, the visitor pressed the button, and this function
+ * handed back a general-business-software measurement — the two screens
+ * disagreeing about what the number is OF, which is the one thing this product
+ * exists not to do.
+ *
+ * So a result is only served when the category it was collected under is still
+ * the category we decide. Otherwise it is a measurement of a different thing,
+ * and answering with it is worse than spending again: R5 forbids rebasing a
+ * historical score, and serving one under a new category's name is that with
+ * extra steps. A miss re-scans and overwrites the file, so this self-heals once.
+ *
+ * A file recording NO category is kept. It cannot be checked, and invalidating
+ * what cannot be checked would re-spend on shape drift alone — refusing to
+ * guess in the safe direction, the same rule `runInfoOf` follows for cost.
+ */
 function cached(domain: string): unknown | null {
   const f = resultFile(domain)
   if (!existsSync(f)) return null
+  let hit: unknown
   try {
-    return JSON.parse(readFileSync(f, 'utf8'))
+    hit = JSON.parse(readFileSync(f, 'utf8'))
   } catch {
     return null
   }
+  // The record, not a re-derivation: `recordCategory` refuses to overwrite, so
+  // a record only ever changes by a deliberate act against the file. That makes
+  // the comparison stable rather than a source of surprise re-spending.
+  //
+  // The decision itself is a pure function in lib/scan-result.ts, where it can
+  // be tested without a filesystem — this line is the IO around it.
+  const record = readCategoryRecord(DATA, domain)
+  return measuresCurrentCategory(hit, record?.slug ?? null) ? hit : null
 }
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
+  const visitorIp = extractClientIp(req)
   const { domain: raw } = (await req.json().catch(() => ({}))) as { domain?: string }
   const domain = normalise(String(raw ?? ''))
 
@@ -109,7 +163,7 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
-        // 1. CACHE FIRST, ALWAYS. A repeat of the same domain must never re-spend
+        // 1. CACHE FIRST. A repeat of the same domain must never re-spend
         //    quota — with 50 requests a month and 17 per engine per scan, one
         //    accidental re-submit is a sixth of the month.
         const hit = cached(domain)
@@ -137,9 +191,31 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
-        // 2. THE GATE. Burst cap and the provider's own remaining quota, both
-        //    checked before anything is spent, both failing closed.
+        // 2. PER-VISITOR THROTTLE. Checked before checkGate so that a throttled
+        //    visitor never touches the provider-quota check or the shared daily
+        //    burst cap. Rejection here costs nothing and touches no shared state.
+        const visitorCfg = defaultVisitorThrottleConfig(DATA, env)
+        const visitorVerdict = checkVisitorThrottle(visitorIp, visitorCfg, new Date())
+        if (!visitorVerdict.ok) {
+          send(c, 'error', { kind: visitorVerdict.reason, message: visitorVerdict.message })
+          return done(c)
+        }
+
+        // 3. THE PER-DOMAIN CEILING. Between the visitor throttle and the
+        //    gate, because it is cheaper than the gate (no HTTP) and narrower
+        //    than the visitor throttle (one subject, not one browser). A retry
+        //    storm on one domain is many scans from many IPs over many hours,
+        //    which is invisible to both of its neighbours here.
         const cfg = defaultGateConfig(DATA, env)
+        const ceilingCfg = defaultDomainCeilingConfig(DATA, env)
+        const ceiling = checkDomainCeiling(domain, cfg.callsPerEngine * ENGINES.length, ceilingCfg, new Date())
+        if (!ceiling.ok) {
+          send(c, 'error', { kind: ceiling.reason, message: ceiling.message })
+          return done(c)
+        }
+
+        // 4. THE GATE. Burst cap and the provider's own remaining quota, both
+        //    checked before anything is spent, both failing closed.
         send(c, 'stage', { stage: 'checking quota' })
         const gate = await checkGate(domain, cfg, found.key, new Date())
         if (!gate.ok) {
@@ -165,18 +241,43 @@ export async function POST(req: Request): Promise<Response> {
           apiKey: found.key,
           capUsd: Number(env['GRADER_CAP_USD'] ?? DEFAULT_CAP_USD),
           maxPrompts: cfg.callsPerEngine,
+          // Authoring a category, when the taxonomy has none for this domain.
+          // Almost always a no-op by the time a scan runs: the preview step has
+          // already resolved and RECORDED the category, so `resolveCategory`
+          // stops at rung 0 and no model is called. It is passed anyway because
+          // a scan reached directly — a client that skips the preview — must not
+          // silently get a worse classification than one that did not.
+          author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key) ?? undefined,
           dataDir: DATA,
           outFile: join(DATA, 'latest.json'),
+          // Progress is streamed to the client through `onProgress` below, so a
+          // second copy on stdout would be noise. The resolver's own log is lost
+          // with it, and that is acceptable HERE and only here: by the time a
+          // scan runs, the preview has already resolved and recorded the
+          // category, so authoring is a no-op on this path. A client that skips
+          // the preview loses the diagnostic, not the degradation.
           log: () => {},
           onProgress: (e) => send(c, 'progress', e),
         })
 
-        // 3. Only a scan that actually reached the provider counts against the
-        //    burst cap. A classification refusal spends nothing and must not
-        //    consume the day's allowance.
-        if (result.status === 'scanned' || result.status === 'no-answers') recordScan(domain, cfg, new Date())
+        // 5. Only a scan that actually reached the provider counts against the
+        //    burst cap and visitor rate limit. A classification refusal spends
+        //    nothing and must not consume allowances.
+        //
+        //    The domain ceiling books the REALISED call count, not the planned
+        //    one — retries included — because under-counting retries is exactly
+        //    the failure it exists to catch. It is booked whenever any call was
+        //    made, including on a failed scan: a scan that burned 40 requests
+        //    and returned nothing still burned 40 requests.
+        if (result.status === 'scanned' || result.status === 'no-answers') {
+          recordScan(domain, cfg, new Date())
+          recordVisitorScan(visitorIp, visitorCfg, new Date())
+        }
+        if ('counts' in result && result.counts.providerCalls > 0) {
+          recordDomainCalls(domain, result.counts.providerCalls, ceilingCfg, new Date())
+        }
 
-        // 4. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
+        // 6. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
         //    read back by the Grader, the dashboard and the agency portfolio,
         //    and it must carry a run block or those pages cannot say which day,
         //    which engines or what it cost. `runGrader` returns one — mode,

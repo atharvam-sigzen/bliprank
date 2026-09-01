@@ -5,8 +5,11 @@ import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProven
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { RangeRail } from '@/components/range-rail'
+import { PromptPreview } from '@/components/prompt-preview'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
+import { fetchPreview } from '@/lib/preview'
+import type { PreviewResponse } from '@/lib/preview-contract'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
@@ -46,6 +49,9 @@ const MASTHEAD_RUN = runInfoOf(SCAN)
 
 type State =
   | { phase: 'idle' }
+  /* Between the button and the spend. See `PromptPreview`. */
+  | { phase: 'previewing'; domain: string }
+  | { phase: 'preview'; domain: string; preview: PreviewResponse }
   | { phase: 'scanning'; domain: string; stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string; cached: boolean }
   | { phase: 'done'; domain: string; scan: ScanResultFile }
   | { phase: 'refused'; domain: string; kind: string; message: string }
@@ -76,16 +82,59 @@ export default function Grader() {
       return
     }
     setError(null)
-    setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
 
-    // The committed scan is checked first and costs nothing. Only a domain with
-    // no stored result reaches the server, and the server checks its own cache
-    // again before it is allowed to spend.
+    /*
+     * PREVIEW FIRST, FOR EVERY DOMAIN — INCLUDING THE ONES THIS BUILD ALREADY
+     * HOLDS.
+     *
+     * The committed scans used to short-circuit straight to their result, on the
+     * reasoning that a record already run needs no preview of what it would ask.
+     * That is true about the SPEND and false about the READER: pipedrive.com and
+     * sigzen.com are the two domains a visitor is most likely to try first, and
+     * they were the only two that never showed which questions produced the
+     * number. The one surface that explains what a mention rate is a measurement
+     * OF was hidden from exactly the audience most likely to be evaluating it.
+     *
+     * It stays free. A bundled domain resolves at rung 0 or rung 1 of the
+     * ladder — a recorded decision, or a leader-domain match — so no homepage is
+     * fetched and no model is called. `startScan` still serves the committed
+     * record rather than collecting, so confirming costs nothing either.
+     *
+     * Everything else reaches the preview endpoint, which classifies the domain —
+     * reading its homepage, and authoring a category for it if the taxonomy has
+     * none — WITHOUT touching provider quota. The visitor reads the category and
+     * the exact prompts, and the scan starts only when they say so.
+     *
+     * This is also the confirmation step the spend guards in this repo have been
+     * written around the absence of: a fat-fingered paste now costs one bounded
+     * homepage fetch instead of seventeen requests on five engines.
+     */
+    setState({ phase: 'previewing', domain: value })
+    void fetchPreview(value).then((outcome) => {
+      if (outcome.ok) setState({ phase: 'preview', domain: value, preview: outcome.preview })
+      else setState({ phase: 'refused', domain: value, kind: outcome.kind, message: outcome.message })
+    })
+  }
+
+  function startScan(value: string) {
+    /*
+     * THE COMMITTED RECORD, SERVED FROM THE BUILD — not from /api/scan.
+     *
+     * Moved here from `submit` so the preview is never skipped, but deliberately
+     * NOT replaced by the route's own cache-first branch. That branch reads
+     * `data-live/results/`, which is a local artefact nobody clones: routing the
+     * bundled domains through it would make the two demo scans depend on one
+     * machine's untracked directory, and they would 404 on a fresh checkout.
+     * The committed JSON is the thing this build actually ships.
+     */
     const local = scanFor(value)
     if (local) {
+      setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: true })
       setTimeout(() => setState({ phase: 'done', domain: value, scan: local }), 300)
       return
     }
+
+    setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
 
     void runLiveScan(value, (e) => {
       if (e.kind === 'stage') setState((s) => (s.phase === 'scanning' ? { ...s, stage: e.stage } : s))
@@ -162,7 +211,14 @@ export default function Grader() {
             The FIXTURE flag below is not scoped away: it is a disclosure about
             the whole build, not a figure belonging to one scan, and a result on
             screen is exactly when it most needs to be visible. */}
-        {state.phase === 'done' && IS_LIVE ? null : (
+        {/* NOT RENDERED OVER ANY DOMAIN'S OWN SHEET — the result OR the preview.
+            The note below carries the REFERENCE scan's figures, and the preview
+            puts a different domain's name directly under it, so it reads as that
+            domain's provenance: 85 answers, 5 engines, day 2026-08-25, for a
+            scan that has not run. Exactly the confusion the comment below
+            describes for the result state, on a screen that did not exist when
+            it was written. */}
+        {(state.phase === 'done' || state.phase === 'preview') && IS_LIVE ? null : (
         <aside className={`note${IS_LIVE ? '' : ' note--flag'}`} aria-label="Where these numbers come from">
           {IS_LIVE ? (
             <>
@@ -199,9 +255,19 @@ export default function Grader() {
 
       {state.phase === 'refused' ? (
         <ScanRefusal kind={state.kind} message={state.message} onReset={() => setState({ phase: 'idle' })} />
+      ) : state.phase === 'preview' ? (
+        <PromptPreview
+          preview={state.preview}
+          onConfirm={() => startScan(state.domain)}
+          onCancel={() => {
+            setDomain('')
+            setState({ phase: 'idle' })
+          }}
+          busy={false}
+        />
       ) : state.phase === 'scanning' && state.total > 0 ? (
         <ScanProgress stage={state.stage} done={state.done} total={state.total} engines={state.engines} prompts={state.prompts} lastCell={state.lastCell} />
-      ) : state.phase === 'idle' || state.phase === 'scanning' ? (
+      ) : state.phase === 'idle' || state.phase === 'scanning' || state.phase === 'previewing' ? (
         <div className="annotated">
           {/* The one instrument you operate, so the one panel on the page. */}
           <form className="card annotated__body" onSubmit={submit} noValidate>
@@ -211,7 +277,7 @@ export default function Grader() {
               Your domain
             </label>
             <p id="domain-help" className="metric__interval" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
-              We check the prompts buyers in your category actually ask.
+              We work out your category, show you the exact questions, and only then check the engines.
             </p>
             <div className="field__row">
               <input
@@ -225,15 +291,20 @@ export default function Grader() {
                 aria-describedby={error ? 'domain-help domain-error' : 'domain-help'}
                 aria-invalid={error ? true : undefined}
                 placeholder={SCAN.domain}
-                disabled={state.phase === 'scanning'}
+                disabled={state.phase !== 'idle'}
                 // Class, not an inline style. Inline colours are invisible to the
                 // contrast suite — that is exactly how a 1.39:1 bar shipped once —
                 // and an inline `transition` cannot be reached by
                 // prefers-reduced-motion at all.
                 className={`field${error ? ' field--invalid' : ''}`}
               />
-              <button type="submit" disabled={state.phase === 'scanning'} className="btn btn--primary">
-                {state.phase === 'scanning' ? 'Checking…' : 'Grade my brand'}
+              <button type="submit" disabled={state.phase !== 'idle'} className="btn btn--primary">
+                {/* THE LABEL NAMES WHAT THE BUTTON DOES NOW. It no longer starts
+                    a scan: it works out the category and shows the prompts, and
+                    a separate, deliberate press buys the scan. A button that
+                    says "Grade my brand" and then asks a question first reads as
+                    a broken submit. */}
+                {state.phase === 'previewing' ? 'Working out your category…' : state.phase === 'scanning' ? 'Checking…' : 'See what we will ask'}
               </button>
             </div>
 
@@ -246,7 +317,11 @@ export default function Grader() {
 
             {/* Progress is announced, not just animated. */}
             <p aria-live="polite" className="metric__interval">
-              {state.phase === 'scanning' ? `Checking ${state.domain} across five answer engines…` : ''}
+              {state.phase === 'previewing'
+                ? `Reading ${state.domain} to work out its category. Nothing is being collected yet.`
+                : state.phase === 'scanning'
+                  ? `Checking ${state.domain} across five answer engines…`
+                  : ''}
             </p>
           </form>
           {/* THE COUNT IS THE REGISTRY'S, NOT A LITERAL. This said "one

@@ -35,7 +35,7 @@
  */
 
 import { cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
-import { SCORING_ALGO_VERSION, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
+import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
 import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
 import type { BlobStore, CollectionOrchestrator } from '@bliprank/collector'
@@ -68,8 +68,45 @@ export interface ScanDeps {
   readonly adapterFor: (engine: EngineId) => EngineAdapter
   readonly banks?: readonly PromptBank[]
   readonly taxonomy?: readonly CategoryDef[]
+  /**
+   * The richer classifier, injected.
+   *
+   * `classifyDomain` reads five tokens of a hostname and nothing else, so it
+   * returns `unclassified` for most real businesses — `nike.com` and
+   * `sigzen.com` carry nothing in their host. `resolve-category.ts` adds the
+   * signals that need IO: the site's own homepage, and, when the taxonomy has no
+   * home for the business at all, an authored bank. Both are side effects, so
+   * they arrive here as a dependency rather than as an import (CLAUDE.md §8).
+   *
+   * PROPERTY 1 IS UNCHANGED AND STILL FIRST. This is consulted only AFTER the
+   * host-shape guard below has refused a pasted filename, so junk in the box
+   * still buys nothing — not a scan, and now also not an outbound fetch.
+   *
+   * Absent, everything behaves exactly as it did: `classifyDomain`, then the
+   * fallback bank. The CLI without a data dir and every existing test take that
+   * path.
+   */
+  readonly resolveCategory?: (domain: string) => Promise<CategoryResolution>
   readonly onProgress?: (e: ScanProgress) => void
   readonly signal?: AbortSignal
+}
+
+/**
+ * What a resolver hands back: a slug, the bank for it, and how it was decided.
+ *
+ * Declared here rather than imported from `resolve-category.ts` so the
+ * dependency points one way — this module composes, it does not know that a
+ * category can be written to a file.
+ */
+export interface CategoryResolution {
+  readonly slug: string
+  readonly bank: PromptBank
+  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`. */
+  readonly signal: string
+  readonly evidence: string
+  /** The recorded trading name, when the decision has one. See `subjectFor`. */
+  readonly brandName?: string
+  readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
 }
 
 export interface ScanProgress {
@@ -120,6 +157,18 @@ export type ScanResult =
        * without saying why it is empty, so it is not optional to read.
        */
       readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
+      /**
+       * Which signal decided the category, and what it matched.
+       *
+       * On the sheet, not in a log. "CRM software" means one thing when the host
+       * IS Pipedrive and another when a model authored the category from the
+       * homepage twenty seconds ago, and a reader is entitled to know which —
+       * the same provenance discipline R8 applies to every number.
+       *
+       * Absent on a scan run without a resolver, where the only possible answers
+       * are the two `classifyDomain` gives and `classification` already says so.
+       */
+      readonly categorySource?: { readonly signal: string; readonly evidence: string }
       /** How the subject brand was identified — see `subjectFor`. */
       readonly subjectSource: 'leader' | 'domain-label'
       readonly comparisonBasis: string
@@ -163,7 +212,7 @@ const leadersOf = (bank: PromptBank): BrandSpec[] =>
  * undercounted wherever answers use its real trading name. Recovering that is
  * what PHASES 3.1's unbuilt site-content signal is for.
  */
-export function subjectFor(domain: string, bank: PromptBank): { spec: BrandSpec; source: 'leader' | 'domain-label' } {
+export function subjectFor(domain: string, bank: PromptBank, siteTitle?: string): { spec: BrandSpec; source: 'leader' | 'domain-label' } {
   const host = domain.toLowerCase().replace(/^www\./, '')
   for (const l of bank.leaders) {
     for (const d of [...l.domains, ...(l.siteDomains ?? [])]) {
@@ -172,8 +221,25 @@ export function subjectFor(domain: string, bank: PromptBank): { spec: BrandSpec;
       }
     }
   }
-  const label = host.split('.')[0] ?? host
-  return { spec: { id: `domain:${host}`, name: label, aliases: [label], domains: [host] }, source: 'domain-label' }
+  /*
+   * ⚠️ THE FALSE ZERO, FIXED HERE — 2026-09-01, algo det-2.
+   *
+   * This returned `aliases: [label]` and nothing else, so `thecosmicbyte.com`
+   * searched every answer for `thecosmicbyte` while all five engines wrote
+   * "Cosmic Byte". The scan published 0 of 50 for a brand named 139 times
+   * across 31 of those answers. The docblock above had predicted exactly this
+   * and pointed at a signal that did not exist yet; it does now.
+   *
+   * `siteTitle` is the recorded one, never a fresh fetch. A re-scan reads the
+   * decision rather than re-reading the homepage, and a homepage rewritten on a
+   * Tuesday must not silently change what a historical number was measuring —
+   * the same reasoning that makes the category itself a written-down answer.
+   */
+  const forms = domainBrandForms(host, siteTitle)
+  return {
+    spec: { id: `domain:${host}`, name: forms.name, aliases: forms.aliases, squashedAliases: forms.squashedAliases, domains: [host] },
+    source: 'domain-label',
+  }
 }
 
 /**
@@ -241,9 +307,35 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     return { status: 'unclassified', domain: req.domain, classification, reason }
   }
 
+  /*
+   * THE RESOLVER, IF ONE WAS GIVEN, AND ONLY NOW.
+   *
+   * Every refusal above has already run: a string that is not a domain, and a
+   * pasted filename, are both gone before this line. So the resolver's outbound
+   * fetch is only ever made for something host-shaped — junk in the box still
+   * costs nothing, which was the whole of PROPERTY 1 and remains so.
+   *
+   * It supersedes `classifyDomain` rather than supplementing it, because it
+   * already RAN `classifyDomain` as its first two rungs and then consulted
+   * signals this module cannot reach. Two answers about one domain is the state
+   * to avoid; `classification` is still returned unchanged, so what the free
+   * signal thought is never lost.
+   */
   let fallback: { reason: 'unclassified' | 'ambiguous'; detail: string; candidates: readonly string[] } | undefined
   let slug: string
-  if (classification.status === 'classified') {
+  let bank: PromptBank | undefined
+  let categorySource: { signal: string; evidence: string } | undefined
+  // The RECORDED trading name, never a fresh read of the site. See `subjectFor`.
+  let brandName: string | undefined
+
+  if (deps.resolveCategory) {
+    const resolved = await deps.resolveCategory(req.domain)
+    slug = resolved.slug
+    bank = resolved.bank
+    brandName = resolved.brandName
+    categorySource = { signal: resolved.signal, evidence: resolved.evidence }
+    if (resolved.fallback) fallback = resolved.fallback
+  } else if (classification.status === 'classified') {
     slug = classification.slug
   } else {
     slug = FALLBACK_SLUG
@@ -253,7 +345,9 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
         : { reason: 'unclassified', detail: classification.reason, candidates: [] }
   }
 
-  const bank = banks.find((b) => b.category === slug)
+  // The resolver hands its own bank over, because a generated one is not in
+  // `banks` — it was authored during this call. Anything else is looked up.
+  bank ??= banks.find((b) => b.category === slug)
   if (!bank) {
     // A classified slug with no bank is a wiring fault, not a user outcome. It
     // must not fall through to a scan of some other category.
@@ -264,7 +358,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
   const prompts = req.maxPrompts ? unprompted.slice(0, req.maxPrompts) : unprompted
 
-  const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank)
+  const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank, brandName)
   const competitors = leadersOf(bank).filter((c) => c.id !== subject.id)
   const scored: BrandSpec[] = [subject, ...competitors]
 
@@ -365,6 +459,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     // discipline is about METRICS, but exactOptionalPropertyTypes still refuses
     // an explicit `undefined` here. A normal scan carries no key at all.
     ...(fallback ? { fallback } : {}),
+    ...(categorySource ? { categorySource } : {}),
     subjectSource,
     comparisonBasis,
     algoVersion: SCORING_ALGO_VERSION,

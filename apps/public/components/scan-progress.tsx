@@ -72,6 +72,7 @@ export function ScanProgress({ stage, done, total, engines, prompts, lastCell }:
 export function ScanRefusal({ kind, message, onReset }: { kind: string; message: string; onReset: () => void }) {
   const TITLE: Record<string, string> = {
     'burst-cap': 'Daily demo cap reached',
+    'visitor-rate-limit': 'Hourly visitor limit reached',
     quota: 'Provider quota exhausted',
     unreadable: 'Could not verify remaining quota',
     disabled: 'Live scanning is off',
