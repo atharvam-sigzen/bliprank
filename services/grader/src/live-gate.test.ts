@@ -406,3 +406,69 @@ describe('readQuota asks per product, and keeps a dead read apart from a dead su
     }
   })
 })
+
+/**
+ * THE HUMAN-REVIEW ITEM, MADE EXECUTABLE.
+ *
+ * `live-gate.ts` is the gate between a public form and paid collection, so the
+ * property that matters is not "the happy path works" but "no path says yes
+ * without evidence". Reading the code and agreeing is how a gap survives a
+ * refactor; this fails instead.
+ *
+ * THE INVARIANT: checkGate returns ok:true ONLY when every engine in
+ * cfg.engines has a real quota row with remaining >= callsPerEngine. Asserted
+ * over the whole power set of present/absent engines, so a future edit cannot
+ * open a hole for one combination and pass because nobody wrote that case.
+ */
+describe('INVARIANT: ok:true requires a quota row for EVERY engine in cfg.engines', () => {
+  const ALL = ['chatgpt', 'gemini', 'copilot', 'google_ai_mode', 'ai_overviews'] as const
+
+  it('holds across all 32 subsets of engines the provider answers for', async () => {
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 17 })
+    for (let mask = 0; mask < 1 << ALL.length; mask++) {
+      const present: Record<string, number> = {}
+      for (const [i, id] of ALL.entries()) if (mask & (1 << i)) present[id] = 50
+
+      const verdict = await checkGate(`d${mask}.com`, c, 'k', NOW, fetchOK(present))
+      const complete = Object.keys(present).length === ALL.length
+
+      // The only shape allowed to pass is the complete one.
+      expect(verdict.ok, `mask ${mask} had ${Object.keys(present).length}/5 engines`).toBe(complete)
+      if (!verdict.ok && !complete) expect(verdict.reason).toBe('quota')
+    }
+  })
+
+  it('a present engine that is SHORT is still a refusal, at every boundary', async () => {
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 17 })
+    for (const id of ALL) {
+      // One below the requirement refuses; exactly the requirement passes.
+      const short = await checkGate('a.com', c, 'k', NOW, fetchOK({ ...FULL, [id]: 16 }))
+      expect(short.ok, `${id} at 16`).toBe(false)
+      const exact = await checkGate('a.com', c, 'k', NOW, fetchOK({ ...FULL, [id]: 17 }))
+      expect(exact.ok, `${id} at 17`).toBe(true)
+    }
+  })
+
+  it('a zero-remaining engine can never be read as absent-and-therefore-fine', async () => {
+    // 0 is falsy. A membership test written as `if (!q.remaining)` would drop
+    // the row, and a dropped row is a MISSING engine — which the subset test
+    // above already refuses. Belt and braces, because this is the gate.
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 1 })
+    const verdict = await checkGate('a.com', c, 'k', NOW, fetchOK({ ...FULL, copilot: 0 }))
+    expect(verdict.ok).toBe(false)
+    if (!verdict.ok) expect(verdict.reason).toBe('quota')
+  })
+
+  it('an unreadable quota can never pass, whatever else is true', async () => {
+    const c = cfg({ maxNewPerDay: 99, callsPerEngine: 1 })
+    for (const bad of [
+      (async () => { throw new Error('offline') }) as unknown as typeof fetch,
+      (async () => ({ ok: false, status: 400, json: async () => ({}) }) as unknown as Response) as unknown as typeof fetch,
+      (async () => ({ ok: true, json: async () => ({}) }) as unknown as Response) as unknown as typeof fetch,
+      (async () => ({ ok: true, json: async () => { throw new Error('not json') } }) as unknown as Response) as unknown as typeof fetch,
+    ]) {
+      const verdict = await checkGate('a.com', c, 'k', NOW, bad)
+      expect(verdict.ok).toBe(false)
+    }
+  })
+})

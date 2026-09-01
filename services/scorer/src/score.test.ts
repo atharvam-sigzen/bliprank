@@ -227,3 +227,70 @@ describe('review findings — regressions that were shipped and are now pinned',
     expect(scoreAnswer({ answer: answer('follow HubSpot_alt for updates'), brand: HUBSPOT }).mentioned).toBe(false)
   })
 })
+
+/**
+ * THE FALSE ZERO — 2026-09-01, and the worst defect this scorer can produce.
+ *
+ * thecosmicbyte.com is not a tracked leader, so `subjectFor` gave it the domain
+ * label `thecosmicbyte` as its only alias. The engines write "Cosmic Byte".
+ * Whole-token matching found nothing, and a brand named 139 times across 31 of
+ * 50 collected answers was published as 0.0% — mentioned in none of them.
+ *
+ * A low number is a finding. A zero that should be ~62% is a broken instrument,
+ * and it is indistinguishable from the real thing on the page.
+ */
+describe('squashed aliases — a brand whose domain runs its words together', () => {
+  const cosmic: BrandSpec = {
+    id: 'domain:thecosmicbyte.com',
+    name: 'thecosmicbyte',
+    aliases: ['thecosmicbyte'],
+    squashedAliases: ['cosmicbyte'],
+    domains: ['thecosmicbyte.com'],
+  }
+
+  it('matches the trading name the engines actually write', () => {
+    for (const text of [
+      'For budget gaming, Cosmic Byte headsets are worth a look.',
+      'The CosmicByte CB-GK-19 is a solid pick.',
+      'Try the Cosmic-Byte mousepad.',
+      'brands like cosmic  byte compete on price',
+    ]) {
+      const m = findMentions(normaliseForMatch(text), cosmic)
+      expect(m, text).not.toBeNull()
+      expect(m!.count).toBe(1)
+    }
+  })
+
+  it('still matches the plain domain label when an answer uses it', () => {
+    const m = findMentions(normaliseForMatch('see thecosmicbyte for details'), cosmic)
+    expect(m).not.toBeNull()
+  })
+
+  it('⚠️ DOES NOT INVENT A MENTION across a word boundary', () => {
+    // Squashing destroys boundaries: "smart station" -> "smartstation", which
+    // CONTAINS "artstation". Inventing a mention is worse than missing one.
+    const artstation: BrandSpec = { id: 'a', name: 'ArtStation', aliases: ['ArtStation'], squashedAliases: ['artstation'], domains: ['artstation.com'] }
+    expect(findMentions(normaliseForMatch('a smart station for your desk'), artstation)).toBeNull()
+    // The real brand, properly bounded, still matches.
+    expect(findMentions(normaliseForMatch('posted on Art Station yesterday'), artstation)).not.toBeNull()
+  })
+
+  it('refuses a needle too short to be evidence', () => {
+    const tiny: BrandSpec = { id: 't', name: 'Go', aliases: [], squashedAliases: ['go'], domains: [] }
+    expect(findMentions(normaliseForMatch('go to the good goggles'), tiny)).toBeNull()
+  })
+
+  it('a squashed hit overlapping a plain alias is counted ONCE, not twice', () => {
+    // 'Cosmic Byte' matches the squashed form; if the brand also lists it as a
+    // plain alias, the existing overlap resolution must still collapse them.
+    const both: BrandSpec = { ...cosmic, aliases: ['thecosmicbyte', 'cosmic byte'] }
+    const m = findMentions(normaliseForMatch('Cosmic Byte makes keyboards'), both)
+    expect(m!.count).toBe(1)
+  })
+
+  it('a brand with no squashedAliases behaves exactly as before', () => {
+    const plain: BrandSpec = { id: 'p', name: 'Pipedrive', aliases: ['Pipedrive'], domains: ['pipedrive.com'] }
+    expect(findMentions(normaliseForMatch('Pipe drive is not the same word'), plain)).toBeNull()
+    expect(findMentions(normaliseForMatch('Pipedrive is a CRM'), plain)).not.toBeNull()
+  })
+})

@@ -70,7 +70,7 @@ import {
   type CategoryDef,
   type PromptBank,
 } from '@bliprank/taxonomy'
-import { findMentions, normaliseForMatch, type BrandSpec } from '@bliprank/scorer'
+import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
 import {
   GENERATED_DISCOVERY,
@@ -110,6 +110,16 @@ export interface CategoryRecord {
   readonly decidedAt: string
   /** True when this slug's bank was authored by a model rather than by a human. */
   readonly generated: boolean
+  /**
+   * The brand's trading name, corroborated once from the site's own title.
+   *
+   * RECORDED, for the same reason the category is: `subjectFor` turns it into a
+   * match alias, so a homepage rewritten on a Tuesday would otherwise change
+   * what a historical number was measuring. Written when the homepage was read;
+   * absent on a decision made without one, where the domain-derived forms carry
+   * the match on their own.
+   */
+  readonly brandName?: string
 }
 
 export interface ResolvedCategory {
@@ -190,6 +200,7 @@ function readRecords(dataDir: string): RecordStore {
           evidence: typeof r.evidence === 'string' ? r.evidence : '',
           decidedAt: typeof r.decidedAt === 'string' ? r.decidedAt : '',
           generated: r.generated === true,
+          ...(typeof r.brandName === 'string' && r.brandName ? { brandName: r.brandName } : {}),
         }
       }
     }
@@ -382,11 +393,27 @@ export function rejectionReason(candidate: GeneratedBank, host: string, banks: r
    * a bank that lost three prompts to filtering is a different sample size than
    * the one every other bank has.
    */
-  const label = host.split('.')[0] ?? ''
-  if (label.length >= 3) {
-    const needle = new RegExp(String.raw`\b${label.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}\b`, 'i')
-    const named = candidate.prompts.find((p) => needle.test(p.text))
-    if (named) return `a prompt names the subject brand ("${named.text}"), which would measure our own phrasing`
+  /*
+   * ⚠️ THE SAME BLIND SPOT THAT CAUSED THE FALSE ZERO, POINTED THE OTHER WAY.
+   *
+   * This tested `\bthecosmicbyte\b` — the literal concatenated label. Every
+   * engine, and every model writing prompts from that homepage, writes "Cosmic
+   * Byte" with a space, and a spaced form does not match a concatenated regex.
+   * So the guard that exists to stop a prompt naming the subject would have
+   * waved through "best Cosmic Byte gaming headset under 3000" — guaranteeing
+   * the brand a mention in its own measurement, which is the exact failure
+   * PROPERTY 2 refuses.
+   *
+   * One root cause, two victims: `subjectFor` could not FIND the brand, and
+   * this could not REFUSE it. Both now go through the same alias derivation, so
+   * a fix to one is a fix to both.
+   */
+  const forms = domainBrandForms(host)
+  const subjectSpec: BrandSpec = { id: 'subject', name: forms.name, aliases: forms.aliases, squashedAliases: forms.squashedAliases, domains: [host] }
+  for (const p of candidate.prompts) {
+    if (findMentions(normaliseForMatch(p.text), subjectSpec)) {
+      return `a prompt names the subject brand ("${p.text}"), which would measure our own phrasing`
+    }
   }
 
   /*
@@ -504,6 +531,17 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     }
   }
 
+  /*
+   * The trading name, corroborated from the site's own title — set once the
+   * homepage has been read, and read by `settle` below.
+   *
+   * A closure variable rather than a fifth parameter because only the rungs
+   * BELOW the fetch can have one: rungs 1 and 2 settle before any HTTP happens,
+   * and there is nothing for them to pass. It stays undefined on those paths,
+   * which is exactly right — the domain-derived forms carry the match alone.
+   */
+  let siteBrandName: string | undefined
+
   const settle = (slug: string, source: CategorySource, evidence: string, generated = false): ResolvedCategory | null => {
     const bank = bankFor(slug)
     const category = categoryFor(slug)
@@ -511,7 +549,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     // refusal scan.ts makes. Falling through to the fallback here is correct and
     // is NOT recorded, so the next scan re-derives once the wiring is fixed.
     if (!bank || !category) return null
-    const record = recordCategory(deps.dataDir, { host, slug, source, evidence, decidedAt, generated })
+    const record = recordCategory(deps.dataDir, { host, slug, source, evidence, decidedAt, generated, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
     const resolvedBank = bankFor(record.slug)
     const resolvedCategory = categoryFor(record.slug)
     if (!resolvedBank || !resolvedCategory) return null
@@ -569,6 +607,22 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   }
 
   const text = extractSiteText(fetched.html)
+
+  /*
+   * ⚠️ THE FALSE ZERO, HALF TWO. The homepage has just been read, and its title
+   * is the one place the brand's real trading name is stated by the brand
+   * itself. `domainBrandForms` accepts it only as CORROBORATION: a phrase is
+   * taken as the name solely when it squashes to the domain label (optionally
+   * minus a leading `the`/`get`/`use`). "Cosmic Byte" in thecosmicbyte.com's
+   * title qualifies; "Best Gaming Gear in India" does not, and contributes
+   * nothing. So this can sharpen a name, never invent one.
+   *
+   * Recorded through `settle`, so a re-scan that reads the decision scores
+   * identically to the scan that made it (R5).
+   */
+  const derived = domainBrandForms(host, `${text.title} ${text.description}`)
+  if (derived.name !== squash(derived.name)) siteBrandName = derived.name
+
   const byContent = classifyContent(text, taxonomy)
   if (byContent.status === 'classified') {
     const settled = settle(byContent.slug, 'site-content', byContent.evidence)
@@ -648,7 +702,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // artefacts, and a reader looking at a surprising bank two years from now
   // should be able to see which produced it. Same discipline as R8's
   // `algo_version` travelling with a metric.
-  const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true })
+  const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
   log(`category: ${host} -> ${slug} (generated by ${candidate.model}: ${candidate.displayName}, ${candidate.prompts.length} prompts, no competitors)`)
   return { record, bank: written.bank, category: written.category, fromRecord: false }
 }

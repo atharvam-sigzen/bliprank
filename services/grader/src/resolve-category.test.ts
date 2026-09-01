@@ -506,3 +506,47 @@ describe('what an authored bank must satisfy before it exists', () => {
     expect(slugify('  Cybersecurity  consulting! ')).toBe('cybersecurity-consulting')
   })
 })
+
+/**
+ * THE SUBJECT'S OWN NAME, SPACED — the other half of the false zero.
+ *
+ * `rejectionReason` tested `\bthecosmicbyte\b`, the literal concatenated label.
+ * A model reading thecosmicbyte.com's homepage writes "Cosmic Byte", because
+ * that is what the homepage says, and a spaced form never matches a
+ * concatenated regex. So the guard that exists to stop a prompt naming its own
+ * subject would have passed it — guaranteeing the brand a mention inside its
+ * own measurement, which is exactly what PROPERTY 2 refuses.
+ *
+ * One root cause with two victims: `subjectFor` could not FIND the brand and
+ * this could not REFUSE it. Both now share `domainBrandForms`.
+ */
+describe('⚠️ A GENERATED PROMPT MAY NOT NAME THE SUBJECT, HOWEVER IT IS SPACED', () => {
+  const withPrompt = (text: string): GeneratedBank => {
+    const base = goodBank()
+    return { ...base, prompts: [{ text, intent: 'discovery' as const }, ...base.prompts.slice(1)] }
+  }
+
+  it('catches the spaced trading name the domain only implies', () => {
+    // THE EXACT MISS. 'thecosmicbyte' does not appear; 'Cosmic Byte' does.
+    const refused = rejectionReason(withPrompt('best Cosmic Byte gaming headset under 3000'), 'thecosmicbyte.com', DEMO_BANKS)
+    expect(refused).toContain('names the subject brand')
+  })
+
+  it('catches every spacing of it, because separators are not evidence', () => {
+    for (const naming of ['CosmicByte keyboards worth buying', 'is Cosmic-Byte any good for fps', 'thecosmicbyte mouse review']) {
+      expect(rejectionReason(withPrompt(naming), 'thecosmicbyte.com', DEMO_BANKS), naming).toContain('names the subject brand')
+    }
+  })
+
+  it('does NOT refuse a clean prompt that merely shares a word', () => {
+    // The bank must not be thrown away for saying "byte" or "cosmic" alone. A
+    // refusal costs the visitor their whole category; it has to be earned.
+    for (const clean of [
+      'best budget mechanical keyboard under 3000 rupees',
+      'how many bytes of storage does a gaming keyboard need',
+      'cosmic themed rgb lighting for a desk setup',
+    ]) {
+      expect(rejectionReason(withPrompt(clean), 'thecosmicbyte.com', DEMO_BANKS), clean).toBeNull()
+    }
+  })
+})
