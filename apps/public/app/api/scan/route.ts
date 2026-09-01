@@ -1,9 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
+import {
+  checkVisitorThrottle,
+  defaultVisitorThrottleConfig,
+  extractClientIp,
+  recordVisitorScan,
+} from '../../../../../services/grader/src/visitor-throttle.js'
 
 /**
  * Live Grader scans, for a demo, over Server-Sent Events.
@@ -28,7 +34,15 @@ import { runGrader } from '../../../../../services/grader/src/run.js'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const ROOT = join(process.cwd(), '..', '..')
+const resolveRoot = (): string => {
+  let curr = process.cwd()
+  while (curr && curr !== dirname(curr)) {
+    if (existsSync(join(curr, 'services', 'grader'))) return curr
+    curr = dirname(curr)
+  }
+  return join(process.cwd(), '..', '..')
+}
+const ROOT = resolveRoot()
 const DATA = join(ROOT, 'services', 'grader', 'data-live')
 const RESULTS = join(DATA, 'results')
 
@@ -74,6 +88,7 @@ function cached(domain: string): unknown | null {
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
+  const visitorIp = extractClientIp(req)
   const { domain: raw } = (await req.json().catch(() => ({}))) as { domain?: string }
   const domain = normalise(String(raw ?? ''))
 
@@ -137,7 +152,17 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
-        // 2. THE GATE. Burst cap and the provider's own remaining quota, both
+        // 2. PER-VISITOR THROTTLE. Checked before checkGate so that a throttled
+        //    visitor never touches the provider-quota check or the shared daily
+        //    burst cap. Rejection here costs nothing and touches no shared state.
+        const visitorCfg = defaultVisitorThrottleConfig(DATA, env)
+        const visitorVerdict = checkVisitorThrottle(visitorIp, visitorCfg, new Date())
+        if (!visitorVerdict.ok) {
+          send(c, 'error', { kind: visitorVerdict.reason, message: visitorVerdict.message })
+          return done(c)
+        }
+
+        // 3. THE GATE. Burst cap and the provider's own remaining quota, both
         //    checked before anything is spent, both failing closed.
         const cfg = defaultGateConfig(DATA, env)
         send(c, 'stage', { stage: 'checking quota' })
@@ -171,12 +196,15 @@ export async function POST(req: Request): Promise<Response> {
           onProgress: (e) => send(c, 'progress', e),
         })
 
-        // 3. Only a scan that actually reached the provider counts against the
-        //    burst cap. A classification refusal spends nothing and must not
-        //    consume the day's allowance.
-        if (result.status === 'scanned' || result.status === 'no-answers') recordScan(domain, cfg, new Date())
+        // 4. Only a scan that actually reached the provider counts against the
+        //    burst cap and visitor rate limit. A classification refusal spends
+        //    nothing and must not consume allowances.
+        if (result.status === 'scanned' || result.status === 'no-answers') {
+          recordScan(domain, cfg, new Date())
+          recordVisitorScan(visitorIp, visitorCfg, new Date())
+        }
 
-        // 4. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
+        // 5. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
         //    read back by the Grader, the dashboard and the agency portfolio,
         //    and it must carry a run block or those pages cannot say which day,
         //    which engines or what it cost. `runGrader` returns one — mode,
