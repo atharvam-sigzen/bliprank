@@ -73,6 +73,25 @@ const DOMAIN_PREFIXES = ['the', 'get', 'try', 'use', 'my', 'go', 'join', 'hey', 
  */
 const MIN_STRIPPED_LENGTH = 5
 
+/**
+ * The floor for a stripped remainder the SITE TITLE independently names.
+ *
+ * ⚠️ WHY TWO FLOORS RATHER THAN ONE LOWER ONE. Reviewing the single floor of 5
+ * exposed a real cost: `getlago.com` minus `get` is `lago`, four characters, so
+ * it was refused and every "Lago handles usage-based billing" went uncounted —
+ * the same false zero this whole change exists to end, one letter further down.
+ * Lowering the floor to 4 outright fixes that and simultaneously breaks
+ * `google.com`, whose remainder after `go` is `ogle`: an ordinary English word
+ * that would score a mention of Google every time somebody ogles something.
+ *
+ * The floor alone cannot separate those two — both are four letters. What
+ * separates them is EVIDENCE. `getlago.com`'s homepage title says "Lago";
+ * `google.com`'s does not say "Ogle". So a four-character remainder is not
+ * refused outright, it is held as PROVISIONAL and admitted only when the title
+ * independently names it. Nothing is trusted on its length alone.
+ */
+const MIN_CORROBORATED_LENGTH = 4
+
 /** Lowercase, letters and digits only. The form squashed matching compares. */
 export const squash = (s: string): string => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
 
@@ -105,28 +124,42 @@ export function domainBrandForms(host: string, siteTitle?: string): { name: stri
   const label = squash((host.toLowerCase().replace(/^www\./, '').split('.')[0] ?? '').trim())
   if (!label) return { name: host, aliases: [], squashedAliases: [] }
 
-  const candidates = [label]
+  // TRUSTED on length alone. PROVISIONAL until the title vouches for it.
+  const trusted = [label]
+  const provisional: string[] = []
   for (const p of DOMAIN_PREFIXES) {
-    if (label.startsWith(p) && label.length - p.length >= MIN_STRIPPED_LENGTH) candidates.push(label.slice(p.length))
+    if (!label.startsWith(p)) continue
+    const rest = label.slice(p.length)
+    if (rest.length >= MIN_STRIPPED_LENGTH) trusted.push(rest)
+    else if (rest.length >= MIN_CORROBORATED_LENGTH) provisional.push(rest)
   }
 
-  // The longest phrase of the title that squashes to a candidate. Longest, so
-  // "Cosmic Byte" wins over "Cosmic" when both would match a candidate.
+  // Every candidate the title names, plus the longest phrase that named one —
+  // longest so "Cosmic Byte" is preferred over "Cosmic" for the display name.
+  const named = new Set<string>()
   let traded = ''
   const words = (siteTitle ?? '').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
   for (let i = 0; i < words.length; i++) {
     for (let n = Math.min(4, words.length - i); n >= 1; n--) {
       const phrase = words.slice(i, i + n).join(' ')
-      if (candidates.includes(squash(phrase)) && phrase.length > traded.length) traded = phrase
+      const sq = squash(phrase)
+      if (!trusted.includes(sq) && !provisional.includes(sq)) continue
+      named.add(sq)
+      if (phrase.length > traded.length) traded = phrase
     }
   }
+
+  // A provisional candidate is admitted ONLY on the title's evidence. This is
+  // the line that lets `lago` in for getlago.com and keeps `ogle` out for
+  // google.com: both are four letters, and only one of them is on its homepage.
+  const promoted = provisional.filter((c) => named.has(c))
 
   return {
     // The corroborated trading name is what a reader should see. Falling back to
     // the label is honest rather than pretty: it is what we actually know.
     name: traded || label,
     aliases: [...new Set([label, ...(traded ? [traded] : [])])],
-    squashedAliases: [...new Set(candidates)],
+    squashedAliases: [...new Set([...trusted, ...promoted])],
   }
 }
 

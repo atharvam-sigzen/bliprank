@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnswerBody } from '@bliprank/contracts'
-import { findMentions, normaliseForMatch, scoreAnswer, SCORING_ALGO_VERSION, type BrandSpec } from './score.js'
+import { domainBrandForms, findMentions, normaliseForMatch, scoreAnswer, SCORING_ALGO_VERSION, type BrandSpec } from './score.js'
 
 const HUBSPOT: BrandSpec = { id: 'hubspot', name: 'HubSpot', aliases: ['HubSpot', 'Hub Spot', 'HubSpot CRM'], domains: ['hubspot.com'] }
 const SALESFORCE: BrandSpec = { id: 'salesforce', name: 'Salesforce', aliases: ['Salesforce', 'Sales Force'], domains: ['salesforce.com'] }
@@ -292,5 +292,69 @@ describe('squashed aliases — a brand whose domain runs its words together', ()
     const plain: BrandSpec = { id: 'p', name: 'Pipedrive', aliases: ['Pipedrive'], domains: ['pipedrive.com'] }
     expect(findMentions(normaliseForMatch('Pipe drive is not the same word'), plain)).toBeNull()
     expect(findMentions(normaliseForMatch('Pipedrive is a CRM'), plain)).not.toBeNull()
+  })
+})
+
+/**
+ * THE FLOOR, AND THE EVIDENCE THAT OVERRIDES IT.
+ *
+ * Reviewing MIN_STRIPPED_LENGTH = 5 exposed a real cost. `getlago.com` minus
+ * `get` is `lago` — four characters — so it was refused and every "Lago handles
+ * usage-based billing" went uncounted: the same false zero one letter further
+ * down. Lowering the floor to 4 fixes that and breaks `google.com`, whose
+ * remainder after `go` is `ogle`, an ordinary English word that would score a
+ * mention of Google every time somebody ogles something.
+ *
+ * Length cannot separate them — both are four letters. Evidence can: Lago's
+ * homepage says "Lago"; Google's does not say "Ogle".
+ *
+ * Every sentence and every title below is INVENTED for this test. Nothing here
+ * touches a provider, a stored scan, or a real homepage.
+ */
+describe('a four-letter remainder is admitted only when the site title names it', () => {
+  const specFor = (host: string, title?: string): BrandSpec => {
+    const f = domainBrandForms(host, title)
+    return { id: host, name: f.name, aliases: f.aliases, squashedAliases: f.squashedAliases, domains: [host] }
+  }
+  const matches = (host: string, sentence: string, title?: string) =>
+    findMentions(normaliseForMatch(sentence), specFor(host, title)) !== null
+
+  // Synthetic. No such scan exists and none is needed.
+  const LAGO_SENTENCE = 'For usage-based billing, Lago is the one people self-host.'
+  const OGLE_SENTENCE = 'People ogle at their phones all day on the train.'
+
+  it('WITH corroboration: "Lago" matches for getlago.com', () => {
+    expect(matches('getlago.com', LAGO_SENTENCE, 'Lago - Open Source Usage Based Billing')).toBe(true)
+    expect(specFor('getlago.com', 'Lago - Open Source Usage Based Billing').squashedAliases).toContain('lago')
+  })
+
+  it('WITHOUT corroboration: the same four letters stay refused', () => {
+    // No title at all, and a title that does not name it, are both "no evidence".
+    expect(matches('getlago.com', LAGO_SENTENCE)).toBe(false)
+    expect(matches('getlago.com', LAGO_SENTENCE, 'Open Source Billing for Developers')).toBe(false)
+  })
+
+  it('"ogle" is STILL refused for google.com, title or no title', () => {
+    // The case the floor exists for. Google's homepage does not say "Ogle", so
+    // nothing promotes it — this is what a blanket floor of 4 would have broken.
+    expect(matches('google.com', OGLE_SENTENCE)).toBe(false)
+    expect(matches('google.com', OGLE_SENTENCE, 'Google')).toBe(false)
+    expect(matches('google.com', OGLE_SENTENCE, 'Google - Search the world&apos;s information')).toBe(false)
+    expect(specFor('google.com', 'Google').squashedAliases).not.toContain('ogle')
+  })
+
+  it('a title naming a RIVAL cannot promote anything', () => {
+    // The corroboration is specific: the title must name THIS candidate, not
+    // merely be present. A competitor's name in the title promotes nothing.
+    const s = specFor('getlago.com', 'Alternatives to Stripe Billing and Chargebee')
+    expect(s.squashedAliases).not.toContain('lago')
+    expect(matches('getlago.com', LAGO_SENTENCE, 'Alternatives to Stripe Billing and Chargebee')).toBe(false)
+  })
+
+  it('the five-letter rule is unchanged — no title needed above the floor', () => {
+    // thecosmicbyte -> cosmicbyte is ten characters: trusted on length alone,
+    // which is why the original fix worked with no homepage read at all.
+    expect(matches('thecosmicbyte.com', 'Cosmic Byte makes budget headsets.')).toBe(true)
+    expect(matches('usebubbles.com', 'Bubbles is a decent async video tool.')).toBe(true)
   })
 })

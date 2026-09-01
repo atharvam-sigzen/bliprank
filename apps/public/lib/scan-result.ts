@@ -79,6 +79,22 @@ export interface ScanResultFile {
    * `scan.run.x` directly. Use `runInfoOf`.
    */
   readonly run?: ScanRun
+  /**
+   * Set when this row was produced by RE-SCORING answers already on disk rather
+   * than by collecting new ones.
+   *
+   * R5 forbids mutating a historical score, and re-scoring forward is what it
+   * prescribes instead — bump the version, write a new row. These two fields are
+   * what make that visible: `collectedAt` still says when the ANSWERS were
+   * bought, and these say when the NUMBER over them was last derived, and from
+   * which algorithm. Without them a det-2 row over August answers is
+   * indistinguishable from a fresh August scan that never happened.
+   *
+   * The superseded row is kept beside it as `<domain>.det-N.audit.json`, which
+   * nothing serves — the cache reads `<domain>.json` only.
+   */
+  readonly rescoredAt?: string
+  readonly rescoredFrom?: string
 }
 
 /**
