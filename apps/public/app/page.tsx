@@ -83,22 +83,27 @@ export default function Grader() {
     }
     setError(null)
 
-    // The committed scan is checked first and costs nothing. A domain this build
-    // already holds needs no preview: the scan it would preview has already been
-    // run, and its category is on the record it is about to render.
-    const local = scanFor(value)
-    if (local) {
-      setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
-      setTimeout(() => setState({ phase: 'done', domain: value, scan: local }), 300)
-      return
-    }
-
     /*
-     * PREVIEW, THEN SPEND. Anything else reaches the preview endpoint, which
-     * classifies the domain — reading its homepage, and authoring a category for
-     * it if the taxonomy has none — WITHOUT touching provider quota. The visitor
-     * reads the category and the exact prompts, and the scan starts only when
-     * they say so.
+     * PREVIEW FIRST, FOR EVERY DOMAIN — INCLUDING THE ONES THIS BUILD ALREADY
+     * HOLDS.
+     *
+     * The committed scans used to short-circuit straight to their result, on the
+     * reasoning that a record already run needs no preview of what it would ask.
+     * That is true about the SPEND and false about the READER: pipedrive.com and
+     * sigzen.com are the two domains a visitor is most likely to try first, and
+     * they were the only two that never showed which questions produced the
+     * number. The one surface that explains what a mention rate is a measurement
+     * OF was hidden from exactly the audience most likely to be evaluating it.
+     *
+     * It stays free. A bundled domain resolves at rung 0 or rung 1 of the
+     * ladder — a recorded decision, or a leader-domain match — so no homepage is
+     * fetched and no model is called. `startScan` still serves the committed
+     * record rather than collecting, so confirming costs nothing either.
+     *
+     * Everything else reaches the preview endpoint, which classifies the domain —
+     * reading its homepage, and authoring a category for it if the taxonomy has
+     * none — WITHOUT touching provider quota. The visitor reads the category and
+     * the exact prompts, and the scan starts only when they say so.
      *
      * This is also the confirmation step the spend guards in this repo have been
      * written around the absence of: a fat-fingered paste now costs one bounded
@@ -112,6 +117,23 @@ export default function Grader() {
   }
 
   function startScan(value: string) {
+    /*
+     * THE COMMITTED RECORD, SERVED FROM THE BUILD — not from /api/scan.
+     *
+     * Moved here from `submit` so the preview is never skipped, but deliberately
+     * NOT replaced by the route's own cache-first branch. That branch reads
+     * `data-live/results/`, which is a local artefact nobody clones: routing the
+     * bundled domains through it would make the two demo scans depend on one
+     * machine's untracked directory, and they would 404 on a fresh checkout.
+     * The committed JSON is the thing this build actually ships.
+     */
+    const local = scanFor(value)
+    if (local) {
+      setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: true })
+      setTimeout(() => setState({ phase: 'done', domain: value, scan: local }), 300)
+      return
+    }
+
     setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
 
     void runLiveScan(value, (e) => {
