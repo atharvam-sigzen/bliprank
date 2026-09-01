@@ -27,6 +27,20 @@ const dataDir = (): string => {
 const PREVIEW_LEDGER = join(dataDir(), 'preview-throttle.json')
 const RECORDS = join(dataDir(), 'domain-categories.json')
 
+/** Drop one domain's recorded category, so a test can start from "never seen". */
+const forget = (domain: string): void => {
+  if (!existsSync(RECORDS)) return
+  try {
+    const store = JSON.parse(readFileSync(RECORDS, 'utf8')) as Record<string, unknown>
+    delete store[domain]
+    writeFileSync(RECORDS, `${JSON.stringify(store, null, 2)}\n`)
+  } catch {
+    // Unparseable is the same as absent for this purpose: the resolver drops a
+    // corrupt store and re-derives, which is the state this wants anyway.
+    rmSync(RECORDS, { force: true })
+  }
+}
+
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   POST(new Request('http://localhost/api/preview', { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }))
 
@@ -130,8 +144,18 @@ describe('POST /api/preview', () => {
   })
 
   it('reuses the recorded category on a second look rather than re-deriving it', async () => {
-    const first = await (await post({ domain: 'pipedrive.com' }, freshIp())).json()
-    const second = await (await post({ domain: 'pipedrive.com' }, freshIp())).json()
+    /*
+     * ⚠️ THIS TEST OWNS ITS STARTING STATE, and it did not, and that is why it
+     * failed. The record store is a real file in a real data dir that a running
+     * dev server also writes to, so "this domain has never been seen" was true
+     * only on a machine where nobody had previewed it — which is precisely the
+     * "passes because of how it was tested" shape this audit is looking for.
+     * afterEach restores the file, so the deletion is contained.
+     */
+    forget('zendesk.com')
+
+    const first = await (await post({ domain: 'zendesk.com' }, freshIp())).json()
+    const second = await (await post({ domain: 'zendesk.com' }, freshIp())).json()
     expect(second.category).toBe(first.category)
     // HOW it was decided does not change by being read back — that is
     // provenance, and it is permanent. WHETHER this call read it is a separate

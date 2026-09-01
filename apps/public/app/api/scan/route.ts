@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
+import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
 import {
@@ -162,9 +163,21 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
-        // 3. THE GATE. Burst cap and the provider's own remaining quota, both
-        //    checked before anything is spent, both failing closed.
+        // 3. THE PER-DOMAIN CEILING. Between the visitor throttle and the
+        //    gate, because it is cheaper than the gate (no HTTP) and narrower
+        //    than the visitor throttle (one subject, not one browser). A retry
+        //    storm on one domain is many scans from many IPs over many hours,
+        //    which is invisible to both of its neighbours here.
         const cfg = defaultGateConfig(DATA, env)
+        const ceilingCfg = defaultDomainCeilingConfig(DATA, env)
+        const ceiling = checkDomainCeiling(domain, cfg.callsPerEngine * ENGINES.length, ceilingCfg, new Date())
+        if (!ceiling.ok) {
+          send(c, 'error', { kind: ceiling.reason, message: ceiling.message })
+          return done(c)
+        }
+
+        // 4. THE GATE. Burst cap and the provider's own remaining quota, both
+        //    checked before anything is spent, both failing closed.
         send(c, 'stage', { stage: 'checking quota' })
         const gate = await checkGate(domain, cfg, found.key, new Date())
         if (!gate.ok) {
@@ -203,15 +216,24 @@ export async function POST(req: Request): Promise<Response> {
           onProgress: (e) => send(c, 'progress', e),
         })
 
-        // 4. Only a scan that actually reached the provider counts against the
+        // 5. Only a scan that actually reached the provider counts against the
         //    burst cap and visitor rate limit. A classification refusal spends
         //    nothing and must not consume allowances.
+        //
+        //    The domain ceiling books the REALISED call count, not the planned
+        //    one — retries included — because under-counting retries is exactly
+        //    the failure it exists to catch. It is booked whenever any call was
+        //    made, including on a failed scan: a scan that burned 40 requests
+        //    and returned nothing still burned 40 requests.
         if (result.status === 'scanned' || result.status === 'no-answers') {
           recordScan(domain, cfg, new Date())
           recordVisitorScan(visitorIp, visitorCfg, new Date())
         }
+        if ('counts' in result && result.counts.providerCalls > 0) {
+          recordDomainCalls(domain, result.counts.providerCalls, ceilingCfg, new Date())
+        }
 
-        // 5. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
+        // 6. CACHE THE ENVELOPE, NOT A BARE RESULT. What is written here is
         //    read back by the Grader, the dashboard and the agency portfolio,
         //    and it must carry a run block or those pages cannot say which day,
         //    which engines or what it cost. `runGrader` returns one — mode,

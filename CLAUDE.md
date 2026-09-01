@@ -276,8 +276,14 @@ deliberate, logged act.
 
 ## 9. Current state
 
-**Phase:** _P0 — Foundation_
-**Gate:** G0 — OpenWeb Ninja pilot validates cost and variance assumptions
-**Blocked on:** nothing
+**Phase:** _P3 — Grader & public surface_ (P0's G0 pilot is still unrun; see below)
+**Gate:** G3 — activation. **Open on the classifier criterion**: ≥95% of 100
+random real domains classified correctly. ADR-0009 built the site-content signal
+and made the taxonomy grow on demand, but its thresholds were set from six real
+homepages, not from that sample. Building the labelled 100 is what closes it.
+**Blocked on:** nothing in code. Two decisions are a human's:
+the classifier thresholds (see ADR-0009 "Open, and blocking G3"), and whether the
+SSRF blocked-range table in `services/grader/src/fetch-site.ts` matches the
+network the collector will actually deploy into.
 
 Update this section at every phase transition. It is the first thing a new session reads.

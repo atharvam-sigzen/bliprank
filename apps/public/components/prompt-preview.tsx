@@ -49,7 +49,10 @@ function sourceLine(preview: PreviewResponse): { cap: string; line: string; glos
     case 'generated':
       return {
         cap: 'New category',
-        line: preview.categoryName,
+        // The evidence, not the name. The name is the headline four
+        // centimetres to the left, and repeating it in the margin spends the
+        // one line the margin has on something already on screen.
+        line: preview.evidence,
         gloss:
           'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human, and no competitors were named — we will not guess who you compete with.',
         flag: true,
@@ -94,6 +97,33 @@ export function PromptPreview({
               {preview.categoryDescription}
             </p>
           ) : null}
+
+          {/* IN THE BODY COLUMN, NOT UNDER THE GRID. These sentences explain the
+              margin note beside them, so they belong level with it — and the
+              body column is three lines tall against a six-line note, which left
+              a hand's width of blank paper between the description and the next
+              thing anyone reads. */}
+          {preview.fallback?.reason === 'ambiguous' ? (
+            <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
+              {preview.domain} fits more than one category at once ({preview.fallback.candidates.join(', ')}), so picking one would be inventing
+              a fact. It will be measured against a general business-software prompt set, with no competitor set.
+            </p>
+          ) : null}
+
+          {/* SAID BEFORE THE BUTTON, NOT AFTER IT. A generated bank carries no
+              competitors, and a reader who is about to spend a scan on it is
+              entitled to know that the chart will have one bar. */}
+          {preview.competitors.length === 0 ? (
+            <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
+              No competitor set for this category, so this scan measures your mention rate and does not rank you against anyone. We only ever
+              name a rival the engines actually named first; a plausible list we had not measured would be a guess wearing a chart.
+            </p>
+          ) : (
+            <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
+              You will be ranked against <span className="num">{preview.competitors.length}</span> tracked brands in this category:{' '}
+              {preview.competitors.join(', ')}.
+            </p>
+          )}
         </div>
         <aside className={`note${source.flag ? ' note--flag' : ''}`} aria-label="How this category was decided">
           <span className={`note__cap${source.flag ? ' note__cap--flag' : ''}`}>{source.cap}</span>
@@ -117,30 +147,6 @@ export function PromptPreview({
           </span>
         </aside>
       </div>
-
-      {/* The ambiguous case is a different fact from the unclassified one and
-          gets its own sentence, exactly as it does on the result sheet. */}
-      {preview.fallback?.reason === 'ambiguous' ? (
-        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          {preview.domain} fits more than one category at once ({preview.fallback.candidates.join(', ')}), so picking one would be inventing a
-          fact. It will be measured against a general business-software prompt set, with no competitor set.
-        </p>
-      ) : null}
-
-      {/* SAID BEFORE THE BUTTON, NOT AFTER IT. A generated bank carries no
-          competitors, and a reader who is about to spend a scan on it is
-          entitled to know that the chart will have one bar. */}
-      {preview.competitors.length === 0 ? (
-        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          No competitor set for this category, so this scan measures your mention rate and does not rank you against anyone. We only ever name a
-          rival the engines actually named first; a plausible list we had not measured would be a guess wearing a chart.
-        </p>
-      ) : (
-        <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-          You will be ranked against <span className="num">{preview.competitors.length}</span> tracked brands in this category:{' '}
-          {preview.competitors.join(', ')}.
-        </p>
-      )}
 
       <section className="section">
         <h2>The {preview.prompts.length} questions we will ask</h2>

@@ -133,12 +133,12 @@ the product.
 
 | # | Deliverable |
 |---|---|
-| 3.1 | Category classifier (site content + autocomplete + contacts enrichment). **Demo-scoped slice done 2026-08-24** — deterministic, domain-only, over the 8-category taxonomy in ADR-0008. **None of the three named signals is built**: all need a network call and two have no provider anywhere in the repo. |
-| 3.2 | 200 pre-computed category prompt banks + leader sets, via `/category-bank`. **8 of 200 done 2026-08-24**, demo-scoped (ADR-0008), 240 prompts, leader sets unverified. |
+| 3.1 | Category classifier (site content + autocomplete + contacts enrichment). **Site content built 2026-09-01 (ADR-0009)** — deterministic keyword scoring over the page's own text, behind an explicit SSRF boundary, with the answer written down once per domain so it can never silently change. Autocomplete and contacts enrichment are still unbuilt and still have no provider. **The thresholds are set from six real homepages, not from a labelled set — measuring them against the 100-domain sample is what closes G3's ≥95%, and it is not done.** |
+| 3.2 | 200 pre-computed category prompt banks + leader sets, via `/category-bank`. **14 hand-authored + a fallback**, demo-scoped (ADR-0008), leader sets unverified. **Since 2026-09-01 the set also grows on demand (ADR-0009)**: a domain no category fits gets a bank authored from its homepage, persisted and reused. An authored bank has NO leaders, ever — only real competitors, from collected answers, may enter a chart. |
 | 3.3 | `apps/public` — the free AI Visibility Grader. **Scan size must clear `MIN_N_FOR_COMPARISON` in the DEGRADED case, not the nominal one** — see the note below |
 | 3.4 | Head-to-head chart with CI bands; Confidence Grade A–D — **done 2026-08-24** (`4d1cb96`), fixture-only |
 | 3.5 | Email gate on the gap list; indexable public result pages |
-| 3.6 | Turnstile / abuse protection; per-IP budget cap |
+| 3.6 | Turnstile / abuse protection; per-IP budget cap. **Partly done**: a per-visitor rolling-window scan throttle and a separate preview throttle both ship; Turnstile and a per-CUSTOMER request ceiling do not. |
 
 ### GATE G3 — the activation gate
 

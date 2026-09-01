@@ -189,7 +189,14 @@ export default function Grader() {
             The FIXTURE flag below is not scoped away: it is a disclosure about
             the whole build, not a figure belonging to one scan, and a result on
             screen is exactly when it most needs to be visible. */}
-        {state.phase === 'done' && IS_LIVE ? null : (
+        {/* NOT RENDERED OVER ANY DOMAIN'S OWN SHEET — the result OR the preview.
+            The note below carries the REFERENCE scan's figures, and the preview
+            puts a different domain's name directly under it, so it reads as that
+            domain's provenance: 85 answers, 5 engines, day 2026-08-25, for a
+            scan that has not run. Exactly the confusion the comment below
+            describes for the result state, on a screen that did not exist when
+            it was written. */}
+        {(state.phase === 'done' || state.phase === 'preview') && IS_LIVE ? null : (
         <aside className={`note${IS_LIVE ? '' : ' note--flag'}`} aria-label="Where these numbers come from">
           {IS_LIVE ? (
             <>
