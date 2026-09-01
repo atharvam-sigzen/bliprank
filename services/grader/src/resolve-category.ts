@@ -339,10 +339,32 @@ export function trackedBrands(banks: readonly PromptBank[]): readonly BrandSpec[
   for (const bank of banks) {
     for (const l of bank.leaders) {
       if (byId.has(l.id)) continue
-      // The name as well as the aliases: a bank may list `HubSpot` as the name
-      // and only `HubSpot CRM` as an alias, and the bare name is the form a
-      // generated prompt is most likely to use.
-      const aliases = [...new Set([l.name, ...l.aliases].map((a) => a.trim()).filter(Boolean))]
+      /*
+       * ⚠️ THE ALIAS TABLE, AND ONLY THE ALIAS TABLE. The bare `l.name` used to
+       * be added on the reasoning that "a bank may list `HubSpot` as the name
+       * and only `HubSpot CRM` as an alias, and the bare name is the form a
+       * generated prompt is most likely to use". That override threw away the
+       * one piece of curation that matters here.
+       *
+       * Across the taxonomy, 104 leaders DO list their bare name among their
+       * aliases and 12 deliberately do not — and all twelve are ordinary English
+       * words: Wave, Sage, Amplitude, Plausible, Heap, Close, Kit, Crisp,
+       * Notion, Moz, Zoom, Durable. Somebody wrote "wave accounting" and
+       * "convertkit" and stopped short of "wave" and "kit" on purpose. Injecting
+       * the name put those bare words back and made them refusal triggers.
+       *
+       * What that cost, in production: kreo-tech.com, a real gaming-peripherals
+       * retailer, had a perfectly good authored bank DISCARDED because one
+       * prompt said "best softbox lighting kit for tiktok videos" and `kit`
+       * matched the brand Kit. The domain fell through to the general
+       * business-software bank and was asked "what software should a small
+       * business buy first" — a wrong measurement caused by a refusal that was
+       * protecting an email-marketing tool from a sentence about lighting.
+       *
+       * HubSpot is still caught, because HubSpot's table lists `hubspot`. The
+       * data already answers the question; this used to overrule it.
+       */
+      const aliases = [...new Set(l.aliases.map((a) => a.trim()).filter(Boolean))]
       byId.set(l.id, { id: l.id, name: l.name, aliases, domains: [] })
     }
   }
