@@ -83,6 +83,47 @@ export interface ScanResultFile {
 }
 
 /**
+ * Is a cached result still an answer to the question we would ask today?
+ *
+ * ⚠️ THE CATEGORY IS PART OF THE QUESTION, SO IT IS PART OF THE CACHE KEY.
+ *
+ * `/api/scan` keyed its result cache on the domain alone, which is not a cache —
+ * it is a promise that a domain has one answer forever. It does not.
+ * `resolveCategory` grew a site-content rung and an authoring rung (ADR-0009),
+ * so a domain scanned before those existed carries a result measured against a
+ * bank nobody would choose for it today. sigzen.com is the specimen: collected
+ * under `general-business-software`, recorded since as `erp-software`. The
+ * preview showed the ERP prompts, the visitor pressed the button, and the cache
+ * handed back a general-business-software measurement — two consecutive screens
+ * disagreeing about what the number is OF, which is the one thing this product
+ * exists not to do.
+ *
+ * A mismatch is therefore a MISS, not a stale-but-usable hit. R5 forbids
+ * rebasing a historical score, and serving one under a new category's name is
+ * that with extra steps. The miss re-scans and overwrites the file, so it
+ * self-heals once.
+ *
+ * Two deliberate falses-to-true:
+ *
+ *   - NO RECORD (`recordedSlug` null). Nothing to disagree with, so the result
+ *     stands. A domain scanned before records existed must not be invalidated
+ *     merely for predating the mechanism.
+ *   - NO CATEGORY on the file. It cannot be checked, and invalidating what
+ *     cannot be checked would re-spend on shape drift alone. Same rule
+ *     `runInfoOf` follows for cost: refuse to guess, in the safe direction.
+ */
+export function measuresCurrentCategory(hit: unknown, recordedSlug: string | null): boolean {
+  // Arrays excluded explicitly. `typeof [] === 'object'` and an array has no
+  // `.category`, so without this an empty array read as "a result with no
+  // category recorded" and was SERVED — the permissive branch above firing on
+  // something that is not a result at all. Same discipline as readRecords.
+  if (typeof hit !== 'object' || hit === null || Array.isArray(hit)) return false
+  const collectedUnder = (hit as { category?: unknown }).category
+  if (typeof collectedUnder !== 'string' || !collectedUnder) return true
+  return recordedSlug === null || recordedSlug === collectedUnder
+}
+
+/**
  * What a surface may say about the run behind a scan, whether or not the file
  * records one.
  *
@@ -173,9 +214,23 @@ export const BUNDLED_SCANS: readonly ScanResultFile[] = [SCAN]
  * SSE already handed the client is stashed here instead, which costs nothing
  * and needs no second store.
  *
- * ponytail: per-browser and per-session by design. A scan collected in one
- * browser is invisible in another until its json is bundled. Upgrade path when
- * the demo needs shared state: a route that lists the results dir.
+ * ⚠️ PERSISTED PER BROWSER, NOT PER SESSION — changed 2026-09-01. This was
+ * sessionStorage, so a scan that cost real provider quota disappeared from the
+ * dashboard, the portfolio and the workspace switcher the moment the browser
+ * closed. The server still had it — `/api/scan` caches to
+ * `data-live/results/` and replays it free forever — but nothing in the UI
+ * could find it, so the visible behaviour was "your scan is gone" and the
+ * obvious response was to run another one. Storage that forgets what was paid
+ * for teaches people to re-spend.
+ *
+ * Honest to persist because a result is immutable and carries its own day:
+ * every surface prints it through `runInfoOf`, so a week-old record reads as a
+ * week-old record. The category mirror in `resolved-category.ts` stays session-
+ * scoped for the opposite reason — a stale decision has no date on its face.
+ *
+ * ponytail: still per-browser. A scan collected in one browser is invisible in
+ * another until its json is bundled. Upgrade path when the demo needs shared
+ * state: a route that lists the results dir.
  */
 const SESSION_KEY = 'bliprank-session-scans'
 
@@ -226,7 +281,7 @@ function isScanBrand(b: unknown): b is ScanBrand {
 
 function sessionScans(): readonly ScanResultFile[] {
   try {
-    const raw = globalThis.sessionStorage?.getItem(SESSION_KEY)
+    const raw = globalThis.localStorage?.getItem(SESSION_KEY)
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
@@ -243,7 +298,7 @@ export function rememberScan(scan: ScanResultFile): void {
   if (scan.status !== 'scanned' || !scan.domain) return
   try {
     const kept = sessionScans().filter((s) => normaliseTyped(s.domain) !== normaliseTyped(scan.domain))
-    globalThis.sessionStorage?.setItem(SESSION_KEY, JSON.stringify([...kept, scan]))
+    globalThis.localStorage?.setItem(SESSION_KEY, JSON.stringify([...kept, scan]))
   } catch {
     /* failing to remember a scan must not break the page showing it */
   }

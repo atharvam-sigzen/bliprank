@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { buildHeadToHead } from './head-to-head'
 import { previewScore } from './preview-score'
-import { BUNDLED_SCANS, SCAN, SIGZEN, rememberScan, runInfoOf, scanFor, scans, subjectOf, type ScanResultFile } from './scan-result'
+import { BUNDLED_SCANS, SCAN, SIGZEN, measuresCurrentCategory, rememberScan, runInfoOf, scanFor, scans, subjectOf, type ScanResultFile } from './scan-result'
 import { workspaceFor } from './workspace'
 
 const SIGZEN_ENGINES = ['chatgpt', 'copilot', 'gemini', 'google-ai-mode', 'google-ai-overviews']
@@ -84,7 +84,7 @@ describe('scanFor — a registry, not one constant', () => {
     // sigzen is no longer bundled, so this now exercises the path it was always
     // really about — a SESSION scan resolving in any typed form.
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
@@ -107,7 +107,7 @@ describe('the live-scanned domain is COLLECTED everywhere, not just on the Grade
     // it, and the claim under test — a scan the Grader collected is COLLECTED on
     // the dashboard too — is about the cached path, not about being bundled.
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
@@ -229,7 +229,7 @@ describe('a scan collected this session is visible on every surface', () => {
     // vitest runs in node; the stash is a no-op without storage, which is the
     // SSR/static-export case and must not throw.
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
@@ -258,7 +258,7 @@ describe('a scan collected this session is visible on every surface', () => {
 
   it('an unfinished scan is not remembered, and no storage is not a crash', () => {
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
@@ -266,7 +266,7 @@ describe('a scan collected this session is visible on every surface', () => {
     expect(scanFor('queued.com')).toBeNull()
     vi.unstubAllGlobals()
 
-    // No sessionStorage at all: the bundled scans still resolve.
+    // No localStorage at all: the bundled scans still resolve.
     expect(() => rememberScan(NOTION)).not.toThrow()
     expect(scans()).toEqual(BUNDLED_SCANS)
   })
@@ -294,7 +294,7 @@ describe('a scan collected this session is visible on every surface', () => {
       JSON.stringify([{ ...SIGZEN, domain: 'x.com', counts: {} }]),
     ]
     for (const raw of cases) {
-      vi.stubGlobal('sessionStorage', { getItem: () => raw, setItem: () => undefined })
+      vi.stubGlobal('localStorage', { getItem: () => raw, setItem: () => undefined })
       expect(scans()).toEqual(BUNDLED_SCANS)
       // The BUNDLED scan still resolves through a corrupt session entry — that
       // is the claim. It was asserted on sigzen, which stopped being bundled;
@@ -306,7 +306,7 @@ describe('a scan collected this session is visible on every surface', () => {
 
     // A valid entry sharing the array with a corrupt one survives the filter.
     const NOTION_OK: ScanResultFile = { ...SIGZEN, domain: 'notion.so' }
-    vi.stubGlobal('sessionStorage', { getItem: () => JSON.stringify([null, NOTION_OK]), setItem: () => undefined })
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify([null, NOTION_OK]), setItem: () => undefined })
     expect(scanFor('notion.so')?.domain).toBe('notion.so')
     vi.unstubAllGlobals()
   })
@@ -318,5 +318,47 @@ describe('no scan file carries a fabricated cost', () => {
     // scan. It is removed, not corrected: the real figure is not recoverable.
     expect(SCAN.run.spentUsd).toBeUndefined()
     expect(runInfoOf(SCAN).spentUsd).toBeNull()
+  })
+})
+
+/**
+ * THE STALE-CATEGORY CACHE, which served a measurement of a different thing.
+ *
+ * `/api/scan` keyed its result cache on the domain alone. sigzen.com was
+ * collected under `general-business-software` and recorded since as
+ * `erp-software`, so the preview offered the ERP prompts and the cache answered
+ * with the general-business-software number. Same domain, different question,
+ * no indication on screen that the two had parted company.
+ */
+describe('measuresCurrentCategory — the category is part of the cache key', () => {
+  const under = (category: string) => ({ ...SIGZEN, category })
+
+  it('a result collected under a category we no longer decide is a MISS', () => {
+    // The exact specimen: collected general-business-software, recorded erp.
+    expect(measuresCurrentCategory(under('general-business-software'), 'erp-software')).toBe(false)
+  })
+
+  it('a result collected under the category we still decide is a hit', () => {
+    expect(measuresCurrentCategory(under('crm-software'), 'crm-software')).toBe(true)
+  })
+
+  it('no record is not a mismatch — a scan predating the mechanism still stands', () => {
+    // Invalidating every result collected before records existed would re-spend
+    // the whole cache to learn nothing.
+    expect(measuresCurrentCategory(under('general-business-software'), null)).toBe(true)
+  })
+
+  it('a file recording no category is kept rather than guessed at', () => {
+    // Cannot be checked. Refuse to guess, in the direction that does not spend.
+    const { category: _dropped, ...noCategory } = SIGZEN
+    expect(measuresCurrentCategory(noCategory, 'erp-software')).toBe(true)
+    expect(measuresCurrentCategory({ ...SIGZEN, category: '' }, 'erp-software')).toBe(true)
+    expect(measuresCurrentCategory({ ...SIGZEN, category: 42 }, 'erp-software')).toBe(true)
+  })
+
+  it('junk that is not an object is a miss, never a served result', () => {
+    for (const junk of [null, undefined, 'a string', 42, []]) {
+      expect(measuresCurrentCategory(junk, 'crm-software')).toBe(false)
+    }
   })
 })

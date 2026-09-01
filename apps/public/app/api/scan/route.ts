@@ -5,7 +5,9 @@ import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../..
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
+import { readCategoryRecord } from '../../../../../services/grader/src/resolve-category.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
+import { measuresCurrentCategory } from '@/lib/scan-result'
 import {
   checkVisitorThrottle,
   defaultVisitorThrottleConfig,
@@ -77,15 +79,50 @@ const normalise = (d: string): string =>
 
 const resultFile = (domain: string) => join(RESULTS, `${domain.replace(/[^a-z0-9.-]/g, '_')}.json`)
 
-/** A finished scan for this domain, if one was ever produced. */
+/**
+ * A finished scan for this domain, if one was ever produced AND it still
+ * measures the same thing.
+ *
+ * ⚠️ THE CATEGORY IS PART OF THE CACHE KEY, BECAUSE IT IS PART OF THE QUESTION.
+ *
+ * This used to key on the domain alone, and that is not a cache — it is a
+ * promise that a domain has one answer forever. It does not. `resolveCategory`
+ * grew a site-content rung and an authoring rung (ADR-0009), so a domain
+ * scanned before those existed carries a result measured against a bank nobody
+ * would choose for it today. sigzen.com is the specimen: collected under
+ * `general-business-software`, recorded since as `erp-software`. The preview
+ * showed the ERP prompts, the visitor pressed the button, and this function
+ * handed back a general-business-software measurement — the two screens
+ * disagreeing about what the number is OF, which is the one thing this product
+ * exists not to do.
+ *
+ * So a result is only served when the category it was collected under is still
+ * the category we decide. Otherwise it is a measurement of a different thing,
+ * and answering with it is worse than spending again: R5 forbids rebasing a
+ * historical score, and serving one under a new category's name is that with
+ * extra steps. A miss re-scans and overwrites the file, so this self-heals once.
+ *
+ * A file recording NO category is kept. It cannot be checked, and invalidating
+ * what cannot be checked would re-spend on shape drift alone — refusing to
+ * guess in the safe direction, the same rule `runInfoOf` follows for cost.
+ */
 function cached(domain: string): unknown | null {
   const f = resultFile(domain)
   if (!existsSync(f)) return null
+  let hit: unknown
   try {
-    return JSON.parse(readFileSync(f, 'utf8'))
+    hit = JSON.parse(readFileSync(f, 'utf8'))
   } catch {
     return null
   }
+  // The record, not a re-derivation: `recordCategory` refuses to overwrite, so
+  // a record only ever changes by a deliberate act against the file. That makes
+  // the comparison stable rather than a source of surprise re-spending.
+  //
+  // The decision itself is a pure function in lib/scan-result.ts, where it can
+  // be tested without a filesystem — this line is the IO around it.
+  const record = readCategoryRecord(DATA, domain)
+  return measuresCurrentCategory(hit, record?.slug ?? null) ? hit : null
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -126,7 +163,7 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
-        // 1. CACHE FIRST, ALWAYS. A repeat of the same domain must never re-spend
+        // 1. CACHE FIRST. A repeat of the same domain must never re-spend
         //    quota — with 50 requests a month and 17 per engine per scan, one
         //    accidental re-submit is a sixth of the month.
         const hit = cached(domain)
