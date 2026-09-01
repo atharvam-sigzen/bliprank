@@ -23,10 +23,5 @@
     "tsx": "^4.23.12",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp"
-    ]
   }
 }
