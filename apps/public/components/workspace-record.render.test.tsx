@@ -9,7 +9,8 @@
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { SCAN, SIGZEN, rememberScan } from '../lib/scan-result'
+import { SCAN, rememberScan } from '../lib/scan-result'
+import { NO_RUN_BLOCK_SCAN } from '../lib/__fixtures__/no-run-block-scan'
 import { WorkspaceRecord } from './workspace-record'
 
 const brand = (domain: string) => renderToStaticMarkup(<WorkspaceRecord domain={domain} context="brand" />)
@@ -23,8 +24,8 @@ describe('head-to-head parity in the measured record', () => {
     expect(html).toContain('The head-to-head comparison is not in this list')
   })
 
-  it('keeps the honest zero-competitor prose for sigzen', () => {
-    // sigzen is no longer a BUNDLED scan — it is the fixture for a record with
+  it('keeps the honest zero-competitor prose for a fallback-bank record', () => {
+    // the fixture is synthetic — it is the specimen for a record with
     // no run block and no competitors. The branch under test is reached through
     // `scanFor`, so the record has to be where the app actually looks for a
     // non-bundled one: the session registry. Node has no localStorage, so the
@@ -34,9 +35,9 @@ describe('head-to-head parity in the measured record', () => {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
-    rememberScan(SIGZEN)
+    rememberScan(NO_RUN_BLOCK_SCAN)
 
-    const html = brand(SIGZEN.domain)
+    const html = brand(NO_RUN_BLOCK_SCAN.domain)
     expect(html).toContain('There is no comparison on this scan')
     // No chart, and no claim that a comparison sits above.
     expect(html).not.toContain('The head-to-head comparison is not in this list')
