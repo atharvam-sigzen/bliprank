@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ActionLink } from '@/components/action-link'
@@ -7,7 +8,7 @@ import { BackLink } from '@/components/back-link'
 import { ProductBar } from '@/components/chrome'
 import { WorkspaceRecord } from '@/components/workspace-record'
 import { normaliseTyped } from '@/lib/scan-result'
-import { workspaceFor } from '@/lib/workspace'
+import { readAgencyDomains, workspaceFor } from '@/lib/workspace'
 import { assertProvisionalAllowed } from '@bliprank/stats'
 
 // Module scope, as on /agency: a provisional surface must fail `next build`
@@ -20,8 +21,16 @@ assertProvisionalAllowed('The agency client record')
  * The record itself is the shared `WorkspaceRecord` — the same measured and
  * pre-flight states the brand dashboard renders, with `context="agency-client"`
  * changing only the copy that names the plan side. This page owns nothing but
- * the frame: the chrome, the way back, and the refusal to render a workspace
- * for a segment that does not resolve to one.
+ * the frame: the chrome, the way back, and the three states a record cannot
+ * express:
+ *
+ *   BOOTING       — localStorage not yet read (domain known, portfolio unknown)
+ *   NOT IN PORTFOLIO — domain is valid but not in this browser's agency list
+ *   LOADED        — domain is a confirmed portfolio member; render the record
+ *
+ * The domain comes from the URL param — never from the brand-side active domain
+ * store. This page renders whichever client was clicked, independent of the
+ * brand-side active domain.
  */
 
 /** decodeURIComponent throws on a malformed escape; a hand-typed URL must
@@ -38,9 +47,23 @@ export default function AgencyClientPage() {
   const params = useParams<{ domain: string }>()
   const typed = safeDecode(params?.domain ?? '')
   const domain = normaliseTyped(typed)
-  // Same resolver every other surface uses. Null means the segment is not a
-  // usable domain (empty, junk, a filename) — there is no workspace to show,
-  // and this page says so rather than inventing one.
+
+  // `undefined` is "not yet read" — localStorage is unavailable during SSR and
+  // during the first client render, so we read it in an effect rather than
+  // synchronously. This keeps the same discipline as the brand dashboard.
+  const [inPortfolio, setInPortfolio] = useState<boolean | undefined>(undefined)
+
+  useEffect(() => {
+    if (!domain) {
+      // Not a usable domain at all — no point checking the portfolio list.
+      setInPortfolio(false)
+      return
+    }
+    setInPortfolio(readAgencyDomains().includes(domain))
+  }, [domain])
+
+  // A genuinely unusable segment (empty, junk, a filename) is caught before the
+  // portfolio check — there is no workspace to show regardless of the list.
   const workspace = domain ? workspaceFor(domain) : null
 
   return (
@@ -49,16 +72,10 @@ export default function AgencyClientPage() {
 
       <BackLink href="/agency" label="Back to the portfolio" />
 
-      {workspace === null ? (
-        <section className="record">
-          <h1 className="record__title">Not a client workspace</h1>
-          <p className="prose">
-            {typed ? <><strong>{typed}</strong> does not resolve to a workspace.</> : 'This address names no client.'} Nothing has been measured
-            for it and nothing on this page will pretend otherwise. Add it from{' '}
-            <Link href="/agency/add">the portfolio&apos;s add sheet</Link> if it is a real domain, or go back to{' '}
-            <Link href="/agency">the portfolio</Link>.
-          </p>
-        </section>
+      {inPortfolio === undefined ? (
+        <Booting />
+      ) : workspace === null || !inPortfolio ? (
+        <NotInPortfolio typed={typed} />
       ) : (
         <>
           <WorkspaceRecord domain={workspace.domain} context="agency-client" />
@@ -70,5 +87,45 @@ export default function AgencyClientPage() {
         </>
       )}
     </main>
+  )
+}
+
+/**
+ * The pre-mount shell. Neutral on purpose: the page knows the domain from the
+ * URL but does not yet know whether it is in this portfolio, because that lives
+ * in localStorage and has not been read.
+ */
+function Booting() {
+  return (
+    <section className="record" aria-busy="true">
+      <p className="prose">Opening the portfolio saved in this browser.</p>
+    </section>
+  )
+}
+
+/**
+ * The domain is not a confirmed portfolio member — either the segment was not
+ * a usable domain, or it resolved but is not in this browser's agency list.
+ *
+ * Never a raw 404: "not in portfolio" is a real, nameable state and the reader
+ * deserves a page that says so, with a clear way back.
+ */
+function NotInPortfolio({ typed }: { typed: string }) {
+  return (
+    <section className="record">
+      <h1 className="record__title">Not in this portfolio</h1>
+      <p className="prose">
+        {typed ? (
+          <>
+            <strong>{typed}</strong> is not in this portfolio.
+          </>
+        ) : (
+          'This address names no client.'
+        )}{' '}
+        Nothing has been measured for it under this agency view and nothing on this page will pretend otherwise. Add it from{' '}
+        <Link href="/agency/add">the portfolio&apos;s add sheet</Link> if it is a real client, or go back to{' '}
+        <Link href="/agency">the portfolio</Link>.
+      </p>
+    </section>
   )
 }
