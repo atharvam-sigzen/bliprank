@@ -257,7 +257,10 @@ export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = proc
    * sequence.
    */
   maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 12),
-  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 17),
+  // ⚠️ TEMPORARY — 2026-09-01, testing only. Default lowered 17 -> 10 to halve
+  // the quota a live scan draws while domains are being tested.
+  // REVERT WITH: git checkout -- services/grader/src/live-gate.ts
+  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 10),
   ledgerFile: join(dataDir, 'live-cap.json'),
   engines: [...ENGINES],
 })
