@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan } from '../../../../../services/grader/src/live-gate.js'
+import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
@@ -206,12 +207,18 @@ export async function POST(req: Request): Promise<Response> {
           // Authoring a category, when the taxonomy has none for this domain.
           // Almost always a no-op by the time a scan runs: the preview step has
           // already resolved and RECORDED the category, so `resolveCategory`
-          // stops at rung 0 and this key is never used. It is passed anyway
-          // because a scan reached directly — a client that skips the preview —
-          // must not silently get a worse classification than one that did not.
-          anthropicApiKey: loadApiKey(ROOT, env, 'ANTHROPIC_API_KEY')?.key,
+          // stops at rung 0 and no model is called. It is passed anyway because
+          // a scan reached directly — a client that skips the preview — must not
+          // silently get a worse classification than one that did not.
+          author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key) ?? undefined,
           dataDir: DATA,
           outFile: join(DATA, 'latest.json'),
+          // Progress is streamed to the client through `onProgress` below, so a
+          // second copy on stdout would be noise. The resolver's own log is lost
+          // with it, and that is acceptable HERE and only here: by the time a
+          // scan runs, the preview has already resolved and recorded the
+          // category, so authoring is a no-op on this path. A client that skips
+          // the preview loses the diagnostic, not the degradation.
           log: () => {},
           onProgress: (e) => send(c, 'progress', e),
         })

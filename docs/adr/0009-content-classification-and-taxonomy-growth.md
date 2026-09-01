@@ -105,6 +105,12 @@ constraint, and it is enforced three times over rather than trusted:
 - `readGeneratedBanks` **drops** a bank file that has acquired any, so a
   hand-edited file cannot put invented rivals on a chart either.
 
+> **Amendment 1 weakens the first of those three and nothing else.** A provider
+> answering with open JSON has no schema to constrain it and can volunteer a
+> `competitors` array. The parser reads three keys and ignores every other one,
+> so the field reaches nothing; the second and third refusals are untouched. See
+> Amendment 1 → "The competitor rule survives a looser provider".
+
 This is the rule the fallback bank already follows and the rule `/category-bank`
 states: do not invent competitor names; derive them from collected answers or a
 verifiable source. A model asked to name the leaders in a category will always
@@ -120,6 +126,11 @@ is refused whole rather than filtered, because a bank that lost three prompts to
 filtering is a different sample size from every other bank.
 
 The model is `claude-sonnet-5`, per CLAUDE.md §6's "customer-facing generation".
+**Superseded by Amendment 1:** the model is now chosen by `BANK_AUTHOR_MODEL`,
+defaulting to `nvidia/nemotron-3-super-120b-a12b:free` on OpenRouter with
+`meta-llama/llama-3.3-70b-instruct:free` behind it. Anthropic remains a
+selectable provider. The reasoning below is unaffected.
+
 This does not violate R2 (batch what can batch): R2 governs **scoring**, which is
 high-volume and latency-insensitive. This is a one-off authoring step on an
 interactive path, with nothing to batch it against, and it runs **at most once per
@@ -205,3 +216,126 @@ it is what closes G3 rather than this ADR.
 The production taxonomy questions ADR-0008 left open stay open. This ADR does not
 answer where the vocabulary comes from or what granularity 200 banks implies — it
 makes the taxonomy able to grow, which is a different question and a smaller one.
+
+
+---
+
+# Amendment 1 — the bank author is a swappable provider
+
+**Status:** Accepted · **Date:** 2026-09-01
+
+## Context
+
+Section 3 above named `claude-sonnet-5` in code, per CLAUDE.md §6. Two things
+argue against a model chosen in a source file:
+
+- The authoring models worth using here are free tiers, and free tiers get
+  rate-limited, deprecated and withdrawn — usually at the least convenient
+  moment. The response to that must be an edit to `.env.local`, not a deploy.
+- Authoring is the one step in this pipeline whose correctness rests on the model
+  staying inside a shape. Which model does that best is an empirical question
+  that will have a different answer in six months, and a codebase should not have
+  to be edited to record a new answer.
+
+## Decision
+
+`services/grader/src/bank-author.ts`. One `BankAuthorConfig`, built from the
+environment by `bankAuthorConfig()`, behind which sit two transports:
+`openai-compatible` (default) and `anthropic`.
+
+**Default: `nvidia/nemotron-3-super-120b-a12b:free`, via OpenRouter, falling back
+to `meta-llama/llama-3.3-70b-instruct:free`.** OpenRouter rather than Nvidia's API
+directly, and it is the *simpler* option here rather than the more capable: the
+`vendor/model:free` slugs are OpenRouter's own addressing scheme, one key reaches
+both named models and whatever replaces them, and the wire format is the OpenAI
+chat-completions shape essentially every host speaks — including Nvidia's own NIM
+endpoint, which `BANK_AUTHOR_BASE_URL` reaches with no code change.
+
+Swapping a model is `BANK_AUTHOR_MODEL`. Swapping provider is
+`BANK_AUTHOR_PROVIDER`. Both are single env vars, which was the requirement.
+
+The Anthropic path is kept rather than deleted: CLAUDE.md §6 names Sonnet 5 for
+customer-facing generation, the SDK is already a dependency, and a seam with one
+implementation behind it is not a seam.
+
+### No `response_format`, and the parser carries the weight
+
+Sending `response_format: {type: 'json_object'}` is the textbook way to ask for
+JSON and is a trap on a fleet of free models: a host that does not support it for
+the chosen model answers 400, which is indistinguishable from "the model is
+down". The configured model would then silently never run, the fallback would
+answer every request, and nobody would be told that the model they chose was not
+the one being used.
+
+So the request asks for JSON in words, and `extractJsonObject` survives what
+models actually return — a fenced block, a preamble, a trailing apology — tracking
+string literals so a brace inside a prompt cannot close the object early.
+Defensive parsing is needed regardless of the flag, so the flag buys nothing and
+costs a whole failure mode.
+
+### The fallback chain
+
+One attempt per model, no backoff. A person is waiting on a preview, and a second
+attempt at a model that just rate-limited is a second wait for the same answer.
+**The fallback model is the retry, and it is a retry that changes something.**
+
+A schema refusal counts as a failure and moves to the fallback: *unreliable* and
+*unavailable* are the same event from here, and a model answering confidently in
+the wrong shape is the worse of the two.
+
+`authorBank` **never throws**. Every failure — network, timeout, HTTP error,
+unparseable output, a shape that does not survive `parseCandidate` — returns
+null, which `resolveCategory` reads as "no bank was authored" and answers with
+the general bucket. That is byte-for-byte the path taken when no key is
+configured at all, so a flaky free model and an unconfigured one reach the
+customer as one outcome rather than two.
+
+### ⚠️ The competitor rule survives a looser provider
+
+This is the part that mattered when choosing a provider, and it is the part that
+does **not** depend on choosing well.
+
+With the Anthropic tool schema, "no competitors" was *structural*: the schema had
+no such field. A free model answering with open JSON can put
+`"competitors": ["Razer", "Logitech"]` in the object, and some will — homepages
+are full of rivals and being helpful is what these models do.
+
+That changes nothing, because the enforcement was never the schema alone:
+
+1. `parseCandidate` reads exactly `display_name`, `description` and `prompts`,
+   and ignores every other key. `GeneratedBank` has nowhere to put a competitor,
+   so there is no later step that could be forgotten.
+2. `resolve-category.ts` constructs `leaders: []` itself, from nothing.
+3. `readGeneratedBanks` **drops** a stored bank that has acquired leaders, so a
+   hand-edited file cannot reintroduce them either.
+
+Three independent refusals. Tested by feeding a response carrying `competitors`,
+`leaders`, `brands` and `market_leaders` through the shipping author and
+asserting that none of those names appears anywhere in the bank or in the file
+written to disk.
+
+### Provenance
+
+The model that answered goes on the record — `evidence` reads "authored from
+acmegear.com's homepage by nvidia/nemotron-3-super-120b-a12b:free" — and into the
+stored bank's `note`. A category authored by a free tier in September and one
+authored by Sonnet in December are different artefacts, and a reader looking at a
+surprising bank two years from now should be able to see which produced it. Same
+discipline as R8's `algo_version` travelling with a metric.
+
+## Consequences
+
+- Swapping a rate-limited free tier is one line in `.env.local`.
+- `verified: false` matters more than it did. A weaker model authoring an
+  unreviewed bank is exactly what that flag is for, and it is shown on the
+  Grader before the scan is bought.
+- Determinism is unchanged where it counts. The sampler is not reproducible on a
+  shared free endpoint whatever `temperature` says — batching and routing see to
+  that — but the answer is written down once and reused forever, so the
+  reproducibility the metric contract needs is the **record's**, not the
+  sampler's.
+- **Still unmeasured:** how reliably any of these models stays inside the shape.
+  The refusals above mean an unreliable model degrades to the general bucket
+  rather than producing something wrong, so the cost of being wrong about this is
+  bounded — but the rate is not known, and a bank whose prompts quietly name a
+  rival is not something `rejectionReason` can detect.

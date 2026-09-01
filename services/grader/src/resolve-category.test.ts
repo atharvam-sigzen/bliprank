@@ -16,6 +16,7 @@ import {
   type GeneratedBank,
 } from './resolve-category.js'
 import type { FetchSiteResult } from './fetch-site.js'
+import { authorBank, type GenerateInput } from './bank-author.js'
 
 let dir: string
 beforeEach(() => {
@@ -35,7 +36,16 @@ const page = (title: string, description = '', headings = '', body = ''): FetchS
 
 const unreachable: FetchSiteResult = { ok: false, reason: 'unreachable', message: 'timed out' }
 
+const AUTHOR = {
+  provider: 'openai-compatible',
+  model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  apiKey: 'test-key',
+  timeoutMs: 1_000,
+} as const
+
 const goodBank = (name = 'Gaming peripherals'): GeneratedBank => ({
+  model: AUTHOR.model,
   displayName: name,
   description: 'Keyboards, mice and headsets built for gaming.',
   prompts: [
@@ -174,7 +184,7 @@ describe('⚠️ THE STABILITY GUARANTEE: a category is decided once and never s
 describe('⚠️ AN AUTHORED CATEGORY NEVER HAS COMPETITORS', () => {
   const authoring = (bank: GeneratedBank = goodBank()) => ({
     dataDir: dir,
-    anthropicApiKey: 'test-key',
+    author: AUTHOR,
     fetchSite: async () => page('Acme Gaming', 'Keyboards and mice', 'Built for play', 'We make gaming keyboards.'),
     generate: async () => bank,
   })
@@ -194,7 +204,7 @@ describe('⚠️ AN AUTHORED CATEGORY NEVER HAS COMPETITORS', () => {
     let authored = 0
     const r = await resolveCategory('othergear.com', {
       dataDir: dir,
-      anthropicApiKey: 'test-key',
+      author: AUTHOR,
       fetchSite: async () => page('Other Gear', 'Keyboards and mice', 'Built for play', 'We make gaming keyboards.'),
       generate: async () => {
         authored += 1
@@ -220,6 +230,53 @@ describe('⚠️ AN AUTHORED CATEGORY NEVER HAS COMPETITORS', () => {
     // put invented rivals on a chart is not a file to partially trust.
     expect(readGeneratedBanks(dir)).toHaveLength(0)
     expect(allBanks(dir).some((b) => b.category === 'gaming-peripherals')).toBe(false)
+  })
+
+  it('END TO END through the real author: a model naming rivals still yields a bank with none', async () => {
+    /*
+     * The other tests here inject `generate`, so they prove the resolver's half.
+     * This one runs the SHIPPING author against a mocked HTTP response, so the
+     * whole chain is under test: a free model volunteering `competitors`, the
+     * parser that reads three keys, the `leaders: []` the resolver constructs,
+     * and the file that is written and read back.
+     */
+    const reply = JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              display_name: 'Gaming peripherals',
+              description: 'Keyboards, mice and headsets built for gaming.',
+              competitors: ['Razer', 'Logitech'],
+              leaders: [{ id: 'razer', name: 'Razer', aliases: ['Razer'], domains: ['razer.com'] }],
+              prompts: [
+                ...Array.from({ length: GENERATED_DISCOVERY }, (_, i) => ({ text: `Best gaming keyboard, option ${i}`, intent: 'discovery' })),
+                ...Array.from({ length: GENERATED_PROBLEM_LED }, (_, i) => ({ text: `My wrists ache, case ${i}`, intent: 'problem-led' })),
+              ],
+            }),
+          },
+        },
+      ],
+    })
+
+    const r = await resolveCategory('acmegear.com', {
+      dataDir: dir,
+      author: AUTHOR,
+      fetchSite: async () => page('Acme Gaming', 'Keyboards and mice', 'Built for play', 'We make gaming keyboards.'),
+      // The real author, with only its transport replaced.
+      generate: (i: GenerateInput) =>
+        authorBank({ ...i, fetchImpl: async () => new Response(reply, { status: 200, headers: { 'content-type': 'application/json' } }) }),
+    })
+
+    expect(r.record.source).toBe('generated')
+    expect(r.bank.leaders).toEqual([])
+    // Nowhere on the stored artefact, not in the bank, not in the note.
+    const stored = readFileSync(join(dir, 'generated-banks', 'gaming-peripherals.json'), 'utf8')
+    expect(stored).not.toContain('Razer')
+    expect(stored).not.toContain('Logitech')
+    // And the model that answered is on the record, so a surprising bank is
+    // attributable years later.
+    expect(r.record.evidence).toContain(AUTHOR.model)
   })
 
   it('an authoring failure degrades to the fallback, never to a broken scan', async () => {

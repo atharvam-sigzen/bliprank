@@ -49,6 +49,7 @@ import { FileBlobStore, FileKV } from './local-store.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult } from './scan.js'
 import { allBanks, allCategories, resolveCategory } from './resolve-category.js'
+import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
 
 /** Provider ceiling for one API key, shared across engines. */
 const KEY_RPS_CEILING = 15
@@ -70,11 +71,12 @@ export interface RunnerOptions {
   readonly outFile: string
   readonly log: (s: string) => void
   /**
-   * Key for authoring a bank when no category in the taxonomy fits (rung 4 of
-   * `resolve-category.ts`). Absent disables authoring only — the homepage
-   * signal still runs, and an unauthorable domain falls back exactly as before.
+   * Which model authors a bank when no category in the taxonomy fits (rung 4 of
+   * `resolve-category.ts`), resolved from the environment by `bankAuthorConfig`.
+   * Absent disables authoring only — the homepage signal still runs, and an
+   * unauthorable domain falls back exactly as before.
    */
-  readonly anthropicApiKey?: string | undefined
+  readonly author?: BankAuthorConfig | undefined
 }
 
 export function parseArgs(
@@ -118,6 +120,7 @@ export function parseArgs(
   const apiKey = found?.key ?? ''
   if (!offline && !apiKey) return { refuse: `OPENWEBNINJA_API_KEY not found in the environment, .env.local or .env` }
   if (!offline) keySource = found?.from ?? 'unknown'
+  const author = bankAuthorConfig(env, (n) => loadApiKey(repoRoot, env, n)?.key) ?? undefined
   if (!offline && env['COLLECTION_ENABLED'] !== 'true') {
     return { refuse: 'COLLECTION_ENABLED is not "true" (rule R3). Enable it deliberately for this run, or pass --fixture.' }
   }
@@ -151,6 +154,20 @@ export function parseArgs(
       apiKey,
       dataDir,
       outFile: args.get('out') ?? join(dataDir, 'latest.json'),
+      /*
+       * The bank author, from the environment and the same repo-root dotenv the
+       * provider key comes from. Absent when no key is configured, which
+       * disables rung 4 and nothing else.
+       *
+       * SECRETS FROM THE FILE, DECISIONS FROM THE COMMAND LINE still holds.
+       * Every DECISION this runner makes -- plan, cap, mode -- is still a flag it
+       * refuses to default. Which model authors a bank is not that kind of
+       * decision: it spends no provider quota, it cannot change what a scan
+       * costs, and the whole point of the seam is that swapping a rate-limited
+       * free tier is an env edit rather than a new flag on every command anyone
+       * has already written down.
+       */
+      ...(author ? { author } : {}),
       log: (s) => process.stdout.write(`${s}\n`),
     },
   }
@@ -340,7 +357,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
         ? async (domain: string) => {
             const r = await resolveCategory(domain, {
               dataDir: o.dataDir,
-              anthropicApiKey: o.anthropicApiKey,
+              author: o.author,
               log: o.log,
             })
             return {

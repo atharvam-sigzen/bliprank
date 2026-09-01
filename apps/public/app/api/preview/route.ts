@@ -2,6 +2,7 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
+import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
 import { UNPROMPTED_INTENTS } from '../../../../../services/grader/src/scan.js'
 import { resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
@@ -107,8 +108,26 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const resolved = await resolveCategory(domain, {
       dataDir: DATA,
-      anthropicApiKey: loadApiKey(ROOT, env, 'ANTHROPIC_API_KEY')?.key,
-      log: () => {},
+      // Model, provider and key all from the environment — ADR-0009 Amendment 1.
+      // `loadApiKey` is passed as the reader so the author's key comes out of the
+      // same repo-root `.env.local` as every other secret, with the same
+      // precedence and the same CRLF handling.
+      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key) ?? undefined,
+      /*
+       * TO THE SERVER CONSOLE, NOT SWALLOWED.
+       *
+       * This used to be `() => {}`, which silenced the one diagnostic that
+       * matters most here. Authoring runs against free tiers that get
+       * rate-limited and withdrawn, and every failure degrades SILENTLY to the
+       * general bucket by design — so with the log discarded, "the model has
+       * been dead for a week" and "no domain happened to need a new category"
+       * look identical from outside. The line names the model, the status and
+       * the provider's own message.
+       *
+       * Server-side only. Nothing here reaches the response, and the response
+       * already says which category was chosen and why.
+       */
+      log: (m) => console.warn(`[preview] ${m}`),
     })
 
     const gate = defaultGateConfig(DATA, env)

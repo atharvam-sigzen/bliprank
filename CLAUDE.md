@@ -258,6 +258,25 @@ COLLECTION_BUDGET_USD_DAILY=      # hard ceiling, enforced by the collector
 COLLECTION_ENABLED=false          # default OFF in dev
 ```
 
+**The prompt-bank author** (ADR-0009 Amendment 1). Optional: with no key it is
+off, and a domain in no known category falls back to the general bank exactly as
+it did before authoring existed. Everything here is an env edit on purpose —
+these are free tiers, and swapping a rate-limited one must not be a deploy.
+
+```
+OPENROUTER_API_KEY=               # or BANK_AUTHOR_API_KEY. Absent = authoring off.
+BANK_AUTHOR_MODEL=                # default nvidia/nemotron-3-super-120b-a12b:free
+BANK_AUTHOR_FALLBACK_MODEL=       # default meta-llama/llama-3.3-70b-instruct:free; '' disables
+BANK_AUTHOR_PROVIDER=             # openai-compatible (default) | anthropic
+BANK_AUTHOR_BASE_URL=             # default https://openrouter.ai/api/v1
+BANK_AUTHOR_TIMEOUT_MS=           # default 25000, per attempt
+```
+
+**⚠️ Whichever model answers, the competitor rule holds.** It is not the schema:
+`parseCandidate` reads three keys and ignores every other one, `leaders: []` is
+constructed in our code, and a stored bank that has acquired leaders is dropped
+on read. A model that names rivals is not an error, it is a field nothing reads.
+
 `COLLECTION_ENABLED` defaults to `false`. Turning it on in a dev session is a
 deliberate, logged act.
 

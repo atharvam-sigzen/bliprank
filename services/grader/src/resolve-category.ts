@@ -59,7 +59,6 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import Anthropic from '@anthropic-ai/sdk'
 import {
   DEMO_BANKS,
   DEMO_TAXONOMY,
@@ -72,13 +71,21 @@ import {
   type PromptBank,
 } from '@bliprank/taxonomy'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
+import {
+  GENERATED_DISCOVERY,
+  GENERATED_PROBLEM_LED,
+  authorBank,
+  type BankAuthorConfig,
+  type GenerateInput,
+  type GeneratedBank,
+} from './bank-author.js'
 
-/** CLAUDE.md §6: Sonnet 5 is the customer-facing generation model. */
-export const BANK_AUTHOR_MODEL = 'claude-sonnet-5'
-
-/** Unprompted prompts a generated bank must carry. Matches every hand-authored bank's 17. */
-export const GENERATED_DISCOVERY = 10
-export const GENERATED_PROBLEM_LED = 7
+/**
+ * Re-exported so a caller needs one import for the ladder and its constants.
+ * The counts live with the author because they are what a bank is validated
+ * against, and the validation is there.
+ */
+export { GENERATED_DISCOVERY, GENERATED_PROBLEM_LED, type BankAuthorConfig, type GeneratedBank } from './bank-author.js'
 
 /**
  * HOW a category was decided — permanent, and never `record`.
@@ -123,8 +130,16 @@ export interface ResolvedCategory {
 export interface ResolveDeps {
   /** Where records and generated banks live. Same dir the gate ledgers use. */
   readonly dataDir: string
-  /** Absent disables rung 4 entirely; the resolver falls back exactly as before. */
-  readonly anthropicApiKey?: string | undefined
+  /**
+   * Which model authors a bank, and where it lives.
+   *
+   * Absent disables rung 4 entirely and the resolver falls back exactly as it
+   * did before authoring existed — the same degradation as an author that fails,
+   * so "no key configured" and "the free tier is down" reach the customer as one
+   * outcome rather than two. Built by `bankAuthorConfig` from the environment,
+   * so swapping models is an env edit (ADR-0009 Amendment 1).
+   */
+  readonly author?: BankAuthorConfig | undefined
   readonly fetchOptions?: FetchSiteOptions
   /** Injected in tests. */
   readonly fetchSite?: (domain: string, options?: FetchSiteOptions) => Promise<FetchSiteResult>
@@ -263,20 +278,15 @@ export function allCategories(dataDir: string): readonly CategoryDef[] {
  * RUNG 4 — authoring a bank for a category the taxonomy does not have.
  */
 
-export interface GenerateInput {
-  readonly host: string
-  readonly title: string
-  readonly description: string
-  readonly headings: string
-  readonly existingSlugs: readonly string[]
-  readonly apiKey: string
-}
-
-export interface GeneratedBank {
-  readonly displayName: string
-  readonly description: string
-  readonly prompts: readonly { readonly text: string; readonly intent: 'discovery' | 'problem-led' }[]
-}
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * RUNG 4 — authoring a bank for a category the taxonomy does not have.
+ *
+ * The model call itself lives in `bank-author.ts`, behind a provider seam, so
+ * that swapping a rate-limited free tier is an environment edit rather than a
+ * deploy. What stays here is everything that decides whether the answer is
+ * ALLOWED TO EXIST, which is the part that must not vary by provider.
+ */
 
 /** `Gaming peripherals` → `gaming-peripherals`. Derived here, never taken from the model. */
 export function slugify(displayName: string): string {
@@ -293,6 +303,12 @@ export function slugify(displayName: string): string {
  * Returns the reason it is refused, or null. Refusing means falling back, which
  * is the behaviour that shipped before this module existed — so a rejected
  * generation is a no-op, never a degradation.
+ *
+ * PROVIDER-INDEPENDENT ON PURPOSE. A forced tool call and a free model's loose
+ * JSON both arrive here, and neither gets a weaker check than the other: a
+ * schema that constrains the request is a convenience, not a guarantee, and the
+ * guarantee has to hold for whichever model the environment happens to name
+ * today.
  */
 export function rejectionReason(candidate: GeneratedBank, host: string): string | null {
   if (!candidate.displayName?.trim() || !slugify(candidate.displayName)) return 'no usable category name'
@@ -315,7 +331,7 @@ export function rejectionReason(candidate: GeneratedBank, host: string): string 
    */
   const label = host.split('.')[0] ?? ''
   if (label.length >= 3) {
-    const needle = new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+    const needle = new RegExp(String.raw`\b${label.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}\b`, 'i')
     const named = candidate.prompts.find((p) => needle.test(p.text))
     if (named) return `a prompt names the subject brand ("${named.text}"), which would measure our own phrasing`
   }
@@ -330,114 +346,6 @@ export function rejectionReason(candidate: GeneratedBank, host: string): string 
     seen.add(key)
   }
   return null
-}
-
-const AUTHORING_SYSTEM = `You author prompt banks for an AI search visibility measurement product.
-
-A prompt bank is the set of questions real buyers type into ChatGPT, Gemini and
-Copilot when they are looking for a product in a category — BEFORE they know
-which brands exist. We send those questions to the engines and measure which
-brands the engines volunteer in reply.
-
-Two intents:
-- discovery: someone looking for this kind of product and naming no brand.
-  "Best mechanical keyboard for programmers with a quiet switch"
-- problem-led: someone describing the problem, not the product category.
-  "My wrists hurt after long coding sessions, what should I change about my desk setup"
-
-ABSOLUTE RULES, and a bank breaking any of them is discarded:
-1. NEVER name a company, brand, product or vendor in any prompt. Not the site's
-   own brand, not a competitor, not a market leader, not an example. A prompt
-   that names a brand measures our phrasing instead of the engine's answer, and
-   naming competitors we have not measured is the specific dishonesty this
-   product exists to argue against.
-2. Write questions a BUYER would type, not questions a marketer would write.
-   Specific, awkward, concrete. Budgets, constraints, use cases, geographies.
-3. The category is the MARKET the business competes in, not the business itself.
-   A company selling gaming keyboards is in "gaming peripherals", not in
-   "Acme Corp products".
-4. No prompt over 200 characters. No duplicates.
-
-You will be given a homepage's own words. Infer the market, then write the bank.`
-
-/**
- * One model call, once per novel category, ever.
- *
- * Not batched, and R2 is not violated: R2 governs SCORING, which is high-volume
- * and latency-insensitive. This is a one-off authoring step on the interactive
- * path — a visitor is waiting for the preview — and there is nothing to batch it
- * with. It runs at most once per category for the lifetime of the taxonomy,
- * because the result is written to disk.
- *
- * The tool has NO competitor field. That is the enforcement: the model is not
- * asked to be trustworthy about leaders, it is structurally unable to supply
- * them.
- */
-export async function generateBank(input: GenerateInput): Promise<GeneratedBank | null> {
-  const client = new Anthropic({ apiKey: input.apiKey })
-  const response = await client.messages.create({
-    model: BANK_AUTHOR_MODEL,
-    max_tokens: 8_000,
-    system: AUTHORING_SYSTEM,
-    tool_choice: { type: 'tool', name: 'publish_category' },
-    tools: [
-      {
-        name: 'publish_category',
-        description: 'Publish the category and its prompt bank. There is deliberately no field for competitors or leading brands.',
-        input_schema: {
-          type: 'object',
-          properties: {
-            display_name: { type: 'string', description: 'The market, in title case, two to four words. e.g. "Gaming peripherals", "Cybersecurity consulting"' },
-            description: { type: 'string', description: 'One sentence describing what companies in this category sell.' },
-            prompts: {
-              type: 'array',
-              minItems: GENERATED_DISCOVERY + GENERATED_PROBLEM_LED,
-              items: {
-                type: 'object',
-                properties: {
-                  text: { type: 'string', description: 'The question, verbatim, naming no brand. Under 200 characters.' },
-                  intent: { type: 'string', enum: ['discovery', 'problem-led'] },
-                },
-                required: ['text', 'intent'],
-                additionalProperties: false,
-              },
-            },
-          },
-          required: ['display_name', 'description', 'prompts'],
-          additionalProperties: false,
-        },
-      },
-    ],
-    messages: [
-      {
-        role: 'user',
-        content: [
-          `Homepage of ${input.host}.`,
-          '',
-          `Title: ${input.title || '(none)'}`,
-          `Description: ${input.description || '(none)'}`,
-          `Headings: ${input.headings.slice(0, 2_000) || '(none)'}`,
-          '',
-          `Categories that already exist (do not duplicate one of these; if the business genuinely belongs in one, use that exact name): ${input.existingSlugs.join(', ')}`,
-          '',
-          `Write ${GENERATED_DISCOVERY} discovery prompts and ${GENERATED_PROBLEM_LED} problem-led prompts.`,
-        ].join('\n'),
-      },
-    ],
-  })
-
-  const block = response.content.find((b) => b.type === 'tool_use')
-  if (!block || block.type !== 'tool_use') return null
-  const raw = block.input as Partial<{ display_name: string; description: string; prompts: { text: string; intent: string }[] }>
-  if (!Array.isArray(raw.prompts)) return null
-
-  return {
-    displayName: String(raw.display_name ?? '').trim(),
-    description: String(raw.description ?? '').trim(),
-    prompts: raw.prompts
-      .filter((p) => typeof p?.text === 'string' && (p.intent === 'discovery' || p.intent === 'problem-led'))
-      .map((p) => ({ text: p.text.trim(), intent: p.intent as 'discovery' | 'problem-led' })),
-  }
 }
 
 const bankFromGenerated = (slug: string, host: string, g: GeneratedBank): GeneratedBankFile => ({
@@ -461,7 +369,7 @@ const bankFromGenerated = (slug: string, host: string, g: GeneratedBank): Genera
     geo: 'US',
     version: 1,
     verified: false,
-    note: `AUTO-GENERATED from ${host}'s homepage on first scan, because no category in the taxonomy fit it. LEADERS IS EMPTY AND STAYS EMPTY: the prompt set is authored, the competitor set is not, because a competitor that was not measured is a competitor that was invented. Real competitors may only ever arrive from brands the engines actually name in collected answers. verified:false — the prompts are model-authored and have not been reviewed by a human.`,
+    note: `AUTO-GENERATED by ${g.model} from ${host}'s homepage on first scan, because no category in the taxonomy fit it. LEADERS IS EMPTY AND STAYS EMPTY: the prompt set is authored, the competitor set is not, because a competitor that was not measured is a competitor that was invented. Real competitors may only ever arrive from brands the engines actually name in collected answers. verified:false — the prompts are model-authored and have not been reviewed by a human.`,
     leaders: [],
     prompts: g.prompts,
   },
@@ -580,20 +488,21 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // second arm names that wiring fault rather than reporting it as weak evidence.
   const weakReason = byContent.status === 'weak' ? byContent.reason : `the page resolved to ${byContent.status === 'classified' ? byContent.slug : 'a category'} but no bank exists for it`
 
-  if (!deps.anthropicApiKey) {
-    log(`category: ${host} would need a new category, but no ANTHROPIC_API_KEY is configured`)
-    return fallbackResult('unclassified', `${weakReason}, and no key is configured to author a new category`, [])
+  if (!deps.author) {
+    log(`category: ${host} would need a new category, but no bank-author model is configured`)
+    return fallbackResult('unclassified', `${weakReason}, and no model is configured to author a new category`, [])
   }
 
   let candidate: GeneratedBank | null = null
   try {
-    candidate = await (deps.generate ?? generateBank)({
+    candidate = await (deps.generate ?? authorBank)({
       host,
       title: text.title,
       description: text.description,
       headings: text.headings,
       existingSlugs: taxonomy.map((c) => c.slug),
-      apiKey: deps.anthropicApiKey,
+      config: deps.author,
+      log,
     })
   } catch (e) {
     // Authoring is best-effort by design. It failing must degrade to the
@@ -629,7 +538,12 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   const written = readGeneratedBanks(deps.dataDir).find((g) => g.bank.category === slug)
   if (!written) return fallbackResult('unclassified', `${weakReason}, and the authored category could not be stored`, [])
 
-  const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage`, decidedAt, generated: true })
-  log(`category: ${host} -> ${slug} (generated: ${candidate.displayName}, ${candidate.prompts.length} prompts, no competitors)`)
+  // The model goes ON THE RECORD, not only in a log. A category authored by a
+  // free tier in September and one authored by Sonnet in December are different
+  // artefacts, and a reader looking at a surprising bank two years from now
+  // should be able to see which produced it. Same discipline as R8's
+  // `algo_version` travelling with a metric.
+  const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true })
+  log(`category: ${host} -> ${slug} (generated by ${candidate.model}: ${candidate.displayName}, ${candidate.prompts.length} prompts, no competitors)`)
   return { record, bank: written.bank, category: written.category, fromRecord: false }
 }

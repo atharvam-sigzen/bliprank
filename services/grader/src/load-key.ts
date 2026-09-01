@@ -39,9 +39,14 @@ const NAME = 'OPENWEBNINJA_API_KEY'
  * Secrets this may be asked for. An allow-list, mirroring `FILE_FLAGS` below and
  * for the same reason: a general "read any variable from the dotenv file"
  * loader is a way for a name typed at a call site to reach a value nobody
- * intended to expose. Both keys here are named in CLAUDE.md §7.
+ * intended to expose. Every key here is named in CLAUDE.md §7.
+ *
+ * `BANK_AUTHOR_API_KEY` and `OPENROUTER_API_KEY` arrived with the swappable
+ * bank-author (ADR-0009 Amendment 1): the model can be changed with an env edit,
+ * so the KEY has to be reachable the same way, from the same repo-root file, or
+ * swapping providers would mean editing two things in two places.
  */
-const SECRETS = new Set([NAME, 'ANTHROPIC_API_KEY'])
+const SECRETS = new Set([NAME, 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'BANK_AUTHOR_API_KEY'])
 
 /** Parse one variable out of dotenv-format text. Quotes and CRLF stripped. */
 export function readVar(text: string, name: string): string | undefined {
