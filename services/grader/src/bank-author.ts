@@ -164,7 +164,7 @@ export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string)
   /*
    * THE DEFAULT FALLBACK ONLY APPLIES TO THE DEFAULT SETUP.
    *
-   * `meta-llama/llama-3.3-70b-instruct:free` is an OpenRouter slug. Carrying it
+   * `minimax/minimax-m3:free` is an OpenRouter slug. Carrying it
    * into an Anthropic config, or one pointed at Nvidia's own NIM endpoint,
    * names a model that host has never heard of — so the second attempt is
    * guaranteed to fail, and to fail in the one place nobody looks, since a
