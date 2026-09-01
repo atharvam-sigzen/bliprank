@@ -68,8 +68,43 @@ export interface ScanDeps {
   readonly adapterFor: (engine: EngineId) => EngineAdapter
   readonly banks?: readonly PromptBank[]
   readonly taxonomy?: readonly CategoryDef[]
+  /**
+   * The richer classifier, injected.
+   *
+   * `classifyDomain` reads five tokens of a hostname and nothing else, so it
+   * returns `unclassified` for most real businesses — `nike.com` and
+   * `sigzen.com` carry nothing in their host. `resolve-category.ts` adds the
+   * signals that need IO: the site's own homepage, and, when the taxonomy has no
+   * home for the business at all, an authored bank. Both are side effects, so
+   * they arrive here as a dependency rather than as an import (CLAUDE.md §8).
+   *
+   * PROPERTY 1 IS UNCHANGED AND STILL FIRST. This is consulted only AFTER the
+   * host-shape guard below has refused a pasted filename, so junk in the box
+   * still buys nothing — not a scan, and now also not an outbound fetch.
+   *
+   * Absent, everything behaves exactly as it did: `classifyDomain`, then the
+   * fallback bank. The CLI without a data dir and every existing test take that
+   * path.
+   */
+  readonly resolveCategory?: (domain: string) => Promise<CategoryResolution>
   readonly onProgress?: (e: ScanProgress) => void
   readonly signal?: AbortSignal
+}
+
+/**
+ * What a resolver hands back: a slug, the bank for it, and how it was decided.
+ *
+ * Declared here rather than imported from `resolve-category.ts` so the
+ * dependency points one way — this module composes, it does not know that a
+ * category can be written to a file.
+ */
+export interface CategoryResolution {
+  readonly slug: string
+  readonly bank: PromptBank
+  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback` | `record`. */
+  readonly signal: string
+  readonly evidence: string
+  readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
 }
 
 export interface ScanProgress {
@@ -120,6 +155,18 @@ export type ScanResult =
        * without saying why it is empty, so it is not optional to read.
        */
       readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
+      /**
+       * Which signal decided the category, and what it matched.
+       *
+       * On the sheet, not in a log. "CRM software" means one thing when the host
+       * IS Pipedrive and another when a model authored the category from the
+       * homepage twenty seconds ago, and a reader is entitled to know which —
+       * the same provenance discipline R8 applies to every number.
+       *
+       * Absent on a scan run without a resolver, where the only possible answers
+       * are the two `classifyDomain` gives and `classification` already says so.
+       */
+      readonly categorySource?: { readonly signal: string; readonly evidence: string }
       /** How the subject brand was identified — see `subjectFor`. */
       readonly subjectSource: 'leader' | 'domain-label'
       readonly comparisonBasis: string
@@ -241,9 +288,32 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     return { status: 'unclassified', domain: req.domain, classification, reason }
   }
 
+  /*
+   * THE RESOLVER, IF ONE WAS GIVEN, AND ONLY NOW.
+   *
+   * Every refusal above has already run: a string that is not a domain, and a
+   * pasted filename, are both gone before this line. So the resolver's outbound
+   * fetch is only ever made for something host-shaped — junk in the box still
+   * costs nothing, which was the whole of PROPERTY 1 and remains so.
+   *
+   * It supersedes `classifyDomain` rather than supplementing it, because it
+   * already RAN `classifyDomain` as its first two rungs and then consulted
+   * signals this module cannot reach. Two answers about one domain is the state
+   * to avoid; `classification` is still returned unchanged, so what the free
+   * signal thought is never lost.
+   */
   let fallback: { reason: 'unclassified' | 'ambiguous'; detail: string; candidates: readonly string[] } | undefined
   let slug: string
-  if (classification.status === 'classified') {
+  let bank: PromptBank | undefined
+  let categorySource: { signal: string; evidence: string } | undefined
+
+  if (deps.resolveCategory) {
+    const resolved = await deps.resolveCategory(req.domain)
+    slug = resolved.slug
+    bank = resolved.bank
+    categorySource = { signal: resolved.signal, evidence: resolved.evidence }
+    if (resolved.fallback) fallback = resolved.fallback
+  } else if (classification.status === 'classified') {
     slug = classification.slug
   } else {
     slug = FALLBACK_SLUG
@@ -253,7 +323,9 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
         : { reason: 'unclassified', detail: classification.reason, candidates: [] }
   }
 
-  const bank = banks.find((b) => b.category === slug)
+  // The resolver hands its own bank over, because a generated one is not in
+  // `banks` — it was authored during this call. Anything else is looked up.
+  bank ??= banks.find((b) => b.category === slug)
   if (!bank) {
     // A classified slug with no bank is a wiring fault, not a user outcome. It
     // must not fall through to a scan of some other category.
@@ -365,6 +437,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     // discipline is about METRICS, but exactOptionalPropertyTypes still refuses
     // an explicit `undefined` here. A normal scan carries no key at all.
     ...(fallback ? { fallback } : {}),
+    ...(categorySource ? { categorySource } : {}),
     subjectSource,
     comparisonBasis,
     algoVersion: SCORING_ALGO_VERSION,

@@ -48,6 +48,7 @@ import { loadApiKey } from './load-key.js'
 import { FileBlobStore, FileKV } from './local-store.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult } from './scan.js'
+import { allBanks, allCategories, resolveCategory } from './resolve-category.js'
 
 /** Provider ceiling for one API key, shared across engines. */
 const KEY_RPS_CEILING = 15
@@ -68,6 +69,12 @@ export interface RunnerOptions {
   readonly dataDir: string
   readonly outFile: string
   readonly log: (s: string) => void
+  /**
+   * Key for authoring a bank when no category in the taxonomy fits (rung 4 of
+   * `resolve-category.ts`). Absent disables authoring only — the homepage
+   * signal still runs, and an unauthorable domain falls back exactly as before.
+   */
+  readonly anthropicApiKey?: string | undefined
 }
 
 export function parseArgs(
@@ -315,12 +322,49 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     const adapterFor = (engine: EngineId) =>
       o.mode === 'fixture' ? fixtureAdapter(engine) : o.mode === 'stub' ? stubAdapter(engine) : openWebNinjaAdapter(engine, { apiKey: o.apiKey, plan: o.plan })
 
+    /*
+     * THE RICHER CLASSIFIER, ON LIVE RUNS ONLY.
+     *
+     * Not a capability gate — it is that the other two modes must stay offline.
+     * `--fixture` is what CI and every test use, and its whole promise is that
+     * nothing leaves the machine; a homepage GET would break that quietly and
+     * make the suite depend on someone else's uptime. `--stub` is the same
+     * bargain. A live run is already reaching the network by definition.
+     *
+     * The fixture adapter also only holds answers for the hand-authored banks,
+     * so a generated bank on a fixture run would collect nothing and report
+     * `no-answers` — a confusing way to say "this mode cannot do that".
+     */
+    const resolver =
+      o.mode === 'live'
+        ? async (domain: string) => {
+            const r = await resolveCategory(domain, {
+              dataDir: o.dataDir,
+              anthropicApiKey: o.anthropicApiKey,
+              log: o.log,
+            })
+            return {
+              slug: r.record.slug,
+              bank: r.bank,
+              signal: r.record.source,
+              evidence: r.record.evidence,
+              ...(r.fallback ? { fallback: r.fallback } : {}),
+            }
+          }
+        : undefined
+
     const result = await runScan(
       { domain: o.domain, engines: o.engines, day: o.day, runsPerCell: 1, ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}) },
       {
         orchestrator,
         blob,
         adapterFor,
+        // Banks grown by earlier scans are in scope for this one, so the second
+        // domain in an authored category joins it rather than authoring a
+        // duplicate — and `compare()` can then put the two side by side.
+        banks: allBanks(o.dataDir),
+        taxonomy: allCategories(o.dataDir),
+        ...(resolver ? { resolveCategory: resolver } : {}),
         onProgress: (p) => {
           // The heartbeat. A lock that stops being touched is a scan that
           // stopped, whether or not the process holding it is still alive.

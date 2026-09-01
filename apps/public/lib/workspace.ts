@@ -38,6 +38,7 @@ import {
   FALLBACK_SLUG,
 } from '@bliprank/taxonomy'
 import { runInfoOf, scanFor } from './scan-result'
+import { readBank, readDecision } from './resolved-category'
 
 export type Role = 'brand' | 'agency'
 
@@ -83,11 +84,22 @@ export const PROMPTS_PER_CYCLE = 17
  */
 const UNPROMPTED_INTENTS: readonly string[] = ['discovery', 'problem-led']
 
-/** The real prompts a cycle would ask, from the category bank. */
+/**
+ * The real prompts a cycle would ask, from the category bank.
+ *
+ * The session cache is consulted FIRST, and the bundled banks are the fallback.
+ * The order matters: a category authored for this visitor's domain exists only
+ * on the server and in that cache, so a bundle-first lookup would find nothing
+ * for it and this page would show an empty prompt list under a category name it
+ * had just displayed. `DEMO_BANKS` still answers for every hand-authored
+ * category and for anyone arriving without a session.
+ */
 export function preflightPrompts(categorySlug: string, limit = PROMPTS_PER_CYCLE): readonly { text: string; intent: string }[] {
-  const bank = DEMO_BANKS.find((b) => b.category === categorySlug)
-  if (!bank) return []
-  return bank.prompts.filter((p) => UNPROMPTED_INTENTS.includes(p.intent)).slice(0, Math.max(0, limit))
+  const cached = readBank(categorySlug)
+  const prompts = cached
+    ? cached.prompts
+    : (DEMO_BANKS.find((b) => b.category === categorySlug)?.prompts ?? [])
+  return prompts.filter((p) => UNPROMPTED_INTENTS.includes(p.intent)).slice(0, Math.max(0, limit))
 }
 
 /**
@@ -109,6 +121,18 @@ function reasonFor(c: ReturnType<typeof classifyDomain>): string {
   return ''
 }
 
+/**
+ * The same two sentences as `reasonFor`, for a decision the server made.
+ *
+ * Separate because a server decision carries more than the pure classifier can:
+ * it knows whether the homepage was read and failed to place the business, or
+ * was never reachable at all, and those are different things to tell someone.
+ */
+function reasonForDecision(d: { slug: string; source: string; evidence: string }): string {
+  if (d.slug !== FALLBACK_SLUG) return ''
+  return `Unclassified: ${d.evidence || 'no category could be determined'}. It is measured against the general business software bank, which carries no competitor set, so no comparison is available.`
+}
+
 /** null when the input is not a usable domain (empty, junk, a filename). */
 export function workspaceFor(domain: string): Workspace | null {
   const host = normaliseHost(domain)
@@ -117,17 +141,33 @@ export function workspaceFor(domain: string): Workspace | null {
   // the grader's spend guard, minus the spend.
   if (!host || looksLikeFilename(host)) return null
 
+  /*
+   * THE SERVER'S DECISION WINS, WHEN THERE IS ONE.
+   *
+   * `classifyDomain` reads the host string and nothing else, so it is the
+   * WEAKEST of the signals now in play — it cannot see the homepage and it
+   * cannot see a category authored ten seconds ago. Running it in preference to
+   * a recorded decision is how this page came to contradict the Grader about
+   * what a domain sells.
+   *
+   * The decision is still permanent and still the server's: this reads a mirror
+   * of it (`resolved-category.ts`), never derives one. With no mirror — a fresh
+   * tab, a domain never previewed — the pure classifier answers exactly as
+   * before, so nothing regresses for the bundled demo domains.
+   */
+  const decided = readDecision(host)
   const classification = classifyDomain(host, DEMO_BANKS, DEMO_TAXONOMY)
-  const confident = classification.status === 'classified'
-  const categorySlug = confident ? classification.slug : FALLBACK_SLUG
+  const confident = decided ? decided.slug !== FALLBACK_SLUG : classification.status === 'classified'
+  const categorySlug = decided ? decided.slug : classification.status === 'classified' ? classification.slug : FALLBACK_SLUG
   const scan = scanFor(host)
+  const cachedBank = readBank(categorySlug)
 
   return {
     domain: host,
     categorySlug,
-    categoryName: categoryBySlug(categorySlug)?.displayName ?? categorySlug,
+    categoryName: cachedBank?.displayName ?? categoryBySlug(categorySlug)?.displayName ?? categorySlug,
     confident,
-    fallbackReason: confident ? '' : reasonFor(classification),
+    fallbackReason: confident ? '' : decided ? reasonForDecision(decided) : reasonFor(classification),
     promptCount: preflightPrompts(categorySlug).length,
     // The surfaces a cycle WOULD cover, not a record of what any past cycle did.
     // A completed scan reports its own engine list on its own result.

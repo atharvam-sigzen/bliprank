@@ -5,8 +5,11 @@ import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProven
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { RangeRail } from '@/components/range-rail'
+import { PromptPreview } from '@/components/prompt-preview'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
+import { fetchPreview } from '@/lib/preview'
+import type { PreviewResponse } from '@/lib/preview-contract'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
@@ -46,6 +49,9 @@ const MASTHEAD_RUN = runInfoOf(SCAN)
 
 type State =
   | { phase: 'idle' }
+  /* Between the button and the spend. See `PromptPreview`. */
+  | { phase: 'previewing'; domain: string }
+  | { phase: 'preview'; domain: string; preview: PreviewResponse }
   | { phase: 'scanning'; domain: string; stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string; cached: boolean }
   | { phase: 'done'; domain: string; scan: ScanResultFile }
   | { phase: 'refused'; domain: string; kind: string; message: string }
@@ -76,16 +82,37 @@ export default function Grader() {
       return
     }
     setError(null)
-    setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
 
-    // The committed scan is checked first and costs nothing. Only a domain with
-    // no stored result reaches the server, and the server checks its own cache
-    // again before it is allowed to spend.
+    // The committed scan is checked first and costs nothing. A domain this build
+    // already holds needs no preview: the scan it would preview has already been
+    // run, and its category is on the record it is about to render.
     const local = scanFor(value)
     if (local) {
+      setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
       setTimeout(() => setState({ phase: 'done', domain: value, scan: local }), 300)
       return
     }
+
+    /*
+     * PREVIEW, THEN SPEND. Anything else reaches the preview endpoint, which
+     * classifies the domain — reading its homepage, and authoring a category for
+     * it if the taxonomy has none — WITHOUT touching provider quota. The visitor
+     * reads the category and the exact prompts, and the scan starts only when
+     * they say so.
+     *
+     * This is also the confirmation step the spend guards in this repo have been
+     * written around the absence of: a fat-fingered paste now costs one bounded
+     * homepage fetch instead of seventeen requests on five engines.
+     */
+    setState({ phase: 'previewing', domain: value })
+    void fetchPreview(value).then((outcome) => {
+      if (outcome.ok) setState({ phase: 'preview', domain: value, preview: outcome.preview })
+      else setState({ phase: 'refused', domain: value, kind: outcome.kind, message: outcome.message })
+    })
+  }
+
+  function startScan(value: string) {
+    setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
 
     void runLiveScan(value, (e) => {
       if (e.kind === 'stage') setState((s) => (s.phase === 'scanning' ? { ...s, stage: e.stage } : s))
@@ -199,9 +226,19 @@ export default function Grader() {
 
       {state.phase === 'refused' ? (
         <ScanRefusal kind={state.kind} message={state.message} onReset={() => setState({ phase: 'idle' })} />
+      ) : state.phase === 'preview' ? (
+        <PromptPreview
+          preview={state.preview}
+          onConfirm={() => startScan(state.domain)}
+          onCancel={() => {
+            setDomain('')
+            setState({ phase: 'idle' })
+          }}
+          busy={false}
+        />
       ) : state.phase === 'scanning' && state.total > 0 ? (
         <ScanProgress stage={state.stage} done={state.done} total={state.total} engines={state.engines} prompts={state.prompts} lastCell={state.lastCell} />
-      ) : state.phase === 'idle' || state.phase === 'scanning' ? (
+      ) : state.phase === 'idle' || state.phase === 'scanning' || state.phase === 'previewing' ? (
         <div className="annotated">
           {/* The one instrument you operate, so the one panel on the page. */}
           <form className="card annotated__body" onSubmit={submit} noValidate>
@@ -211,7 +248,7 @@ export default function Grader() {
               Your domain
             </label>
             <p id="domain-help" className="metric__interval" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
-              We check the prompts buyers in your category actually ask.
+              We work out your category, show you the exact questions, and only then check the engines.
             </p>
             <div className="field__row">
               <input
@@ -225,15 +262,20 @@ export default function Grader() {
                 aria-describedby={error ? 'domain-help domain-error' : 'domain-help'}
                 aria-invalid={error ? true : undefined}
                 placeholder={SCAN.domain}
-                disabled={state.phase === 'scanning'}
+                disabled={state.phase !== 'idle'}
                 // Class, not an inline style. Inline colours are invisible to the
                 // contrast suite — that is exactly how a 1.39:1 bar shipped once —
                 // and an inline `transition` cannot be reached by
                 // prefers-reduced-motion at all.
                 className={`field${error ? ' field--invalid' : ''}`}
               />
-              <button type="submit" disabled={state.phase === 'scanning'} className="btn btn--primary">
-                {state.phase === 'scanning' ? 'Checking…' : 'Grade my brand'}
+              <button type="submit" disabled={state.phase !== 'idle'} className="btn btn--primary">
+                {/* THE LABEL NAMES WHAT THE BUTTON DOES NOW. It no longer starts
+                    a scan: it works out the category and shows the prompts, and
+                    a separate, deliberate press buys the scan. A button that
+                    says "Grade my brand" and then asks a question first reads as
+                    a broken submit. */}
+                {state.phase === 'previewing' ? 'Working out your category…' : state.phase === 'scanning' ? 'Checking…' : 'See what we will ask'}
               </button>
             </div>
 
@@ -246,7 +288,11 @@ export default function Grader() {
 
             {/* Progress is announced, not just animated. */}
             <p aria-live="polite" className="metric__interval">
-              {state.phase === 'scanning' ? `Checking ${state.domain} across five answer engines…` : ''}
+              {state.phase === 'previewing'
+                ? `Reading ${state.domain} to work out its category. Nothing is being collected yet.`
+                : state.phase === 'scanning'
+                  ? `Checking ${state.domain} across five answer engines…`
+                  : ''}
             </p>
           </form>
           {/* THE COUNT IS THE REGISTRY'S, NOT A LITERAL. This said "one

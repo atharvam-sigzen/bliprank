@@ -190,6 +190,13 @@ export async function POST(req: Request): Promise<Response> {
           apiKey: found.key,
           capUsd: Number(env['GRADER_CAP_USD'] ?? DEFAULT_CAP_USD),
           maxPrompts: cfg.callsPerEngine,
+          // Authoring a category, when the taxonomy has none for this domain.
+          // Almost always a no-op by the time a scan runs: the preview step has
+          // already resolved and RECORDED the category, so `resolveCategory`
+          // stops at rung 0 and this key is never used. It is passed anyway
+          // because a scan reached directly — a client that skips the preview —
+          // must not silently get a worse classification than one that did not.
+          anthropicApiKey: loadApiKey(ROOT, env, 'ANTHROPIC_API_KEY')?.key,
           dataDir: DATA,
           outFile: join(DATA, 'latest.json'),
           log: () => {},

@@ -10,10 +10,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "@bliprank/collector": "workspace:*",
     "@bliprank/contracts": "workspace:*",
     "@bliprank/scorer": "workspace:*",
     "@bliprank/stats": "workspace:*",
     "@bliprank/taxonomy": "workspace:*",
-    "@bliprank/collector": "workspace:*"
+    "undici": "^8.10.0"
   }
 }
