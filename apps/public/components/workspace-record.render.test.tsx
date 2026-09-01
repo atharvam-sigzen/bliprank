@@ -27,10 +27,10 @@ describe('head-to-head parity in the measured record', () => {
     // sigzen is no longer a BUNDLED scan — it is the fixture for a record with
     // no run block and no competitors. The branch under test is reached through
     // `scanFor`, so the record has to be where the app actually looks for a
-    // non-bundled one: the session registry. Node has no sessionStorage, so the
+    // non-bundled one: the session registry. Node has no localStorage, so the
     // test supplies the two methods scan-result calls.
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
