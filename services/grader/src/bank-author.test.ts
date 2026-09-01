@@ -50,12 +50,15 @@ const input = (fetchImpl: typeof fetch, config: BankAuthorConfig = CONFIG, log?:
 describe('the model and provider come from the environment, not from code', () => {
   const key = (n: string) => (n === 'OPENROUTER_API_KEY' ? 'or-key' : undefined)
 
-  it('defaults to Nemotron on OpenRouter, with Llama behind it', () => {
+  it('defaults to Nemotron on OpenRouter, with a DIFFERENT VENDOR behind it', () => {
     const c = bankAuthorConfig({} as NodeJS.ProcessEnv, key)!
     expect(c.provider).toBe('openai-compatible')
     expect(c.model).toBe(DEFAULT_BANK_AUTHOR_MODEL)
     expect(c.fallbackModel).toBe(DEFAULT_BANK_AUTHOR_FALLBACK_MODEL)
     expect(c.baseUrl).toBe(DEFAULT_BANK_AUTHOR_BASE_URL)
+    // The first real failure this chain saw was an NVIDIA-side outage, not a
+    // model-side one. A same-vendor fallback is the same outage twice.
+    expect(c.model.split('/')[0]).not.toBe(c.fallbackModel!.split('/')[0])
   })
 
   it('swaps the model on ONE env var — the whole point of the seam', () => {

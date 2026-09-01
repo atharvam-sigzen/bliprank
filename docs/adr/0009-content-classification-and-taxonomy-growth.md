@@ -244,7 +244,7 @@ environment by `bankAuthorConfig()`, behind which sit two transports:
 `openai-compatible` (default) and `anthropic`.
 
 **Default: `nvidia/nemotron-3-super-120b-a12b:free`, via OpenRouter, falling back
-to `meta-llama/llama-3.3-70b-instruct:free`.** OpenRouter rather than Nvidia's API
+to `minimax/minimax-m3:free`.** OpenRouter rather than Nvidia's API
 directly, and it is the *simpler* option here rather than the more capable: the
 `vendor/model:free` slugs are OpenRouter's own addressing scheme, one key reaches
 both named models and whatever replaces them, and the wire format is the OpenAI
@@ -334,6 +334,51 @@ discipline as R8's `algo_version` travelling with a metric.
   that — but the answer is written down once and reused forever, so the
   reproducibility the metric contract needs is the **record's**, not the
   sampler's.
+### Measured on 2026-09-01, against the real task
+
+`meta-llama/llama-3.3-70b-instruct:free` — the fallback this amendment originally
+named — **does not exist**. OpenRouter answers 404: "This model is unavailable for
+free." It was recalled, not looked up, and it could never have run. Corrected by
+querying `/api/v1/models` and then testing the candidates on the real authoring
+task rather than choosing from the list on paper:
+
+| Model | Result |
+|---|---|
+| `nvidia/nemotron-3-super-120b-a12b:free` | timed out past 40s under load; succeeded in 17s when not |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | timed out past 40s |
+| `google/gemma-4-31b-it:free` | 429, "temporarily rate-limited upstream" |
+| `z-ai/glm-5.2:free` | 429, same |
+| `minimax/minimax-m3:free` | **valid bank in ~8s** |
+
+The first real failure the chain saw in anger was `Upstream error from Nvidia:
+Service temporarily overloaded` — a **vendor-side** outage, not a model-side one.
+So the fallback is deliberately a different vendor: a same-vendor fallback is the
+same outage twice, with the second copy costing another timeout before anyone is
+told.
+
+The primary stays Nemotron. That ranking will be wrong within weeks, which is the
+entire reason it is an env var and not a constant.
+
+End to end on `sigzen.com`, the domain that motivated this ADR: Nemotron authored
+**"ERP Implementation Services"** — the correct market, which no hand-authored
+category held — with 17 prompts, `leaders: []`, `verified: false`, and the model
+recorded in `evidence`.
+
+### Observed: the schema holds, the prose rules bend
+
+Those 17 prompts name `ERPNext` and `Frappe`. That is the authoring system's
+rule 1 ("NEVER name a company, brand, product or vendor") being bent, and
+`rejectionReason` did not catch it — it checks the subject's own domain label,
+and `sigzen` correctly does not appear.
+
+Arguably correct in this instance: ERPNext is the *platform the market is defined
+by*, the way "WordPress hosting" is a real category, and it is neither the subject
+nor a competitor of it. But it is a concrete instance of the limitation this ADR
+already recorded, and it points at a check that is worth building and is not built:
+**refuse a generated prompt naming any leader already tracked in the taxonomy.**
+Those are known brand names on file, so that subset is detectable — unlike brands
+in general.
+
 - **Still unmeasured:** how reliably any of these models stays inside the shape.
   The refusals above mean an unreliable model degrades to the general bucket
   rather than producing something wrong, so the cost of being wrong about this is

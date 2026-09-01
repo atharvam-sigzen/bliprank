@@ -266,7 +266,7 @@ these are free tiers, and swapping a rate-limited one must not be a deploy.
 ```
 OPENROUTER_API_KEY=               # or BANK_AUTHOR_API_KEY. Absent = authoring off.
 BANK_AUTHOR_MODEL=                # default nvidia/nemotron-3-super-120b-a12b:free
-BANK_AUTHOR_FALLBACK_MODEL=       # default meta-llama/llama-3.3-70b-instruct:free; '' disables
+BANK_AUTHOR_FALLBACK_MODEL=       # default minimax/minimax-m3:free; '' disables
 BANK_AUTHOR_PROVIDER=             # openai-compatible (default) | anthropic
 BANK_AUTHOR_BASE_URL=             # default https://openrouter.ai/api/v1
 BANK_AUTHOR_TIMEOUT_MS=           # default 25000, per attempt

@@ -74,11 +74,23 @@ export const DEFAULT_BANK_AUTHOR_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free
 /**
  * Tried when the primary fails for ANY reason, including a schema refusal.
  *
+ * ⚠️ A DIFFERENT VENDOR FROM THE PRIMARY, ON PURPOSE. The first failure this
+ * chain ever saw in anger was "Upstream error from Nvidia: Service temporarily
+ * overloaded" — a vendor-side outage, not a model-side one. A fallback from the
+ * same vendor is not a fallback; it is the same outage twice, with the second
+ * copy costing another timeout before anyone is told.
+ *
+ * Chosen by measurement, not from a list. Against the real task on 2026-09-01:
+ * both free Nemotrons timed out past 40s, `google/gemma-4-31b-it:free` and
+ * `z-ai/glm-5.2:free` answered 429 "temporarily rate-limited upstream", and this
+ * one produced a valid bank in ~8s. That ranking will change — which is the
+ * entire reason it is an env var.
+ *
  * An OpenRouter slug, so it is only defaulted for the default OpenRouter setup —
  * see `bankAuthorConfig`. Point the base URL somewhere else and this has to be
  * named, or it would be a second attempt at a model that host cannot serve.
  */
-export const DEFAULT_BANK_AUTHOR_FALLBACK_MODEL = 'meta-llama/llama-3.3-70b-instruct:free'
+export const DEFAULT_BANK_AUTHOR_FALLBACK_MODEL = 'minimax/minimax-m3:free'
 
 export const DEFAULT_BANK_AUTHOR_BASE_URL = 'https://openrouter.ai/api/v1'
 
@@ -88,6 +100,12 @@ export const DEFAULT_BANK_AUTHOR_BASE_URL = 'https://openrouter.ai/api/v1'
  * Two attempts at 25s fit inside the preview route's 60s ceiling with room for
  * the homepage fetch that preceded them. A free tier that hangs is the common
  * case, not the rare one, and a person is waiting on this.
+ *
+ * ⚠️ THE CEILING IS THE ROUTE'S, NOT THE MODEL'S, AND IT IS NOT GENEROUS. On
+ * 2026-09-01 the free Nemotron tier did not finish inside FORTY seconds. Raising
+ * this to suit it would push two attempts past the route's own limit, so the
+ * honest answer is that a model too slow for 25s is a model this cannot use
+ * today — and the fallback is what makes that survivable rather than fatal.
  */
 export const DEFAULT_BANK_AUTHOR_TIMEOUT_MS = 25_000
 
