@@ -90,7 +90,12 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
         <div className="annotated__body">
           <HeadToHeadChart data={data} subjectLabel={subject.name} />
         </div>
-        <aside className="note">
+        {/* DETAIL. The comparison basis is the auditor's field: it says why
+            these brands may be compared at all. The chart it annotates keeps
+            every one of its marks at simple depth, and the two paragraphs under
+            it — which explain the shaded band and the dashed rows a simple
+            reader can still see — stay with them. */}
+        <aside className="note detail">
           <span className="note__cap">Basis</span>
           <span className="note__line">every brand scored over</span>
           <span className="note__line">the same {scan.counts.answersScored} answers</span>

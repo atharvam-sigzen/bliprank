@@ -63,7 +63,12 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="section">
+      {/* DETAIL. A per-engine breakdown with an interval and an n on every row
+          is the shape of a question an agency asks — which surface is weak, and
+          is the difference real. The headline cards above already carry the
+          answer to "am I doing well", each with its own range, so hiding this
+          removes no mark a simple reader was relying on. */}
+      <section className="section detail">
         <h2>By engine</h2>
         <div className="card table-wrap">
           <table>
@@ -107,7 +112,10 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="section">
+      {/* DETAIL. Source classification is a methodology surface: it explains how
+          a citation was attributed, which is the auditor's question rather than
+          the owner's. Its own caption opens by naming the ADR. */}
+      <section className="section detail">
         <h2>Where the citations come from</h2>
         <div className="card">
           <p className="metric__interval" style={{ marginBottom: 'var(--space-3)' }}>

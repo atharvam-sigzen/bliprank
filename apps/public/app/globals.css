@@ -3179,3 +3179,89 @@ h3.record__title,
   color: var(--color-foreground);
   font-weight: 600;
 }
+
+/* ==========================================================================
+   DEPTH — the simple reading
+   ==========================================================================
+
+   ONE DIRECTION ONLY. Every rule in this section is written as
+   [data-depth='simple'] and never as its negation, so a page with no attribute
+   at all — a reader with JavaScript off, whom the boot script never reached —
+   gets the full record rather than a subset they have no way to reveal. The
+   fallback fails open, and it does so structurally rather than by remembering.
+
+   NOTHING HERE IS A SECOND DESIGN. There is no simple palette, no simple
+   component and no simple number. The same components render the same scan;
+   this section shows fewer of them and re-typesets the prose. A figure visible
+   at both depths is the same figure, with the same interval, from the same
+   pass.
+
+   THE RULE FOR WHAT CARRIES .detail — and it is a rule, not a taste, because
+   the alternative is that the simple view quietly becomes a different product:
+
+       A block is .detail if and only if hiding it removes no MARK from the
+       page. Prose that explains something still drawn stays at both depths.
+       Prose that explains something itself hidden goes with it.
+
+   That is what keeps the dashed rows on the head-to-head chart explained in the
+   simple view, and it is why the fixture stamp and the short-sample caveat are
+   not .detail: both change how a visible number must be read. Hiding a
+   disclosure to make a page calmer is the one move this product cannot make.
+   ========================================================================== */
+
+[data-depth='simple'] .detail {
+  display: none;
+}
+
+/*
+ * THE MARGIN FOLDS AWAY. The two-column record — content, and its papers
+ * alongside — is the detailed reading; at simple depth the annotation column
+ * collapses into the flow exactly as it already does under 1100px, so no new
+ * layout is invented for this and the notes that survive keep their DOM
+ * position. (0,2,0) beats the (0,1,0) rule inside the min-width query whatever
+ * the source order.
+ */
+[data-depth='simple'] .annotated {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/*
+ * THE ESSAY FIX, AND IT IS A TYPE RULE RATHER THAN A CUT.
+ *
+ * The sheet's standing rule is serif on words, mono on figures. That is right
+ * for a record and it is precisely what made the product read "like an essay or
+ * a blog" to a brand owner: Newsreader at a 62ch measure IS magazine
+ * typography, and no amount of shortening the copy changes what it signals.
+ *
+ * So at simple depth the serif is demoted to headings and the display face
+ * stops being the medium of every explanation. Body prose goes to the interface
+ * sans, one step larger, at a measure short enough to read as an interface
+ * statement rather than a column. The serif still opens every section, so the
+ * record's voice is intact — it is no longer doing the talking.
+ */
+[data-depth='simple'] .prose {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: normal;
+  max-width: 46ch;
+}
+
+/* The amber tick survives the change of face. A caveat is a caveat at both
+   depths, and it is the one piece of prose a simple reader most needs to see. */
+[data-depth='simple'] .prose--flag {
+  font-weight: 460;
+}
+
+/*
+ * n AND THE ENGINE COUNT NEVER LEAVE. The margin note beside the rail loses its
+ * provenance line at simple depth — algorithm version and collection path are
+ * the auditor's fields, not the owner's — but the category, the answer count
+ * and the engine count stay, at both depths, on every surface. A reader must
+ * never be able to screenshot a number from this product without the size of
+ * the sample beside it. Asserted in apps/public/lib/depth.test.ts.
+ */
+[data-depth='simple'] .note {
+  font-size: 0.71875rem;
+}

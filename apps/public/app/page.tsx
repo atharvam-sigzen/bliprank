@@ -454,7 +454,12 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
             {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
-          <span className="note__line">{formatProvenance(metric)}</span>
+          {/* The auditor's line — algorithm version and collection path — and
+              the only part of this note that goes at simple depth. The category,
+              the answer count and the engine count above it stay at BOTH depths:
+              a number from this product is never screenshottable without the
+              size of the sample beside it. */}
+          <span className="note__line detail">{formatProvenance(metric)}</span>
         </aside>
       </div>
 
@@ -471,8 +476,20 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         It sits ABOVE the Precision grade rather than beside it, so the two are
         never scanned as one compound verdict. They answer different questions —
         how visible, and how much the sample knows.
+
+        DETAIL-ONLY, and this is the one place the depth split changes what the
+        product asserts rather than only how much of it is shown.
+
+        The simple view gets exactly one headline, and this cannot be it. It is
+        labelled `preview`, it carries no confidence interval because nobody has
+        derived one for it, and its own caption says it "is not comparable with
+        anyone else's score — including a later version of this one". A number
+        with those three properties is precisely what every competitor puts at
+        the top of the page, and putting ours there would trade the only claim
+        this product actually has for a figure that looks like theirs. The
+        headline is the mention rate, which is real, has bounds and has papers.
       */}
-      <div className="annotated" style={{ marginTop: 'var(--space-5)' }}>
+      <div className="annotated detail" style={{ marginTop: 'var(--space-5)' }}>
         <div className="annotated__body">
           <p className="readout__cap">Visibility</p>
           <p className="score">
@@ -502,7 +519,15 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       </div>
 
       <div className="gradeline">
-        <span className="gradebadge" aria-hidden="true">
+        {/* THE BADGE IS THE DETAILED READING OF THIS; THE SENTENCE BESIDE IT IS
+            the simple one, and it is already plain language ("tight enough to
+            act on", "we do not yet know enough to say"). A letter in a box is
+            the PageSpeed pattern — it reads as a mark out of ten however it is
+            captioned, and it is the single most misreadable object on the page
+            for the audience the simple view exists to serve. So at simple depth
+            the grade stays, in the words that say what it means, and the badge
+            that invites the wrong reading of it does not. */}
+        <span className="gradebadge detail" aria-hidden="true">
           {/* Labelled, because a bare A-D badge is the PageSpeed/security-score
               pattern and reads as "you scored B". This grades how much the
               sample knows, not how the brand is doing. */}
@@ -524,7 +549,12 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           no competitors at all. Two contradictions on one screen, and the
           second implies a comparison set that does not exist. Both clauses now
           come from the same metric and brand list the rest of the record does. */}
-      <p className="prose" style={{ marginTop: 'var(--space-4)' }}>
+      {/* DETAIL. Every mark this paragraph explains — the range, the Precision
+          grade, the overlapping competitor bars — is drawn elsewhere and carries
+          its own label, so hiding it removes no mark from the page. It is the
+          methodology argument, and it is the right argument in the wrong place
+          for a reader who has not yet been told what their number is. */}
+      <p className="prose detail" style={{ marginTop: 'var(--space-4)' }}>
         This is a measure of how much <span className="num">{metric.n}</span> answers can tell us, not a mark out of ten. It places you in a range,{' '}
         <span className="num">{formatInterval(metric)}</span>, and the Precision grade above says how much of one
         {competitors > 0 ? '. A competitor whose range overlaps yours cannot be told apart from you on this sample' : ''}. Anyone quoting a precise
