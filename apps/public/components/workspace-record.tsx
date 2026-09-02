@@ -158,7 +158,7 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       <section className="record">
         {/* Same lede as the Grader, from the same component: the two surfaces
             render one record and must not come to word it differently. */}
-        <Headline scan={scan} />
+        <Headline subject={subject.name} metric={metric} engines={run.engines.length} />
 
         {/* The rail with its papers beside it. Same instrument as the Grader,
             same discipline: the figure cannot be photographed without the range

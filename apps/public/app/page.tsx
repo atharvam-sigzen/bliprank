@@ -411,7 +411,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       {/* The finding, before the caveats about it and before the instrument
           that draws it. A reader who stops here has the estimate, both bounds
           and the sample size, in a sentence. */}
-      <Headline scan={scan} />
+      <Headline subject={subject.name} metric={metric} engines={run.engines.length} />
 
       {/*
         A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the

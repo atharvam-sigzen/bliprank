@@ -120,6 +120,60 @@ describe('the fallback fails open: absent data-depth is the FULL record', () => 
   })
 })
 
+describe('no simple-depth rule targets a class the app never renders', () => {
+  /*
+   * ⚠️ WRITTEN BECAUSE I DID EXACTLY THIS, AND SHIPPED IT.
+   *
+   * The first depth pass appended one shared block to BOTH stylesheets. Three of
+   * the four rules it put in apps/web were dead on arrival: that app renders
+   * `.prose`, `.prose--flag` and `.annotated` precisely nowhere — its body copy
+   * is `.stamp__body`, `.notice` and `.metric__interval`, none of them set in
+   * the display serif. So the typographic half of the fix corrected nothing
+   * there, while the sheet read as though the dashboard had had the same pass
+   * the Grader had.
+   *
+   * That is the specific danger of a shared design system across two deploys:
+   * copying the RULES is not doing the WORK, and a rule that targets nothing is
+   * indistinguishable from a rule that is working until someone greps.
+   */
+  const APPS = [
+    { sheet: 'apps/public', dir: '/public/' },
+    { sheet: 'apps/web', dir: '/web/' },
+  ]
+
+  const rendered = (dir: string) => {
+    const classes = new Set<string>()
+    for (const { path, src } of SOURCES) {
+      if (!path.includes(dir)) continue
+      for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g))
+        for (const c of (m[1] ?? m[2] ?? '').split(/[\s${}?:'"+]+/)) if (c) classes.add(c)
+    }
+    return classes
+  }
+
+  it.each(APPS)('$sheet renders every class its simple-depth rules select', ({ sheet, dir }) => {
+    const css = SHEETS.find((s) => s.name === sheet)!.css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const used = rendered(dir)
+    const dead: string[] = []
+    for (const m of css.matchAll(/\[data-depth='simple'\]([^{]*)\{/g)) {
+      // The last class in the selector is the element the rule actually styles.
+      const classes = [...m[1]!.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((x) => x[1]!)
+      const target = classes[classes.length - 1]
+      if (target && !used.has(target)) dead.push(`${sheet}: [data-depth='simple'] .${target}`)
+    }
+    expect(dead).toEqual([])
+  })
+
+  it('the check bites — it would score a rule for an unrendered class as dead', () => {
+    const used = rendered('/web/')
+    // A class apps/web genuinely does not render, asserted so the rule above is
+    // not passing because `rendered` returns everything.
+    expect(used.has('detail')).toBe(true)
+    expect(used.has('annotated')).toBe(false)
+    expect(used.has('prose')).toBe(false)
+  })
+})
+
 describe('a disclosure is never .detail', () => {
   /*
    * THE ONE MOVE THIS PRODUCT CANNOT MAKE. Everything on the .detail list is

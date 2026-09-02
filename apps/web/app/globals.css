@@ -1185,6 +1185,37 @@ tbody tr:last-child th {
   color: var(--color-muted-foreground);
 }
 
+/*
+ * The fitted variant: each bound is printed under the band edge it describes,
+ * not at the track's corners — at the corners of a fixed 0-100 track a bound
+ * reads as the SCALE'S endpoint, which is a mislabelled axis rather than a
+ * measurement. Ported from apps/public, where it was fixed; this sheet had the
+ * base rule and none of the three below, so the dashboard was still drawing the
+ * old row on all three metric cards.
+ */
+.rail__bounds--scale {
+  display: block;
+  position: relative;
+  height: 1.1em;
+}
+
+.rail__bound {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.rail__end {
+  position: absolute;
+  left: 0;
+  font-size: 0.625rem;
+}
+
+.rail__end--hi {
+  left: auto;
+  right: 0;
+}
+
 /* The label row above the rail: what it measures, and how much of it there is. */
 .rail__head {
   display: flex;
@@ -2100,42 +2131,56 @@ body {
 }
 
 /*
- * THE MARGIN FOLDS AWAY. The two-column record — content, and its papers
- * alongside — is the detailed reading; at simple depth the annotation column
- * collapses into the flow exactly as it already does under 1100px, so no new
- * layout is invented for this and the notes that survive keep their DOM
- * position. (0,2,0) beats the (0,1,0) rule inside the min-width query whatever
- * the source order.
+ * NO .prose OR .prose--flag RULE HERE, DELIBERATELY.
+ *
+ * Both were copied across from apps/public in the first depth pass and both
+ * were DEAD: this app renders neither class anywhere — its body copy is
+ * `.stamp__body`, `.notice` and `.metric__interval`, none of which is set in
+ * the display serif, so the typographic half of the essay fix has nothing to
+ * correct on this surface. `.annotated` went the same way for the same reason.
+ *
+ * They are not restored as "harmless". A rule that targets nothing reads as a
+ * rule that is working, which is how the next person concludes this app has had
+ * the pass it has not had. depth.test.ts now fails the build on any
+ * [data-depth='simple'] rule whose subject class the app never renders.
  */
-[data-depth='simple'] .annotated {
-  grid-template-columns: minmax(0, 1fr);
-}
 
 /*
- * THE ESSAY FIX, AND IT IS A TYPE RULE RATHER THAN A CUT.
+ * THE LEDE — the finding in a sentence, above the instruments.
  *
- * The sheet's standing rule is serif on words, mono on figures. That is right
- * for a record and it is precisely what made the product read "like an essay or
- * a blog" to a brand owner: Newsreader at a 62ch measure IS magazine
- * typography, and no amount of shortening the copy changes what it signals.
- *
- * So at simple depth the serif is demoted to headings and the display face
- * stops being the medium of every explanation. Body prose goes to the interface
- * sans, one step larger, at a measure short enough to read as an interface
- * statement rather than a column. The serif still opens every section, so the
- * record's voice is intact — it is no longer doing the talking.
+ * Same component and same metrics as the Grader's, because it is the same file.
+ * Sans rather than any display face: this has to read as an interface making a
+ * statement, not as a pull quote. The figures inside stay mono, like every
+ * figure on this sheet.
  */
-[data-depth='simple'] .prose {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.55;
-  letter-spacing: normal;
-  max-width: 46ch;
+.headline {
+  margin: 0 0 var(--space-4);
 }
 
-/* The amber tick survives the change of face. A caveat is a caveat at both
-   depths, and it is the one piece of prose a simple reader most needs to see. */
-[data-depth='simple'] .prose--flag {
+.headline__claim {
+  font-family: var(--font-sans);
+  font-size: clamp(1.1875rem, 0.95rem + 1.05vw, 1.5rem);
   font-weight: 460;
+  line-height: 1.32;
+  letter-spacing: -0.011em;
+  color: var(--color-foreground);
+  max-width: 34ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.headline__claim strong {
+  font-weight: 660;
+}
+
+/* Quieter but NOT small print: this is the half of the sentence carrying the
+   uncertainty, and shrinking it below the body size would be the layout undoing
+   what the wording is for. */
+.headline__range {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-muted-foreground);
+  margin: var(--space-2) 0 0;
+  max-width: 46ch;
 }

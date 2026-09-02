@@ -1,8 +1,9 @@
 import { compare, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
+import { Headline } from '@/components/headline'
 import { MetricCard, DeltaBadge } from '@/components/metric-card'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { ProductBar } from '@/components/chrome'
-import { BY_ENGINE, HEADLINE, SOURCE_MIX, TREND } from '@/lib/fixtures'
+import { BY_ENGINE, ENGINES, HEADLINE, SOURCE_MIX, TREND } from '@/lib/fixtures'
 import { NO_SCHEDULER_NOTE, PLANNED_CAPTION, Planned } from '@/lib/planned'
 
 export default function Dashboard() {
@@ -13,8 +14,20 @@ export default function Dashboard() {
       <header className="masthead">
         <div>
           <h1>Acme CRM — AI search visibility</h1>
+          {/* THE SAMPLE SHAPE IS DETAIL; THE DATES ARE NOT.
+              "30 prompts × 5 runs × 5 engines" is mono technical shorthand — the
+              auditor's field. The dates either side of it are the reader's, and
+              "compared with 2026-08-01" explains the delta badges below, which
+              stay drawn at both depths, so by ADR-0010's rule it stays too.
+
+              The comment sits OUT here rather than inside the element:
+              planned.test.ts asserts `<Planned />` within 240 characters of the
+              cycle date, because the marker must be legibly ON the claim it
+              qualifies, and a comment wedged between them pushed it out of that
+              window without changing the rendered page. The test was right and
+              the first version of this edit was not. */}
           <p className="cycle">
-            Cycle 2026-08-15 · 30 prompts × 5 runs × 5 engines · compared with 2026-08-01 <Planned />
+            Cycle 2026-08-15<span className="detail"> · 30 prompts × 5 runs × 5 engines</span> · compared with 2026-08-01 <Planned />
           </p>
         </div>
       </header>
@@ -29,6 +42,34 @@ export default function Dashboard() {
           intervals, the significance rules and the provenance lines are the real ones.
         </p>
       </aside>
+
+      {/* THE LEDE, AND IT ANSWERS THE THREE-CARD PROBLEM RATHER THAN HIDING IT.
+
+          IT SITS ABOVE THE TIMER NOTICE AND BELOW THE FIXTURE STAMP, and the
+          order is the whole point. Modelled against the prerendered HTML, the
+          simple reading of this page opened with ~135 words of disclosure
+          before it reached a number — a brand owner read two paragraphs of
+          caveat before "am I doing well". Neither may be hidden, but nothing
+          fixes their ORDER except the rule that no claim precedes its own
+          qualifier.
+
+          The stamp stays first because it discloses that every figure here is
+          fixture data, and a number before that disclosure is exactly the
+          substitution this product argues against. The timer notice qualifies
+          the CADENCE — the delta badges, the "compared with" dates and the
+          trend — and the lede makes no cadence claim at all, so moving it below
+          the lede leaves no claim unqualified. It is still above every delta
+          badge and above the trend, which is the property its own comment
+          asks for.
+
+          Three cards is three headline numbers and no answer to "am I doing
+          well" — the same defect the Grader had. The cards stay at both depths:
+          citation rate and share of voice are different BUSINESS questions, not
+          technical depth, and hiding them would be removing features rather than
+          simplifying. What was missing is a statement of which one is the
+          headline, in words. Same component and same wording as the Grader's,
+          because it is the same file. */}
+      <Headline subject="Acme CRM" metric={HEADLINE.mentionRate.current} engines={ENGINES.length} />
 
       {/* THE TIMER CLAIM IS A PAGE-LEVEL CLAIM, SO THE MARKER IS TOO.
           The stamp above discloses the DATA: none of these numbers came from a
