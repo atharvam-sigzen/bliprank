@@ -72,6 +72,7 @@ import {
 } from '@bliprank/taxonomy'
 import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
+import { readPromoted } from './promote-competitors.js'
 import {
   GENERATED_DISCOVERY,
   GENERATED_PROBLEM_LED,
@@ -218,6 +219,18 @@ export function readCategoryRecord(dataDir: string, domain: string): CategoryRec
 }
 
 /**
+ * Every domain placed in one category, with its recorded trading name.
+ *
+ * Exported so competitor promotion can ask "who is the SUBJECT here" without a
+ * second module learning where the record file lives or how a malformed one is
+ * tolerated. A domain must never be proposed as its own competitor, and the
+ * records are the only place that says which domains a category holds.
+ */
+export function recordedIn(dataDir: string, slug: string): readonly CategoryRecord[] {
+  return Object.values(readRecords(dataDir)).filter((r) => r.slug === slug)
+}
+
+/**
  * Write a domain's category, ONCE.
  *
  * An existing record is returned unchanged rather than overwritten, and that
@@ -241,7 +254,19 @@ export interface GeneratedBankFile {
   readonly bank: PromptBank
 }
 
-/** Every bank generated so far. Read on each resolve so a sibling process's writes are seen. */
+/**
+ * Every bank generated so far. Read on each resolve so a sibling process's
+ * writes are seen.
+ *
+ * ⚠️ THE LEADERS REFUSAL BELOW IS UNCHANGED AND STAYS UNCHANGED. ADR-0009's
+ * third refusal — a generated bank file that has acquired any leaders is
+ * DROPPED — is what stops a hand-edited file putting invented rivals on a
+ * chart, and promotion did not weaken it. Promoted competitors live in their
+ * own file, where every entry carries the collected answers it was learned from
+ * (`promote-competitors.ts`), and are merged in AFTER this check. So a leader
+ * reaches a chart by exactly one route, and it is the route with evidence
+ * attached.
+ */
 export function readGeneratedBanks(dataDir: string): readonly GeneratedBankFile[] {
   const dir = banksDir(dataDir)
   if (!existsSync(dir)) return []
@@ -257,12 +282,39 @@ export function readGeneratedBanks(dataDir: string): readonly GeneratedBankFile[
       // chart, which is the one outcome this module exists to prevent.
       if (!bank || !category || !Array.isArray(bank.prompts) || bank.prompts.length === 0) continue
       if (Array.isArray(bank.leaders) && bank.leaders.length > 0) continue
-      out.push({ category, bank: { ...bank, leaders: [] } as PromptBank })
+      out.push({ category, bank: withPromoted(dataDir, { ...bank, leaders: [] } as PromptBank) })
     } catch {
       /* a malformed bank file is skipped, not fatal */
     }
   }
   return out
+}
+
+/**
+ * Attach this category's PROMOTED competitors, if any have been promoted.
+ *
+ * ⚠️ THE ONLY WAY A GENERATED BANK EVER ACQUIRES A LEADER, and the reason it is
+ * safe is that it does not read the bank file. `readPromoted` reads a separate
+ * store in which every entry carries the collected answers it was learned from,
+ * and drops any entry that does not. So the three refusals ADR-0009 built around
+ * `leaders` are all still in force over the bank file, unweakened, and the one
+ * path that adds a rival is the one that cannot be walked without evidence.
+ *
+ * THE VERSION MOVES WITH THE LEADERS. `comparisonBasisFor` stamps
+ * `slug@version` into every metric, and adding competitors changes `position`
+ * and therefore the preview score. A scan from before promotion and one from
+ * after are not measurements of the same thing; carrying the promoted version
+ * here is what makes `compare()` refuse to put them side by side instead of
+ * reporting the difference as movement.
+ */
+function withPromoted(dataDir: string, bank: PromptBank): PromptBank {
+  const promoted = readPromoted(dataDir, bank.category)
+  if (!promoted || promoted.leaders.length === 0) return bank
+  // `evidence` is stripped: a `Leader` has no such field, and the store is where
+  // the evidence lives. Carrying it into the bank would put an unversioned blob
+  // into `comparison_basis`'s neighbourhood for no reader's benefit.
+  const leaders = promoted.leaders.map(({ id, name, aliases, domains }) => ({ id, name, aliases, domains }))
+  return { ...bank, version: promoted.bankVersion, leaders }
 }
 
 function writeGeneratedBank(dataDir: string, file: GeneratedBankFile): void {

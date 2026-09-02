@@ -53,8 +53,20 @@ function sourceLine(preview: PreviewResponse): { cap: string; line: string; glos
         // centimetres to the left, and repeating it in the margin spends the
         // one line the margin has on something already on screen.
         line: preview.evidence,
-        gloss:
-          'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human, and no competitors were named — we will not guess who you compete with.',
+        /*
+         * ⚠️ THE SECOND HALF IS DERIVED, NOT ASSERTED. This line used to end
+         * "and no competitors were named" unconditionally, which was true of
+         * every authored category because there was no mechanism by which one
+         * could acquire a rival. There is now: a competitor promoted from
+         * brands the engines actually named in collected answers
+         * (`promote-competitors.ts`). Leaving the sentence hardcoded would tell
+         * a customer looking straight at their own competitor list that we
+         * refuse to name one — the same defect the head-to-head section carried
+         * when it told an authored category it had not been categorised.
+         */
+        gloss: preview.competitors.length
+          ? 'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human. The competitors listed were not chosen by us — each was promoted because the engines themselves named it in answers we collected.'
+          : 'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human, and no competitors were named — we will not guess who you compete with.',
         flag: true,
       }
     default:

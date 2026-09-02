@@ -15,7 +15,8 @@
     "grader:scan": "tsx services/grader/src/run.ts",
     "demo:dashboard": "pnpm --filter @bliprank/web dev",
     "demo:grader": "pnpm --filter @bliprank/public dev",
-    "grader:diagnose": "tsx services/grader/src/diagnose.ts"
+    "grader:diagnose": "tsx services/grader/src/diagnose.ts",
+    "grader:promote": "tsx services/grader/src/promote.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
