@@ -440,6 +440,28 @@ table {
 }
 
 /*
+ * THE DEPTH SWITCH, ON.
+ *
+ * Same fill and ink as hover, held — the identical device .navbar__wsbtn--open
+ * uses two hundred lines down, for the identical reason: a state is drawn as a
+ * state, not announced only to the accessibility tree.
+ *
+ * Said three ways, none load-bearing alone. The fill is the first; the icon
+ * gains rules (two strokes become four) so the state survives greyscale, a
+ * monochrome print and a reader who cannot separate the fill from the paper;
+ * and `aria-checked` is the third. Colour is not one of the three — this sheet
+ * does not spend colour on state, it spends it on data.
+ *
+ * The label does NOT change, which is the point of it. "Full detail" names what
+ * is being switched at both depths, so the reading the reader is not currently
+ * getting is always on screen.
+ */
+.depthtoggle[aria-checked='true'] {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+/*
  * THE LETTERHEAD. The one heavy rule on the page sits under it — everything
  * else is hairline, which is what keeps this a record rather than a
  * broadsheet. The title is the serif at display optical size; the subject
@@ -2785,6 +2807,10 @@ h3.record__title,
   order: 1;
   display: flex;
   align-items: center;
+  /* Two controls now: depth and theme. Without a gap they share an edge and
+     read as one segmented control, which they are not — they switch different
+     things and either can be set without the other. */
+  gap: var(--space-1);
 }
 
 .navbar__link {

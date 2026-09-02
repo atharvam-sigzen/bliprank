@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
 import { ActionLink } from '@/components/action-link'
-import { themedUrl, useTheme } from '@/components/theme'
+import { themedUrl, useDepth, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { RangeRail } from '@/components/range-rail'
@@ -484,13 +484,15 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
  */
 export function WorkedExample() {
   const theme = useTheme()
+  const depth = useDepth()
   return (
     <div style={{ marginTop: 'var(--space-3)' }}>
-      {/* themedUrl: the worked example is a different origin, so the theme
-          chosen here cannot reach its localStorage. The query parameter is how
-          the choice crosses; `system` sends nothing and the media query
-          decides there as it does here. */}
-      <ActionLink href={themedUrl(DASHBOARD_URL, theme)} external>
+      {/* themedUrl: the worked example is a different origin, so neither the
+          theme nor the depth chosen here can reach its localStorage. The query
+          parameters are how both choices cross; `system` sends no theme and the
+          media query decides there as it does here, and a reader who has never
+          set a depth sends none, so the route default applies on arrival. */}
+      <ActionLink href={themedUrl(DASHBOARD_URL, theme, depth)} external>
         Worked example
       </ActionLink>
       <p className="prose">

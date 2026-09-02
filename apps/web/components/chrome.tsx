@@ -28,8 +28,8 @@ export type Surface = 'dashboard' | 'grader' | 'pricing' | 'agency'
 /** Absolute in dev so the cross-link works across two ports; env-overridable. */
 const GRADER = process.env['NEXT_PUBLIC_GRADER_URL'] ?? 'http://localhost:3001'
 
-import { ThemeToggle, THEME_BOOT, themedUrl, useTheme, readTheme } from './theme'
-export { ThemeToggle, THEME_BOOT, themedUrl, useTheme, readTheme }
+import { ThemeToggle, DepthToggle, THEME_BOOT, themedUrl, useTheme, useDepth, readTheme, readDepth, defaultDepthFor } from './theme'
+export { ThemeToggle, DepthToggle, THEME_BOOT, themedUrl, useTheme, useDepth, readTheme, readDepth, defaultDepthFor }
 
 /**
  * Backward compatibility wrapper. In new code, prefer `themedUrl(url, useTheme())`
@@ -41,6 +41,9 @@ export function withTheme(url: string): string {
 
 export function ProductBar({ current: _current }: { current: Surface }) {
   const theme = useTheme()
+  // Every link on this bar leaves the origin, so the reader's depth has to ride
+  // along with their theme or Full detail is lost on the way to the Grader.
+  const depth = useDepth()
 
   return (
     <nav className="navbar" aria-label="BlipRank">
@@ -48,7 +51,7 @@ export function ProductBar({ current: _current }: { current: Surface }) {
         {/* Plain anchors, not next/link: every link here crosses an origin in
             dev (3000 to 3001) and a host in production (Vercel to Cloudflare
             Pages), and next/link's client navigation cannot do either. */}
-        <a className="navbar__mark" href={themedUrl(GRADER, theme)}>
+        <a className="navbar__mark" href={themedUrl(GRADER, theme, depth)}>
           <span className="navbar__dot" aria-hidden="true" />
           BlipRank
         </a>
@@ -60,14 +63,15 @@ export function ProductBar({ current: _current }: { current: Surface }) {
         </div>
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
         <div className="navbar__util">
-          <a className="navbar__link" href={themedUrl(GRADER, theme)}>
+          <a className="navbar__link" href={themedUrl(GRADER, theme, depth)}>
             Grader
           </a>
-          <a className="navbar__link" href={themedUrl(`${GRADER}/pricing`, theme)}>
+          <a className="navbar__link" href={themedUrl(`${GRADER}/pricing`, theme, depth)}>
             Pricing
           </a>
         </div>

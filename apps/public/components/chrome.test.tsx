@@ -129,6 +129,56 @@ describe('ProductBar, before any effect runs', () => {
   })
 })
 
+describe('the depth switch is on every chrome, before any effect runs', () => {
+  const SURFACES = ['grader', 'pricing', 'dashboard', 'workspace', 'agency'] as const
+
+  it('every surface paints it — the plain view must never hide that a full one exists', () => {
+    for (const surface of SURFACES) {
+      const html = renderToStaticMarkup(<ProductBar current={surface} />)
+      expect([surface, html.includes('role="switch"')]).toEqual([surface, true])
+      expect([surface, html.includes('Full detail')]).toEqual([surface, true])
+    }
+  })
+
+  it('GUARD 5: it is labelled by the thing it switches, not by the state it is in', () => {
+    /*
+     * A control reading "Simple" over a simple view advertises nothing. The
+     * evaluator most likely to screenshot this page and file the product as
+     * another vibes tool is the one who never learns the depth exists — so the
+     * words "Full detail" are on screen at BOTH depths, and aria-checked, not
+     * the label, carries which one is showing.
+     */
+    const html = renderToStaticMarkup(<ProductBar current="grader" />)
+    expect(html).toContain('Full detail')
+    expect(html).not.toContain('>Simple<')
+  })
+
+  it('paints unchecked before hydration, whatever the route default turns out to be', () => {
+    // useDepth' server snapshot is null by design: the prerender cannot read an
+    // attribute the boot script has not written yet. The VIEW does not flash —
+    // the boot stamped data-depth before first paint — only this label corrects
+    // itself, exactly as the theme toggle's does.
+    for (const surface of SURFACES) {
+      const html = renderToStaticMarkup(<ProductBar current={surface} />)
+      expect([surface, html.includes('aria-checked="false"')]).toEqual([surface, true])
+    }
+  })
+
+  it('sits beside the theme toggle in the slot that already existed', () => {
+    // One slot, two controls, no new grid column and no new breakpoint.
+    const html = renderToStaticMarkup(<ProductBar current="dashboard" />)
+    const slot = html.match(/<div class="navbar__theme">(.*?)<\/div><div/s)?.[1]
+    // Asserted, not defaulted: falling back to the whole document here would
+    // make every line below pass without the slot existing at all.
+    expect(slot).toBeDefined()
+    expect(slot).toContain('role="switch"')
+    expect(slot).toContain('themetoggle')
+    // Depth first in the DOM, so it is the first of the two a keyboard or
+    // screen-reader user reaches. It is the one that changes what is on screen.
+    expect(slot!.indexOf('role="switch"')).toBeLessThan(slot!.lastIndexOf('themetoggle'))
+  })
+})
+
 describe('workspaceGroups', () => {
   it('with no session scans, every bundled domain is reference and none is yours', () => {
     // Node has no localStorage, which is exactly the fresh-browser case.

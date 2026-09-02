@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { ThemeToggle, THEME_BOOT, themedUrl, useTheme, applyTheme, readTheme, type ThemeChoice } from './theme'
+import { ThemeToggle, DepthToggle, THEME_BOOT, themedUrl, useTheme, useDepth, applyTheme, applyDepth, readTheme, readDepth, defaultDepthFor, type ThemeChoice, type Depth } from './theme'
 import { BUNDLED_SCANS, normaliseTyped, scans } from '@/lib/scan-result'
 import { readActiveDomain, readAgencyDomains, writeActiveDomain, writeRole } from '@/lib/workspace'
 
@@ -205,6 +205,7 @@ function NeutralBar({ current }: { current: Surface }) {
         <Mark />
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
@@ -304,6 +305,7 @@ function BrandBar({ current }: { current: Surface }) {
         </Switcher>
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
@@ -367,6 +369,7 @@ function AgencyBar({ current }: { current: Surface }) {
         </Switcher>
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
@@ -391,7 +394,7 @@ export function ProductBar({ current }: { current: Surface }) {
   return <NeutralBar current={current} />
 }
 
-export { THEME_BOOT, ThemeToggle, themedUrl, useTheme, applyTheme, readTheme, type ThemeChoice }
+export { THEME_BOOT, ThemeToggle, DepthToggle, themedUrl, useTheme, useDepth, applyTheme, applyDepth, readTheme, readDepth, defaultDepthFor, type ThemeChoice, type Depth }
 
 /**
  * Backward compatibility wrapper. In new code, prefer `themedUrl(url, useTheme())`
