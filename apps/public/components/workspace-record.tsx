@@ -8,7 +8,6 @@ import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { Headline } from '@/components/headline'
 import { RangeRail } from '@/components/range-rail'
-import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
@@ -91,7 +90,6 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
-  const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
   // Object identity against the compiled-in constants, the same derivation the
   // chrome's switcher uses: scans() returns the bundled files by reference, so
   // a scan not in BUNDLED_SCANS is one this browser collected this session.
@@ -180,38 +178,6 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
             <span className="note__line detail">{formatProvenance(metric)}</span>
             <span className="note__gloss">
               From prompts that name no brand, so the number measures what the engines volunteer rather than what we prompted them with.
-            </span>
-          </aside>
-        </div>
-
-        {/*
-          THE PREVIEW SCORE, presented exactly as the Grader presents it.
-          Duplicated markup rather than shared: the two surfaces must agree on
-          the wording and the shape, and the wording is the point. If a third
-          surface needs it, that is the moment to extract a component.
-        */}
-        <div className="annotated" style={{ marginTop: 'var(--space-5)' }}>
-          <div className="annotated__body">
-            <p className="readout__cap">Visibility</p>
-            <p className="score">
-              <span className="score__value num">{preview.score}</span>
-              <span className="score__of">/ 100</span>
-              <span className="score__flag">preview</span>
-            </p>
-            <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
-              {PREVIEW_SCORE_CAPTION}. It combines the mention rate with competitive position on placeholder weights, carries no confidence
-              interval, and is not comparable with anyone else&apos;s score, including a later version of this one.
-            </p>
-          </div>
-          <aside className="note note--flag">
-            <span className="note__cap note__cap--flag">How it is made</span>
-            {preview.parts.map((part) => (
-              <span className="note__line" key={part.label}>
-                {part.label} {(part.weight * 100).toFixed(0)}% · {part.points.toFixed(1)} pts
-              </span>
-            ))}
-            <span className="note__gloss">
-              {missingNote(preview)}
             </span>
           </aside>
         </div>

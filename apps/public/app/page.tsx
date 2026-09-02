@@ -12,7 +12,6 @@ import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
 import { fetchPreview } from '@/lib/preview'
 import type { PreviewResponse } from '@/lib/preview-contract'
-import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
 
@@ -397,7 +396,6 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
-  const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
   // Counted once. The zero-competitor branch of HeadToHeadSection computes the same
   // thing, and the caveat above it may not imply a comparison it refuses.
   const competitors = scan.brands.filter((b) => !b.isSubject).length
@@ -466,61 +464,6 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
               a number from this product is never screenshottable without the
               size of the sample beside it. */}
           <span className="note__line detail">{formatProvenance(metric)}</span>
-        </aside>
-      </div>
-
-      {/*
-        THE PREVIEW SCORE — on the paper, annotated in the margin, and NOT on a
-        rail.
-        
-        The rail means "this is a measurement and here is its interval". This
-        number has no interval, because nobody has derived one for it, so it gets
-        a plain figure and the composition of that figure sits beside it. Same
-        provenance discipline as everything else on the sheet: the number cannot
-        be read without the working.
-        
-        It sits ABOVE the Precision grade rather than beside it, so the two are
-        never scanned as one compound verdict. They answer different questions —
-        how visible, and how much the sample knows.
-
-        DETAIL-ONLY, and this is the one place the depth split changes what the
-        product asserts rather than only how much of it is shown.
-
-        The simple view gets exactly one headline, and this cannot be it. It is
-        labelled `preview`, it carries no confidence interval because nobody has
-        derived one for it, and its own caption says it "is not comparable with
-        anyone else's score — including a later version of this one". A number
-        with those three properties is precisely what every competitor puts at
-        the top of the page, and putting ours there would trade the only claim
-        this product actually has for a figure that looks like theirs. The
-        headline is the mention rate, which is real, has bounds and has papers.
-      */}
-      <div className="annotated detail" style={{ marginTop: 'var(--space-5)' }}>
-        <div className="annotated__body">
-          <p className="readout__cap">Visibility</p>
-          <p className="score">
-            <span className="score__value num">{preview.score}</span>
-            <span className="score__of">/ 100</span>
-            <span className="score__flag">preview</span>
-          </p>
-          <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
-            {PREVIEW_SCORE_CAPTION}. It combines the mention rate with competitive position on placeholder weights, carries no confidence
-            interval, and is not comparable with anyone else&apos;s score — including a later version of this one.
-          </p>
-        </div>
-        <aside className="note note--flag">
-          <span className="note__cap note__cap--flag">How it is made</span>
-          {preview.parts.map((part) => (
-            <span className="note__line" key={part.label}>
-              {part.label} {(part.weight * 100).toFixed(0)}% · {part.points.toFixed(1)} pts
-            </span>
-          ))}
-          {preview.parts.map((part) => (
-            <span className="note__line" key={`${part.label}-detail`}>
-              {part.detail}
-            </span>
-          ))}
-          <span className="note__gloss">{missingNote(preview)}</span>
         </aside>
       </div>
 

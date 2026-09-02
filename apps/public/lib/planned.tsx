@@ -1,17 +1,15 @@
 /**
- * THE PLANNED MARKER - the second kind of provisional, and it is not the first.
+ * THE PLANNED MARKER.
  *
- * `PREVIEW_SCORE_CAPTION` says the METHOD is not settled: the number is real,
- * produced by code that ran, but the rubric behind it may still change.
- * PLANNED says something stricter and worse: the CAPABILITY is not built. No
- * code produces this yet, and what is on screen is the shape of a view rather
- * than a record of anything.
- *
- * Keeping them apart matters because they resolve differently. A preview number
- * becomes final when the rubric is signed off. A planned view stays a drawing
- * until somebody writes the thing that fills it. Two surfaces need this marker
- * today and they must not word the gap two ways, so the wording lives here,
- * exactly as the preview caption does.
+ * PLANNED says the CAPABILITY is not built. No code produces this yet, and what
+ * is on screen is the shape of a view rather than a record of anything. It is
+ * deliberately not "preview" or "provisional": those words describe a number
+ * whose method may still change, and a reader who sees PLANNED has to be able
+ * to tell that no code ran at all. (A "preview" visibility score once sat
+ * beside this marker; it was removed on 2026-09-02 because a composite with
+ * placeholder weights and no interval was the kind of figure this product
+ * refuses from everyone else.) Two surfaces need this marker today and they
+ * must not word the gap two ways, so the wording lives here.
  *
  * apps/web cannot import from this file: separate app, separate deploy, no
  * workspace dependency between them. `apps/web/lib/planned.tsx` is a duplicate

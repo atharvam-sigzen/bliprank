@@ -25,7 +25,6 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { buildHeadToHead } from './head-to-head'
-import { previewScore } from './preview-score'
 import { BUNDLED_SCANS, SCAN, measuresCurrentCategory, rememberScan, runInfoOf, scanFor, scans, subjectOf, type ScanResultFile } from './scan-result'
 import { NO_RUN_BLOCK_SCAN } from './__fixtures__/no-run-block-scan'
 import { workspaceFor } from './workspace'
@@ -131,15 +130,6 @@ describe('the live-scanned domain is COLLECTED everywhere, not just on the Grade
     const competitors = NO_RUN_BLOCK_SCAN.brands.filter((b) => !b.isSubject)
     expect(competitors).toEqual([])
 
-    // The position component is REPORTED MISSING rather than scored. Half credit
-    // for an absent input would have paid this brand for comparisons that never
-    // happened.
-    const preview = previewScore(subject, competitors)
-    expect(preview.missing).toContain('competitive position')
-    expect(preview.parts.map((p) => p.label)).toEqual(['mention rate'])
-    expect(preview.comparable).toBe(0)
-    expect(Number.isFinite(preview.score)).toBe(true)
-
     // And the chart is a chart of one row rather than an error.
     const h = buildHeadToHead({ label: subject.name, metric: subject.metric }, [])
     expect(h.rows).toHaveLength(1)
@@ -194,7 +184,6 @@ describe('every scan file this build could load renders', () => {
     const subject = subjectOf(scan)
     expect(subject).toBeDefined()
     const competitors = scan.brands.filter((b) => !b.isSubject)
-    expect(() => previewScore(subject, competitors)).not.toThrow()
     if (competitors.length > 0) {
       expect(() =>
         buildHeadToHead({ label: subject.name, metric: subject.metric }, competitors.map((b) => ({ label: b.name, metric: b.metric }))),

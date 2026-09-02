@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-import { PREVIEW_SCORE_CAPTION } from './preview-score'
 import * as planned from './planned'
 // The duplicate in the other app. Imported by relative path because there is no
 // workspace dependency between the two apps - which is the whole reason the file
@@ -12,11 +11,9 @@ describe('the planned marker', () => {
   it('says the capability is missing, not that the method is unsettled', () => {
     expect(planned.PLANNED_CAPTION.toLowerCase()).toContain('planned')
     expect(planned.PLANNED_CAPTION.toLowerCase()).toContain('not built')
-    // The two provisional markers must not collapse into each other. A reader
-    // who sees "preview" on a number and "planned" on a view has to be able to
-    // tell that one of them means no code ran at all.
+    // A reader who sees "planned" on a view has to be able to tell that it
+    // means no code ran at all, not that a number's method is unsettled.
     expect(planned.PLANNED_CAPTION.toLowerCase()).not.toContain('preview')
-    expect(PREVIEW_SCORE_CAPTION.toLowerCase()).not.toContain('planned')
   })
 
   it('states the scheduler gap in full', () => {
