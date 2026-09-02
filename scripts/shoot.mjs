@@ -188,18 +188,43 @@ async function shoot(browser, { name, path, viewport, theme, prepare, seed }) {
     return [...new Set(hits)].slice(0, 12)
   })
 
+  const refused = (await page.$('section.record--refused')) !== null
+
   await context.close()
-  return { file, blocked, problems, overflow, typography, figures }
+  return { file, blocked, problems, overflow, typography, figures, refused }
 }
 
 const browser = await chromium.launch()
 mkdirSync(OUT, { recursive: true })
 
-const typeDomain = async (page) => {
-  await page.fill('#domain', 'pipedrive.com')
+/*
+ * THE WAIT IS ON THE SETTLED STATE, NOT ON THE FIRST THING THAT APPEARS.
+ *
+ * This used to wait for `.record__domain`. The pre-scan preview wears that
+ * class too (prompt-preview.tsx), so the wait resolved on the preview, the
+ * capture showed "Working out your category...", and a masthead regression
+ * that only shows once a result is on the page sat in the committed shots
+ * unphotographed for a whole commit. And `[role=alert]` was worse: the domain
+ * field's error slot carries that role whether or not it has an error in it,
+ * so the old wait resolved on the still-submitting form every time.
+ *
+ * A scan settles in exactly three states and this waits for those: a result
+ * (a rail, which only a real metric draws), a refusal (the refused record), or
+ * the preview's confirm button — which is then pressed, and the wait repeats
+ * for the first two.
+ */
+const SETTLED = 'section.record .rail, section.record--refused'
+const scanFlow = (domain) => async (page) => {
+  await page.fill('#domain', domain)
   await page.click('button[type=submit]')
-  await page.waitForSelector('.record__domain, .record, [role=alert]', { timeout: 8000 })
+  await page.waitForSelector(`${SETTLED}, .record__action.btn--primary`, { timeout: 15000 })
+  if (!(await page.$(SETTLED))) {
+    await page.click('.record__action.btn--primary')
+    await page.waitForSelector(SETTLED, { timeout: 15000 })
+  }
 }
+
+const typeDomain = scanFlow('pipedrive.com')
 
 /*
  * The refusal state, WITHOUT touching the provider.
@@ -218,19 +243,13 @@ const QUOTA_MESSAGE =
 
 const QUOTA_SSE = ['event: error', `data: ${JSON.stringify({ kind: 'quota', message: QUOTA_MESSAGE })}`, '', ''].join('\n')
 
-const typeSigzen = async (page) => {
-  await page.fill('#domain', 'sigzen.com')
-  await page.click('button[type=submit]')
-  await page.waitForSelector('.record__domain, .record, [role=alert]', { timeout: 8000 })
-}
+const typeSigzen = scanFlow('sigzen.com')
 
 const refuse = async (page) => {
   await page.route('**/api/scan', (route) =>
     route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream' }, body: QUOTA_SSE }),
   )
-  await page.fill('#domain', 'example.com')
-  await page.click('button[type=submit]')
-  await page.waitForSelector('[role=alert]', { timeout: 8000 })
+  await scanFlow('example.com')(page)
 }
 
 /*
@@ -282,15 +301,18 @@ const SHOTS = [
   { name: '8-agency-portfolio', path: '/agency', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
   { name: '9-agency-add', path: '/agency/add', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com']) } },
   /*
-   * sigzen.com — the third demo domain, and the one that proves the product's
-   * argument hardest. It is a real collected scan of a company AI answers never
-   * mention: 0.0% with a real interval, ONE brand, no competitors, because it
-   * classified into the fallback bank which has no leaders by design.
+   * sigzen.com — a real collected scan that is NOT bundled with the build (the
+   * shipped registry holds pipedrive.com alone), so on the Grader it goes through
+   * the preview to "Run this scan", which calls /api/scan, which this harness
+   * aborts by design. What gets photographed is therefore the runner-unreachable
+   * refusal: a state a visitor really sees when the scan service is down, and
+   * the one screen that must show NO number. The block is the point of the
+   * capture, so it is expected here and a problem everywhere else.
    *
-   * It is also the file that used to crash the result page, so it is captured in
-   * both places that render it.
+   * Before 2026-09-02 the wait resolved on the preview and this shot never got
+   * this far; the comment above it still described a bundled scan.
    */
-  { name: '10-grader-sigzen', path: '/', prepare: typeSigzen },
+  { name: '10-grader-sigzen', path: '/', prepare: typeSigzen, expectsRefusal: true },
   { name: '11-dashboard-sigzen', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'sigzen.com' } },
   { name: '12-agency-pricing', path: '/agency/pricing' },
   { name: '13-agency-lifecycle', path: '/agency/lifecycle', seed: { [KEY.role]: 'agency' } },
@@ -305,8 +327,15 @@ for (const shot of SHOTS) {
     for (const theme of ['light', 'dark']) {
       const r = await shoot(browser, { ...shot, viewport, theme })
       const flags = []
-      if (r.blocked.length) flags.push(`BLOCKED ${r.blocked.length} forbidden request(s)`)
-      if (r.problems.length) flags.push(...r.problems)
+      // A shot that must end in the runner refusal: the guard aborting /api/scan
+      // IS the state under capture, and the browser logs that abort as a failed
+      // resource. Anything else blocked, or any other error, is still a problem —
+      // and so is that shot NOT ending in the refusal.
+      const blocked = shot.expectsRefusal ? r.blocked.filter((u) => !/\/api\/scan/i.test(u)) : r.blocked
+      const problems = shot.expectsRefusal ? r.problems.filter((p) => !/net::ERR_FAILED/.test(p)) : r.problems
+      if (blocked.length) flags.push(`BLOCKED ${blocked.length} forbidden request(s)`)
+      if (problems.length) flags.push(...problems)
+      if (shot.expectsRefusal && !r.refused) flags.push('expected the runner refusal and the page did not show one')
       if (r.typography.length) flags.push(...r.typography)
       // Named for what they are: these captures must contain no measurement.
       if (/preflight|fallback|agency-add/.test(shot.name) && r.figures.length) {
