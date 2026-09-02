@@ -17,9 +17,14 @@ that the copy is long. Reading the Grader result path as shipped:
 | | |
 |---|---|
 | Competing headline numbers | **3** — mention rate, Visibility /100, Precision A–D |
-| Body paragraphs before the first chart | **5** |
-| `.note` / `.annotated` margin blocks in one file | **33** |
+| `.prose` paragraphs in the result | **5** |
+| Margin notes on the result path | **3** in `page.tsx`, plus one per rendering component |
 | Body prose typeface | the display serif, at a 62ch measure |
+
+<sub>An earlier draft of this row said "33 margin blocks". That was 33 *lines*
+matching `note` or `annotated` in `page.tsx`, not 33 notes — there are three
+`<aside class="note">` on the result path. The point stands on the corrected
+figure and did not need the inflated one.</sub>
 
 None of it is wrong. Every number carries its interval, every refusal is honest,
 every caveat is derived rather than asserted. The problem is that **nothing is
@@ -166,11 +171,18 @@ and a test that only counted words would let the cause survive a rewrite.
 - The safety properties are mechanical, not remembered: fail-open direction,
   no-disclosure-is-detail, `n`-survives, and the type rule are all asserted, and
   the guards were mutation-checked rather than assumed to bite.
-- `apps/web` shipped five stacked generations of palette with only the last live
-  (19% of its declarations dead). Collapsing them to one was a precondition for
-  this work — a sixth pass would have been written on top of the five — and is
-  recorded here because it is why the diff for that commit is large and why it
-  changed nothing on screen.
+- `apps/web` shipped five stacked generations of palette with only the last
+  live. Collapsing them to one was a precondition for this work — a sixth pass
+  would have been written on top of the five — and is recorded here because it
+  is why that commit's diff is large and why it changed nothing on screen.
+
+  ⚠️ **A figure quoted during that work was overstated.** "19% of declarations
+  overridden by something further down" is what the counter measured, but it
+  counts a `@media` breakpoint override as an override, and a conditional
+  override is not dead code. The honest split is **110 genuinely dead token
+  declarations (12%)** plus about 7% of legitimate responsive overrides that
+  survive the cleanup — the same counter reports 8% against the consolidated
+  file. The deletion was correct; the number attached to it was not.
 
 **Costs, accepted.**
 
@@ -195,40 +207,97 @@ and a test that only counted words would let the cause survive a rewrite.
   composition pass the Grader just had, and the split will want revisiting when
   it does.
 
+## Decided since: the frequency headline ships, gated twice
+
+`formatFrequency` is wired into the record as a plain-language lede, behind two
+thresholds. Outside them it prints percentages.
+
+**Gate 1 — resolution.** `MAX_SPOKEN_INFLATION = 1.5`: the spoken range may not
+be more than half again wider than the computed interval. n=150 at 17.0–31.2%
+speaks (1.17×); n=600 at 21.7–28.6% does not (1.93×), so a paying customer's
+larger sample can no longer produce a vaguer headline than the free tier's on
+the same brand. 1.5 rather than 1.4 because it is where the n=150 band stays
+contiguous — 10, 15, 20 and 25% all speak, 30% and above do not — and a
+threshold that admitted 20% and 30% while refusing 25% would look arbitrary.
+
+**Gate 2 — legibility.** `MAX_SPOKEN_DENOMINATOR = 20`. This was missing from
+the original option and the analysis says it should not have been: inflation
+guards high rates and is blind at the other end, where a brand at 5% on n=150
+speaks as "as few as 1 in 42" — faithful (1.13×) and unreadable. Every brand
+under about 8.5% at n=150 lands there, which on the free Grader is a large share
+of arrivals. An infinite denominator is exempt; it renders "none at all", a word
+rather than a number.
+
+Both constants are ⚠️ PROVISIONAL in the sense `MIN_N_FOR_COMPARISON` already
+is: measured, not derived.
+
+## The bounded-denominator option is rejected
+
+Option (c) — allowing a numerator, "2 in 9" — was measured rather than argued.
+Over a grid of 84 realistic (n, p̂) cells, with the same 1.5 inflation gate and
+two independent readability yardsticks (strict = numerator ≤ 3 over a common
+denominator; loose = numerator ≤ 3, denominator ≤ 12):
+
+| option | speaks | readable, strict | readable, loose |
+|---|---|---|---|
+| (b) shipped — 1 in k, k ≤ 20 | 32% | 13% | 23% |
+| (c) K = 10 | 50% | **25%** | **46%** |
+| (c) K = 12 | 57% | 15% | 44% |
+| (c) K = 16 | 69% | 6% | 21% |
+| (d) one shared denominator, k ≤ 12 | 52% | 24% | 40% |
+
+Four findings, and the third is the one that settles it.
+
+1. **(c) really does buy coverage** — roughly double the readable share at
+   K = 10, consistently under both yardsticks. The "it cannot help" hypothesis
+   is simply wrong.
+2. **More denominators make it worse.** K = 16 scores 6% strict against
+   K = 10's 25%: given more freedom the approximation picks tighter, uglier
+   fractions (elevenths, sixteenths). The constraint is what produces idiomatic
+   output, not the fidelity — which makes the choice of K load-bearing and
+   fragile, a third provisional constant doing all the work.
+3. **Most of the coverage it adds is phrases worse than the percentage they
+   replace.** Of the four cases (c) at K = 10 adds over (b):
+   *"1 in 5 to 3 in 10"* (21.7–28.6%), *"2 in 9 to 2 in 7"* (22.4–27.8%),
+   *"1 in 4 to 3 in 7"* (26.3–41.2%) and *"none at all to 1 in 9"* (2.7–10.2%)
+   — only the last is clearly easier to read than its percentage. The other
+   three demand mental normalising that the percentage does not.
+4. **(c) is not a superset of (b).** They fail on complementary cases: a bounded
+   denominator cannot represent anything between 0 and 6.1%, so at n=600 and
+   p̂=8% (c) refuses while (b) says "1 in 17 to 1 in 9". Adopting (c) would lose
+   some of the low-rate cases where frequency framing is most valuable.
+
+Building (c) would therefore widen the set of shapes a headline can take —
+percentage, "1 in k", *and* odd fractions — which makes the cross-scan
+inconsistency that is already the main objection to two framings worse rather
+than better, in exchange for a minority of cases that read no better. Rejected.
+
 ## Open
 
-**The plain-language headline is not wired in.** `formatFrequency`
-(`packages/stats/src/format.ts`) is written and tested but called by nothing, so
-the simple view currently shows the mention rate as a percentage on a rail rather
-than as the sentence this ADR describes in invariant 1. It is human-owned under
-CLAUDE.md §4 and awaiting review.
+⚠️ **The live question is not (b) versus (c). It is (b) versus percentages
+always, and desk analysis cannot settle it.**
 
-⚠️ **The rounding trade-off is undecided, and it is a product judgement.**
-Rounding the spoken bounds outward guarantees the range a customer reads always
-contains the computed interval and can never be tighter than it. The price is the
-mirror error: `1 in k` is coarse near small `k`, so at 25% the only speakable
-frequencies either side are 1 in 5 (20.0%) and 1 in 3 (33.3%), and *any* interval
-inside that gap is spoken as "as few as 1 in 5, as many as 1 in 3".
+The same grid says (b) speaks on 32% of cells and is idiomatic on 13–23%. So
+for roughly two scans in three the headline is a percentage regardless, and for
+part of the remainder the frequency it produces ("1 in 17 to 1 in 9") is not
+obviously better than one. Two provisional constants, an outward-rounding rule,
+a containment proof and 22 tests currently serve about one scan in five.
 
-Measured, on real intervals:
+The case for keeping it as shipped: where it does speak idiomatically the
+sentence genuinely lands — "as few as 1 in 6, as many as 1 in 3" reaches a
+reader that "17.0–31.2%" does not — the gates make the bad cases unreachable,
+and the fallback is not a degradation.
 
-| Sample | Computed | Spoken | Inflation |
-|---|---|---|---|
-| n=150, p̂≈25% (Starter) | 17.0–31.2% | 1 in 6 – 1 in 3 (16.7–33.3%) | **1.17×** |
-| n=150, p̂=10% | 6.0–16.0% | 1 in 17 – 1 in 6 (5.9–16.7%) | 1.08× |
-| n=150, p̂=33% | 26.0–41.0% | 1 in 4 – 1 in 2 (25.0–50.0%) | **1.67×** |
-| n=600, p̂=25% | 21.7–28.6% | 1 in 5 – 1 in 3 (20.0–33.3%) | **1.93×** |
-| ±0.2pt at 25% | 24.8–25.2% | 1 in 5 – 1 in 3 (20.0–33.3%) | 33.3× |
+The case against: one shape always, and the product's own aesthetic is
+restraint.
 
-**The inflation is worst where the sample is best.** That is the perverse
-direction for a product selling precision, and it is not confined to the extreme
-case: a customer paying for four times the sample gets a tighter interval and a
-*vaguer* sentence (1.93× against the free tier's 1.17×), on the same brand,
-because it was measured more carefully. On an ordinary n=150 scan at 33% the top
-bound is spoken as "as many as one answer in two" for a measurement whose upper
-bound is 41% — a nine-point overstatement.
+**This is an empirical question about readers, and every readability judgement
+above is a proxy invented for the analysis.** It belongs in G3's usability
+dimension with real people, not in another round of arithmetic. Until then the
+gated version ships, because it is safe rather than because it is proven.
 
-Overstating uncertainty is not the safe error when precision is the thing being
-sold. Three options are set out in `packages/stats/src/frequency.test.ts`; the
-choice belongs to the owner of `packages/stats`. Until it is made, nothing calls
-the function and the simple view shows a percentage on a rail.
+A second follow-on, smaller: `PromptBreakdown` ("which questions you appear in")
+is marked `.detail` on the rule, and that is probably not the last word — it is
+nearer a brand owner's world than the by-engine split is, and a one-line plain
+version ("you appear in 3 of the 6 questions we asked") likely belongs in the
+simple view. Not invented here.
