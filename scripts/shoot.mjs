@@ -181,7 +181,7 @@ async function shoot(browser, { name, path, viewport, theme, prepare, seed }) {
     const hits = []
     // Percentages and x/100 scores, excluding the fixed 0/100 scale endpoints
     // the rail always prints and the engine/prompt counts in settings.
-    for (const m of text.matchAll(/\d+(\.\d+)?\s?%/g)) hits.push(m[0])
+    for (const m of text.matchAll(/\b\d+(\.\d+)?\s?%/g)) hits.push(m[0])
     for (const el of document.querySelectorAll('.score__value, .portfolio__grade, .gradebadge, .rail__value')) {
       hits.push(`${el.className.split(' ')[0]}:${el.textContent?.trim().slice(0, 12)}`)
     }

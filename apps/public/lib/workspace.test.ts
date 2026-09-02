@@ -106,7 +106,7 @@ describe('workspaceFor', () => {
     expect(collectionStatus(collected)).toBe('collected — cycle of 2026-08-25')
     expect(collectionLine(collected)).toBe('85 answers · day 2026-08-25')
     // The one thing neither line may ever contain for a collected domain.
-    expect(collectionLine(collected)).not.toMatch(/0 answers/)
+    expect(collectionLine(collected)).not.toMatch(/\b0 answers\b/)
     expect(collectionStatus(collected)).not.toMatch(/not collected/)
 
     expect(collectionStatus(queued)).toBe('queued — first cycle not collected')

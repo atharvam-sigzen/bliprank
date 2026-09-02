@@ -618,7 +618,7 @@ hits are excluded: a hit proves the cache works, not that collection does.
 
 | # | Item | Status |
 | --- | --- | --- |
-| 2.1 | Deterministic scorer | **Done, fixture-only.** No model call on any path (R1). URL masking so a brand appearing only in a link is cited but not *mentioned*; `position` is a rank among detected brands, not a character offset; explicit letter/digit/underscore boundaries rather than ``, which does not fire around `+` or `.`. A test pins that a score row carries **no** interval — one answer is one Bernoulli trial. |
+| 2.1 | Deterministic scorer | **Done, fixture-only.** No model call on any path (R1). URL masking so a brand appearing only in a link is cited but not *mentioned*; `position` is a rank among detected brands, not a character offset; explicit letter/digit/underscore boundaries rather than ``, which does not fire around `+` or `.`. A test pins that a score row carries **no** interval — one answer is one Bernoulli trial. |
 | 2.1b | Citation source classifier | **Done, fixture-only.** ADR-0005 classes, identity before platform. The hard constraint has its own tests: no input reaches `owned` for an unlisted domain, including a provider-supplied publisher name — acting on that would make the class depend on which provider collected the run. |
 | 2.5 | Golden set | **Skeleton only.** Harness plus 7 hand-built seed cases. Returns `NOT_RUN` below the 300-case target: agreement over a dozen answers is noise wearing a gate's clothes. |
 
