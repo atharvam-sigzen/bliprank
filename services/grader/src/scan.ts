@@ -314,6 +314,43 @@ export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[
   ].join('|')
 }
 
+/**
+ * The unprompted prompts a scan would send, in the order it would send them.
+ *
+ * Extracted so a caller can ask what a scan WOULD collect without collecting
+ * it. `rescore.ts` uses it to prove, before anything runs, that every cell is
+ * already in the answer store — which is what makes a re-derivation provably
+ * free rather than hopefully free.
+ */
+export function promptsFor(bank: PromptBank, maxPrompts?: number): readonly PromptBank['prompts'][number][] {
+  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
+  return maxPrompts ? unprompted.slice(0, maxPrompts) : unprompted
+}
+
+/**
+ * Every cell one scan of this bank covers: prompt x engine, on one day.
+ *
+ * ⚠️ ONE DEFINITION, TWO CALLERS. `runScan` builds its cells from this, and so
+ * does the pre-flight check in `rescore.ts`. A second copy of this loop would
+ * be a second answer to "which cells does a scan of this bank need", and the
+ * two would drift in the direction where the check passes and the scan then
+ * misses — which is the direction that spends money.
+ */
+export function cellsFor(
+  bank: PromptBank,
+  engines: readonly EngineId[],
+  day: string,
+  maxPrompts?: number,
+): readonly { readonly cell: CacheCell; readonly prompt: string; readonly engine: EngineId }[] {
+  const out: { cell: CacheCell; prompt: string; engine: EngineId }[] = []
+  for (const p of promptsFor(bank, maxPrompts)) {
+    for (const engine of engines) {
+      out.push({ cell: cacheCell({ prompt: p.text, engine, locale: bank.locale, geo: bank.geo, dateBucket: day }), prompt: p.text, engine })
+    }
+  }
+  return out
+}
+
 export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanResult> {
   const banks = deps.banks ?? DEMO_BANKS
   const taxonomy = deps.taxonomy ?? DEMO_TAXONOMY
@@ -407,19 +444,13 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   }
 
   // PROPERTY 2. Unprompted prompts only.
-  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
-  const prompts = req.maxPrompts ? unprompted.slice(0, req.maxPrompts) : unprompted
+  const prompts = promptsFor(bank, req.maxPrompts)
 
   const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank, brandName)
   const competitors = leadersOf(bank).filter((c) => c.id !== subject.id)
   const scored: BrandSpec[] = [subject, ...competitors]
 
-  const cells: { cell: CacheCell; prompt: string; engine: EngineId }[] = []
-  for (const p of prompts) {
-    for (const engine of req.engines) {
-      cells.push({ cell: cacheCell({ prompt: p.text, engine, locale: bank.locale, geo: bank.geo, dateBucket: req.day }), prompt: p.text, engine })
-    }
-  }
+  const cells = cellsFor(bank, req.engines, req.day, req.maxPrompts)
 
   const answers: RawAnswer[] = []
   let cacheHits = 0

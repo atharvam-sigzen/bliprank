@@ -9,6 +9,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { SCAN, type ScanResultFile } from '../lib/scan-result'
+import { NO_RUN_BLOCK_SCAN } from '../lib/__fixtures__/no-run-block-scan'
 import { PromptBreakdown } from './prompt-breakdown'
 
 const html = (scan: ScanResultFile) => renderToStaticMarkup(<PromptBreakdown scan={scan} />)
@@ -42,6 +43,14 @@ const withRows = (): ScanResultFile =>
   }) as ScanResultFile
 
 describe('a cycle that carries its rows', () => {
+  it('the committed reference scan is now one of them', () => {
+    // It was re-derived over its own already-bought answers (`grader:rescore`),
+    // so the demo shows the real table rather than the honest apology.
+    const out = html(SCAN)
+    expect(out).toContain('<table')
+    expect(out).toContain('Which questions you appear in')
+  })
+
   it('prints the prompt verbatim and the position as a fraction of what was detected', () => {
     const out = html(withRows())
     expect(out).toContain('best crm for a two person team')
@@ -71,9 +80,16 @@ describe('a cycle that carries its rows', () => {
 
 describe('a cycle that does not', () => {
   it('renders the absence in words, and draws no table', () => {
-    // The committed reference scan predates the field — the state most files
-    // are in. It must not render a grid of misses.
-    const out = html(SCAN)
+    /*
+     * A file with no rows — the state every result written before 2026-09-02 is
+     * in, and the one this component must never render as a grid of misses.
+     *
+     * This used to point at the committed reference scan, which was such a file
+     * until it was re-derived over its own answers on 2026-09-02. Rather than
+     * weaken the assertion, it now points at a fixture that genuinely carries no
+     * rows: the case still exists in the wild and still has to be handled.
+     */
+    const out = html(NO_RUN_BLOCK_SCAN)
     expect(out).toContain('There is no per-question breakdown for this cycle')
     expect(out).not.toContain('<table')
     // And it must not imply a finding: the sentence says the payload lacks the

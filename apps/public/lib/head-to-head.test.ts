@@ -562,7 +562,13 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     for (const b of SCAN.brands) {
       // R8 on the committed artefact too: a scan file missing provenance would
       // render a bare number and no test above would have caught it.
-      expect([b.id, b.metric.n, b.metric.algo_version, b.metric.collection_path]).toEqual([b.id, SCAN.counts.answersScored, 'det-1', 'third-party-grounded'])
+      // Against the FILE's own stamp, not a literal. The reference scan moves
+      // forward with the algorithm (R5 re-scores forward rather than mutating),
+      // and every brand in one file must share its version or the file is not
+      // one measurement. `apps/public` does not depend on the scorer, so the
+      // constant is not importable here — and the file's own stamp is the
+      // stronger assertion anyway.
+      expect([b.id, b.metric.n, b.metric.algo_version, b.metric.collection_path]).toEqual([b.id, SCAN.counts.answersScored, SCAN.algoVersion, 'third-party-grounded'])
     }
   })
 
@@ -596,7 +602,29 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     // time a real scan is committed, which is not a defect.
     expect(IS_LIVE).toBe(SCAN.run.mode === 'live')
     if (SCAN.run.mode === 'live') {
-      expect(SCAN.counts.providerCalls).toBeGreaterThan(0)
+      /*
+       * ⚠️ A RE-SCORED FILE IS LIVE AND MAKES NO CALLS, AND BOTH ARE TRUE.
+       *
+       * `run.mode` describes where the ANSWERS came from; `counts` describes
+       * the pass that produced the NUMBER. Those were the same event until
+       * `grader:rescore` existed, and this assertion quietly assumed it. A
+       * re-derivation reads answers a live collection already bought, so it
+       * records `mode: 'live'` — correctly, the banner's claim is about the
+       * answers — alongside zero provider calls.
+       *
+       * So the check follows the same split rather than being dropped: the
+       * answers must have come from somewhere, and for a re-scored file that
+       * somewhere is the store. `cacheHits > 0` is the same claim about the same
+       * thing, made against the counts this file actually holds.
+       */
+      if (SCAN.rescoredFrom) {
+        expect(SCAN.counts.providerCalls).toBe(0)
+        expect(SCAN.counts.cacheHits).toBeGreaterThan(0)
+        // And the row it superseded is what holds the calls that bought them.
+        expect(SCAN.rescoredAt).toBeTruthy()
+      } else {
+        expect(SCAN.counts.providerCalls).toBeGreaterThan(0)
+      }
     } else {
       expect(SCAN.counts.providerCalls).toBe(0)
       expect(SCAN.run.spentUsd ?? 0).toBe(0)
