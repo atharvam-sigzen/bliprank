@@ -650,3 +650,80 @@ rather than a rival in its own excerpt, and `ERPNext` is the platform
 `sigzen.com` implements rather than a competitor of it — the same distinction
 Amendment 1 drew when it allowed an ERP bank to name ERPNext. Both are judgement
 calls about a market, which is not a call this code is allowed to make.
+
+---
+
+# Amendment 3, addendum — the first promotion, and the distinction the bar cannot make
+
+**Status:** Accepted · **Date:** 2026-09-02
+
+## What was promoted
+
+An operator read the dry run for `erp-software` and approved six of the eight
+names that cleared the bar:
+
+**Odoo · QuickBooks · Xero · Microsoft Dynamics 365 · Salesforce · SAP Business One**
+
+`erp-software` moved to `@2`. `gaming-peripherals-india` still has nothing
+promoted, because nothing clears the bar there.
+
+## What was refused, and why it matters more than what was promoted
+
+Two names cleared the arithmetic and were wrong about the market:
+
+| Refused | Its own evidence | Why it is not a rival |
+|---|---|---|
+| `Shopify` | *"Connect online platforms like Shopify or WooCommerce for seamless omni-channel management"* | Named as an **integration** the ERP connects to. |
+| `ERPNext` | *"### 1. ERPNext — my first choice"* | The **platform** sigzen.com implements. Amendment 1 already drew this line when it allowed an ERP bank to name ERPNext. |
+
+Both were named by real engines, in real answers, repeatedly, across engines.
+Every count was honest. The counts were simply not the question.
+
+## ⚠️ The known limitation: mentioned-as-a-rival vs mentioned-as-an-adjacent-thing
+
+The evidence bar counts **whether** a name was said. It has no representation at
+all for **how** it was said, and at least three distinct relationships collapse
+into the same three integers:
+
+- **rival** — the thing a buyer would choose instead ("Odoo or SAP Business One")
+- **integration** — the thing it connects to ("connect Shopify to your ERP")
+- **platform or substrate** — the thing it is built on or implements ("ERPNext
+  partner", "WordPress hosting")
+
+A brand in any of those three appears in the same answers, in the same bold
+spans and comparison tables, with the same recurrence across engines. No
+threshold on answers, prompts or engines separates them, and raising the bar
+does not help: `Shopify` cleared on three engines, more than several genuine
+rivals did.
+
+**Not being fixed now, deliberately.** The cheap-looking fixes are all worse
+than the human gate:
+
+- *An LLM classifying the relationship* breaks R1. The competitor set decides
+  `position`, `position` decides the preview score, and a set that can answer
+  differently on two runs over one corpus is not reproducible.
+- *Cue phrases* ("integrates with", "connect", "built on") are a keyword list
+  against free prose, and would refuse a genuine rival any time an answer
+  happened to mention integrating with it — which good ERP answers do constantly.
+- *Requiring the name to appear in a comparison table* helps for one answer
+  shape and fails for the prose shortlists that make up most of the corpus.
+
+The honest shape of a fix, whenever this is revisited at scale, is probably
+**positional rather than lexical**: the same first-appearance offsets
+`scoreAnswer` already computes, asking whether the candidate sits in the same
+enumeration as the other candidates or off in a supporting clause. That is a
+deterministic signal over structure we already extract, which is the only kind
+of signal allowed on this path. It is a real piece of work and it needs its own
+evidence, not a guess.
+
+**Until then the design holds because the gate is a person.** The dry run is
+free, prints the matched alias and a quoted excerpt for every candidate, and
+writes nothing. A refusal is recorded in the store (`excluded`) rather than
+living in the operator's shell history, so the same wrong candidate is not
+re-proposed on the next run over the same corpus — and `--exclude` is retroactive,
+so a promotion that turns out wrong is removed by naming it, with the version
+bump that implies.
+
+**The cost of this limitation scales with categories, not with corpus size.**
+One judgement call per category is affordable; it is the thing to watch when the
+taxonomy has two hundred of them.

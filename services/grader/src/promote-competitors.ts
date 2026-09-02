@@ -342,6 +342,26 @@ export interface PromotedCompetitors {
    */
   readonly bankVersion: number
   readonly leaders: readonly (Leader & { readonly evidence: CompetitorEvidence })[]
+  /**
+   * Names a human looked at, and refused. PERSISTED, and that is the point.
+   *
+   * ⚠️ WITHOUT THIS THE OVERRIDE IS A SHELL-HISTORY ENTRY. The evidence bar is
+   * a counting rule and cannot be taught the difference between a rival and an
+   * integration: the real corpus cleared `Shopify` on the strength of "Connect
+   * online platforms like Shopify or WooCommerce", and cleared `ERPNext`, which
+   * is the platform sigzen.com implements rather than a competitor of it. A
+   * person reading the excerpt sees both instantly.
+   *
+   * That judgement is the expensive part of the whole mechanism, and the next
+   * run over the same corpus reaches the same two candidates by the same
+   * arithmetic. Keeping the refusal beside the promotions means the operator's
+   * work survives; keeping it only in a `--exclude` flag means it survives
+   * exactly as long as somebody remembers to retype it.
+   *
+   * A refusal is not evidence of anything about the brand, so it stores no
+   * excerpt and no counts — only that it was seen and declined, and when.
+   */
+  readonly excluded?: readonly { readonly name: string; readonly at: string }[]
 }
 
 const promotedDir = (dataDir: string): string => join(dataDir, 'promoted-competitors')
@@ -382,6 +402,14 @@ export function readPromoted(dataDir: string, slug: string): PromotedCompetitors
       promotedAt: String(parsed.promotedAt ?? ''),
       algoVersion: String(parsed.algoVersion ?? ''),
       bankVersion: Number.isFinite(parsed.bankVersion) ? Number(parsed.bankVersion) : 2,
+      // Read back unvalidated beyond its shape: an exclusion can only ever
+      // REMOVE a competitor from a chart, so a malformed one fails safe in the
+      // direction that shows fewer rivals rather than more.
+      excluded: Array.isArray(parsed.excluded)
+        ? parsed.excluded
+            .filter((e): e is { name: string; at: string } => typeof e?.name === 'string' && e.name.trim() !== '')
+            .map((e) => ({ name: e.name, at: typeof e.at === 'string' ? e.at : '' }))
+        : [],
       // ⚠️ `domains` is forced empty on READ as well as on write. A promoted
       // name was learned from prose; crediting a citation to it would be an
       // attribution nobody verified. See the header.
@@ -414,16 +442,46 @@ export function readAllPromoted(dataDir: string): readonly PromotedCompetitors[]
  * so without the version moving. New names are appended and the version goes up
  * again, so each round is a distinct, comparable, refusable state.
  */
+/**
+ * Names the operator has refused, from this run and from every previous one.
+ *
+ * Matched on the squashed form, so `SAP Business One` and `sap business one`
+ * are one refusal rather than two — the same key promotion itself is held under.
+ */
+export function excludedKeys(promotion: PromotedCompetitors | null, alsoExclude: readonly string[] = []): ReadonlySet<string> {
+  return new Set([...(promotion?.excluded ?? []).map((e) => e.name), ...alsoExclude].map(squash).filter(Boolean))
+}
+
 export function buildPromotion(
   slug: string,
   candidates: readonly CompetitorCandidate[],
-  opts: { readonly bankVersion: number; readonly now: string; readonly existing?: PromotedCompetitors | null },
+  opts: {
+    readonly bankVersion: number
+    readonly now: string
+    readonly existing?: PromotedCompetitors | null
+    /** Names this run refuses. Added to whatever the file already refuses. */
+    readonly exclude?: readonly string[]
+  },
 ): PromotedCompetitors {
   const existing = opts.existing ?? null
+  const refused = excludedKeys(existing, opts.exclude ?? [])
   const held = new Map((existing?.leaders ?? []).map((l) => [squash(l.name), l]))
+
+  /*
+   * ⚠️ AN EXCLUSION IS RETROACTIVE, AND HAS TO BE.
+   *
+   * Refusing a name only at the gate would leave one already promoted in place
+   * for ever, so the only way to undo a promotion would be to hand-edit the
+   * store — the same hand-editing every refusal in this module exists to make
+   * unnecessary. A name refused here is dropped whether it arrived a minute ago
+   * or a month ago, and the version bump below is what makes that visible
+   * rather than silent.
+   */
+  for (const key of held.keys()) if (refused.has(key)) held.delete(key)
+
   for (const c of candidates) {
     const key = squash(c.name)
-    if (!key || held.has(key)) continue
+    if (!key || held.has(key) || refused.has(key)) continue
     held.set(key, {
       // Namespaced so a promoted id can never collide with a hand-authored
       // leader id, and so its origin is legible in a stored score row.
@@ -434,12 +492,23 @@ export function buildPromotion(
       evidence: c.evidence,
     })
   }
+
+  // Recorded under the name the operator typed where this run refused it, and
+  // under the name already on file otherwise, so the list reads back as what a
+  // person actually decided about.
+  const seen = new Map((existing?.excluded ?? []).map((e) => [squash(e.name), e]))
+  for (const name of opts.exclude ?? []) {
+    const key = squash(name)
+    if (key && !seen.has(key)) seen.set(key, { name, at: opts.now })
+  }
+
   return {
     category: slug,
     promotedAt: opts.now,
     algoVersion: SCORING_ALGO_VERSION,
     bankVersion: Math.max(opts.bankVersion + 1, (existing?.bankVersion ?? 0) + 1),
     leaders: [...held.values()],
+    ...(seen.size > 0 ? { excluded: [...seen.values()] } : {}),
   }
 }
 

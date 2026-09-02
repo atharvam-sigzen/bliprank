@@ -28,6 +28,7 @@ import { DEMO_BANKS } from '@bliprank/taxonomy'
 import {
   DEFAULT_THRESHOLDS,
   buildPromotion,
+  excludedKeys,
   extractCandidates,
   looksLikeName,
   promotable,
@@ -241,6 +242,72 @@ describe('the store — evidence is the price of admission', () => {
   })
 })
 
+describe('the human override — a judgement the bar cannot make', () => {
+  const candidate = (name: string) => ({
+    name,
+    evidence: { source: 'extracted' as const, answers: 4, prompts: 3, engines: 2, engineIds: ['chatgpt', 'gemini'], matchedAs: name, excerpt: '…' },
+  })
+
+  it('keeps the batch and drops the named ones — never all-or-nothing', () => {
+    // The real shape of this report: six good names and two that clear the
+    // arithmetic while being wrong about the market. Refusing the batch over
+    // the two would mean taking the wrong ones or taking none.
+    const p = buildPromotion('erp-software', [candidate('Odoo'), candidate('Shopify'), candidate('Xero')], {
+      bankVersion: 1,
+      now: 'now',
+      exclude: ['Shopify'],
+    })
+    expect(p.leaders.map((l) => l.name)).toEqual(['Odoo', 'Xero'])
+    expect(p.excluded).toEqual([{ name: 'Shopify', at: 'now' }])
+  })
+
+  it('⚠️ the refusal PERSISTS, so the next run does not re-propose it', () => {
+    // Without this the override lives in somebody's shell history. The bar is
+    // deterministic, so the same corpus reaches the same wrong candidate every
+    // single time it is run.
+    const first = buildPromotion('erp-software', [candidate('Odoo')], { bankVersion: 1, now: 't1', exclude: ['Shopify'] })
+    const second = buildPromotion('erp-software', [candidate('Shopify'), candidate('Xero')], { bankVersion: 1, now: 't2', existing: first })
+    expect(second.leaders.map((l) => l.name)).toEqual(['Odoo', 'Xero'])
+    expect(second.excluded).toEqual([{ name: 'Shopify', at: 't1' }])
+  })
+
+  it('⚠️ is retroactive: refusing a name already promoted removes it', () => {
+    // A gate-only refusal would leave a mistake on a chart for ever, and the
+    // only undo would be hand-editing the store — the thing every refusal in
+    // this module exists to make unnecessary.
+    const first = buildPromotion('erp-software', [candidate('Odoo'), candidate('Shopify')], { bankVersion: 1, now: 't1' })
+    expect(first.leaders).toHaveLength(2)
+    const second = buildPromotion('erp-software', [], { bankVersion: 1, now: 't2', existing: first, exclude: ['Shopify'] })
+    expect(second.leaders.map((l) => l.name)).toEqual(['Odoo'])
+    // And the version moves, so the removal is a declared change of basis
+    // rather than a silent rebase of what the old number meant.
+    expect(second.bankVersion).toBeGreaterThan(first.bankVersion)
+  })
+
+  it('matches a refusal however it was typed', () => {
+    const p = buildPromotion('x', [candidate('SAP Business One')], { bankVersion: 1, now: 'now', exclude: ['sap business one'] })
+    expect(p.leaders).toEqual([])
+    expect(excludedKeys(p).has('sapbusinessone')).toBe(true)
+  })
+
+  it('survives the round trip through the store', () => {
+    const dir = tmp()
+    writePromotion(dir, buildPromotion('erp-software', [candidate('Odoo')], { bankVersion: 1, now: 'now', exclude: ['Shopify'] }))
+    const back = readPromoted(dir, 'erp-software')!
+    expect(back.excluded).toEqual([{ name: 'Shopify', at: 'now' }])
+    expect(excludedKeys(back).has('shopify')).toBe(true)
+  })
+
+  it('a file with only refusals and no leaders is not a promotion', () => {
+    // `readPromoted` returns null with no usable leaders, and `withPromoted`
+    // then leaves the bank exactly as it was — including its version. An
+    // operator who refuses everything has changed nothing, which is correct.
+    const dir = tmp()
+    writePromotion(dir, buildPromotion('erp-software', [], { bankVersion: 1, now: 'now', exclude: ['Shopify'] }))
+    expect(readPromoted(dir, 'erp-software')).toBeNull()
+  })
+})
+
 describe('the merge — ADR-0009’s refusals are untouched', () => {
   const writeBank = (dir: string, leaders: unknown[]) => {
     mkdirSync(join(dir, 'generated-banks'), { recursive: true })
@@ -386,11 +453,35 @@ describe('end to end, on the real committed corpus', () => {
     expect(promotable(tallyCompetitors(corpus, { tracked: trackedBrands(DEMO_BANKS), exclude: ['thecosmicbyte.com', 'Cosmic Byte'] }))).toEqual([])
   })
 
-  it('nothing has actually been promoted yet — that is a human’s call', () => {
-    // ⚠️ HUMAN REVIEW REQUIRED is not a comment, it is this assertion. The
-    // mechanism ships dry; `--apply` writes the file, and this fails the moment
-    // one appears without the test being updated alongside it.
-    expect(readPromoted(DATA, 'erp-software')).toBeNull()
+  it('records the reviewed decision for erp-software, and nothing for the category nobody reviewed', () => {
+    /*
+     * ⚠️ THIS ASSERTION IS THE HUMAN REVIEW, WRITTEN DOWN.
+     *
+     * The mechanism shipped dry. On 2026-09-02 an operator read the dry run and
+     * approved six of the eight names it proposed, refusing `Shopify` (named as
+     * an integration: "Connect online platforms like Shopify or WooCommerce")
+     * and `ERPNext` (the platform sigzen.com implements, not a rival of it).
+     *
+     * Pinned so that a later change to the extractor, the bar or the corpus
+     * cannot quietly add a seventh competitor to a customer's chart without
+     * somebody editing this list and re-reading the excerpts.
+     */
+    const erp = readPromoted(DATA, 'erp-software')
+    if (erp) {
+      expect(erp.leaders.map((l) => l.name).sort()).toEqual([
+        'Microsoft Dynamics 365',
+        'Odoo',
+        'QuickBooks',
+        'SAP Business One',
+        'Salesforce',
+        'Xero',
+      ])
+      expect(erp.excluded?.map((e) => e.name).sort()).toEqual(['ERPNext', 'Shopify'])
+      // Every promoted leader is silent on citations. See the header.
+      for (const l of erp.leaders) expect(l.domains, l.name).toEqual([])
+      expect(erp.bankVersion).toBe(2)
+    }
+    // Nothing clears the bar there, so nothing was ever written for it.
     expect(readPromoted(DATA, 'gaming-peripherals-india')).toBeNull()
   })
 })

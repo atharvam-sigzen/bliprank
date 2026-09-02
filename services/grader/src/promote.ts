@@ -4,6 +4,7 @@
  *
  *   pnpm grader:promote -- --category erp-software              # report only
  *   pnpm grader:promote -- --category erp-software --apply      # write it
+ *   pnpm grader:promote -- --category erp-software --apply --exclude "Shopify,ERPNext"
  *
  * ⚠️ SPENDS NOTHING, EVER. It reads the answer store off disk and calls no
  * provider and no model (R1, R3). There is no `--live`, no key is loaded, and
@@ -29,7 +30,19 @@
 
 import { join } from 'node:path'
 import { domainBrandForms } from '@bliprank/scorer'
-import { DEFAULT_THRESHOLDS, buildPromotion, promotable, readCorpus, readPromoted, tallyCompetitors, writePromotion, type CompetitorCandidate, type PromotionThresholds } from './promote-competitors.js'
+import { squash } from '@bliprank/scorer'
+import {
+  DEFAULT_THRESHOLDS,
+  buildPromotion,
+  excludedKeys,
+  promotable,
+  readCorpus,
+  readPromoted,
+  tallyCompetitors,
+  writePromotion,
+  type CompetitorCandidate,
+  type PromotionThresholds,
+} from './promote-competitors.js'
 import { allBanks, recordedIn, trackedBrands } from './resolve-category.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
@@ -38,6 +51,8 @@ interface Options {
   readonly category: string
   readonly dataDir: string
   readonly apply: boolean
+  /** Names the operator refuses this run. Persisted, so the refusal is not retyped. */
+  readonly exclude: readonly string[]
   readonly thresholds: PromotionThresholds
 }
 
@@ -70,6 +85,25 @@ export function parsePromoteArgs(argv: readonly string[]): Options | { readonly 
     category,
     dataDir: args.get('data') ?? join(here, '..', 'data-live'),
     apply: args.has('apply'),
+    /*
+     * ⚠️ WHY NOT ALL-OR-NOTHING.
+     *
+     * The bar is arithmetic and there is a judgement it cannot make: a brand
+     * named as a RIVAL and a brand named as an INTEGRATION clear it
+     * identically. On the real corpus `Shopify` cleared on "Connect online
+     * platforms like Shopify or WooCommerce", and `ERPNext` cleared for a
+     * domain that IMPLEMENTS ERPNext. Six good names and two wrong ones is the
+     * normal shape of this report, so refusing the batch over the two would
+     * mean either taking the wrong ones or taking none.
+     *
+     * The refusal is written into the store, not just applied to this run, so
+     * the next operator does not have to rediscover it. See
+     * `PromotedCompetitors.excluded`.
+     */
+    exclude: (args.get('exclude') ?? '')
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean),
     thresholds,
   }
 }
@@ -135,11 +169,29 @@ async function main(): Promise<void> {
   // cannot promote its own leader into itself.
   const tracked = trackedBrands(banks.filter((b) => b.category !== o.category))
   const candidates = tallyCompetitors(corpus, { tracked, exclude: subjectFormsFor(o.dataDir, o.category) })
-  const clears = promotable(candidates, o.thresholds)
-  const below = candidates.filter((c) => !clears.includes(c))
+  const cleared = promotable(candidates, o.thresholds)
+  const below = candidates.filter((c) => !cleared.includes(c))
+
+  // Refusals already on file plus the ones typed this run. Applied to the
+  // REPORT as well as to the write, so a dry run shows what --apply would do.
+  const held = readPromoted(o.dataDir, o.category)
+  const refused = excludedKeys(held, o.exclude)
+  const clears = cleared.filter((c) => !refused.has(squash(c.name)))
+  const vetoed = cleared.filter((c) => refused.has(squash(c.name)))
 
   process.stdout.write(`CLEARS THE BAR (${clears.length})\n`)
   for (const c of clears) process.stdout.write(`${line(c)}\n      ${c.evidence.excerpt}\n`)
+
+  if (vetoed.length > 0) {
+    // Shown, never silently dropped. A name that clears the arithmetic and is
+    // refused anyway is the most interesting line in this report: it is where
+    // the counting rule and the market disagree.
+    process.stdout.write(`\nCLEARS THE BAR, REFUSED BY A HUMAN (${vetoed.length})\n`)
+    for (const c of vetoed) {
+      const when = held?.excluded?.find((e) => squash(e.name) === squash(c.name))?.at
+      process.stdout.write(`${line(c)}   ${when ? `refused ${when.slice(0, 10)}` : 'refused this run'}\n      ${c.evidence.excerpt}\n`)
+    }
+  }
   // Printed, not hidden. A silent cut reads as "there was nothing else", and the
   // names just under the bar are exactly the ones a human should see before
   // deciding whether the bar is in the right place.
@@ -151,26 +203,28 @@ async function main(): Promise<void> {
     process.stdout.write(
       `\nDRY RUN. Nothing was written.\n` +
         `Re-run with --apply to promote the ${clears.length} above into ${o.category}.\n` +
+        `Refuse one with --exclude "Name,Other Name"; the refusal is stored, not retyped.\n` +
         `⚠️ Read the excerpts first: a match can be a real string and a nonsense competitor at once.\n`,
     )
     return
   }
 
-  if (clears.length === 0) {
+  if (clears.length === 0 && o.exclude.length === 0) {
     process.stdout.write('\nNothing clears the bar, so --apply writes nothing.\n')
     return
   }
 
-  const existing = readPromoted(o.dataDir, o.category)
   const promotion = buildPromotion(o.category, clears, {
     bankVersion: bank.version,
     now: new Date().toISOString(),
-    ...(existing ? { existing } : {}),
+    ...(held ? { existing: held } : {}),
+    ...(o.exclude.length ? { exclude: o.exclude } : {}),
   })
   const path = writePromotion(o.dataDir, promotion)
   process.stdout.write(
     `\nwrote ${path}\n` +
       `  ${promotion.leaders.length} competitors · bank version ${bank.version} -> ${promotion.bankVersion}\n` +
+      (promotion.excluded?.length ? `  ${promotion.excluded.length} refused and recorded: ${promotion.excluded.map((e) => e.name).join(', ')}\n` : '') +
       `⚠️ THE VERSION MOVED, SO EVERY EXISTING SCAN OF THIS CATEGORY IS NOW ON A DIFFERENT BASIS.\n` +
       `   compare() will refuse to put an @${bank.version} number beside an @${promotion.bankVersion} one, which is correct:\n` +
       `   the competitor set decides position, so they are not measurements of the same thing.\n` +
