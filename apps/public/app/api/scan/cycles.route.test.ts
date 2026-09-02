@@ -107,12 +107,12 @@ const post = async (body: Record<string, unknown>) => {
 
 // Read at assertion time, not at module load, so a run across UTC midnight cannot disagree with the route's own clock.
 const today = () => new Date().toISOString().slice(0, 10)
-const firstCycle = (day: string) => ({
+const firstCycle = (day: string, comparisonBasis = 'b') => ({
   status: 'scanned',
   domain: DOMAIN,
   category: 'crm-software',
   categoryName: 'CRM software',
-  comparisonBasis: 'b',
+  comparisonBasis,
   algoVersion: 'det-2',
   collectedAt: `${day}T10:00:00.000Z`,
   counts: { cellsRequested: 85, cacheHits: 0, collected: 85, failed: 0, answersScored: 85, providerCalls: 85 },
@@ -191,6 +191,35 @@ describe('what refuses a second cycle, before anything could spend', () => {
     expect(String(err['message'])).toContain('different question')
     expect(graderCalls).toEqual([])
     expect(listCycles(dir, DOMAIN)).toHaveLength(1)
+  })
+
+  it('⚠️ a basis the trend could not use: refused before the gates, naming the fix', async () => {
+    // The last cycle was bought at 10 prompts per engine (both September scans
+    // on disk were); the server now defaults to 17. A 17-prompt cycle would be
+    // a point compare() refuses — spend for nothing drawable.
+    writeCycle(dir, firstCycle('2026-09-01', 'grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=10|runs=1'))
+    const events = await post({ domain: DOMAIN, cycle: 'new' })
+    const err = events.find((e) => e.event === 'error')!.data
+    expect(err['kind']).toBe('basis-mismatch')
+    expect(String(err['message'])).toContain('asked 10 prompts per engine and this one would ask 17')
+    expect(String(err['message'])).toContain('GRADER_PROMPTS_PER_SCAN=10')
+    expect(graderCalls).toEqual([])
+    // With the server set to match, the same request goes ahead at 10.
+    process.env['GRADER_PROMPTS_PER_SCAN'] = '10'
+    const ok = await post({ domain: DOMAIN, cycle: 'new' })
+    expect(ok.find((e) => e.event === 'error')).toBeUndefined()
+    expect(graderCalls[0]).toMatchObject({ maxPrompts: 10 })
+  })
+
+  it('⚠️ a prompt count that cannot size a scan is refused before anything, on either path', async () => {
+    // 0 would pass the ceiling (needing 0) and the quota gate, and the runner
+    // drops a falsy maxPrompts and scans the whole bank.
+    process.env['GRADER_PROMPTS_PER_SCAN'] = '0'
+    for (const body of [{ domain: DOMAIN, cycle: 'new' }, { domain: 'other-cycles.example' }]) {
+      const events = await post(body)
+      expect(events.find((e) => e.event === 'error')!.data['kind']).toBe('config')
+    }
+    expect(graderCalls).toEqual([])
   })
 
   it('⚠️ no category record: refused rather than re-derived', async () => {

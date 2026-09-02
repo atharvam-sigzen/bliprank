@@ -4,9 +4,10 @@ import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan, utcDay } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
-import { latestCycle, writeCycle } from '../../../../../services/grader/src/cycles.js'
+import { latestCycle, writeCycle, type CycleResult } from '../../../../../services/grader/src/cycles.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
 import { allBanks, readCategoryRecord } from '../../../../../services/grader/src/resolve-category.js'
+import { basisOf, promptsFor } from '../../../../../services/grader/src/scan.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
 import { measuresCurrentCategory } from '@/lib/scan-result'
 import {
@@ -187,6 +188,20 @@ export async function POST(req: Request): Promise<Response> {
         const now = new Date()
         const today = utcDay(now)
 
+        // THE SCAN'S SIZE, RESOLVED ONCE, AND REFUSED IF IT CANNOT SIZE A SCAN.
+        // `GRADER_PROMPTS_PER_SCAN=0` or a non-number would pass the ceiling
+        // (needing 0) and the quota gate (remaining < 0 is never true) and then
+        // run the WHOLE bank, because the runner drops a falsy maxPrompts. Found
+        // by the ADR-0013 second review. Refused here, where it costs nothing.
+        const cfg = defaultGateConfig(DATA, env)
+        if (!Number.isInteger(cfg.callsPerEngine) || cfg.callsPerEngine <= 0) {
+          send(c, 'error', {
+            kind: 'config',
+            message: `GRADER_PROMPTS_PER_SCAN resolves to ${String(cfg.callsPerEngine)}, which is not a positive whole number, so no scan can be sized. Nothing was collected and nothing was charged.`,
+          })
+          return done(c)
+        }
+
         if (!wantsNewCycle) {
           // 1. CACHE FIRST. A repeat of the same domain must never re-spend
           //    quota — with 50 requests a month and 17 per engine per scan, one
@@ -210,7 +225,7 @@ export async function POST(req: Request): Promise<Response> {
           //    Without one, collecting would mean deciding a category today,
           //    which would make the two cycles measurements of different
           //    things. Refused rather than re-derived.
-          const prior = latestCycle(DATA, domain)
+          const prior = latestCycle<CycleResult & { comparisonBasis?: string }>(DATA, domain)
           if (prior) {
             const record = readCategoryRecord(DATA, domain)
             if (!record) {
@@ -225,10 +240,40 @@ export async function POST(req: Request): Promise<Response> {
             //    alone — honest for a first scan, and for a second cycle a
             //    measurement against different prompts filed as a point of the
             //    same trend. Refused.
-            if (!allBanks(DATA).some((b) => b.category === record.slug)) {
+            const bank = allBanks(DATA).find((b) => b.category === record.slug)
+            if (!bank) {
               send(c, 'error', {
                 kind: 'no-bank',
                 message: `${domain}'s recorded category ${record.slug} has no prompt bank in this build, so a new cycle would run against the general bank rather than the prompts the last cycle used. Refused rather than measured against a different question. Nothing was collected and nothing was charged.`,
+              })
+              return done(c)
+            }
+            //    A basis the trend cannot use. The prompt count and the engine
+            //    set are the two parts of the basis the ENVIRONMENT controls,
+            //    and a cycle collected at 10 prompts beside one collected at 17
+            //    is a point compare() refuses and the chart breaks at — a whole
+            //    cycle's spend for a point nothing can be drawn through. Both
+            //    September scans on disk were bought at 10 while the reference
+            //    cycle is 17; found by the ADR-0013 second review. The bank
+            //    version is deliberately NOT checked: a promoted competitor set
+            //    is a deliberate act, and refusing every cycle after it would
+            //    freeze the domain.
+            const was = basisOf(prior.result.comparisonBasis ?? '')
+            const willAsk = promptsFor(bank, cfg.callsPerEngine).length
+            const wasEngines = was.engines ? [...was.engines].sort().join(',') : undefined
+            const willUse = [...ENGINES].sort().join(',')
+            const promptsDiffer = was.maxPrompts !== undefined && was.maxPrompts !== willAsk
+            const enginesDiffer = wasEngines !== undefined && wasEngines !== willUse
+            if (promptsDiffer || enginesDiffer) {
+              const detail = [
+                promptsDiffer ? `asked ${was.maxPrompts} prompts per engine and this one would ask ${willAsk} (GRADER_PROMPTS_PER_SCAN on the scan server)` : '',
+                enginesDiffer ? `ran on ${wasEngines} and this one would run on ${willUse}` : '',
+              ]
+                .filter(Boolean)
+                .join('; it also ')
+              send(c, 'error', {
+                kind: 'basis-mismatch',
+                message: `${domain}'s last cycle (${prior.day}) ${detail}. The two would not be comparable, so the new cycle could not join the trend and its spend would buy a point nothing can be drawn through.${promptsDiffer ? ` Set GRADER_PROMPTS_PER_SCAN=${was.maxPrompts} to collect a comparable cycle.` : ''} Nothing was collected and nothing was charged.`,
               })
               return done(c)
             }
@@ -275,7 +320,6 @@ export async function POST(req: Request): Promise<Response> {
         //    than the visitor throttle (one subject, not one browser). A retry
         //    storm on one domain is many scans from many IPs over many hours,
         //    which is invisible to both of its neighbours here.
-        const cfg = defaultGateConfig(DATA, env)
         const ceilingCfg = defaultDomainCeilingConfig(DATA, env)
         const ceiling = checkDomainCeiling(domain, cfg.callsPerEngine * ENGINES.length, ceilingCfg, now)
         if (!ceiling.ok) {
