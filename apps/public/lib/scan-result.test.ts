@@ -20,7 +20,7 @@
  *   2. A cached file the app cannot read fails a test rather than a demo.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
@@ -153,12 +153,26 @@ describe('the live-scanned domain is COLLECTED everywhere, not just on the Grade
  */
 const RESULTS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'services', 'grader', 'data-live', 'results')
 
-const cachedFiles = (): readonly { name: string; scan: ScanResultFile }[] =>
-  existsSync(RESULTS)
-    ? readdirSync(RESULTS)
-        .filter((f) => f.endsWith('.json'))
-        .map((name) => ({ name, scan: JSON.parse(readFileSync(join(RESULTS, name), 'utf8')) as ScanResultFile }))
+const parseFile = (path: string): ScanResultFile => JSON.parse(readFileSync(path, 'utf8')) as ScanResultFile
+const cachedFiles = (): readonly { name: string; scan: ScanResultFile }[] => {
+  if (!existsSync(RESULTS)) return []
+  const top = readdirSync(RESULTS)
+    .filter((f) => f.endsWith('.json'))
+    .map((name) => ({ name, scan: parseFile(join(RESULTS, name)) }))
+  // Every cycle file as well (ADR-0013): results/cycles/<domain>/<day>.json is
+  // what /api/cycles hands the client, so it must render like the latest does.
+  const cyclesRoot = join(RESULTS, 'cycles')
+  const nested = existsSync(cyclesRoot)
+    ? readdirSync(cyclesRoot).flatMap((d) => {
+        const dir = join(cyclesRoot, d)
+        if (!statSync(dir).isDirectory()) return []
+        return readdirSync(dir)
+          .filter((f) => f.endsWith('.json'))
+          .map((name) => ({ name: `cycles/${d}/${name}`, scan: parseFile(join(dir, name)) }))
+      })
     : []
+  return [...top, ...nested]
+}
 
 describe('every scan file this build could load renders', () => {
   const cases = [

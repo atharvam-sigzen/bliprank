@@ -24,8 +24,11 @@ import { recordCategory } from '../../../../../services/grader/src/resolve-categ
  *     and `grader:scan --fixture` use — deterministic answers, no socket;
  *   - the live quota read, which is an HTTP call to the provider.
  *
- * And `fetch` itself is stubbed to THROW, so if any code on this path tried to
- * reach a homepage, the bank author or the provider, the test fails by name.
+ * And the global `fetch` is stubbed to THROW, which covers the provider adapter
+ * and the bank author. It does NOT cover the homepage fetcher, which uses
+ * undici's own client (`fetch-site.ts`); that path is free and is proven
+ * unreached by the category assertion below, not by the stub: rung 0 answers
+ * from the record before rung 3 could read a page.
  *
  * ⚠️ THE CATEGORY IS PROVEN HERE, NOT BY CONSTRUCTION. The domain is
  * pipedrive.com, which the host-shape classifier places in crm-software as a

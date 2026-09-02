@@ -26,6 +26,7 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { DEMO_BANKS } from '@bliprank/taxonomy'
 import { FileKV } from './local-store.js'
 import { auditPathFor, planRescore, storedResults } from './rescore.js'
+import { cyclePath, cyclesDir } from './cycles.js'
 import { basisOf, cellsFor } from './scan.js'
 
 const dirs: string[] = []
@@ -135,6 +136,32 @@ describe('the pre-flight refuses before anything can spend', () => {
     await seed(dir, { record: false })
     const plan = await planRescore(dir, 'pipedrive.com', 17)
     expect('refuse' in plan && plan.refuse).toContain('no category record')
+  })
+
+  it('⚠️ a cycle collected under an earlier category re-derives under ITS bank, not the record’s', async () => {
+    const dir = tmp()
+    await seed(dir) // record: crm-software; latest: crm-software
+    mkdirSync(cyclesDir(dir, 'pipedrive.com'), { recursive: true })
+    const file = cyclePath(dir, 'pipedrive.com', '2026-08-01')
+    writeFileSync(
+      file,
+      JSON.stringify({
+        status: 'scanned',
+        domain: 'pipedrive.com',
+        category: 'accounting-software',
+        algoVersion: 'det-1',
+        comparisonBasis: BASIS.replace('crm-software@1', 'accounting-software@1'),
+        collectedAt: '2026-08-01T06:00:00.000Z',
+        run: { mode: 'live', plan: 'payg', day: '2026-08-01', engines: [...ENGINES], capUsd: 5, at: '2026-08-01T06:19:05.858Z' },
+        counts: { cellsRequested: 85, cacheHits: 0, collected: 85, failed: 0, answersScored: 85, providerCalls: 85 },
+        brands: [],
+      }),
+    )
+    const plan = await planRescore(dir, 'pipedrive.com', 17, file)
+    if ('refuse' in plan) throw new Error(plan.refuse)
+    expect(plan.category).toBe('accounting-software')
+    expect(plan.file).toBe(file)
+    expect(plan.day).toBe('2026-08-01')
   })
 
   it('refuses a domain this build holds no result for', async () => {

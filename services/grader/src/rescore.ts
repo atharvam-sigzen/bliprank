@@ -165,8 +165,13 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
   const record = readCategoryRecord(dataDir, domain)
   if (!record) return { refuse: `${domain}: no category record. Re-deriving under a category decided today would rebase what the number measures.` }
 
-  const bank = allBanks(dataDir).find((b) => b.category === record.slug)
-  if (!bank) return { refuse: `${domain}: no bank for recorded category ${record.slug}` }
+  // The cycle's OWN category when the file names one (ADR-0013 second review):
+  // a cycle collected before a deliberate category change is re-derived under
+  // the bank it was measured against, not today's record's. The record must
+  // still exist — a domain nobody decided is still refused above.
+  const slug = typeof stored.category === 'string' && stored.category ? stored.category : record.slug
+  const bank = allBanks(dataDir).find((b) => b.category === slug)
+  if (!bank) return { refuse: `${domain}: no bank for category ${slug}` }
 
   // The scope this result was MEASURED over, not the scope a scan would use
   // today. See `basisOf`.
@@ -184,7 +189,7 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
     file,
     day,
     algoVersion: stored.algoVersion ?? '',
-    category: record.slug,
+    category: slug,
     ...(stored.run ? { run: stored.run } : { run: undefined }),
     maxPrompts,
     engines,

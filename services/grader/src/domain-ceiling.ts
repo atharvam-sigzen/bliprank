@@ -100,9 +100,11 @@ export const ceilingFor = (cellsPerCycle: number): number => Math.ceil(CYCLES_PE
  *
  * Still a RUNAWAY BACKSTOP against the free tier's 50 requests per engine per
  * month: 204 over five engines is 40.8 per engine, so one domain cannot empty
- * an engine's allowance on its own. The cache is what makes repeat scans of the
- * same day free; a domain legitimately reaching this number is a domain
- * something is wrong with.
+ * an engine's allowance on its own. That property holds up to 20 prompts;
+ * above that the derived ceiling passes 50 per engine, and the provider's own
+ * quota gate (`checkGate`) is what enforces the tier — this only backstops it.
+ * The cache is what makes repeat scans of the same day free; a domain
+ * legitimately reaching this number is a domain something is wrong with.
  */
 export const DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH = ceilingFor(DEFAULT_CELLS_PER_CYCLE)
 
