@@ -250,7 +250,7 @@ async function readStoredAnswers(blob: BlobStore, r2Key: string): Promise<RawAns
   }
 }
 
-const leadersOf = (bank: PromptBank): BrandSpec[] =>
+export const leadersOf = (bank: PromptBank): BrandSpec[] =>
   bank.leaders.map((l) => ({ id: l.id, name: l.name, aliases: [...l.aliases], domains: [...l.domains] }))
 
 /**

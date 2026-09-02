@@ -1,4 +1,8 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { r2KeyFor } from '@bliprank/collector'
+import { DEMO_BANKS } from '@bliprank/taxonomy'
+import { FileBlobStore } from './local-store.js'
+import { cellsFor } from './scan.js'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -80,5 +84,53 @@ describe('readScanAnswers picks the bank the cycle was measured against', () => 
     writeCycle(dir, cycle('2026-08-20', 'no-such-bank'))
     writeFileSync(join(dir, 'domain-categories.json'), '{}\n')
     expect(await readScanAnswers(dir, DOMAIN)).toEqual({ refuse: `${DOMAIN}: no bank for category no-such-bank` })
+  })
+})
+
+describe('every answer carries its citations, classified by the scan’s own rules (ADR-0014)', () => {
+  it('owned, competitor, review and other, from a stored blob, with the rule set named', async () => {
+    // pipedrive.com is a tracked crm-software leader, so its subject spec owns
+    // pipedrive.com and HubSpot is a competitor with hubspot.com.
+    const domain = 'pipedrive.com'
+    const day = '2026-08-25'
+    const stored = { ...cycle(day, 'crm-software'), domain, comparisonBasis: 'grader|engines=chatgpt|en-US|US|crm-software@1|unprompted=1|runs=1' }
+    writeCycle(dir, stored)
+    const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const [first] = cellsFor(bank, ['chatgpt'], day, 1)
+    const blob = new FileBlobStore(join(dir, 'answers'))
+    await blob.put(
+      r2KeyFor(first!.cell, 'openwebninja:chatgpt'),
+      JSON.stringify({
+        runs: [
+          {
+            text: 'Pipedrive and HubSpot are both popular.',
+            collectedAt: `${day}T06:00:00.000Z`,
+            citations: [
+              { url: 'https://www.pipedrive.com/en/features', position: 0 },
+              { url: 'https://www.g2.com/products/pipedrive/reviews', position: 1 },
+              { url: 'https://www.hubspot.com/products/crm', position: 2 },
+              { url: 'https://example.org/some-blog-post', position: 3 },
+              { notAUrl: true },
+            ],
+          },
+          { text: 'No sources here.', collectedAt: `${day}T06:00:01.000Z` },
+        ],
+      }),
+    )
+
+    const got = await readScanAnswers(dir, domain)
+    if ('refuse' in got) throw new Error(got.refuse)
+    expect(got.algoVersion).toMatch(/^det-/)
+    expect(got.answers).toHaveLength(2)
+    const [a, b] = got.answers
+    expect(a!.citations.map((c) => [c.domain, c.sourceClass])).toEqual([
+      ['pipedrive.com', 'owned'],
+      ['g2.com', 'review'],
+      ['hubspot.com', 'competitor'],
+      ['example.org', 'other'],
+    ])
+    expect(a!.citations.map((c) => c.position)).toEqual([0, 1, 2, 3])
+    // An answer that cited nothing says so with an empty list, not an absence.
+    expect(b!.citations).toEqual([])
   })
 })

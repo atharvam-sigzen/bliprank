@@ -2,6 +2,13 @@
  * `pnpm grader:aeo` — the gap report for one domain.
  *
  *   pnpm grader:aeo -- --domain sigzen.com
+ *   pnpm grader:aeo -- --domain pipedrive.com --out apps/public/public/gap-report.json
+ *
+ * With `--out` the report is built by `gapReportFor` (ADR-0014): against the
+ * prompts the domain's STORED CYCLE was measured over, carrying that cycle's
+ * day and basis, and written as the JSON the result page reads — the static
+ * artefact for the bundled reference scan, exactly as `grader:answers` writes
+ * the answers. Without `--out` it is the terminal report it always was.
  *
  * It resolves the domain's category the same way a scan does, fetches the
  * homepage through the SSRF boundary the classifier already uses, and reports
@@ -27,8 +34,10 @@
  * opens.
  */
 
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { auditSite, type AeoReport, type Finding } from './aeo-audit.js'
+import { gapReportFor } from './gaps.js'
 import { bankAuthorConfig } from './bank-author.js'
 import { fetchSiteHtml } from './fetch-site.js'
 import { loadApiKey } from './load-key.js'
@@ -41,6 +50,8 @@ export interface AeoOptions {
   readonly domain: string
   readonly dataDir: string
   readonly maxPrompts: number
+  /** Write the cycle-bound report here as JSON, for a result page to read. */
+  readonly out?: string
 }
 
 export function parseAeoArgs(argv: readonly string[]): AeoOptions | { readonly refuse: string } {
@@ -60,6 +71,7 @@ export function parseAeoArgs(argv: readonly string[]): AeoOptions | { readonly r
     domain,
     dataDir: args.get('data') ?? join(here, '..', 'data-live'),
     maxPrompts,
+    ...(args.get('out') ? { out: args.get('out')! } : {}),
   }
 }
 
@@ -108,6 +120,20 @@ async function main(): Promise<void> {
     process.exit(2)
   }
   const o = parsed
+  if (o.out) {
+    const report = await gapReportFor(o.dataDir, o.domain)
+    if ('refuse' in report) {
+      process.stderr.write(`refusing: ${report.refuse}\n`)
+      process.exit(2)
+    }
+    writeFileSync(o.out, JSON.stringify(report, null, 2) + '\n')
+    process.stdout.write(
+      `\naeo gap report · ${o.domain} · ${report.category} · cycle of ${report.day} · ${report.promptCount} prompts\n` +
+        `  ${report.finalUrl} · ${report.bytes} bytes${report.truncated ? ' (truncated)' : ''} · read ${report.fetchedAt}\n` +
+        `  spends no provider quota. Nothing here is published anywhere.\n${renderReport(report)}\n  wrote ${o.out}\n`,
+    )
+    return
+  }
   const root = join(here, '..', '..', '..')
   const env = process.env
   const author = bankAuthorConfig(env, (n) => loadApiKey(root, env, n)?.key) ?? undefined

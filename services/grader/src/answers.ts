@@ -52,7 +52,27 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { FileBlobStore } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { latestCycle, readCycle } from './cycles.js'
-import { basisOf, cellsFor } from './scan.js'
+import { SCORING_ALGO_VERSION, scoreAnswer } from '@bliprank/scorer'
+import type { Citation } from '@bliprank/contracts'
+import { basisOf, cellsFor, leadersOf, subjectFor } from './scan.js'
+
+/**
+ * One source an answer cited, with the class the scorer assigned it.
+ *
+ * The class is `classifyCitation`'s (ADR-0005), computed here at READ time by
+ * the same `scoreAnswer` the scan ran, over the same stored URL, with the same
+ * subject and competitor domains — so it is the class the scan's own rows
+ * carry, re-derived rather than copied. `algoVersion` on the file says which
+ * rule set did it. ADR-0014.
+ */
+export interface StoredCitation {
+  readonly url: string
+  /** 0-based index in the engine's own citation list. */
+  readonly position: number
+  readonly sourceClass: string
+  /** The registrable domain the class was decided on. */
+  readonly domain: string
+}
 
 /** One collected answer, as a reader sees it. */
 export interface StoredAnswer {
@@ -63,6 +83,8 @@ export interface StoredAnswer {
   /** The engine returned no answer text. NOT the same as "did not mention you". */
   readonly empty: boolean
   readonly collectedAt: string
+  /** Every source the engine cited for this answer, in its own order. Empty when it cited none. */
+  readonly citations: readonly StoredCitation[]
 }
 
 /**
@@ -77,6 +99,8 @@ export interface ScanAnswers {
   readonly category: string
   readonly day: string
   readonly comparisonBasis: string
+  /** The scoring rule set that classified the citations. */
+  readonly algoVersion: string
   readonly answers: readonly StoredAnswer[]
 }
 
@@ -109,13 +133,19 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
   // with the client's basis check still passing because the basis string is
   // copied from the file. Found by the ADR-0013 review. The record is consulted
   // only for a file too old to name its category.
-  const slug = typeof stored.category === 'string' && stored.category ? stored.category : readCategoryRecord(dataDir, domain)?.slug
+  const record = readCategoryRecord(dataDir, domain)
+  const slug = typeof stored.category === 'string' && stored.category ? stored.category : record?.slug
   if (!slug) return { refuse: `${domain}: neither the stored result nor a category record names the category it was measured against` }
   const bank = allBanks(dataDir).find((b) => b.category === slug)
   if (!bank) return { refuse: `${domain}: no bank for category ${slug}` }
 
   const basis = basisOf(stored.comparisonBasis ?? '')
   const cells = cellsFor(bank, basis.engines ?? ([...ENGINES] as EngineId[]), day, basis.maxPrompts)
+
+  // The same subject and competitor specs the scan scored with, derived the
+  // same way, so a citation's class here is the class the scan's rows carry.
+  const { spec: subject } = subjectFor(domain, bank, record?.brandName)
+  const competitors = leadersOf(bank).filter((b) => b.id !== subject.id)
 
   const blob = new FileBlobStore(join(dataDir, 'answers'))
   const answers: StoredAnswer[] = []
@@ -125,15 +155,25 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
     const body = await blob.get(r2KeyFor(c.cell, `openwebninja:${c.engine}`))
     if (!body) continue
     try {
-      const parsed = JSON.parse(body) as { runs?: { text?: unknown; collectedAt?: unknown }[] }
+      const parsed = JSON.parse(body) as { runs?: { text?: unknown; collectedAt?: unknown; citations?: unknown }[] }
       for (const run of parsed.runs ?? []) {
         if (typeof run.text !== 'string') continue
+        // The stored citation list, shape-checked: a URL string, and its index
+        // in the engine's list when the provider gave one.
+        const cited: Citation[] = Array.isArray(run.citations)
+          ? run.citations.flatMap((x, i) => {
+              const u = (x as { url?: unknown; position?: unknown }) ?? {}
+              return typeof u.url === 'string' && u.url ? [{ url: u.url, position: typeof u.position === 'number' ? u.position : i }] : []
+            })
+          : []
+        const row = scoreAnswer({ answer: { text: run.text, citations: cited }, brand: subject, competitors })
         answers.push({
           prompt: c.prompt,
           engine: c.engine,
           text: run.text,
           empty: run.text.trim() === '',
           collectedAt: typeof run.collectedAt === 'string' ? run.collectedAt : '',
+          citations: row.citations.map((k) => ({ url: k.url, position: k.position, sourceClass: k.sourceClass, domain: k.domain })),
         })
       }
     } catch {
@@ -143,7 +183,7 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
     }
   }
 
-  return { domain, category: slug, day, comparisonBasis: stored.comparisonBasis ?? '', answers }
+  return { domain, category: slug, day, comparisonBasis: stored.comparisonBasis ?? '', algoVersion: SCORING_ALGO_VERSION, answers }
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
