@@ -58,6 +58,7 @@ import { FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { runGrader } from './run.js'
 import { basisOf, cellsFor } from './scan.js'
+import { latestPath, listCycles } from './cycles.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
@@ -100,7 +101,12 @@ export function storedResults(dataDir: string): readonly string[] {
  * algorithm gets its own slot rather than erasing the first supersession.
  */
 export function auditPathFor(dataDir: string, domain: string, algo: string): string {
-  const base = join(resultsDir(dataDir), `${domain}.${algo || 'unversioned'}`)
+  return auditPathForFile(latestPath(dataDir, domain), algo)
+}
+
+/** The same rule for any result file, so a cycle file's audit row sits beside it (ADR-0013). */
+export function auditPathForFile(file: string, algo: string): string {
+  const base = `${file.replace(/\.json$/, '')}.${algo || 'unversioned'}`
   if (!existsSync(`${base}.audit.json`)) return `${base}.audit.json`
   for (let n = 2; ; n++) if (!existsSync(`${base}.${n}.audit.json`)) return `${base}.${n}.audit.json`
 }
@@ -119,6 +125,8 @@ function ledgerCap(dataDir: string): number {
 
 interface Plan {
   readonly domain: string
+  /** The result file this plan re-derives: the latest, or one cycle's own file. */
+  readonly file: string
   readonly day: string
   readonly algoVersion: string
   readonly category: string
@@ -139,8 +147,7 @@ interface Plan {
  * What a re-score of this domain would need, and whether the store already has
  * it. Read-only: nothing here can collect, spend or write.
  */
-export async function planRescore(dataDir: string, domain: string, fallbackPrompts: number): Promise<Plan | { readonly refuse: string }> {
-  const file = join(resultsDir(dataDir), `${domain}.json`)
+export async function planRescore(dataDir: string, domain: string, fallbackPrompts: number, file: string = latestPath(dataDir, domain)): Promise<Plan | { readonly refuse: string }> {
   if (!existsSync(file)) return { refuse: `no stored result for ${domain}` }
 
   let stored: { run?: Record<string, unknown>; collectedAt?: string; algoVersion?: string; category?: string; comparisonBasis?: string }
@@ -174,6 +181,7 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
 
   return {
     domain,
+    file,
     day,
     algoVersion: stored.algoVersion ?? '',
     category: record.slug,
@@ -206,18 +214,29 @@ async function main(): Promise<void> {
 
   const plans: Plan[] = []
   for (const domain of targets) {
-    const plan = await planRescore(o.dataDir, domain, gate.callsPerEngine)
-    if ('refuse' in plan) {
-      process.stdout.write(`  SKIP  ${domain.padEnd(22)} ${plan.refuse}\n`)
-      continue
+    /*
+     * EVERY CYCLE, NOT ONLY THE LATEST (ADR-0013). A re-score exists to move a
+     * whole history forward under a new derivation; leaving earlier cycles on
+     * the old stamp would draw a version boundary through the trend that R5
+     * never asked for. The latest file is planned first, then each earlier
+     * cycle's own file; a cycle whose file IS the latest is planned once.
+     */
+    const files = listCycles(o.dataDir, domain).map((c) => c.file)
+    if (files.length === 0) process.stdout.write(`  SKIP  ${domain.padEnd(22)} no stored result for ${domain}\n`)
+    for (const file of files) {
+      const plan = await planRescore(o.dataDir, domain, gate.callsPerEngine, file)
+      if ('refuse' in plan) {
+        process.stdout.write(`  SKIP  ${domain.padEnd(22)} ${plan.refuse}\n`)
+        continue
+      }
+      const state = plan.missing.length === 0 ? 'free' : `${plan.missing.length} MISSING`
+      process.stdout.write(
+        `  ${state.padEnd(12)} ${plan.domain.padEnd(22)} ${plan.category} · day ${plan.day} · ` +
+          `${plan.maxPrompts} prompts x ${plan.engines.length} engines = ${plan.cells} cells · ${plan.algoVersion}\n`,
+      )
+      for (const m of plan.missing.slice(0, 5)) process.stdout.write(`                 would have to buy: ${m}\n`)
+      if (plan.missing.length === 0) plans.push(plan)
     }
-    const state = plan.missing.length === 0 ? 'free' : `${plan.missing.length} MISSING`
-    process.stdout.write(
-      `  ${state.padEnd(12)} ${plan.domain.padEnd(22)} ${plan.category} · day ${plan.day} · ` +
-        `${plan.maxPrompts} prompts x ${plan.engines.length} engines = ${plan.cells} cells · ${plan.algoVersion}\n`,
-    )
-    for (const m of plan.missing.slice(0, 5)) process.stdout.write(`                 would have to buy: ${m}\n`)
-    if (plan.missing.length === 0) plans.push(plan)
   }
 
   if (!o.apply) {
@@ -282,8 +301,8 @@ async function main(): Promise<void> {
       continue
     }
 
-    const live = join(resultsDir(o.dataDir), `${plan.domain}.json`)
-    const audit = auditPathFor(o.dataDir, plan.domain, plan.algoVersion)
+    const live = plan.file
+    const audit = auditPathForFile(plan.file, plan.algoVersion)
     copyFileSync(live, audit)
 
     /*
@@ -326,6 +345,12 @@ async function main(): Promise<void> {
     }
     if (!plan.run) delete (envelope as { run?: unknown }).run
     writeFileSync(live, JSON.stringify(envelope, null, 2) + '\n')
+    // The latest file mirrors the newest cycle's own file (ADR-0013). When the
+    // file just re-derived IS that cycle's, the mirror follows it — its previous
+    // content was byte-identical to the cycle file whose audit row was kept.
+    const latest = latestPath(o.dataDir, plan.domain)
+    const newest = listCycles(o.dataDir, plan.domain).at(-1)
+    if (live !== latest && newest && newest.day === plan.day) writeFileSync(latest, JSON.stringify(envelope, null, 2) + '\n')
     unlinkSync(out)
 
     const subject = result.brands.find((b) => b.isSubject)

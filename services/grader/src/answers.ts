@@ -51,6 +51,7 @@ import { r2KeyFor } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { FileBlobStore } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
+import { latestCycle, readCycle } from './cycles.js'
 import { basisOf, cellsFor } from './scan.js'
 
 /** One collected answer, as a reader sees it. */
@@ -91,27 +92,27 @@ export interface ScanAnswers {
  *
  * Reads only. No provider call, no model call, and no path here can collect.
  */
-export async function readScanAnswers(dataDir: string, domain: string): Promise<ScanAnswers | { readonly refuse: string }> {
-  const file = join(dataDir, 'results', `${domain}.json`)
-  if (!existsSync(file)) return { refuse: `no stored result for ${domain}` }
-
-  let stored: { run?: { day?: string }; collectedAt?: string; comparisonBasis?: string }
-  try {
-    stored = JSON.parse(readFileSync(file, 'utf8')) as typeof stored
-  } catch {
-    return { refuse: `${domain}: stored result is not readable JSON` }
-  }
+export async function readScanAnswers(dataDir: string, domain: string, cycleDay?: string): Promise<ScanAnswers | { readonly refuse: string }> {
+  // One cycle's evidence, by day (ADR-0013). The latest when no day is asked
+  // for, which is what every reader before cycles existed was reading.
+  const cycle = cycleDay ? readCycle(dataDir, domain, cycleDay) : latestCycle(dataDir, domain)
+  if (!cycle) return { refuse: cycleDay ? `no stored cycle of ${domain} for ${cycleDay}` : `no stored result for ${domain}` }
+  const stored = cycle.result as { run?: { day?: string }; collectedAt?: string; comparisonBasis?: string; category?: string }
 
   const day = stored.run?.day ?? (stored.collectedAt ?? '').slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { refuse: `${domain}: no collection day on the stored result` }
 
-  // The RECORDED category and the file's OWN scope, for the same reasons
-  // `rescore.ts` gives: a category decided today, or today's prompt count, would
-  // fetch the answers to a different measurement than the one on screen.
-  const record = readCategoryRecord(dataDir, domain)
-  if (!record) return { refuse: `${domain}: no category record` }
-  const bank = allBanks(dataDir).find((b) => b.category === record.slug)
-  if (!bank) return { refuse: `${domain}: no bank for recorded category ${record.slug}` }
+  // THE CYCLE'S OWN CATEGORY, and the file's own scope. A record deliberately
+  // moved since this cycle ran (sigzen.com: general-business-software, then
+  // erp-software) names a different bank, and cells built from it would fetch
+  // the answers to a different measurement than the one on screen — or none,
+  // with the client's basis check still passing because the basis string is
+  // copied from the file. Found by the ADR-0013 review. The record is consulted
+  // only for a file too old to name its category.
+  const slug = typeof stored.category === 'string' && stored.category ? stored.category : readCategoryRecord(dataDir, domain)?.slug
+  if (!slug) return { refuse: `${domain}: neither the stored result nor a category record names the category it was measured against` }
+  const bank = allBanks(dataDir).find((b) => b.category === slug)
+  if (!bank) return { refuse: `${domain}: no bank for category ${slug}` }
 
   const basis = basisOf(stored.comparisonBasis ?? '')
   const cells = cellsFor(bank, basis.engines ?? ([...ENGINES] as EngineId[]), day, basis.maxPrompts)
@@ -142,7 +143,7 @@ export async function readScanAnswers(dataDir: string, domain: string): Promise<
     }
   }
 
-  return { domain, category: record.slug, day, comparisonBasis: stored.comparisonBasis ?? '', answers }
+  return { domain, category: slug, day, comparisonBasis: stored.comparisonBasis ?? '', answers }
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
