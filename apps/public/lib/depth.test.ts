@@ -48,11 +48,21 @@ function sources(): { path: string; src: string }[] {
 
 const SOURCES = sources()
 
+/**
+ * ⚠️ WHOLE-TOKEN, NOT `\bdetail\b`. A regex word boundary treats `-` as a
+ * boundary, so `\bdetail\b` matches `no-detail-here` and `detail-panel`,
+ * neither of which a CSS `.detail` selector matches. Every check below used
+ * the boundary form; one of them — the provenance completeness rule — was
+ * weakened by it, since a line reading `className="notdetail"` counted as
+ * marked. Found by the stripper's own test in simple-view.test.ts.
+ */
+const marked = (cls: string) => cls.split(/\s+/).includes('detail')
+
 /** Every className string in either app that carries `detail`. */
 const MARKED = SOURCES.flatMap(({ path, src }) =>
   [...src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)]
     .map((m) => ({ path, cls: m[1] ?? m[2] ?? '' }))
-    .filter((x) => /\bdetail\b/.test(x.cls)),
+    .filter((x) => marked(x.cls)),
 )
 
 describe('the scan is not vacuous', () => {
@@ -190,7 +200,7 @@ describe('a disclosure is never .detail', () => {
     for (const { path, src } of SOURCES) {
       for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
         const cls = m[1] ?? m[2] ?? ''
-        if (!/\bdetail\b/.test(cls)) continue
+        if (!marked(cls)) continue
         for (const d of DISCLOSURES) {
           expect([path, cls, cls.includes(d)]).toEqual([path, cls, false])
         }
@@ -201,7 +211,10 @@ describe('a disclosure is never .detail', () => {
   it('the check bites — it would score a disclosure marked detail as a failure', () => {
     // Without this the rule above passes vacuously the day nothing is marked.
     const cls = 'prose prose--flag detail'
-    expect(/\bdetail\b/.test(cls) && DISCLOSURES.some((d) => cls.includes(d))).toBe(true)
+    expect(marked(cls) && DISCLOSURES.some((d) => cls.includes(d))).toBe(true)
+    // ...and the boundary form it replaced would have scored a false positive.
+    expect(marked('prose no-detail-here')).toBe(false)
+    expect(/\bdetail\b/.test('prose no-detail-here')).toBe(true)
   })
 })
 
@@ -227,7 +240,7 @@ describe('the sample size survives at simple depth', () => {
     for (const { path, src } of SOURCES) {
       for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
         const cls = m[1] ?? m[2] ?? ''
-        if (!/\bdetail\b/.test(cls)) continue
+        if (!marked(cls)) continue
         for (const p of PROTECTED) expect([path, cls, cls.includes(p)]).toEqual([path, cls, false])
       }
     }
@@ -257,7 +270,8 @@ describe('provenance is detail on EVERY surface, not just the one under review',
         if (!line.includes('formatProvenance(')) continue
         // The render sites are JSX; a bare import or a helper definition is not.
         if (!line.includes('className=')) continue
-        if (!/className="[^"]*\bdetail\b[^"]*"/.test(line)) offenders.push(`${path}: ${line.trim()}`)
+        const cls = /className="([^"]*)"/.exec(line)?.[1] ?? ''
+        if (!marked(cls)) offenders.push(`${path}: ${line.trim()}`)
       }
     }
     expect(offenders).toEqual([])

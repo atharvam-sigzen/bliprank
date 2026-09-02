@@ -93,9 +93,24 @@ describe('no surface asserts a cadence that nothing runs', () => {
       expect([needle, i > -1]).toEqual([needle, true])
       return i
     }
-    // Two dated cycles a fortnight apart is the timer claim in one sentence.
-    const cycle = at('Cycle 2026-08-15')
-    expect(src.slice(cycle, cycle + 240)).toContain('<Planned />')
+    /*
+     * Two dated cycles a fortnight apart is the timer claim in one sentence, so
+     * the marker has to be inside that sentence.
+     *
+     * ANCHORED ON THE ELEMENT, NOT ON THE DATE. This read `at('Cycle
+     * 2026-08-15')` and a fixed 240-character window, which broke the moment
+     * the dates stopped being literals — they are read from the fixture now, so
+     * the masthead cannot drift from the denominators the way it had. The
+     * property was never about the string: it is that <Planned /> sits within
+     * the same element as the cycle dates, so the slice runs to that element's
+     * end rather than to an arbitrary offset.
+     */
+    const cycle = at('className="cycle"')
+    const cycleEnd = src.indexOf('</p>', cycle)
+    expect(cycleEnd).toBeGreaterThan(cycle)
+    expect(src.slice(cycle, cycleEnd)).toContain('<Planned />')
+    expect(src.slice(cycle, cycleEnd)).toContain('CYCLE_DATES.current')
+    expect(src.slice(cycle, cycleEnd)).toContain('CYCLE_DATES.previous')
     // The notice is above the delta badges and above the by-engine table, not
     // buried beside the chart. `{NO_SCHEDULER_NOTE}` is the use, not the import.
     const notice = at('{NO_SCHEDULER_NOTE}')

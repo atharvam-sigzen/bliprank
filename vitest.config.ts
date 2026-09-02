@@ -1,7 +1,53 @@
-import { realpathSync } from 'node:fs'
+import { realpathSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+
+// The canonical repo root, spelled the way `root` below needs it — see the note
+// there about the drive letter's case being load-bearing on win32. Every path
+// this config hands to vite is built from it so no id can differ by case.
+const ROOT = realpathSync.native(process.cwd()).replace(/\\/g, '/')
+const APPS = `${ROOT}/apps/`
+
+/**
+ * `@/…` RESOLVES INSIDE THE APP THAT WROTE IT, WHICH IS THE ONLY CORRECT
+ * ANSWER AND WAS NOT WHAT THIS CONFIG DID.
+ *
+ * Both apps define `@/*` as their OWN root (each tsconfig maps it to `./*`), so
+ * the specifier is ambiguous without knowing the importer. This file used to
+ * alias it unconditionally to apps/public, which had two effects and the second
+ * is the serious one:
+ *
+ *   - an apps/web module importing something apps/public does not have, like
+ *     `@/components/metric-card`, failed to resolve — noisy, and merely
+ *     annoying;
+ *   - an apps/web module importing something BOTH have, like
+ *     `@/components/chrome`, resolved silently to apps/public's copy. A test
+ *     would then render the wrong component and pass.
+ *
+ * The practical consequence was that apps/web had NO render coverage at all,
+ * and could not safely be given any. Two defects shipped behind that gap: the
+ * rail's mislabelled-axis fix never crossing the deploy boundary, and a fixture
+ * whose masthead and headline disagree about the sample size. Neither is
+ * detectable by a source scan; both are obvious the moment the page renders.
+ *
+ * Resolved by importer rather than by splitting into vitest projects: the
+ * settings below carry three separately documented win32/React-instance
+ * hazards, and duplicating them across projects is a larger blast radius than
+ * one resolver. Returning null falls through to vite's own resolution, so a
+ * genuinely missing file still errors rather than silently landing elsewhere.
+ */
+function resolveAppAlias(id: string, importer: string | undefined): string | null {
+  const app = (importer ?? '').replace(/\\/g, '/').startsWith(`${APPS}web/`) ? 'web' : 'public'
+  const base = `${APPS}${app}/${id}`
+  for (const candidate of [base, `${base}.tsx`, `${base}.ts`, `${base}/index.tsx`, `${base}/index.ts`]) {
+    try {
+      if (statSync(candidate).isFile()) return candidate
+    } catch {
+      // Not this extension; try the next.
+    }
+  }
+  return null
+}
 
 // Resolve react the way apps/public does, once, so every specifier below is
 // pinned to the SAME copy. `resolve.dedupe` cannot do this here: it resolves
@@ -24,14 +70,18 @@ export default defineConfig({
   // lowercase-cwd shell only, which is why this suite was "green and red
   // depending on cache state". Pinning root to the realpathed cwd makes every
   // id canonical regardless of how the shell spelt the drive.
-  root: realpathSync.native(process.cwd()).replace(/\\/g, '/'),
-  // apps/public's `@/*` path alias, so a component can be rendered in a test the
-  // same way Next resolves it. Regex-anchored on `@/` rather than keyed on `@`:
-  // a bare `@` key is a prefix match and would rewrite every `@bliprank/*`
-  // import in the monorepo.
+  root: ROOT,
+  // The `@/*` path alias, so a component can be rendered in a test the same way
+  // Next resolves it — which means resolving it the way the IMPORTING app's
+  // tsconfig does, since both map `@/*` to their own root. Regex-anchored on
+  // `@/` rather than keyed on `@`: a bare `@` key is a prefix match and would
+  // rewrite every `@bliprank/*` import in the monorepo.
   resolve: {
     alias: [
-      { find: /^@\//, replacement: fileURLToPath(new URL('./apps/public/', import.meta.url)) },
+      // Resolved AGAINST THE IMPORTING APP — see resolveAppAlias above. The
+      // empty replacement hands the resolver the bare subpath ('lib/x'), which
+      // it joins onto whichever app root the importer lives in.
+      { find: /^@\//, replacement: '', customResolver: (id: string, importer: string | undefined) => resolveAppAlias(id, importer) },
       // One React instance, guaranteed at resolution time rather than left to
       // the externalization cache. Without these the suite's health depends on
       // the state of node_modules/.vite: a stale cache externalises
