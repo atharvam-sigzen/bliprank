@@ -465,6 +465,31 @@ describe('THEME_BOOT resolves depth before first paint', () => {
     expect(runBoot('?a=1', '/x').replacedUrl).toBeNull()
   })
 
+  it('junk in the param is ignored, not applied and not persisted', () => {
+    /*
+     * THE WORD BOUNDARY IS LOAD-BEARING, and it is the kind of thing that
+     * silently stops being one. `\b` written into a template literal needs the
+     * doubled backslash to survive into the emitted string; a single one makes
+     * it the backspace character U+0008, the regex matches a prefix, and
+     * `?depth=simplex` starts persisting `simple`. That exact slip was found
+     * elsewhere in this repo, so it is asserted here rather than assumed.
+     */
+    for (const q of ['?depth=simplex', '?depth=detailedly', '?depth=expert', '?theme=darkness']) {
+      const res = runBoot(q, '/x')
+      expect([q, res.storedDepth]).toEqual([q, undefined])
+      expect([q, res.attr]).toEqual([q, undefined])
+      // Nothing matched, so nothing is spent and the address bar is untouched.
+      expect([q, res.replacedUrl]).toEqual([q, null])
+      // The route default still applies, so the page is never left unstamped.
+      expect([q, res.depthAttr]).toEqual([q, 'simple'])
+    }
+  })
+
+  it('and the valid params really do persist, so the rule above is not vacuous', () => {
+    expect(runBoot('?depth=simple', '/agency').storedDepth).toBe('simple')
+    expect(runBoot('?depth=detailed', '/').storedDepth).toBe('detailed')
+  })
+
   it('THE DRIFT GUARD: the boot script and defaultDepthFor agree on every path', () => {
     /*
      * The route rule is stated twice and it has to be: once as a readable,
