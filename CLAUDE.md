@@ -120,6 +120,14 @@ Never mutate a historical score. When the algorithm changes, bump the version,
 write new rows, and add a changelog entry. Competitors silently rebase history;
 we do not. `/score-version` handles this — use it.
 
+**The one exception, and its bar (ADR-0012).** A rule change may ship under the
+current version only when BOTH hold: (1) a **full-corpus check** — every stored
+answer scored under both rule sets, not a sample — shows zero differing rows;
+and (2) a **structural argument** shows no existing or future record could ever
+reach the differing case under the old rules. Both go in an ADR, and the
+changelog names it. Anything less defaults to bumping. There are no other
+exceptions, and "the difference is small" is not one.
+
 ### R6 — The cache key is sacred
 `hash(normalised_prompt, engine, locale, geo, date_bucket)` is the primary key of
 the answer store and the Redis lookup key. It is simultaneously the margin lever,
@@ -304,5 +312,10 @@ homepages, not from that sample. Building the labelled 100 is what closes it.
 the classifier thresholds (see ADR-0009 "Open, and blocking G3"), and whether the
 SSRF blocked-range table in `services/grader/src/fetch-site.ts` matches the
 network the collector will actually deploy into.
+**Known gap, not urgent:** `/score-version` does not work as written — it points
+at `services/scorer/version.ts`, which does not exist (the constant is
+`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), and it gates on a
+golden set holding 7 of the 300 cases it needs. Repair it before the first real
+bump (ADR-0012).
 
 Update this section at every phase transition. It is the first thing a new session reads.
