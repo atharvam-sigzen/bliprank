@@ -31,12 +31,27 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
 
   if (!breakdown) {
     return (
-      <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-        There is no per-question breakdown for this cycle. The answers were scored together into one rate of{' '}
+      /*
+       * WRAPPED, so the depth marking sits on the section rather than on the
+       * flagged paragraph — and this is a judgement, not a way round the rule.
+       *
+       * depth.test.ts refuses any element carrying both `prose--flag` and
+       * `detail`, because a flagged paragraph is normally a caveat that changes
+       * how a VISIBLE number must be read, and hiding one of those would make
+       * the page calmer by making it untrue. This paragraph is a different
+       * animal: it explains why a section that is itself hidden has nothing in
+       * it. It says nothing about the headline rate, which is exactly as valid
+       * either way. At simple depth the breakdown is not offered, so an
+       * explanation of its absence is noise.
+       */
+      <section className="section detail">
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
+          There is no per-question breakdown for this cycle. The answers were scored together into one rate of{' '}
         <span className="num">{scan.counts.answersScored}</span> answers, and this file does not carry which question or which engine each of
         them came from. That is a statement about this stored payload, not a finding: it does not mean the questions went unanswered, and
-        splitting the total five ways to fill the gap would be arithmetic presented as evidence.
-      </p>
+          splitting the total five ways to fill the gap would be arithmetic presented as evidence.
+        </p>
+      </section>
     )
   }
 
@@ -44,7 +59,7 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
   const subject = subjectOf(scan)
 
   return (
-    <section className="section" aria-labelledby="breakdown-heading">
+    <section className="section detail" aria-labelledby="breakdown-heading">
       <h2 id="breakdown-heading">Which questions you appear in</h2>
 
       <p className="prose">

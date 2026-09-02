@@ -25,7 +25,10 @@ export function MetricCard({ label, metric, previous }: { label: string; metric:
 
       {comparison ? <DeltaBadge comparison={comparison} /> : null}
 
-      <p className="metric__provenance">{formatProvenance(metric)}</p>
+      {/* DETAIL. The rail above prints its own n, so the sample size survives
+          at simple depth without this line — which carries the algorithm
+          version and the collection path, and nothing else. */}
+      <p className="metric__provenance detail">{formatProvenance(metric)}</p>
     </article>
   )
 }

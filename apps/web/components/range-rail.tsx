@@ -1,4 +1,4 @@
-import { formatInterval, formatProvenance, formatValue, type Metric } from '@bliprank/stats'
+import { formatInterval, formatValue, type Metric } from '@bliprank/stats'
 
 /**
  * THE SIGNATURE: the interval is the hero and the estimate is a mark inside it.
@@ -77,9 +77,4 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
       </p>
     </div>
   )
-}
-
-/** The provenance line, unchanged in substance and set as a footer. */
-export function RailProvenance({ metric }: { metric: Metric }) {
-  return <p className="metric__provenance">{formatProvenance(metric)}</p>
 }

@@ -379,6 +379,53 @@ table {
   border-left: 3px solid var(--color-accent);
 }
 
+/*
+ * THE LEDE OF A RECORD — the finding in a sentence, above the instrument.
+ *
+ * SANS, NOT THE DISPLAY SERIF, and that is the one deliberate exception to this
+ * sheet's "serif on words" rule. A serif at this size reads as a pull quote,
+ * which is exactly the register the MVP feedback objected to; this has to read
+ * as an interface making a statement. The serif keeps the headings and the
+ * margin gloss, where it says "this is a record" without doing the talking.
+ *
+ * The figures inside it stay mono, like every figure on this sheet. "1 in 4"
+ * is a quantity, and a quantity set in the body face is a quantity the eye has
+ * to find rather than one it lands on.
+ */
+.headline {
+  margin: var(--space-4) 0 0;
+}
+
+.headline__claim {
+  font-family: var(--font-sans);
+  font-size: clamp(1.1875rem, 0.95rem + 1.05vw, 1.5rem);
+  font-weight: 460;
+  line-height: 1.32;
+  letter-spacing: -0.011em;
+  color: var(--color-foreground);
+  max-width: 34ch;
+  margin: 0;
+  /* A domain or a trading name can be long and must never overflow the
+     measure; the same rule the record headline uses, for the same reason. */
+  overflow-wrap: anywhere;
+}
+
+.headline__claim strong {
+  font-weight: 660;
+}
+
+/* The bounds and the sample, quieter but NOT small print: this is the half of
+   the sentence that carries the uncertainty, and shrinking it below the body
+   size would be the layout undoing what the wording is for. */
+.headline__range {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-muted-foreground);
+  max-width: 46ch;
+  margin: var(--space-2) 0 0;
+}
+
 /* The lede under a page title. */
 .lede {
   font-family: var(--font-display);

@@ -396,7 +396,7 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
             {run.day ? ` · collected — cycle of ${run.day}` : ' · collected'} · {scan.counts.answersScored} answers
           </span>
         </Link>
-        <span className="portfolio__category">{formatProvenance(subject.metric)}</span>
+        <span className="portfolio__category detail">{formatProvenance(subject.metric)}</span>
         <RemoveButton domain={workspace.domain} onRemove={onRemove} />
       </div>
 

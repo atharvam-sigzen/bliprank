@@ -2139,13 +2139,3 @@ body {
 [data-depth='simple'] .prose--flag {
   font-weight: 460;
 }
-
-/*
- * THE PROVENANCE FOOTER on a metric card is the auditor's line: algorithm
- * version and collection path. `n` is not in it — the rail above prints its own
- * — so hiding this at simple depth costs the reader nothing they need and
- * nothing the invariant protects.
- */
-[data-depth='simple'] .metric__provenance {
-  display: none;
-}

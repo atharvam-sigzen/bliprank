@@ -6,6 +6,7 @@ import { ActionLink } from '@/components/action-link'
 import { themedUrl, useDepth, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
+import { Headline } from '@/components/headline'
 import { RangeRail } from '@/components/range-rail'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
@@ -110,7 +111,9 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
             {run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
-          <span className="note__line">{formatProvenance(metric)}</span>
+          {/* DETAIL, like every other provenance line on every surface. The
+              answer count and engine count above it stay at both depths. */}
+          <span className="note__line detail">{formatProvenance(metric)}</span>
           {/* THE COST LINE IS OMITTED, NOT ZEROED. This file may not record
               spend; `$0.0000` would state that a scan which bought 85 answers
               cost nothing, and an empty slot in the mono figure voice still
@@ -153,6 +156,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       ) : null}
 
       <section className="record">
+        {/* Same lede as the Grader, from the same component: the two surfaces
+            render one record and must not come to word it differently. */}
+        <Headline scan={scan} />
+
         {/* The rail with its papers beside it. Same instrument as the Grader,
             same discipline: the figure cannot be photographed without the range
             around it or without where it came from. */}
@@ -167,7 +174,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
               {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
             </span>
             {run.day ? <span className="note__line">day {run.day}</span> : null}
-            <span className="note__line">{formatProvenance(metric)}</span>
+            {/* DETAIL, matching the Grader. Found on review: the same field on
+                the same record was marked on one surface and not the other, so
+                the simple view was inconsistent between them. */}
+            <span className="note__line detail">{formatProvenance(metric)}</span>
             <span className="note__gloss">
               From prompts that name no brand, so the number measures what the engines volunteer rather than what we prompted them with.
             </span>

@@ -65,7 +65,11 @@ describe('the scan is not vacuous', () => {
    * it reports safety.
    */
   it('finds both apps and a realistic number of components', () => {
-    expect(SOURCES.length).toBeGreaterThan(20)
+    // A floor near the real count, not a token one: at 20 the walker could have
+    // dropped half the tree — including every bracket route, which is where the
+    // agency surfaces live — and still passed.
+    expect(SOURCES.length).toBeGreaterThanOrEqual(38)
+    expect(SOURCES.some((s) => s.path.includes('[domain]'))).toBe(true)
     expect(SOURCES.some((s) => s.path.includes('/public/app/page.tsx'))).toBe(true)
     expect(SOURCES.some((s) => s.path.includes('/web/app/page.tsx'))).toBe(true)
     expect(SOURCES.some((s) => s.path.includes('head-to-head-section'))).toBe(true)
@@ -173,6 +177,43 @@ describe('the sample size survives at simple depth', () => {
         for (const p of PROTECTED) expect([path, cls, cls.includes(p)]).toEqual([path, cls, false])
       }
     }
+  })
+})
+
+describe('provenance is detail on EVERY surface, not just the one under review', () => {
+  /*
+   * FOUND ON REVIEW, AFTER THE FIRST PASS SHIPPED.
+   *
+   * The Grader marked its provenance line `.detail`; workspace-record.tsx
+   * rendered the same field, from the same metric, on the same record, on two
+   * notes — and neither was marked. So the simple view showed the algorithm
+   * version and collection path on the dashboard and hid them on the Grader,
+   * for one scan.
+   *
+   * Nothing caught it because the first pass tested the RULE (no disclosure is
+   * detail) and not its COMPLEMENT (everything that should be detail, is). One
+   * of those is checkable for a field with a single formatter, so it is checked:
+   * formatProvenance has exactly one job and every call site wants the same
+   * answer.
+   */
+  it('every rendered formatProvenance call sits on an element marked detail', () => {
+    const offenders: string[] = []
+    for (const { path, src } of SOURCES) {
+      for (const line of src.split('\n')) {
+        if (!line.includes('formatProvenance(')) continue
+        // The render sites are JSX; a bare import or a helper definition is not.
+        if (!line.includes('className=')) continue
+        if (!/className="[^"]*\bdetail\b[^"]*"/.test(line)) offenders.push(`${path}: ${line.trim()}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('the check bites — it finds the call sites at all', () => {
+    const sites = SOURCES.flatMap(({ path, src }) =>
+      src.split('\n').filter((l) => l.includes('formatProvenance(') && l.includes('className=')).map(() => path),
+    )
+    expect(sites.length).toBeGreaterThanOrEqual(3)
   })
 })
 

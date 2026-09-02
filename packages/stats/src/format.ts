@@ -331,11 +331,51 @@ export function confidenceGrade(
    ========================================================================== */
 
 /**
- * The largest denominator worth speaking. Above one answer in two, "1 in k"
- * stops being idiomatic — 1/0.6 rounds to "1 in 2", which understates, and
- * there is no natural single-numerator phrasing above a half.
+ * The largest rate worth speaking. Above one answer in two, "1 in k" stops
+ * being idiomatic — 1/0.6 rounds to "1 in 2", which understates, and there is
+ * no natural single-numerator phrasing above a half.
  */
 const FREQUENCY_CEILING = 0.5
+
+/**
+ * How much wider than the computed interval the SPOKEN range may be.
+ *
+ * ⚠️ PROVISIONAL, and chosen from measurement rather than taste — see the grid
+ * in frequency.test.ts. The bounds round outward so the spoken range always
+ * contains the interval; the cost is that "1 in k" is coarse near small k, and
+ * near 25% the only frequencies either side are 1 in 5 (20.0%) and 1 in 3
+ * (33.3%). Any interval inside that gap is spoken as the whole gap.
+ *
+ * WITHOUT THIS GATE THE PRODUCT'S VALUE PROPOSITION RUNS BACKWARDS. A customer
+ * paying for four times the sample gets a tighter interval and a vaguer
+ * sentence — n=150 at 17.0-31.2% inflates 1.17x, n=600 at 21.7-28.6% inflates
+ * 1.93x, on the same brand, because it was measured more carefully.
+ *
+ * 1.5 is where the n=150 band stays contiguous (10-25% all speak; 30% and above
+ * do not), which matters more than the number itself: a threshold that admits
+ * 20% and 30% while refusing 25% would look arbitrary to anyone comparing two
+ * scans. It is not a derived constant and it is not defended as one.
+ */
+export const MAX_SPOKEN_INFLATION = 1.5
+
+/**
+ * The largest denominator a reader will actually read as a quantity.
+ *
+ * ⚠️ PROVISIONAL, and the gate I MISSED on the first pass. Inflation catches
+ * the high-rate failure — small k, poor resolution — and is blind to the
+ * low-rate one: at n=150 a brand at 5% has ci_low ≈ 0.027, which speaks as "as
+ * few as 1 in 37". That is faithful (1.13x) and unreadable, and it is not an
+ * edge case — every brand under about 8.5% at n=150 lands there, which on the
+ * free Grader is a large share of the brands that arrive.
+ *
+ * So the two failure modes sit at opposite ends and the readable band is
+ * narrow. 20 is a round number at the edge of what reads as a quantity rather
+ * than as an arbitrary integer; "1 in 17" still lands, "1 in 37" does not.
+ *
+ * An INFINITE denominator is exempt: it renders as "none at all", which is a
+ * word rather than a number and reads perfectly.
+ */
+export const MAX_SPOKEN_DENOMINATOR = 20
 
 export type Frequency =
   /**
@@ -409,6 +449,30 @@ export function formatFrequency(m: Metric): Frequency {
   // honest phrase for it is "none at all" rather than a very large denominator.
   const lowK = m.ci_low > 0 ? Math.ceil(1 / m.ci_low) : Number.POSITIVE_INFINITY
   const pointK = Math.round(1 / m.value)
+
+  /*
+   * THE TWO GATES, AND THEY GUARD OPPOSITE ENDS OF THE SAME BAND.
+   *
+   * Readability fails at LOW rates, where the denominators grow past what
+   * anyone reads as a quantity. Resolution fails at HIGH rates, where the
+   * available frequencies are too far apart to carry an interval. Frequency
+   * framing wins in the middle and nowhere else, so outside the middle this
+   * refuses and the surface prints percentages — which are always available,
+   * always exact, and carry no readability cliff.
+   *
+   * Refusing is not a degraded outcome here. A percentage with its interval is
+   * the honest rendering of this number; the frequency is a better rendering
+   * only where it is both faithful and legible.
+   */
+  if (Number.isFinite(lowK) && lowK > MAX_SPOKEN_DENOMINATOR) {
+    return { kind: 'unavailable', reason: 'the rate is too low to speak as a frequency anyone would read' }
+  }
+
+  const spokenWidth = 1 / highK - (Number.isFinite(lowK) ? 1 / lowK : 0)
+  const computedWidth = m.ci_high - m.ci_low
+  if (computedWidth > 0 && spokenWidth / computedWidth > MAX_SPOKEN_INFLATION) {
+    return { kind: 'unavailable', reason: 'speaking this interval as a frequency would overstate how little is known' }
+  }
 
   return { kind: 'ratio', point: inOne(pointK), low: inOne(lowK), high: inOne(highK), pointK, lowK, highK }
 }

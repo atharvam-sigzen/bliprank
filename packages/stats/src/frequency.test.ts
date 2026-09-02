@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { formatFrequency, type Frequency, type Metric } from './format.js'
+import { MAX_SPOKEN_DENOMINATOR, MAX_SPOKEN_INFLATION, formatFrequency, type Frequency, type Metric } from './format.js'
 import { wilson } from './wilson.js'
 
 /**
- * ⚠️ THIS FILE IS THE REVIEW SURFACE FOR A HUMAN-OWNED CHANGE.
+ * ⚠️ HUMAN-OWNED (CLAUDE.md §4). `formatFrequency` decides what a customer is
+ * told their number is, in the one view most of them will ever read.
  *
- * `formatFrequency` decides what a customer is told their number is, in the one
- * view most of them will ever read. These tests are written to make the three
- * judgements in its doc comment concrete enough to accept or reject, not to
- * demonstrate that the arithmetic runs.
+ * Two properties matter and they pull in opposite directions.
  *
- * The property that matters is CONTAINMENT: the spoken range must never be
- * narrower than the computed interval. It is asserted here by exhaustive sweep
- * rather than by example, because a rounding rule that is right on the cases
- * someone thought of is exactly the failure mode this product cannot have.
+ *   CONTAINMENT — the spoken range must never be narrower than the computed
+ *   interval. Guaranteed by rounding the bounds outward, and asserted here by
+ *   exhaustive sweep rather than by example.
+ *
+ *   FAITHFULNESS AND LEGIBILITY — the spoken range must not be much WIDER
+ *   either, and its denominators must be numbers a person reads as quantities.
+ *   Neither is guaranteed; both are gated, and outside the gates this refuses
+ *   and the surface prints percentages.
+ *
+ * The gates are the whole design. Everything below exists to show where they
+ * sit and that each of them earns its place.
  */
 
 const metric = (value: number, ci_low: number, ci_high: number, n = 150): Metric => ({
@@ -28,110 +33,191 @@ const metric = (value: number, ci_low: number, ci_high: number, n = 150): Metric
 
 /** The rate a spoken "1 in k" actually asserts. "none at all" asserts zero. */
 const rateOf = (k: number): number => (Number.isFinite(k) ? 1 / k : 0)
+const ratio = (f: Frequency) => f as Extract<Frequency, { kind: 'ratio' }>
 
-describe('the spoken range always contains the computed interval', () => {
-  /*
-   * JUDGEMENT 1, AS A PROPERTY.
-   *
-   * The bounds round outward: the low denominator up, the high denominator
-   * down. A customer therefore always reads a range at least as wide as the one
-   * the arithmetic supports. Rounding to nearest would be closer on average and
-   * would sometimes speak a range TIGHTER than the measurement, which is the
-   * single error this package exists to refuse.
-   */
+/** A real Wilson interval, so the cases below are scans and not hypotheticals. */
+const scan = (p: number, n: number) => {
+  const w = wilson(Math.round(p * n), n)
+  return metric(Math.round(p * n) / n, w.ci_low, w.ci_high, n)
+}
+
+describe('containment: the spoken range always holds the computed interval', () => {
   it('holds across every real Wilson interval from n=30 to n=600', () => {
-    let checked = 0
+    let spoken = 0
+    let total = 0
     for (const n of [30, 50, 75, 100, 150, 200, 300, 450, 600]) {
       for (let successes = 0; successes <= n; successes++) {
         const w = wilson(successes, n)
         const m = metric(successes / n, w.ci_low, w.ci_high, n)
         const f = formatFrequency(m)
+        total++
         if (f.kind !== 'ratio') continue
-        checked++
-        // The spoken low is at or below the computed low; the spoken high at or above.
+        spoken++
         expect([n, successes, rateOf(f.lowK) <= m.ci_low + 1e-12]).toEqual([n, successes, true])
         expect([n, successes, rateOf(f.highK) >= m.ci_high - 1e-12]).toEqual([n, successes, true])
       }
     }
-    // Not a vacuous sweep: the ratio branch has to be the common one.
-    expect(checked).toBeGreaterThan(400)
+    // Not a vacuous sweep. It is also not most of them — see the coverage block.
+    expect(spoken).toBeGreaterThan(150)
+    expect(total).toBe(1964)
   })
 
-  it('the check bites — rounding the bounds to nearest would break containment', () => {
-    // 17.0–31.2%: to-nearest gives 1 in 6 (0.1667 < 0.170, still fine) but
-    // 1 in 3 (0.3333 > 0.312, fine too). The failure is on the other side.
-    // p = 0.26: to-nearest on the high bound of 0.34 gives 1 in 3 = 0.3333,
-    // which is BELOW 0.34 — a range narrower than the measurement.
-    const nearestHigh = Math.round(1 / 0.34)
-    expect(1 / nearestHigh).toBeLessThan(0.34)
-    // The implementation floors instead, so it cannot produce that.
-    const f = formatFrequency(metric(0.26, 0.19, 0.34))
+  it('the bounds are floored and ceilinged, not rounded to nearest', () => {
+    // n=150 at p̂≈25%, the Starter unit and the case the design was built on.
+    const f = ratio(formatFrequency(metric(0.247, 0.17, 0.312)))
     expect(f.kind).toBe('ratio')
-    expect(rateOf((f as Extract<Frequency, { kind: 'ratio' }>).highK)).toBeGreaterThanOrEqual(0.34)
+    expect(rateOf(f.lowK)).toBeLessThanOrEqual(0.17)
+    expect(rateOf(f.highK)).toBeGreaterThanOrEqual(0.312)
+    // To-nearest on the high bound would give 1 in 3 here too, but on an
+    // interval ending at 0.34 it gives 1/3 = 0.3333 — inside the measurement.
+    expect(1 / Math.round(1 / 0.34)).toBeLessThan(0.34)
   })
 })
 
 describe('the worked example from the design plan', () => {
   it('reads as the sentence the simple view was designed around', () => {
-    const f = formatFrequency(metric(0.247, 0.17, 0.312))
-    expect(f).toEqual({ kind: 'ratio', point: '1 in 4', low: '1 in 6', high: '1 in 3', pointK: 4, lowK: 6, highK: 3 })
+    expect(formatFrequency(metric(0.247, 0.17, 0.312))).toEqual({
+      kind: 'ratio',
+      point: '1 in 4',
+      low: '1 in 6',
+      high: '1 in 3',
+      pointK: 4,
+      lowK: 6,
+      highK: 3,
+    })
     // "…in about 1 in 4 answers. Could be as few as 1 in 6, or as many as 1 in 3."
   })
 })
 
-describe('zero is a finding, and it keeps its upper bound', () => {
+describe('GATE 1 — resolution: it refuses to speak an interval it would inflate', () => {
   /*
-   * JUDGEMENT 3. The Grader already has a branch for this and already says the
-   * right thing about it; the frequency form has to preserve that. A zero
-   * without an upper bound is a bug being reported as a result.
+   * "1 in k" is coarse near small k. At 25% the only frequencies either side
+   * are 1 in 5 (20.0%) and 1 in 3 (33.3%), so any interval inside that gap is
+   * spoken as the whole gap. Without this gate the product's value proposition
+   * runs backwards: a bigger, more careful sample produces a vaguer sentence.
    */
+  const inflation = (m: Metric) => {
+    const f = ratio(formatFrequency(m))
+    return (rateOf(f.highK) - rateOf(f.lowK)) / (m.ci_high - m.ci_low)
+  }
+
+  it('the free Grader scan speaks, and inflates 1.17x doing it', () => {
+    expect(inflation(metric(0.247, 0.17, 0.312))).toBeCloseTo(1.17, 2)
+  })
+
+  it('THE CASE THIS GATE EXISTS FOR: four times the sample, refused', () => {
+    // n=600 at p̂=25% is 21.7-28.6% and would speak as "1 in 5 to 1 in 3"
+    // (20.0-33.3%) — 1.93x, VAGUER than the free tier's 1.17x on the same
+    // brand, because it was measured more carefully.
+    const f = formatFrequency(metric(0.25, 0.217, 0.286, 600))
+    expect(f.kind).toBe('unavailable')
+    expect((f as Extract<Frequency, { kind: 'unavailable' }>).reason).toMatch(/overstate/)
+  })
+
+  it('and the nine-point overstatement at p̂=33% is refused too', () => {
+    // 26.0-41.0% would have spoken as "1 in 4 to 1 in 2" — "as many as one
+    // answer in two" against a computed upper bound of 41%.
+    expect(formatFrequency(metric(0.33, 0.26, 0.41)).kind).toBe('unavailable')
+  })
+
+  it('a razor-tight interval — the 33x case — never reaches a customer', () => {
+    expect(formatFrequency(metric(0.25, 0.248, 0.252)).kind).toBe('unavailable')
+  })
+
+  it('the gate bites: every case it admits is within the stated bound', () => {
+    for (const n of [30, 100, 150, 600]) {
+      for (let s = 1; s <= n; s++) {
+        const w = wilson(s, n)
+        const m = metric(s / n, w.ci_low, w.ci_high, n)
+        if (formatFrequency(m).kind !== 'ratio') continue
+        expect([n, s, inflation(m) <= MAX_SPOKEN_INFLATION + 1e-9]).toEqual([n, s, true])
+      }
+    }
+  })
+})
+
+describe('GATE 2 — legibility: it refuses denominators nobody reads', () => {
+  /*
+   * ⚠️ THE GATE THE FIRST PASS MISSED, and it guards the opposite end.
+   * Inflation is blind here: at n=150 a brand at 5% speaks as "as few as 1 in
+   * 42", which is faithful (1.13x) and unreadable. It is not an edge case —
+   * every brand under about 8.5% at n=150 lands there, and on the free Grader
+   * that is a large share of the brands that arrive.
+   */
+  it('a low-rate brand is refused however faithful the arithmetic is', () => {
+    const f = formatFrequency(scan(0.05, 150))
+    expect(f.kind).toBe('unavailable')
+    expect((f as Extract<Frequency, { kind: 'unavailable' }>).reason).toMatch(/too low to speak/)
+  })
+
+  it('the two gates are jointly necessary — neither catches the other`s case', () => {
+    // Low rate: legible gate fires, inflation would have passed it.
+    const low = scan(0.05, 150)
+    const lowK = Math.ceil(1 / low.ci_low)
+    const lowInflation = (1 / Math.floor(1 / low.ci_high) - 1 / lowK) / (low.ci_high - low.ci_low)
+    expect(lowK).toBeGreaterThan(MAX_SPOKEN_DENOMINATOR)
+    expect(lowInflation).toBeLessThanOrEqual(MAX_SPOKEN_INFLATION)
+
+    // High rate: inflation gate fires, legibility would have passed it.
+    const high = metric(0.25, 0.217, 0.286, 600)
+    expect(Math.ceil(1 / high.ci_low)).toBeLessThanOrEqual(MAX_SPOKEN_DENOMINATOR)
+    expect(formatFrequency(high).kind).toBe('unavailable')
+  })
+
+  it('the readable middle still speaks', () => {
+    const f = ratio(formatFrequency(scan(0.1, 150)))
+    expect(f.kind).toBe('ratio')
+    expect(f.lowK).toBeLessThanOrEqual(MAX_SPOKEN_DENOMINATOR)
+  })
+
+  it('an infinite denominator is exempt — it is a word, not a number', () => {
+    // ci_low = 0 is common at small n and reads as "none at all", which is
+    // perfectly legible and asserts exactly zero, so containment is exact.
+    const f = ratio(formatFrequency(metric(0.02, 0, 0.09)))
+    expect(f.kind).toBe('ratio')
+    expect(f.low).toBe('none at all')
+    expect(rateOf(f.lowK)).toBe(0)
+  })
+})
+
+describe('zero is a finding, and it keeps its upper bound', () => {
   it('p̂ = 0 returns none, with the most that could be hiding', () => {
     const w = wilson(0, 150)
     const f = formatFrequency(metric(0, w.ci_low, w.ci_high, 150))
     expect(f.kind).toBe('none')
-    expect((f as Extract<Frequency, { kind: 'none' }>).highK).toBeGreaterThan(1)
     expect((f as Extract<Frequency, { kind: 'none' }>).high).toMatch(/^1 in \d+$/)
   })
 
   it('the upper bound tightens as the sample grows, which is the whole point', () => {
     const at = (n: number) => {
       const w = wilson(0, n)
-      const f = formatFrequency(metric(0, w.ci_low, w.ci_high, n))
-      return (f as Extract<Frequency, { kind: 'none' }>).highK
+      return (formatFrequency(metric(0, w.ci_low, w.ci_high, n)) as Extract<Frequency, { kind: 'none' }>).highK
     }
-    // A bigger k is a smaller rate: more answers, less that could be hiding.
     expect(at(600)).toBeGreaterThan(at(150))
     expect(at(150)).toBeGreaterThan(at(30))
   })
-})
 
-describe('a bound at zero is spoken, not printed as a huge denominator', () => {
-  it('ci_low = 0 becomes "none at all" rather than "1 in 100000"', () => {
-    const f = formatFrequency(metric(0.02, 0, 0.09))
-    expect(f.kind).toBe('ratio')
-    expect((f as Extract<Frequency, { kind: 'ratio' }>).low).toBe('none at all')
-    // and it still contains: "none at all" asserts 0, which is <= ci_low.
-    expect(rateOf((f as Extract<Frequency, { kind: 'ratio' }>).lowK)).toBeLessThanOrEqual(0)
+  it('NOT gated by MAX_SPOKEN_DENOMINATOR, deliberately', () => {
+    // "not mentioned in any of 600 answers; at most about 1 in 250" is a single
+    // bound, not a range, and a large denominator there is the good news rather
+    // than an unreadable span. The legibility gate guards spans.
+    const w = wilson(0, 600)
+    const f = formatFrequency(metric(0, w.ci_low, w.ci_high, 600)) as Extract<Frequency, { kind: 'none' }>
+    expect(f.kind).toBe('none')
+    expect(f.highK).toBeGreaterThan(MAX_SPOKEN_DENOMINATOR)
   })
 })
 
 describe('it refuses rather than approximating', () => {
-  /*
-   * JUDGEMENT 2 and the DEFERRAL. Every refusal here sends the surface to the
-   * percentage sentence, which is always available. None of them is a silent
-   * fallback: the reason is returned so a caller cannot mistake a refusal for a
-   * measurement.
-   */
   it('refuses above one answer in two, testing the BOUND and not the estimate', () => {
-    // The estimate is comfortably under a half; the interval is not.
-    const f = formatFrequency(metric(0.42, 0.34, 0.51))
-    expect(f).toEqual({ kind: 'unavailable', reason: 'the interval reaches above one answer in two' })
+    expect(formatFrequency(metric(0.42, 0.34, 0.51))).toEqual({
+      kind: 'unavailable',
+      reason: 'the interval reaches above one answer in two',
+    })
   })
 
   it('refuses the good-news case, deliberately and with a reason', () => {
-    // DEFERRED in the implementation: "7 in 10" needs a numerator this function
-    // does not produce, and choosing how that numerator rounds is a judgement
-    // for the owner of this file.
+    // DEFERRED: "7 in 10" needs a numerator this function does not produce.
     expect(formatFrequency(metric(0.7, 0.62, 0.77)).kind).toBe('unavailable')
   })
 
@@ -144,97 +230,50 @@ describe('it refuses rather than approximating', () => {
     expect(formatFrequency(metric(0.2, Number.NaN, 0.3)).kind).toBe('unavailable')
   })
 
-  it('every refusal carries a reason, and none is empty', () => {
-    const refusals = [metric(0.42, 0.34, 0.51), metric(0.7, 0.62, 0.77), metric(0, 0, 1, 0), metric(Number.NaN, 0, 0.3)]
-      .map(formatFrequency)
-      .filter((f) => f.kind === 'unavailable')
-    expect(refusals.length).toBe(4)
-    for (const r of refusals) expect((r as Extract<Frequency, { kind: 'unavailable' }>).reason.length).toBeGreaterThan(10)
+  it('every refusal carries a distinct, non-empty reason', () => {
+    const reasons = new Set(
+      [metric(0.42, 0.34, 0.51), metric(0, 0, 1, 0), scan(0.05, 150), metric(0.25, 0.217, 0.286, 600)]
+        .map(formatFrequency)
+        .filter((f) => f.kind === 'unavailable')
+        .map((f) => (f as Extract<Frequency, { kind: 'unavailable' }>).reason),
+    )
+    expect(reasons.size).toBe(4)
+    for (const r of reasons) expect(r.length).toBeGreaterThan(10)
   })
 })
 
-describe('⚠️ THE COST OF THIS FRAMING, MEASURED — the reviewer decides', () => {
+describe('⚠️ COVERAGE — how often the simple view actually speaks a frequency', () => {
   /*
-   * FOUND WHILE WRITING THESE TESTS, AND IT IS THE REASON THIS FILE IS FLAGGED.
+   * THE NUMBER THE PRODUCT DECISION TURNS ON, and it is not flattering.
    *
-   * Outward rounding guarantees containment, so the spoken range is never
-   * tighter than the measurement. The price is the opposite error, and it is
-   * not small: "1 in k" has coarse granularity near small k, so a PRECISE
-   * measurement is spoken as a vague one.
+   * Both gates are correct individually. Together they leave a narrow band:
+   * frequency framing is faithful AND legible only for roughly 8-25% at
+   * n=150, and the inflation is erratic rather than monotonic — it depends on
+   * where the interval endpoints happen to fall against the 1/k lattice, so
+   * the band is not even contiguous at every n.
    *
-   * At p̂ = 25% the neighbouring speakable frequencies are 1 in 5 (20.0%) and
-   * 1 in 3 (33.3%). Any interval inside that gap — including a superbly tight
-   * one — is spoken as "as few as 1 in 5, as many as 1 in 3". A brand measured
-   * to ±0.2 points is told its rate might be anywhere from a fifth to a third.
-   *
-   * For a product whose entire claim is that its numbers are more trustworthy
-   * than the competition's, systematically making good measurements SOUND worse
-   * than they are is a real cost, not a rounding detail. It is also the exact
-   * mirror of the dishonesty we refuse: overstating uncertainty is not neutral
-   * when precision is the thing being sold.
-   *
-   * Three ways out, none of which I should pick:
-   *   (a) accept it — the simple view is for gist, and the detailed view has
-   *       the real interval one switch away;
-   *   (b) speak the range only when the inflation is under some factor, and
-   *       fall back to the percentage sentence otherwise;
-   *   (c) allow numerators ("2 in 9"), which restores resolution and costs
-   *       idiom.
-   * That is a product judgement about what a customer is told, which is what
-   * §4 reserves to a human. The number below exists so the choice is made with
-   * the magnitude visible rather than in the abstract.
+   * The consequence for a customer is that the headline sentence changes SHAPE
+   * between scans for reasons they cannot see. That is an argument for letting
+   * percentages own the headline permanently, and it is recorded here as a
+   * measurement rather than an opinion. Flagged in ADR-0010.
    */
-  const inflation = (m: Metric) => {
-    const f = formatFrequency(m) as Extract<Frequency, { kind: 'ratio' }>
-    return (rateOf(f.highK) - rateOf(f.lowK)) / (m.ci_high - m.ci_low)
-  }
+  const NS = [30, 50, 100, 150, 300, 600, 1000]
+  const PS = [0.02, 0.05, 0.08, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
 
-  it('outward rounding always widens, so the bounds never collapse onto the estimate', () => {
-    // The good half of the trade: a caller can always print a real span.
-    const f = formatFrequency(metric(0.25, 0.248, 0.252)) as Extract<Frequency, { kind: 'ratio' }>
-    expect(f.lowK).toBeGreaterThan(f.highK)
-    expect(rateOf(f.lowK)).toBeLessThanOrEqual(0.248)
-    expect(rateOf(f.highK)).toBeGreaterThanOrEqual(0.252)
+  it('a frequency is the minority rendering across the realistic grid', () => {
+    let spoken = 0
+    for (const n of NS) for (const p of PS) if (formatFrequency(scan(p, n)).kind === 'ratio') spoken++
+    const share = spoken / (NS.length * PS.length)
+    // Measured at ~1/3. Asserted as a band so the figure in ADR-0010 cannot
+    // drift silently if a threshold is retuned.
+    expect(share).toBeGreaterThan(0.2)
+    expect(share).toBeLessThan(0.45)
   })
 
-  it('a razor-tight interval at 25% is spoken 33x wider than it is', () => {
-    expect(inflation(metric(0.25, 0.248, 0.252))).toBeCloseTo(33.33, 1)
-  })
-
-  it('the free Grader scan inflates modestly — the case for accepting this', () => {
-    // n = 150 at p̂ ≈ 25%, the Starter unit: 17.0-31.2% spoken as 16.7-33.3%.
-    expect(inflation(metric(0.247, 0.17, 0.312))).toBeCloseTo(1.17, 2)
-  })
-
-  it('⚠️ BUT A BIGGER SAMPLE INFLATES MORE, WHICH INVERTS WHAT THE TIER BUYS', () => {
-    /*
-     * THE FINDING THAT MATTERS, AND IT IS NOT THE EXTREME CASE.
-     *
-     * The perverse direction was easy to dismiss while the only example was a
-     * ±0.2-point interval nobody will ever measure. It is not confined there.
-     * A customer paying for four times the sample gets a TIGHTER interval and a
-     * WIDER spoken range, because 1-in-5 and 1-in-3 are the only frequencies
-     * available either side of 25% and both intervals sit between them:
-     *
-     *   n = 150, 17.0-31.2%  ->  "1 in 6 to 1 in 3"  (16.7-33.3%)  1.17x
-     *   n = 600, 21.7-28.6%  ->  "1 in 5 to 1 in 3"  (20.0-33.3%)  1.93x
-     *
-     * The paid tier's headline sentence is VAGUER than the free one, on the
-     * same brand, because it measured more carefully. That is not a rounding
-     * detail; it is the product's value proposition running backwards in the
-     * one view most customers will read.
-     */
-    const starter = inflation(metric(0.247, 0.17, 0.312))
-    const paid = inflation(metric(0.25, 0.217, 0.286))
-    expect(paid).toBeCloseTo(1.93, 2)
-    expect(paid).toBeGreaterThan(starter)
-  })
-
-  it('and the top bound can overstate by 9 points on an ordinary scan', () => {
-    // n = 150 at p̂ = 33%: 26.0-41.0% spoken as "1 in 4 to 1 in 2" = 25.0-50.0%.
-    // "as many as one answer in two" for a measurement whose upper bound is 41%.
-    const f = formatFrequency(metric(0.33, 0.26, 0.41)) as Extract<Frequency, { kind: 'ratio' }>
-    expect(f.high).toBe('1 in 2')
-    expect(rateOf(f.highK) - 0.41).toBeCloseTo(0.09, 2)
+  it('and at the Starter unit it is a contiguous band, which is the best case', () => {
+    const spoken = PS.filter((p) => formatFrequency(scan(p, 150)).kind === 'ratio')
+    // 10%-25% at n=150. Contiguous, and only four of twelve bands: 8% and below
+    // fail legibility (k=22 at 8%), 30% and above fail resolution.
+    expect(spoken).toEqual([0.1, 0.15, 0.2, 0.25])
   })
 })

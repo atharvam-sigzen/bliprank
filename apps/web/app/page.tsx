@@ -158,7 +158,10 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-          <p className="metric__provenance">{formatProvenance(SOURCE_MIX[0]!.metric)} · shares of 412 observed citations</p>
+          {/* Marked even though the whole section already is: the depth of a
+              provenance line should be legible where it is written, not
+              inferred from an ancestor six elements up. */}
+          <p className="metric__provenance detail">{formatProvenance(SOURCE_MIX[0]!.metric)} · shares of 412 observed citations</p>
         </div>
       </section>
     </main>

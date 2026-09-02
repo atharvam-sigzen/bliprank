@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
+import { Headline } from '@/components/headline'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { RangeRail } from '@/components/range-rail'
 import { PromptPreview } from '@/components/prompt-preview'
@@ -407,6 +408,11 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           as its headline — on the paper, not in a box. */}
       <h2 className="record__domain">{scan.domain}</h2>
 
+      {/* The finding, before the caveats about it and before the instrument
+          that draws it. A reader who stops here has the estimate, both bounds
+          and the sample size, in a sentence. */}
+      <Headline scan={scan} />
+
       {/*
         A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the
         likeliest shape of running out of quota mid-scan — the scan still returns
@@ -578,6 +584,15 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       {/* The same cycle, per question and per engine. One component on both
           surfaces, so the Grader and the workspace record cannot come to
           disagree about what the same file says. */}
+      {/* DETAIL. A 6x5 grid of glyphs with a four-symbol legend: every mark it
+          draws is its own, so hiding it takes the explanation with the thing
+          explained and leaves the headline untouched.
+
+          NOTE: this is rule-consistent and probably not the last word. "Which
+          questions you appear in" is nearer the brand owner's world than the
+          by-engine split is, and a one-line plain version of it ("you appear in
+          3 of the 6 questions we asked") likely belongs in the simple view. Not
+          invented here. */}
       <PromptBreakdown scan={scan} />
 
       <OpenWorkspaceButton domain={scan.domain} label="Open in dashboard" />

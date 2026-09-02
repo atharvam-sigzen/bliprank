@@ -176,7 +176,12 @@ export function HeadToHeadChart({ data, subjectLabel }: { data: HeadToHead; subj
 
       {/* Provenance travels with the number on the free surface too — this is
           the page most likely to be screenshotted beside a competitor's tool. */}
-      <p className="metric__provenance">{formatProvenance(data.subject.metric)} · all brands scored over the same scan unless the table says otherwise</p>
+      {/* DETAIL. The chart keeps every mark it draws at simple depth; this
+          footer is the auditor's field — algorithm version, collection path,
+          and the basis on which these brands may be compared at all. */}
+      <p className="metric__provenance detail">
+        {formatProvenance(data.subject.metric)} · all brands scored over the same scan unless the table says otherwise
+      </p>
     </figure>
   )
 }
