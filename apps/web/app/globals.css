@@ -856,6 +856,46 @@ body {
 }
 
 
+/* ==========================================================================
+   REFINEMENT LAYER
+   ==========================================================================
+   What follows — the type scale, the tabular figures, the elevation and the
+   padding — is one deliberate pass, and this says why, because none of it is
+   self-evident from the declarations.
+
+   Five things were making this sheet read as unfinished, and none of them was
+   the colour scheme. The first two were fixed in a palette this file no longer
+   carries; the PRINCIPLES survive the palette and still govern, so they are
+   kept and the archaeology is not.
+
+   1. CHROME IS TRUE NEUTRAL, AND THE BRAND HUE IS RESERVED FOR DATA. Every
+      rule, divider and card edge used to be a pale brand tint. Reserving the
+      hue for the marks that carry meaning is the single biggest difference
+      between a template and a product, and it is why --color-border is a
+      neutral while --color-primary is Prussian.
+
+   2. BODY TEXT IS NEAR-BLACK, NOT A COLOUR. Coloured body copy reads as a
+      theme applied to a document; near-black reads as typeset.
+
+   3. TABULAR FIGURES, EVERYWHERE A FIGURE APPEARS. In a proportional font the
+      digit 1 is narrower than 8, so a column of percentages does not line up
+      and the decimal points drift. On a page that is almost entirely numbers
+      this is the loudest possible tell.
+
+   4. A REAL TYPE SCALE. Everything used to sit between 0.6875 and 1.25rem at
+      one weight, so nothing had rank. Display, title, section and label are
+      distinct in size, weight AND tracking — large type gets negative
+      tracking, small caps get positive, which is what makes set type look set
+      rather than scaled.
+
+   5. ELEVATION AND ROOM. Cards had a 1px shadow at 4% and 16px of padding, so
+      content pressed against its own edges. Restrained elevation, and padding
+      that lets a number breathe.
+
+   The dense-dashboard brief is unchanged: this is not more decoration, it is
+   the same information given rank, rhythm and alignment.
+   ========================================================================== */
+
 /* --- type ---------------------------------------------------------------- */
 
 body {

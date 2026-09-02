@@ -198,17 +198,43 @@ describe('⚠️ THE COST OF THIS FRAMING, MEASURED — the reviewer decides', (
   })
 
   it('a razor-tight interval at 25% is spoken 33x wider than it is', () => {
-    expect(inflation(metric(0.25, 0.248, 0.252))).toBeGreaterThan(30)
+    expect(inflation(metric(0.25, 0.248, 0.252))).toBeCloseTo(33.33, 1)
   })
 
-  it('a realistic Grader interval inflates only modestly, which is the case for (a)', () => {
-    // n = 150 at p̂ ≈ 25% — the Starter unit. 17.0-31.2% spoken as 16.7-33.3%.
-    expect(inflation(metric(0.247, 0.17, 0.312))).toBeLessThan(1.25)
+  it('the free Grader scan inflates modestly — the case for accepting this', () => {
+    // n = 150 at p̂ ≈ 25%, the Starter unit: 17.0-31.2% spoken as 16.7-33.3%.
+    expect(inflation(metric(0.247, 0.17, 0.312))).toBeCloseTo(1.17, 2)
   })
 
-  it('the inflation is worst where the sample is best — the perverse direction', () => {
-    const wide = inflation(metric(0.247, 0.17, 0.312))
-    const tight = inflation(metric(0.25, 0.248, 0.252))
-    expect(tight).toBeGreaterThan(wide)
+  it('⚠️ BUT A BIGGER SAMPLE INFLATES MORE, WHICH INVERTS WHAT THE TIER BUYS', () => {
+    /*
+     * THE FINDING THAT MATTERS, AND IT IS NOT THE EXTREME CASE.
+     *
+     * The perverse direction was easy to dismiss while the only example was a
+     * ±0.2-point interval nobody will ever measure. It is not confined there.
+     * A customer paying for four times the sample gets a TIGHTER interval and a
+     * WIDER spoken range, because 1-in-5 and 1-in-3 are the only frequencies
+     * available either side of 25% and both intervals sit between them:
+     *
+     *   n = 150, 17.0-31.2%  ->  "1 in 6 to 1 in 3"  (16.7-33.3%)  1.17x
+     *   n = 600, 21.7-28.6%  ->  "1 in 5 to 1 in 3"  (20.0-33.3%)  1.93x
+     *
+     * The paid tier's headline sentence is VAGUER than the free one, on the
+     * same brand, because it measured more carefully. That is not a rounding
+     * detail; it is the product's value proposition running backwards in the
+     * one view most customers will read.
+     */
+    const starter = inflation(metric(0.247, 0.17, 0.312))
+    const paid = inflation(metric(0.25, 0.217, 0.286))
+    expect(paid).toBeCloseTo(1.93, 2)
+    expect(paid).toBeGreaterThan(starter)
+  })
+
+  it('and the top bound can overstate by 9 points on an ordinary scan', () => {
+    // n = 150 at p̂ = 33%: 26.0-41.0% spoken as "1 in 4 to 1 in 2" = 25.0-50.0%.
+    // "as many as one answer in two" for a measurement whose upper bound is 41%.
+    const f = formatFrequency(metric(0.33, 0.26, 0.41)) as Extract<Frequency, { kind: 'ratio' }>
+    expect(f.high).toBe('1 in 2')
+    expect(rateOf(f.highK) - 0.41).toBeCloseTo(0.09, 2)
   })
 })
