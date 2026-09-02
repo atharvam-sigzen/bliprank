@@ -5,6 +5,7 @@ import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bl
 import { ActionLink } from '@/components/action-link'
 import { themedUrl, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
+import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { RangeRail } from '@/components/range-rail'
 import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
@@ -227,14 +228,26 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
           scan is measured alone and says so rather than drawing a chart. */}
       <HeadToHeadSection scan={scan} />
 
+      {/* The per-question table, from the same cycle. It renders its own honest
+          absence when the file predates `promptRows`, so this surface makes no
+          claim about the split that the data does not carry. */}
+      <PromptBreakdown scan={scan} />
+
       {/*
-        ⚠️ THE TWO CHARTS THIS COMPONENT REFUSES TO DRAW.
+        ⚠️ THE CHART THIS COMPONENT STILL REFUSES TO DRAW.
 
         One cycle is one point, and a line through one point is a shape with no
-        measurement under it. The stored payload also holds no per-engine split,
-        so a by-engine table would have to divide a total by five and present the
-        result as five findings. Both are the same failure — a picture asserting
-        more than the data contains — and both are refused in words instead.
+        measurement under it. A picture asserting more than the data contains is
+        refused in words instead.
+
+        THE BY-ENGINE TABLE USED TO BE THE SECOND ENTRY HERE, and the reason it
+        gave was sound but the fact underneath it was wrong. "The per-engine
+        split is not in this cycle's stored payload" was true of the payload and
+        false of the pipeline: `scoreAnswer` computed it for every answer and
+        `runScan` summed it away before writing the file. The rate was never
+        divided five ways — the rows are kept now, and `PromptBreakdown` counts
+        them. What was refused was the division, and the division is still
+        refused: a file without rows gets the sentence, not a grid.
       */}
       <section className="section">
         <h2>What is not on this page</h2>
@@ -255,12 +268,6 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
             </>
           ) : null}
           . A line through a single point would be drawing movement that has not been measured.
-        </p>
-        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          There is no breakdown by engine either. {run.engines.length > 0 ? `The ${run.engines.length} surfaces` : 'The answer surfaces'} were
-          scored together into one rate of{' '}
-          <span className="num">{scan.counts.answersScored}</span> answers, and the per-engine split is not in this cycle&apos;s stored payload.
-          Splitting the total five ways would be arithmetic presented as evidence.
         </p>
         <WorkedExample />
       </section>

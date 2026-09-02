@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
+import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { RangeRail } from '@/components/range-rail'
 import { PromptPreview } from '@/components/prompt-preview'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
@@ -543,6 +544,11 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       ) : null}
 
       <HeadToHeadSection scan={scan} />
+
+      {/* The same cycle, per question and per engine. One component on both
+          surfaces, so the Grader and the workspace record cannot come to
+          disagree about what the same file says. */}
+      <PromptBreakdown scan={scan} />
 
       <OpenWorkspaceButton domain={scan.domain} label="Open in dashboard" />
       <ResetButton onReset={onReset} />

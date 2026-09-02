@@ -84,6 +84,21 @@ export interface ScanResultFile {
   readonly collectedAt: string
   readonly brands: readonly ScanBrand[]
   /**
+   * One row per scored answer for the SUBJECT — which prompt, which engine,
+   * mentioned or not, at what position. Written by `runScan` since 2026-09-02.
+   *
+   * ⚠️ OPTIONAL, AND THE ABSENCE MEANS ONE THING ONLY: this file predates the
+   * field. It does NOT mean the subject went unmentioned. `promptBreakdown`
+   * enforces the distinction — it returns null for a file without rows, and
+   * every surface renders the absence in words rather than as an empty grid.
+   *
+   * Typed as `unknown[]` here on purpose. It arrives from a JSON import and from
+   * `localStorage`, both of which are trust boundaries, so the shape is checked
+   * at runtime in `lib/prompt-breakdown.ts` and nowhere else. A declared row
+   * type here would let a caller skip that check while looking correct.
+   */
+  readonly promptRows?: readonly unknown[]
+  /**
    * Present only on a file written by a runner that owned the budget — the CLI
    * envelope and, since this fix, `/api/scan`. Files cached before that carry no
    * run block at all, which is why this is optional and why nothing may read

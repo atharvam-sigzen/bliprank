@@ -3133,3 +3133,23 @@ h3.record__title,
   color: var(--color-muted-foreground);
   margin-right: 2px;
 }
+
+/* ==========================================================================
+   THE PER-QUESTION MARK
+   ==========================================================================
+
+   One glyph per collected answer in the breakdown grid. Deliberately quiet:
+   a hit is weighted, a miss is muted, and neither is coloured. Green for
+   "mentioned" would make the table read as a scorecard, and a cell here is
+   one answer — not a verdict, and carrying no interval of its own. */
+.mark {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}
+
+.mark--hit {
+  color: var(--color-foreground);
+  font-weight: 600;
+}

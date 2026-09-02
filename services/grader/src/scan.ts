@@ -128,6 +128,49 @@ export interface BrandResult {
   readonly metric: Metric
 }
 
+/**
+ * ONE SCORED ANSWER, AS THE SUBJECT SAW IT — PHASES 3.3, added 2026-09-02.
+ *
+ * ⚠️ NOTHING HERE IS A NEW MEASUREMENT. Every field below is already computed,
+ * for every answer, by the `scoreAnswer` call in the brand loop below — and was
+ * then summed into `mentions`/`citations` and thrown away. The result carried
+ * one rate over fifty answers and no way to see which prompt or which engine
+ * produced it, so the workspace record said in prose that "the per-engine split
+ * is not in this cycle's stored payload". It was in the pipeline; it was not in
+ * the payload. This is the payload. No extra scoring pass, no extra provider
+ * call, no model call — the same `ScoreRow`, kept instead of discarded.
+ *
+ * THE ATOM IS ONE ANSWER, NOT ONE PROMPT. A cell is `prompt x engine x day` and
+ * `runsPerCell` may be greater than one, so two rows can legitimately share a
+ * prompt and an engine. Aggregating up to a prompt is the reader's job
+ * (`lib/prompt-breakdown.ts`), because a surface that has to divide can also be
+ * asked what it divided — which is the failure the by-engine table was refused
+ * for in the first place.
+ *
+ * ⚠️ NO SENTIMENT FIELD, AND THAT IS NOT AN OVERSIGHT. Sentiment is the one
+ * signal R1 permits a model to produce, on a 25% sample, and PHASES 2.3 has not
+ * been built. No stored answer carries one. An optional field that is always
+ * absent would read on the sheet as "we could not tell for this answer", which
+ * is a different claim from "this build does not collect it" — and the second is
+ * the true one. The surfaces say the second, in words, once.
+ */
+export interface PromptRow {
+  /** The prompt as SENT, not the normalised cache-key form. */
+  readonly prompt: string
+  readonly engine: EngineId
+  readonly mentioned: boolean
+  /** Times an alias appeared in this answer. 0 when not mentioned. */
+  readonly mentionCount: number
+  /** Rank by first appearance among every brand detected, 1-based. null when absent. */
+  readonly position: number | null
+  /** How many brands the scorer found in this answer at all — the denominator of `position`. */
+  readonly brandsDetected: number
+  /** One of the subject's own domains was cited in this answer. */
+  readonly cited: boolean
+  /** TRACKED competitors named in this answer. Empty for a bank with no leaders. */
+  readonly competitorsMentioned: readonly string[]
+}
+
 export interface ScanCounts {
   readonly cellsRequested: number
   readonly cacheHits: number
@@ -176,6 +219,15 @@ export type ScanResult =
       readonly collectedAt: string
       readonly counts: ScanCounts
       readonly brands: readonly BrandResult[]
+      /**
+       * Per-answer detail for the SUBJECT, one row per scored answer.
+       *
+       * Present on every scan this version runs. Absent on a result file written
+       * before it existed — and a surface must read that absence as "this file
+       * does not carry the split", never as "the subject was mentioned nowhere".
+       * Those are opposite claims and only one of them is in the file.
+       */
+      readonly promptRows: readonly PromptRow[]
     }
 
 /**
@@ -419,6 +471,13 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell)
   const n = answers.length
 
+  /*
+   * The subject's per-answer rows, harvested from the pass that was already
+   * running. See `PromptRow`: this costs one push per answer and buys the
+   * per-prompt and per-engine views the record previously had to refuse.
+   */
+  const promptRows: PromptRow[] = []
+
   const brands: BrandResult[] = scored.map((spec) => {
     let mentions = 0
     let citations = 0
@@ -429,6 +488,21 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
       const row = scoreAnswer({ answer: { text: a.text, citations: a.citations }, brand: spec, competitors })
       if (row.mentioned) mentions += 1
       if (row.cited) citations += 1
+      if (spec.id === subject.id) {
+        promptRows.push({
+          // The prompt as SENT. `cell.normalisedPrompt` is the cache key's
+          // lowercased form and putting that on a sheet would show the reader a
+          // question we did not ask.
+          prompt: a.prompt || a.cell.normalisedPrompt,
+          engine: a.cell.engine,
+          mentioned: row.mentioned,
+          mentionCount: row.mentionCount,
+          position: row.position,
+          brandsDetected: row.brandsDetected,
+          cited: row.cited,
+          competitorsMentioned: row.competitorsMentioned,
+        })
+      }
     }
     const w = wilson(mentions, n)
     return {
@@ -466,5 +540,6 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     collectedAt: answers[answers.length - 1]?.collectedAt ?? req.day,
     counts,
     brands,
+    promptRows,
   }
 }

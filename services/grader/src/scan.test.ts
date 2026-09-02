@@ -404,3 +404,94 @@ describe('a brand whose domain runs its words together is still found', () => {
     expect(spec.squashedAliases).toBeUndefined()
   })
 })
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PER-ANSWER ROWS — the split the record used to say was "not in this cycle's
+ * stored payload".
+ *
+ * The claim these tests pin is a RECONCILIATION claim, not a feature claim: the
+ * rows must be the same evidence the headline rate is made of, one row per
+ * scored answer, or a surface that renders both is showing two measurements
+ * under one heading. `promptBreakdown` in the public app refuses to draw when
+ * they disagree; these are what stop them disagreeing at the source.
+ */
+describe('promptRows — the per-prompt, per-engine evidence behind the rate', () => {
+  const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
+
+  it('emits exactly one row per scored answer, and they reconcile with the metric', async () => {
+    // Pipedrive is named by chatgpt only, so the two engines genuinely differ —
+    // a split that a divide-the-total table could not have produced.
+    const d = deps((_prompt, engine) => (engine === 'chatgpt' ? 'Pipedrive is a good pick.' : 'Try something else entirely.'))
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 3 }), d)
+    expect(r.status).toBe('scanned')
+    if (r.status !== 'scanned') return
+
+    const subject = r.brands.find((b) => b.isSubject)!
+    expect(r.promptRows).toHaveLength(subject.metric.n)
+    expect(r.promptRows).toHaveLength(r.counts.answersScored)
+    expect(r.promptRows.filter((row) => row.mentioned)).toHaveLength(subject.mentions)
+
+    // The split itself: every chatgpt answer names it, no gemini answer does.
+    const chatgpt = r.promptRows.filter((row) => row.engine === 'chatgpt')
+    const gemini = r.promptRows.filter((row) => row.engine === 'gemini')
+    expect(chatgpt).toHaveLength(3)
+    expect(gemini).toHaveLength(3)
+    expect(chatgpt.every((row) => row.mentioned)).toBe(true)
+    expect(gemini.every((row) => row.mentioned)).toBe(false)
+  })
+
+  it('carries the prompt AS SENT, not the normalised cache-key form', async () => {
+    const d = deps(() => 'nothing here')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    const sent = unprompted.slice(0, 2).map((p) => p.text)
+    expect([...new Set(r.promptRows.map((row) => row.prompt))].sort()).toEqual([...sent].sort())
+    // The cache key lowercases; a sheet showing that would show a question we
+    // did not ask. At least one demo prompt has a capital in it.
+    expect(sent.some((t) => t !== t.toLowerCase())).toBe(true)
+  })
+
+  it('records position, mention count and the competitors named in the same answer', async () => {
+    // HubSpot first, Pipedrive second: position is by first appearance, so the
+    // row must say 2 of 2 rather than merely "mentioned".
+    const d = deps(() => 'HubSpot leads here, though Pipedrive is the better value. Pipedrive again.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 1 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    const row = r.promptRows[0]!
+    expect(row.mentioned).toBe(true)
+    expect(row.position).toBe(2)
+    expect(row.brandsDetected).toBeGreaterThanOrEqual(2)
+    expect(row.mentionCount).toBe(2)
+    expect(row.competitorsMentioned).toContain('HubSpot')
+  })
+
+  it('an unmentioned answer is a row, not a missing row — that is the whole point', async () => {
+    const d = deps(() => 'No CRM is named in this answer at all.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    expect(r.promptRows).toHaveLength(4)
+    expect(r.promptRows.every((row) => row.mentioned === false)).toBe(true)
+    expect(r.promptRows.every((row) => row.position === null)).toBe(true)
+    // A zero rate with four rows behind it is a finding. Four missing rows
+    // would be indistinguishable from a scan that never ran.
+    expect(r.brands.find((b) => b.isSubject)!.metric.value).toBe(0)
+  })
+
+  it('rows describe the SUBJECT only — a competitor does not get its own rows', async () => {
+    const d = deps(() => 'HubSpot is the only one worth naming.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    // Two prompts x two engines = four answers, and four rows — not eight, not
+    // one set per brand scored.
+    expect(r.promptRows).toHaveLength(4)
+    expect(r.brands.length).toBeGreaterThan(1)
+    expect(r.promptRows.every((row) => row.mentioned === false)).toBe(true)
+    expect(r.promptRows.every((row) => row.competitorsMentioned.includes('HubSpot'))).toBe(true)
+  })
+})
