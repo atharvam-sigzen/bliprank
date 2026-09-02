@@ -318,6 +318,12 @@ workspace record draws a real trend once two exist. A person starts each cycle
 from the record; **there is no scheduler.** The per-domain ceiling's default is
 derived, not fixed: `2 cycles × cells per cycle × 1.2 retry headroom` (204 at
 17 prompts), decided 2026-09-02.
+**Diagnostics (ADR-0014, 2026-09-02):** the result page shows what the engines
+cited (every citation classified by the scan's own rules, shares with
+intervals, most-cited sites) and the gap report (the homepage against the
+cycle's prompts). Both are evidence fetched on request, never written into a
+result; nothing generates or publishes. No publisher registry exists, so
+`earned_media` is never assigned and most citations read as "other".
 **Known gap, not urgent:** `/score-version` does not work as written — it points
 at `services/scorer/version.ts`, which does not exist (the constant is
 `SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), and it gates on a
