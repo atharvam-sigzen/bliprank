@@ -125,7 +125,24 @@ was never stamped on anything; the stamped identifier is the one that counts.
 | Version | Date | Change | Effect on historical comparison |
 |---|---|---|---|
 | det-1 | 2026-08-22 | Deterministic scorer: mention, citation, prominence, competitor detection, citation source class | n/a |
-| det-2 | 2026-09-01 | Brand forms are also derived from a domain that runs its words together, with the site title as corroboration; a compound-named brand had scored zero | A brand's rate can differ between versions; `compare()` refuses to compare rows stamped differently, and a result re-derived from stored answers keeps its det-1 row as an audit file |
+| det-2 | 2026-09-01 | Brand forms are also derived from a domain that runs its words together, with the site title as corroboration; a compound-named brand had scored zero. Includes, from a second commit the same day, a narrower rule: a four-character remainder is admitted only when the site title names it (see the note below) | A brand's rate can differ between versions; `compare()` refuses to compare rows stamped differently, and a result re-derived from stored answers keeps its det-1 row as an audit file |
+
+**A lapse in det-2, recorded rather than hidden.** The four-character rule in
+the det-2 row shipped twenty-seven minutes after the det-2 stamp was introduced,
+in a separate commit (`0d4af7f`, 2026-09-01), without a version bump. That
+should not have happened: the rule changes what an answer scores for a domain
+of one specific shape. It was found on 2026-09-02 and investigated before any
+decision was taken. The evidence, in full, is in
+[`docs/adr/0012-det-2-covers-the-corroboration-rule.md`](adr/0012-det-2-covers-the-corroboration-rule.md):
+seven synthetic cases scored under both versions, of which exactly one differs;
+every one of the 360 stored answers scored against every affected subject under
+both versions, with zero differing rows; and the structural argument for why no
+record written under the earlier rules could ever reach the differing case. On
+that evidence det-2 is defined as the later rules and no det-3 was issued,
+because a version boundary across provably identical numbers would have marked
+them "not comparable" for no reason, which is its own kind of false signal. A
+test now pins the alias derivation to the version stamp so this cannot recur
+silently, and R5 states the bar any future exception must clear.
 
 Historical scores are never recomputed. When the algorithm changes, new rows are
 written and charts show a version boundary.
