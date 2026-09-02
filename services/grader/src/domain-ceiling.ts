@@ -51,18 +51,60 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { ENGINES } from '@bliprank/contracts'
+import { DEFAULT_PROMPTS_PER_SCAN } from './live-gate.js'
 
 /**
- * Calls one domain may draw in a month, across all engines.
- *
- * 170 = ten full scans at 17 prompts on one engine, or two full five-engine
- * scans with a wide margin for retries. Set against the free tier's 50 requests
- * per engine per month: a single domain cannot exhaust one engine's allowance,
- * which is the property that matters. Deliberately generous — this is a
- * RUNAWAY BACKSTOP, and the cache is what makes repeat scans free, so a domain
- * legitimately reaching this number is a domain something is wrong with.
+ * Full cycles one domain is allowed in a UTC month. Two, because a trend needs
+ * two points and the free tier's 50 requests per engine per month cannot fund
+ * a third at 17 prompts (3 × 17 = 51). ADR-0013.
  */
-export const DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH = 170
+export const CYCLES_PER_MONTH = 2
+
+/**
+ * How far above nominal a cycle's REALISED call count may run and still leave
+ * room for the next one. `Budget` charges every attempt, retries included, so
+ * a cycle costs more than its cell count. Observed on the three live scans to
+ * date: 1.02, 1.02 and 1.16. Set a little above the worst of those; re-derive
+ * from the ledger once more cycles have run. A starting value, not a law.
+ */
+export const RETRY_HEADROOM = 1.2
+
+/** Calls one full cycle draws at the default prompt count: prompts × engines. */
+export const DEFAULT_CELLS_PER_CYCLE = DEFAULT_PROMPTS_PER_SCAN * ENGINES.length
+
+/**
+ * The ceiling for a given cycle size: CYCLES_PER_MONTH cycles, each allowed to
+ * run RETRY_HEADROOM above nominal. Exported so a caller with a non-default
+ * prompt count gets the same margin, not the default's.
+ */
+export const ceilingFor = (cellsPerCycle: number): number => Math.ceil(CYCLES_PER_MONTH * cellsPerCycle * RETRY_HEADROOM)
+
+/**
+ * Calls one domain may draw in a month, across all engines, when nothing
+ * overrides it: 2 × 85 × 1.2 = 204 at 17 prompts on five engines.
+ *
+ * THE MARGIN THIS ACTUALLY PROVIDES, at 17 prompts. `checkDomainCeiling`
+ * admits a scan while `used + 85 ≤ 204`, so the second cycle of a month goes
+ * ahead as long as the first realised no more than 119 calls — a retry ratio of
+ * 1.40 on the first cycle alone — or both cycles run at up to 1.20. Every live
+ * scan so far has retried, at 1.02 to 1.16, so both fit. A third full cycle in
+ * the same month is refused (2 × 85 = 170 used, 85 more needed), which is what
+ * the free tier would refuse anyway.
+ *
+ * The previous default of 170 described itself as "two full five-engine scans
+ * with a wide margin for retries" and had none: 85 + 85 = 170 exactly, so a
+ * single retry in cycle one refused cycle two. It was also a bare number tied
+ * to nothing, so a change to the prompt count silently changed how many cycles
+ * it allowed. This one is derived from the constants it depends on.
+ *
+ * Still a RUNAWAY BACKSTOP against the free tier's 50 requests per engine per
+ * month: 204 over five engines is 40.8 per engine, so one domain cannot empty
+ * an engine's allowance on its own. The cache is what makes repeat scans of the
+ * same day free; a domain legitimately reaching this number is a domain
+ * something is wrong with.
+ */
+export const DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH = ceilingFor(DEFAULT_CELLS_PER_CYCLE)
 
 export interface DomainCeilingConfig {
   readonly maxCallsPerMonth: number
@@ -171,7 +213,18 @@ export function recordDomainCalls(domain: string, calls: number, cfg: DomainCeil
   writeFileSync(cfg.ledgerFile, JSON.stringify(next, null, 2) + '\n')
 }
 
-export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): DomainCeilingConfig => ({
-  maxCallsPerMonth: Number(env['GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH'] ?? DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH),
-  ledgerFile: join(dataDir, 'domain-ceiling.json'),
-})
+/**
+ * The ceiling in force. An explicit `GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH` is
+ * absolute and wins. Otherwise the default is derived from the prompt count in
+ * force — `GRADER_PROMPTS_PER_SCAN` when set — so the margin stated above holds
+ * at 10 prompts and at 20, rather than only at 17.
+ */
+export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): DomainCeilingConfig => {
+  const explicit = env['GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH']
+  const prompts = Number(env['GRADER_PROMPTS_PER_SCAN'] ?? DEFAULT_PROMPTS_PER_SCAN)
+  const derived = Number.isFinite(prompts) && prompts > 0 ? ceilingFor(prompts * ENGINES.length) : DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH
+  return {
+    maxCallsPerMonth: explicit !== undefined && explicit !== '' ? Number(explicit) : derived,
+    ledgerFile: join(dataDir, 'domain-ceiling.json'),
+  }
+}

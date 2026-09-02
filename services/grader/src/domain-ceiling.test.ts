@@ -3,8 +3,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  CYCLES_PER_MONTH,
+  DEFAULT_CELLS_PER_CYCLE,
   DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH,
+  RETRY_HEADROOM,
   callsThisMonth,
+  ceilingFor,
   checkDomainCeiling,
   defaultDomainCeilingConfig,
   recordDomainCalls,
@@ -120,11 +124,39 @@ describe('failure modes', () => {
   })
 })
 
-describe('the default is a backstop, not the operating limit', () => {
-  it('leaves room for more than one full five-engine scan', () => {
-    // 17 prompts x 5 engines = 85. The ceiling must not fire on a domain's
-    // SECOND legitimate scan, or it is a feature limit wearing a safety label.
-    expect(DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH).toBeGreaterThanOrEqual(170)
+describe('the default is a formula with a stated margin, not a bare number (ADR-0013)', () => {
+  it('is CYCLES_PER_MONTH × cells per cycle × RETRY_HEADROOM, rounded up — 204 at 17 prompts on five engines', () => {
+    expect(DEFAULT_CELLS_PER_CYCLE).toBe(85)
+    expect(DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH).toBe(Math.ceil(CYCLES_PER_MONTH * DEFAULT_CELLS_PER_CYCLE * RETRY_HEADROOM))
+    expect(DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH).toBe(204)
+  })
+
+  it('⚠️ the second cycle survives the first one retrying — the margin the old 170 claimed and did not have', () => {
+    const c = { maxCallsPerMonth: DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH, ledgerFile: join(dir, 'domain-ceiling.json') }
+    // The worst retry ratio observed on a live scan is 1.16 (pipedrive, 22 calls
+    // for 19 cells). Book a first cycle at that ratio, then ask for a second.
+    recordDomainCalls('acme.com', Math.ceil(85 * 1.16), c, SEP)
+    expect(checkDomainCeiling('acme.com', 85, c, SEP).ok).toBe(true)
+    // Both cycles at the headroom ratio still fit exactly.
+    recordDomainCalls('both.com', Math.ceil(85 * RETRY_HEADROOM), c, SEP)
+    expect(checkDomainCeiling('both.com', 85, c, SEP).ok).toBe(true)
+    // Under the old default of 170, one retry in cycle one refused cycle two.
+    const old = { ...c, maxCallsPerMonth: 170 }
+    recordDomainCalls('old.com', 86, old, SEP)
+    expect(checkDomainCeiling('old.com', 85, old, SEP).ok).toBe(false)
+  })
+
+  it('a third full cycle in the month is refused, as the free tier would refuse it anyway', () => {
+    const c = { maxCallsPerMonth: DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH, ledgerFile: join(dir, 'domain-ceiling.json') }
+    recordDomainCalls('acme.com', 170, c, SEP)
+    expect(checkDomainCeiling('acme.com', 85, c, SEP).ok).toBe(false)
+  })
+
+  it('follows the prompt count in force, so the margin holds at 10 prompts and at 20', () => {
+    expect(ceilingFor(10 * 5)).toBe(120)
+    expect(ceilingFor(20 * 5)).toBe(240)
+    expect(defaultDomainCeilingConfig(dir, { GRADER_PROMPTS_PER_SCAN: '20' } as NodeJS.ProcessEnv).maxCallsPerMonth).toBe(240)
+    expect(defaultDomainCeilingConfig(dir, {} as NodeJS.ProcessEnv).maxCallsPerMonth).toBe(204)
   })
 
   it('is below what one domain would need to exhaust a free engine tier', () => {
@@ -135,8 +167,8 @@ describe('the default is a backstop, not the operating limit', () => {
     expect(perEngine).toBeLessThan(50)
   })
 
-  it('reads its ceiling from the environment, so it can be raised deliberately', () => {
-    const c = defaultDomainCeilingConfig(dir, { GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH: '9' } as NodeJS.ProcessEnv)
+  it('an explicit ceiling in the environment is absolute and wins over the formula', () => {
+    const c = defaultDomainCeilingConfig(dir, { GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH: '9', GRADER_PROMPTS_PER_SCAN: '20' } as NodeJS.ProcessEnv)
     expect(c.maxCallsPerMonth).toBe(9)
   })
 })

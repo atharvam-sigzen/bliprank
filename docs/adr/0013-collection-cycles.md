@@ -274,10 +274,17 @@ from the ledger once more cycles have run, not a constant to trust.
 If a plain number is preferred, 200 has the same properties at 17 prompts and
 none of them at 20.
 
-⚠️ **HUMAN REVIEW REQUIRED: spend control.** Nothing in `domain-ceiling.ts` was
-changed. The recommendation above is for the owner to accept, amend or refuse;
-until then the build is correct under the current default and a second cycle of
-a 17-prompt domain in the same month will most likely be refused by it.
+**Decided 2026-09-02, by the owner: the derived form.** `domain-ceiling.ts`
+now exports `CYCLES_PER_MONTH = 2`, `RETRY_HEADROOM = 1.2` and
+`ceilingFor(cellsPerCycle)`, and the default is `ceilingFor(17 × 5) = 204`.
+`defaultDomainCeilingConfig` derives from `GRADER_PROMPTS_PER_SCAN` when it is
+set, so the margin holds at any prompt count; an explicit
+`GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH` stays absolute. The constant's comment
+now states the margin that exists: the second cycle goes ahead if the first
+realised no more than 119 calls (ratio 1.40), or both run at up to 1.20; a
+third full cycle is refused. Tests pin the formula, the survival of a second
+cycle after a first at the worst observed ratio, and the old default's failure
+on the same input.
 
 ### One more thing the review found, about the provider and not the ceiling
 

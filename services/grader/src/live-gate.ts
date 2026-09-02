@@ -36,6 +36,14 @@ export const USAGE_URL = 'https://api.openwebninja.com/usage'
  */
 export const DEFAULT_CAP_USD = 5
 
+/**
+ * Prompts one scan sends to EVERY engine, when `GRADER_PROMPTS_PER_SCAN` is not
+ * set. Named because the per-domain ceiling derives its default from it: a
+ * cycle is this many prompts times the engine count, and a ceiling that did not
+ * know the number silently shrank to one cycle a month when the number grew.
+ */
+export const DEFAULT_PROMPTS_PER_SCAN = 17
+
 /** Provider api_id -> our EngineId. `ai_answers` is a separate aggregate product. */
 const API_ID: Record<string, EngineId> = {
   chatgpt: 'chatgpt',
@@ -257,7 +265,7 @@ export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = proc
    * sequence.
    */
   maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 12),
-  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 17),
+  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? DEFAULT_PROMPTS_PER_SCAN),
   ledgerFile: join(dataDir, 'live-cap.json'),
   engines: [...ENGINES],
 })

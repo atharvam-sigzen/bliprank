@@ -315,8 +315,9 @@ network the collector will actually deploy into.
 **Cycles (ADR-0013, 2026-09-02):** a domain can be collected again on a later
 UTC day, every cycle is kept (`results/cycles/<domain>/<day>.json`), and the
 workspace record draws a real trend once two exist. A person starts each cycle
-from the record; **there is no scheduler.** The per-domain ceiling's default
-(170) is under human review with a recommendation in the ADR.
+from the record; **there is no scheduler.** The per-domain ceiling's default is
+derived, not fixed: `2 cycles × cells per cycle × 1.2 retry headroom` (204 at
+17 prompts), decided 2026-09-02.
 **Known gap, not urgent:** `/score-version` does not work as written — it points
 at `services/scorer/version.ts`, which does not exist (the constant is
 `SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), and it gates on a
