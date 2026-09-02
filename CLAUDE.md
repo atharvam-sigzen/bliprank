@@ -312,6 +312,11 @@ homepages, not from that sample. Building the labelled 100 is what closes it.
 the classifier thresholds (see ADR-0009 "Open, and blocking G3"), and whether the
 SSRF blocked-range table in `services/grader/src/fetch-site.ts` matches the
 network the collector will actually deploy into.
+**Cycles (ADR-0013, 2026-09-02):** a domain can be collected again on a later
+UTC day, every cycle is kept (`results/cycles/<domain>/<day>.json`), and the
+workspace record draws a real trend once two exist. A person starts each cycle
+from the record; **there is no scheduler.** The per-domain ceiling's default
+(170) is under human review with a recommendation in the ADR.
 **Known gap, not urgent:** `/score-version` does not work as written — it points
 at `services/scorer/version.ts`, which does not exist (the constant is
 `SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), and it gates on a
