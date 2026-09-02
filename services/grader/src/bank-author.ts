@@ -328,16 +328,37 @@ export function parseCandidate(raw: unknown, model: string): GeneratedBank | nul
 }
 
 /** One attempt against an OpenAI-compatible chat-completions endpoint. */
-async function askOpenAiCompatible(input: GenerateInput, model: string): Promise<string> {
-  const doFetch = input.fetchImpl ?? fetch
+/**
+ * ONE TEXT COMPLETION, against whichever host `config` names.
+ *
+ * ⚠️ EXTRACTED FROM `askOpenAiCompatible`, WHICH NOW CALLS IT — not written
+ * beside it. A second copy of this request would be a second place for the
+ * OpenRouter attribution headers, the 200-with-an-error-body case and the
+ * timeout to be got right, and the copy nobody is looking at is the one that
+ * rots. The bank author's behaviour is unchanged: same endpoint, same headers,
+ * same temperature, same absence of `response_format` (see the section above on
+ * why that flag is a trap on a fleet of free models).
+ *
+ * The second caller is the AEO gap drafter (`aeo-audit.ts`), which needs prose
+ * rather than JSON — so the JSON extraction stays where it was, in `authorBank`,
+ * and this returns whatever the model said.
+ */
+export async function askText(
+  config: BankAuthorConfig,
+  model: string,
+  system: string,
+  user: string,
+  opts: { readonly maxTokens?: number; readonly fetchImpl?: typeof fetch } = {},
+): Promise<string> {
+  const doFetch = opts.fetchImpl ?? fetch
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), input.config.timeoutMs)
+  const timer = setTimeout(() => controller.abort(), config.timeoutMs)
   try {
-    const res = await doFetch(`${input.config.baseUrl}/chat/completions`, {
+    const res = await doFetch(`${config.baseUrl}/chat/completions`, {
       method: 'POST',
       signal: controller.signal,
       headers: {
-        Authorization: `Bearer ${input.config.apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
         // OpenRouter's attribution headers. Ignored by every other
         // OpenAI-compatible host, and being identifiable is the correct posture
@@ -353,10 +374,10 @@ async function askOpenAiCompatible(input: GenerateInput, model: string): Promise
         // down once and reused forever, so the reproducibility that matters is
         // the RECORD's, not the sampler's.
         temperature: 0.3,
-        max_tokens: 4_000,
+        max_tokens: opts.maxTokens ?? 4_000,
         messages: [
-          { role: 'system', content: AUTHORING_SYSTEM },
-          { role: 'user', content: userMessage(input) },
+          { role: 'system', content: system },
+          { role: 'user', content: user },
         ],
       }),
     })
@@ -377,6 +398,10 @@ async function askOpenAiCompatible(input: GenerateInput, model: string): Promise
     clearTimeout(timer)
   }
 }
+
+/** The bank author's own call: the authoring system prompt, through `askText`. */
+const askOpenAiCompatible = (input: GenerateInput, model: string): Promise<string> =>
+  askText(input.config, model, AUTHORING_SYSTEM, userMessage(input), { ...(input.fetchImpl ? { fetchImpl: input.fetchImpl } : {}) })
 
 /**
  * One attempt against Anthropic.

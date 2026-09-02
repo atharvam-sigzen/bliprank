@@ -16,7 +16,8 @@
     "demo:dashboard": "pnpm --filter @bliprank/web dev",
     "demo:grader": "pnpm --filter @bliprank/public dev",
     "grader:diagnose": "tsx services/grader/src/diagnose.ts",
-    "grader:promote": "tsx services/grader/src/promote.ts"
+    "grader:promote": "tsx services/grader/src/promote.ts",
+    "grader:aeo": "tsx services/grader/src/aeo.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
