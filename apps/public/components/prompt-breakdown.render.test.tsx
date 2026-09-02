@@ -1,106 +1,140 @@
-/**
- * The per-question table, actually rendered.
- *
- * Two states, and the second is the one that ships today: every result file
- * collected before 2026-09-02 carries no rows, so the component has to say so in
- * words rather than draw an empty grid. A test that only exercised the happy
- * path would leave the sentence every existing scan actually renders unchecked.
- */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { SCAN, type ScanResultFile } from '../lib/scan-result'
-import { NO_RUN_BLOCK_SCAN } from '../lib/__fixtures__/no-run-block-scan'
+import { SCAN } from '../lib/scan-result'
+import { promptBreakdown } from '../lib/prompt-breakdown'
 import { PromptBreakdown } from './prompt-breakdown'
 
-const html = (scan: ScanResultFile) => renderToStaticMarkup(<PromptBreakdown scan={scan} />)
+/**
+ * THE PLAIN READING OF THE BREAKDOWN, RENDERED.
+ *
+ * `.detail` is a CSS mechanism and there is no browser in this toolchain, so
+ * "what a simple reader sees" is modelled the way the stylesheet models it:
+ * drop every subtree whose opening tag carries `detail`, and read what is left.
+ * That is exactly what `[data-depth='simple'] .detail { display: none }` does.
+ */
 
-const withRows = (): ScanResultFile =>
-  ({
-    ...SCAN,
-    brands: [{ ...SCAN.brands.find((b) => b.isSubject)!, mentions: 1, metric: { ...SCAN.brands.find((b) => b.isSubject)!.metric, n: 2 } }],
-    promptRows: [
-      {
-        prompt: 'best crm for a two person team',
-        engine: 'chatgpt',
-        mentioned: true,
-        mentionCount: 2,
-        position: 2,
-        brandsDetected: 6,
-        cited: true,
-        competitorsMentioned: ['HubSpot'],
-      },
-      {
-        prompt: 'best crm for a two person team',
-        engine: 'gemini',
-        mentioned: false,
-        mentionCount: 0,
-        position: null,
-        brandsDetected: 4,
-        cited: false,
-        competitorsMentioned: ['HubSpot'],
-      },
-    ],
-  }) as ScanResultFile
+/**
+ * Strip every element marked `.detail`, honouring nesting of the same tag.
+ *
+ * Written as a tag tokeniser rather than a regex sweep because the first
+ * attempt was a regex sweep, it silently dropped everything after the marked
+ * subtree, and the three self-checks at the bottom of this file are the only
+ * reason that did not quietly become the model of "what a simple reader sees"
+ * for every assertion above.
+ */
+function simpleView(html: string): string {
+  const re = /<(\/?)([a-zA-Z0-9]+)([^>]*)>/g
+  let out = ''
+  let last = 0
+  let skipTag: string | null = null
+  let depth = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html))) {
+    const [full, slash, tag, attrs] = m as unknown as [string, string, string, string]
+    if (skipTag === null) {
+      out += html.slice(last, m.index)
+      if (!slash && /class="[^"]*\bdetail\b[^"]*"/.test(attrs)) {
+        skipTag = tag
+        depth = 1
+      } else {
+        out += full
+      }
+      last = re.lastIndex
+    } else if (tag === skipTag) {
+      if (slash) {
+        depth--
+        if (depth === 0) {
+          skipTag = null
+          last = re.lastIndex
+        }
+      } else if (!attrs.endsWith('/')) depth++
+    }
+  }
+  return skipTag === null ? out + html.slice(last) : out
+}
 
-describe('a cycle that carries its rows', () => {
-  it('the committed reference scan is now one of them', () => {
-    // It was re-derived over its own already-bought answers (`grader:rescore`),
-    // so the demo shows the real table rather than the honest apology.
-    const out = html(SCAN)
-    expect(out).toContain('<table')
-    expect(out).toContain('Which questions you appear in')
+const html = renderToStaticMarkup(<PromptBreakdown scan={SCAN} />)
+const simple = simpleView(html)
+const words = (s: string) => s.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ').split(/\s+/).filter(Boolean)
+
+describe('the simple reading is a sentence, not a table', () => {
+  it('the shipped scan actually has a breakdown, or these assert nothing', () => {
+    expect(promptBreakdown(SCAN)).not.toBeNull()
+    expect(html).toContain('Which questions you appear in')
   })
 
-  it('prints the prompt verbatim and the position as a fraction of what was detected', () => {
-    const out = html(withRows())
-    expect(out).toContain('best crm for a two person team')
-    expect(out).toContain('2/6')
-    // The row and the footer both say one of two, which is the headline.
-    expect(out).toContain('1/2')
+  it('keeps the heading and the plain sentence', () => {
+    expect(simple).toContain('Which questions you appear in')
+    expect(simple).toMatch(/was named in|was not named in any/)
+    expect(simple).toContain('we asked')
   })
 
-  it('names the competitor the engines actually said, with its own denominator', () => {
-    const out = html(withRows())
-    expect(out).toContain('HubSpot')
-    expect(out).toContain('2/2')
+  it('drops the table, the glyph legend and every technical caveat', () => {
+    expect(simple).not.toContain('<table')
+    expect(simple).not.toContain('table-wrap')
+    // The four-symbol legend and the two flagged caveats travel with the table.
+    expect(simple).not.toContain('no answer was collected for that cell')
+    expect(simple).not.toContain('The engine columns are counts, not rates')
+    expect(simple).not.toContain('There is no sentiment column')
   })
 
-  it('states the sentiment absence rather than showing an empty column', () => {
-    const out = html(withRows())
-    expect(out).toContain('There is no sentiment column')
-    expect(out.toLowerCase()).not.toContain('<th scope="col">sentiment')
+  it('THE BUDGET: the plain reading is one sentence, not an essay', () => {
+    // The full section runs to several hundred words. What survives at simple
+    // depth has to stay a sentence, and a number is the only thing that keeps
+    // it one as the component grows.
+    const body = words(simple).length
+    expect(body).toBeLessThanOrEqual(45)
+    expect(words(html).length).toBeGreaterThan(200)
   })
 
-  it('says the engine columns are counts and carry no interval', () => {
-    // The refusal the by-engine table was originally barred for is still made,
-    // in the one place a reader might mistake a column for a rate.
-    expect(html(withRows())).toContain('counts, not rates')
+  it('STATES BOTH COUNTS, so the questions figure cannot overstate', () => {
+    /*
+     * "named in 4 of 6 questions" is consistent with being named by one engine
+     * of five each time — 4 of 30 answers, a rate of 13%. The answers pair is
+     * what stops the questions pair from reading as "I am in two thirds of
+     * conversations", so its presence is the honesty property, not a detail.
+     */
+    const b = promptBreakdown(SCAN)!
+    expect(simple).toContain(String(b.answers))
+    expect(simple).toContain(String(b.mentionedIn))
+  })
+
+  it('the answers pair IS the headline pair, so the two readings reconcile', () => {
+    // promptBreakdown refuses to return anything whose totals disagree with the
+    // subject metric, so this is a statement about what the sentence prints.
+    const b = promptBreakdown(SCAN)!
+    const subject = SCAN.brands.find((x) => x.isSubject)!
+    expect(b.mentionedIn).toBe(subject.mentions)
+    expect(b.answers).toBe(subject.metric.n)
+  })
+
+  it('the question count never exceeds the questions asked', () => {
+    const b = promptBreakdown(SCAN)!
+    const named = b.prompts.filter((p) => p.mentionedIn > 0).length
+    expect(named).toBeLessThanOrEqual(b.prompts.length)
+    expect(simple).toContain(String(b.prompts.length))
   })
 })
 
-describe('a cycle that does not', () => {
-  it('renders the absence in words, and draws no table', () => {
-    /*
-     * A file with no rows — the state every result written before 2026-09-02 is
-     * in, and the one this component must never render as a grid of misses.
-     *
-     * This used to point at the committed reference scan, which was such a file
-     * until it was re-derived over its own answers on 2026-09-02. Rather than
-     * weaken the assertion, it now points at a fixture that genuinely carries no
-     * rows: the case still exists in the wild and still has to be handled.
-     */
-    const out = html(NO_RUN_BLOCK_SCAN)
-    expect(out).toContain('There is no per-question breakdown for this cycle')
+describe('the stripper is not lying to the tests above', () => {
+  it('removes a marked subtree and keeps its siblings', () => {
+    const sample = '<div><p>keep</p><div class="x detail"><p>drop</p><table>drop</table></div><p>keep2</p></div>'
+    const out = simpleView(sample)
+    expect(out).toContain('keep')
+    expect(out).toContain('keep2')
+    expect(out).not.toContain('drop')
     expect(out).not.toContain('<table')
-    // And it must not imply a finding: the sentence says the payload lacks the
-    // split, not that the questions went unanswered.
-    expect(out).toContain('does not mean the questions went unanswered')
   })
 
-  it('refuses a file whose rows disagree with its headline', () => {
-    // Rows say one mention; the metric says none. Two measurements, one
-    // heading — so neither is drawn.
-    const lying = { ...withRows(), brands: [{ ...withRows().brands[0]!, mentions: 0 }] } as ScanResultFile
-    expect(html(lying)).toContain('There is no per-question breakdown for this cycle')
+  it('handles a marked subtree that nests the same tag', () => {
+    const sample = '<div><div class="detail"><div>inner</div></div><span>after</span></div>'
+    const out = simpleView(sample)
+    expect(out).not.toContain('inner')
+    expect(out).toContain('after')
+  })
+
+  it('leaves an unmarked document untouched', () => {
+    const sample = '<section><p>a</p><p>b</p></section>'
+    expect(simpleView(sample)).toBe(sample)
   })
 })

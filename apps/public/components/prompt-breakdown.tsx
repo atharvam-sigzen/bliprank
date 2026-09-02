@@ -1,6 +1,8 @@
 'use client'
 
-import { byEngine, promptBreakdown } from '@/lib/prompt-breakdown'
+import { useState } from 'react'
+import { answerKey, indexAnswers, loadAnswers, type AnswerIndex, type StoredAnswer } from '@/lib/answers'
+import { byEngine, promptBreakdown, type BreakdownLine } from '@/lib/prompt-breakdown'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 /**
@@ -58,16 +60,83 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
   const engines = byEngine(breakdown)
   const subject = subjectOf(scan)
 
+  /*
+   * THE PLAIN READING — two counts, no estimate, no threshold.
+   *
+   * A question counts as one you appeared in when at least one engine named you
+   * in its answer to it. That is a count of rows, exactly like everything else
+   * in this component, and it is the shape of the question a brand owner
+   * actually arrives with: not "what is my rate" but "where do I come up".
+   *
+   * ⚠️ THE SECOND COUNT IS LOAD-BEARING, NOT DECORATION. "Named in 4 of 6
+   * questions" alone reads as "I am in two thirds of conversations", and it is
+   * consistent with being named by one engine out of five each time — 4 of 30
+   * answers, a rate of 13%. Printing both counts side by side is what stops the
+   * first from overstating, and it costs one clause. The answers pair is also
+   * the headline's own numerator and denominator, so the two readings of this
+   * cycle are visibly the same measurement rather than two that must be
+   * reconciled on trust.
+   */
+  const questionsNamedIn = breakdown.prompts.filter((p) => p.mentionedIn > 0).length
+  const questions = breakdown.prompts.length
+  const q = (n: number) => `${n} ${n === 1 ? 'question' : 'questions'}`
+
   return (
-    <section className="section detail" aria-labelledby="breakdown-heading">
+    <section className="section" aria-labelledby="breakdown-heading">
       <h2 id="breakdown-heading">Which questions you appear in</h2>
 
+      {/* BOTH DEPTHS. Not a simple-only element — a rule that showed something
+          only under `simple` would have to key on the attribute's absence or on
+          `detailed`, and ADR-0010 forbids both so a no-JavaScript reader never
+          loses anything. It reads as the section's opening sentence at either
+          depth, which is what it is. */}
       <p className="prose">
-        {subject.name} was named in <span className="num">{breakdown.mentionedIn}</span> of{' '}
-        <span className="num">{breakdown.answers}</span> answers — the same numerator and the same denominator as the rate above, listed out
-        rather than summarised. {breakdown.prompts.length} questions, each asked on {breakdown.engines.length}{' '}
-        {breakdown.engines.length === 1 ? 'surface' : 'surfaces'}. Every cell below is one answer that was actually collected and scored.
+        {questionsNamedIn === 0 ? (
+          <>
+            {subject.name} was not named in any of the <span className="num">{q(questions)}</span> we asked, across all{' '}
+            <span className="num">{breakdown.answers}</span> answers they produced.
+          </>
+        ) : questionsNamedIn === questions ? (
+          <>
+            {subject.name} was named in all <span className="num">{q(questions)}</span> we asked, and in{' '}
+            <span className="num">
+              {breakdown.mentionedIn} of the {breakdown.answers}
+            </span>{' '}
+            answers they produced.
+          </>
+        ) : (
+          <>
+            {subject.name} was named in{' '}
+            <span className="num">
+              {questionsNamedIn} of the {q(questions)}
+            </span>{' '}
+            we asked, and in{' '}
+            <span className="num">
+              {breakdown.mentionedIn} of the {breakdown.answers}
+            </span>{' '}
+            answers they produced.
+          </>
+        )}
       </p>
+
+      {/*
+        EVERYTHING TECHNICAL, UNDER ONE MARK.
+
+        Grouping rather than sprinkling `.detail` over six elements, and that is
+        the rule's natural shape rather than a convenience: ADR-0010 says a block
+        is detail when hiding it removes no mark, which is a statement about a
+        mark AND ITS EXPLANATION travelling together. A wrapper says exactly
+        that. It also means the two `prose--flag` caveats inside never carry
+        `.detail` themselves — depth.test.ts refuses that pairing, because a
+        flagged paragraph is normally a caveat about a VISIBLE number, and these
+        two are caveats about the table above them, which goes when they do.
+      */}
+      <div className="detail">
+        <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
+          The same numerator and the same denominator as the rate above, listed out rather than summarised.{' '}
+          {breakdown.prompts.length} questions, each asked on {breakdown.engines.length}{' '}
+          {breakdown.engines.length === 1 ? 'surface' : 'surfaces'}. Every cell below is one answer that was actually collected and scored.
+        </p>
 
       <div className="table-wrap" style={{ marginTop: 'var(--space-4)' }}>
         <table>
@@ -192,11 +261,155 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
         </p>
       )}
 
+      <Evidence scan={scan} lines={breakdown.prompts} subjectName={subject.name} />
+
       <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
         There is no sentiment column. Sentiment is the one signal a model is allowed to produce here, on a sampled basis, and that pass is not
         built — so no answer in this cycle carries one. An empty column would read as &ldquo;neutral&rdquo;, which is a finding this scan did
         not make.
       </p>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * ⚠️ THE ACTUAL ANSWERS. Every number above is derived from these, and this is
+ * where a reader stops trusting the derivation and reads the input.
+ *
+ * NOT LOADED UNTIL ASKED. Measured: this scan's answer text is 191 KB raw and
+ * 64 KB gzipped, against 2.5 KB for the whole result file. It sits behind a
+ * button and a dynamic import so a visitor who never opens it never downloads
+ * it — see `lib/answers.ts` for why that trade is made rather than assumed.
+ *
+ * ⚠️ VERBATIM AND WHOLE. No excerpt, no highlight, no "relevant portion". An
+ * excerpt is us choosing which part of the evidence a reader sees, and the
+ * answers that do NOT name the brand are exactly as load-bearing as the ones
+ * that do — they are the denominator.
+ *
+ * ⚠️ AND NO HIGHLIGHTING OF THE MATCH, which is a decision rather than an
+ * omission. Marking where the scorer matched would mean re-running a matcher in
+ * the browser over the RAW text, while the real one runs over a normalised form
+ * with URL masking and whole-token boundaries. The two would disagree
+ * eventually, and a highlight that contradicts the verdict beside it is worse
+ * than no highlight: it teaches a reader that the evidence and the number are
+ * two different things. The reader has ctrl-F, which is exactly as good and
+ * cannot drift.
+ *
+ * ⚠️ WHICH MEANS THIS IS ALSO HOW WE GET CAUGHT. A reader who finds their brand
+ * in an answer we scored as a miss has found a false zero — the defect that
+ * published `thecosmicbyte.com` as mentioned in 0 of 50 answers while the
+ * engines wrote "Cosmic Byte" 139 times. That is the point. It is the only
+ * check on this instrument that does not come from us.
+ */
+function Evidence({ scan, lines, subjectName }: { scan: ScanResultFile; lines: readonly BreakdownLine[]; subjectName: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'refused'>('idle')
+  const [index, setIndex] = useState<AnswerIndex | null>(null)
+  const [message, setMessage] = useState('')
+
+  async function open() {
+    setState('loading')
+    const got = await loadAnswers(scan)
+    if (!got.ok) {
+      setMessage(got.message)
+      setState('refused')
+      return
+    }
+    setIndex(indexAnswers(got.answers))
+    setState('ready')
+  }
+
+  if (state === 'idle' || state === 'loading') {
+    return (
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <button type="button" className="btn btn--quiet" onClick={() => void open()} disabled={state === 'loading'}>
+          {state === 'loading' ? 'Opening the answers…' : 'Read what the engines actually said'}
+        </button>
+        <p className="prose" style={{ marginTop: 'var(--space-2)' }}>
+          Every figure above is counted from these answers. They are not loaded until you ask, because they are considerably larger than the rest
+          of this page — press the button and you can read any of the {lines.length} questions exactly as {scan.domain} was answered, word for
+          word, including the ones where {subjectName} was not named.
+        </p>
+      </div>
+    )
+  }
+
+  if (state === 'refused') {
+    return (
+      <p className="prose prose--flag" style={{ marginTop: 'var(--space-4)' }}>
+        {message}
+      </p>
+    )
+  }
+
+  const held = index!
+  const expected = lines.reduce((n, l) => n + l.answers, 0)
+  const got = [...held.values()].reduce((n, a) => n + a.length, 0)
+
+  return (
+    <section style={{ marginTop: 'var(--space-4)' }}>
+      <p className="prose">
+        {/* Counted against what the rows expect, so a short evidence set is a
+            stated shortfall rather than a quietly shorter list. */}
+        {got === expected ? (
+          <>
+            All <span className="num">{expected}</span> answers behind the table above, verbatim. Open a question to read what each engine wrote.
+          </>
+        ) : (
+          <>
+            <span className="num">{got}</span> of the <span className="num">{expected}</span> answers behind the table above could be read back.
+            The rest are not in this build&apos;s store; nothing is substituted for them.
+          </>
+        )}
+      </p>
+
+      {lines.map((line) => (
+        <details key={line.prompt} className="evidence">
+          <summary className="evidence__q">
+            <span className="evidence__prompt">{line.prompt}</span>
+            <span className="num evidence__count">
+              {line.mentionedIn}/{line.answers}
+            </span>
+          </summary>
+          {line.cells.map((cell, i) => {
+            const found = held.get(answerKey(line.prompt, cell.engine)) ?? []
+            const answer: StoredAnswer | undefined = found[0]
+            return (
+              <article className="evidence__a" key={`${cell.engine}-${i}`}>
+                <p className="evidence__head">
+                  <span className="evidence__engine">{cell.engine}</span>
+                  <span className="num">
+                    {cell.mentioned ? `${subjectName} named — ${cell.position} of ${cell.brandsDetected} brands` : `${subjectName} not named`}
+                    {cell.brandsDetected > 0 && !cell.mentioned ? ` · ${cell.brandsDetected} other named` : ''}
+                  </span>
+                </p>
+                {!answer ? (
+                  <p className="prose prose--flag">The text of this answer is not in this build&apos;s store, so it cannot be shown.</p>
+                ) : answer.empty ? (
+                  /* ⚠️ AN ABSENT ANSWER IS NOT A SILENT ONE, and a blank box
+                     would say the wrong one of those. Every empty answer in this
+                     corpus is a google-ai-overviews cell where Google showed no
+                     overview at all. It is still counted in the denominator
+                     above — a scoring rule, and a human's to change — so the
+                     honest thing is to say exactly that, here, next to it. */
+                  <p className="prose prose--flag">
+                    This engine returned no answer at all for this question — there was no AI answer to be named in, rather than an answer that
+                    did not name {subjectName}. It is still counted in the {line.answers} above, which is why the two facts are worth telling
+                    apart.
+                  </p>
+                ) : (
+                  /* tabIndex: the block scrolls, and a scrollable region that cannot be
+                     reached by keyboard is unreachable for anyone not using a mouse
+                     (WCAG 2.1.1). aria-label because "pre" announces nothing. */
+                  <pre className="evidence__text" tabIndex={0} aria-label={`${cell.engine} answer, verbatim`}>
+                    {answer.text}
+                  </pre>
+                )}
+              </article>
+            )
+          })}
+        </details>
+      ))}
     </section>
   )
 }
