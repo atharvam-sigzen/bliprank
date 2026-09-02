@@ -25,8 +25,8 @@ import { AnswerIndex } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { DEMO_BANKS } from '@bliprank/taxonomy'
 import { FileKV } from './local-store.js'
-import { auditPathFor, basisOf, planRescore, storedResults } from './rescore.js'
-import { cellsFor } from './scan.js'
+import { auditPathFor, planRescore, storedResults } from './rescore.js'
+import { basisOf, cellsFor } from './scan.js'
 
 const dirs: string[] = []
 const tmp = (): string => {

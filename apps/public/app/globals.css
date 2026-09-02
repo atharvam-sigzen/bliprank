@@ -3312,3 +3312,89 @@ h3.record__title,
 [data-depth='simple'] .note {
   font-size: 0.71875rem;
 }
+
+/* ==========================================================================
+   THE EVIDENCE — an answer, as the engine wrote it
+   ==========================================================================
+
+   Set apart from the record's own voice on purpose. Everything else on this
+   page is ours; this is somebody else's text quoted whole, and it should not
+   be able to be mistaken for our prose. Mono, indented, and never styled to
+   look authored. */
+.evidence {
+  border-top: var(--hairline);
+  padding: var(--space-3) 0;
+}
+
+.evidence:last-of-type {
+  border-bottom: var(--hairline);
+}
+
+.evidence__q {
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  list-style: none;
+}
+
+.evidence__q::-webkit-details-marker {
+  display: none;
+}
+
+.evidence__q::before {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-muted-foreground);
+  flex: none;
+}
+
+.evidence[open] > .evidence__q::before {
+  content: '−';
+}
+
+.evidence__prompt {
+  flex: 1;
+}
+
+.evidence__count {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  flex: none;
+}
+
+.evidence__a {
+  margin: var(--space-3) 0 var(--space-3) var(--space-4);
+}
+
+.evidence__head {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  margin: 0 0 var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+
+.evidence__engine {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The answer itself. `pre-wrap` because it is markdown as the engine emitted
+   it: the line breaks are the engine's and re-flowing them would be editing. */
+.evidence__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--color-muted);
+  border-radius: 2px;
+  max-height: 30rem;
+  overflow-y: auto;
+}

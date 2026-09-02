@@ -57,7 +57,7 @@ import { loadApiKey } from './load-key.js'
 import { FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { runGrader } from './run.js'
-import { cellsFor } from './scan.js'
+import { basisOf, cellsFor } from './scan.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
@@ -134,41 +134,6 @@ interface Plan {
   readonly missing: readonly string[]
 }
 
-/**
- * The scope of the measurement being re-derived, read off its own
- * `comparison_basis`.
- *
- * ⚠️ NOT TODAY'S GATE SETTING, AND THIS IS NOT A DETAIL.
- *
- * `comparisonBasisFor` stamps `unprompted=N` and `engines=...` into every metric
- * precisely because a scan over 17 prompts and a scan over 10 are not
- * measurements of the same thing. `GRADER_PROMPTS_PER_SCAN` is a knob that moves
- * — it is temporarily 10 while domains are being tested, against the 17
- * pipedrive.com was actually collected over.
- *
- * Re-deriving under today's knob would quietly republish pipedrive on 50 answers
- * instead of 85, widening its interval, changing its basis, and doing both for
- * no reason a reader of the file could ever discover. A re-score changes the
- * DERIVATION over answers that have not changed; the moment it changes the
- * sample too, it is a new scan wearing an old file's name.
- *
- * Absent or malformed, the caller's default applies — a file that never recorded
- * its scope cannot have it recovered, and guessing narrow is as wrong as
- * guessing wide.
- */
-export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number; readonly engines?: readonly EngineId[] } {
-  const parts = (comparisonBasis ?? '').split('|')
-  const prompts = Number(parts.find((p) => p.startsWith('unprompted='))?.slice('unprompted='.length))
-  const engineList = parts
-    .find((p) => p.startsWith('engines='))
-    ?.slice('engines='.length)
-    .split(',')
-    .filter((e): e is EngineId => (ENGINES as readonly string[]).includes(e))
-  return {
-    ...(Number.isInteger(prompts) && prompts > 0 ? { maxPrompts: prompts } : {}),
-    ...(engineList && engineList.length > 0 ? { engines: engineList } : {}),
-  }
-}
 
 /**
  * What a re-score of this domain would need, and whether the store already has

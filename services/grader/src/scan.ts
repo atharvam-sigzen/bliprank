@@ -34,7 +34,7 @@
  *    "not comparable" for every row.
  */
 
-import { cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
+import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
 import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
@@ -349,6 +349,35 @@ export function cellsFor(
     }
   }
   return out
+}
+
+/**
+ * The inverse of `comparisonBasisFor`: the scope a stored measurement was taken
+ * over, read back off its own basis string.
+ *
+ * ⚠️ IT LIVES BESIDE THE FUNCTION THAT WRITES THE STRING, deliberately. One
+ * function builds `engines=...|unprompted=N` and one takes it apart, and a
+ * parser that drifts from its writer silently recovers the wrong scope — which
+ * on the re-score path means republishing an 85-answer measurement as a
+ * 50-answer one, and on the evidence path means showing a reader answers from a
+ * scan other than the one they are looking at.
+ *
+ * Absent or malformed yields nothing and the caller supplies its own default. A
+ * file that never recorded its scope cannot have it recovered, and guessing
+ * narrow is as wrong as guessing wide.
+ */
+export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number; readonly engines?: readonly EngineId[] } {
+  const parts = (comparisonBasis ?? '').split('|')
+  const prompts = Number(parts.find((p) => p.startsWith('unprompted='))?.slice('unprompted='.length))
+  const engineList = parts
+    .find((p) => p.startsWith('engines='))
+    ?.slice('engines='.length)
+    .split(',')
+    .filter((e): e is EngineId => (ENGINE_IDS as readonly string[]).includes(e))
+  return {
+    ...(Number.isInteger(prompts) && prompts > 0 ? { maxPrompts: prompts } : {}),
+    ...(engineList && engineList.length > 0 ? { engines: engineList } : {}),
+  }
 }
 
 export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanResult> {
