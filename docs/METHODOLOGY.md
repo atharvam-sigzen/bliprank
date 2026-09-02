@@ -5,7 +5,7 @@
 > no evidence and only 6 publish a checkable method. This page is why we are in the
 > second group.
 
-*Scoring algorithm version: `0.1.0` · Last updated: 2026-08-22*
+*Scoring algorithm version: `det-2` · Last updated: 2026-09-02*
 
 ---
 
@@ -14,14 +14,13 @@
 For a defined set of prompts, in a defined set of engines, from defined regions,
 over a defined window, we measure how often and how prominently a brand appears.
 
-Four distinct signals, never collapsed into one undefined score:
+Three distinct signals, never collapsed into one undefined score:
 
 | Signal | Definition |
 |---|---|
 | **Mention** | Brand name (or a registered alias) appears in the answer text |
 | **Citation** | A link to a brand-owned domain appears in the answer's references |
-| **Prominence** | Where in the answer the first mention falls |
-| **Framing** | Whether the mention is positive, neutral or negative |
+| **Prominence** | Where in the answer the first mention falls, as a rank among the brands that answer named |
 
 ## How we report
 
@@ -40,10 +39,14 @@ change".** We do not draw an arrow for noise.
 
 Mention, citation, prominence and competitor detection are computed on **100%** of
 runs using deterministic rules — alias matching and URL extraction. They are
-reproducible: the same input produces the same output, every time.
+reproducible: the same input produces the same output, every time. No language
+model is called anywhere in scoring.
 
-Framing is estimated on a **25% sample** using a language model, because no rule
-expresses it well. Sampled fields are labelled as sampled everywhere they appear.
+**We do not measure framing or sentiment.** A sampled, model-scored framing
+signal is designed (25% of runs, labelled as sampled wherever it appears) and it
+is not built. Until it ships, no number on any BlipRank surface describes tone,
+and where a sentiment column might be expected the page says that it is absent
+rather than leaving a blank that reads as "neutral".
 
 ## Collection paths — disclosed
 
@@ -115,9 +118,14 @@ questions than avoid them.
 
 ## Changelog
 
+The version is the identifier stamped on every score row and printed beside
+every number as `algo`. Earlier revisions of this page carried a `0.1.0` that
+was never stamped on anything; the stamped identifier is the one that counts.
+
 | Version | Date | Change | Effect on historical comparison |
 |---|---|---|---|
-| 0.1.0 | 2026-08-18 | Initial release | n/a |
+| det-1 | 2026-08-22 | Deterministic scorer: mention, citation, prominence, competitor detection, citation source class | n/a |
+| det-2 | 2026-09-01 | Brand forms are also derived from a domain that runs its words together, with the site title as corroboration; a compound-named brand had scored zero | A brand's rate can differ between versions; `compare()` refuses to compare rows stamped differently, and a result re-derived from stored answers keeps its det-1 row as an audit file |
 
 Historical scores are never recomputed. When the algorithm changes, new rows are
 written and charts show a version boundary.
