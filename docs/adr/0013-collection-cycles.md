@@ -89,7 +89,19 @@ Two things refuse a new cycle before any gate, spending nothing:
   under, and the record is the only thing that guarantees it. Without one,
   collecting would mean deciding a category today. Refused as `no-record`
   rather than re-derived: two cycles measured under different questions are not
-  a trend.
+  a trend. A recorded slug with no bank in the build is refused the same way,
+  as `no-bank`.
+- **A basis the trend could not use.** The prompt count and the engine set are
+  the two parts of the basis the environment controls, and a cycle bought at
+  10 prompts beside one bought at 17 is a point `compare()` refuses and the
+  chart breaks at: a whole cycle's spend for a point nothing can be drawn
+  through. Both September scans on disk were bought at 10 while the reference
+  cycle is 17. Refused as `basis-mismatch`, naming the setting to change. The
+  bank version is deliberately not checked: a promoted competitor set is a
+  deliberate act, and refusing every cycle after it would freeze the domain.
+- **A prompt count that cannot size a scan.** `GRADER_PROMPTS_PER_SCAN=0` or a
+  non-number passed both gates (needing nothing) and then ran the whole bank,
+  because the runner drops a falsy limit. Refused as `config`, on both paths.
 
 With a record, `runGrader` resolves the category through `resolveCategory`,
 whose rung 0 returns the recorded decision before anything can fetch or author,
@@ -146,10 +158,12 @@ cycle into the latest file after re-deriving it.
 - **No scheduler.** `SCHEDULE_FACT` now reads "daily (intended); nothing
   schedules a cycle yet, a person starts each one from the workspace record",
   identically in both apps. A cycle recurs when someone presses the button.
-- **The client registry is per browser.** A cycle collected in one browser is
-  invisible in another until its JSON is bundled, exactly as before. The
-  server's store holds every cycle; a `/api/cycles` route that lists it for the
-  client is the obvious next step and is not built here.
+- **The client registry syncs from the server once, on load.** `/api/cycles`
+  lists every cycle the machine holds for a domain and the record remembers
+  what it lacks, so a run that finished after the tab closed, another browser,
+  or cleared site data all recover. On the static deployment the route does
+  not exist and nothing is added or claimed, so there the registry is still
+  per browser plus the bundled cycle.
 - **The static deployment collects nothing.** On Cloudflare Pages there is no
   route, the button's request 404s, and the record says so in words.
 - **The prompt breakdown and head-to-head show the latest cycle only.** Earlier
@@ -209,6 +223,38 @@ says so, and probing for the route before render would add a request to every
 page load); and the client registry's growth of roughly 33 KB per cycle with
 prompt rows, which the answers module already documents as the reason evidence
 is fetched rather than stored.
+
+## The second review, on the whole feature
+
+After the fixes above, a fresh reviewer walked the feature as a system that one
+paid run would exercise, from the button to the trend, and read the ADR against
+the code. Two findings stood up as MAJOR and both were fixed before anything
+was committed further.
+
+| Finding | What could happen | What changed |
+|---|---|---|
+| A second cycle's basis was never checked before spending | With `GRADER_PROMPTS_PER_SCAN` at 10 on the scan server (as it was for both September scans) and the reference cycle at 17, the run would have bought a whole cycle that `compare()` refuses and the chart breaks at, with a `≠` and a generic gloss that never names the prompt count. | The route refuses `basis-mismatch` before the gates, naming the setting and the value that would make the cycle comparable; the record's gloss now opens the basis string and says which segment differs. Tested with a 10-prompt prior against a 17-prompt server, then with the server set to match. |
+| A cycle that finished after the browser disconnected was unreachable from any screen | The server filed it; the client never received the result; on reload the record said one cycle and the button said "already collected today", and the Grader short-circuits bundled domains before the route's cache could serve it. | `/api/cycles` lists the server's cycles and the record syncs from it once on load, remembering what the browser lacks. Same fix covers another browser and cleared site data. A 404 on the static deployment adds nothing. |
+| `GRADER_PROMPTS_PER_SCAN=0` ran the whole bank past both gates | The ceiling needed 0, the quota gate compared against 0, and the runner dropped the falsy limit. Pre-existing on the gate. | The route refuses `config` before either path. |
+| Rescore planned an earlier-category cycle under the record's bank | The fix applied to the evidence reader had not been mirrored, so such a cycle reported every cell MISSING and was skipped. | `planRescore` uses the cycle's own category; the record must still exist. Tested. |
+| The render sweep did not see cycle files | `results/cycles/` was never descended. | It is. |
+| Copy: "spends real provider quota for 85 requests, as the latest cycle did" | The reference domain's latest is a rescore row that made no calls, and the next cycle's size is the server's to know. | Reworded: one request per prompt per engine, plus retries. |
+| `NewCycle` reported a collection failure as "status no-answers" | Every-request-failed, the shape a quota exhaustion takes part-way, read as a neutral outcome while the calls were booked. | Named as a collection failure, with the booking stated. |
+| The integration test's header overstated its fetch stub | The homepage fetcher uses undici's own client, which a global stub does not cover. | The header says what the stub covers and what the category assertion proves instead. |
+
+Held on inspection, with what convinced the reviewer: the record path (rung 0
+first, `recordCategory` refuses overwrite, same subject id, engines sorted
+identically, so with the prompt count matched the basis is byte-equal);
+rescore over cycle files with the latest re-mirrored; R8 on every new surface;
+the ceiling arithmetic (119 admitted, 120 refused, 240 at 20 prompts, an
+explicit override winning); the integration test's mock being load-bearing
+(blobs stamped `fixture:chatgpt`, zero fetch calls; with the mock removed the
+same run makes 15 stubbed fetches and ends `no-answers`); every copy sentence
+matching the code. Two notes were left as they are: the route defaults the
+price plan to `payg` when `OPENWEBNINJA_PLAN` is unset, so a free-tier cycle
+prints a pay-as-you-go cost, which predates this feature; and
+`PROMPTS_PER_CYCLE` in `apps/public/lib/workspace.ts` is a second copy of the
+default prompt count that does not follow the environment.
 
 ## The per-domain ceiling, reviewed
 
