@@ -3,7 +3,7 @@ import { Headline } from '@/components/headline'
 import { MetricCard, DeltaBadge } from '@/components/metric-card'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { ProductBar } from '@/components/chrome'
-import { BY_ENGINE, ENGINES, HEADLINE, SOURCE_MIX, TREND } from '@/lib/fixtures'
+import { BY_ENGINE, CYCLE_DATES, CYCLE_SHAPE, ENGINES, HEADLINE, SOURCE_MIX, TREND } from '@/lib/fixtures'
 import { NO_SCHEDULER_NOTE, PLANNED_CAPTION, Planned } from '@/lib/planned'
 
 export default function Dashboard() {
@@ -15,10 +15,16 @@ export default function Dashboard() {
         <div>
           <h1>Acme CRM — AI search visibility</h1>
           {/* THE SAMPLE SHAPE IS DETAIL; THE DATES ARE NOT.
-              "30 prompts × 5 runs × 5 engines" is mono technical shorthand — the
-              auditor's field. The dates either side of it are the reader's, and
-              "compared with 2026-08-01" explains the delta badges below, which
-              stay drawn at both depths, so by ADR-0010's rule it stays too.
+              The prompts × runs × engines line is mono technical shorthand —
+              the auditor's field. The dates either side of it are the reader's,
+              and "compared with" explains the delta badges below, which stay
+              drawn at both depths, so by ADR-0010's rule it stays too.
+
+              EVERY FIGURE HERE IS READ FROM THE FIXTURE, none typed. The line
+              used to be a literal, and it claimed 30 × 5 × 5 = 750 answers over
+              cards carrying n = 150 — a sentence a reader could multiply out
+              and catch us on. It now states the same constants the denominators
+              are built from, so the arithmetic cannot drift apart again.
 
               The comment sits OUT here rather than inside the element:
               planned.test.ts asserts `<Planned />` within 240 characters of the
@@ -27,7 +33,12 @@ export default function Dashboard() {
               window without changing the rendered page. The test was right and
               the first version of this edit was not. */}
           <p className="cycle">
-            Cycle 2026-08-15<span className="detail"> · 30 prompts × 5 runs × 5 engines</span> · compared with 2026-08-01 <Planned />
+            Cycle {CYCLE_DATES.current}
+            <span className="detail">
+              {' '}
+              · {CYCLE_SHAPE.prompts} prompts × {CYCLE_SHAPE.runs} runs × {CYCLE_SHAPE.engines} engines
+            </span>{' '}
+            · compared with {CYCLE_DATES.previous} <Planned />
           </p>
         </div>
       </header>
