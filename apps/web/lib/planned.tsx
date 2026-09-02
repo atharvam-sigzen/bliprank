@@ -19,7 +19,7 @@ export const NO_SCHEDULER_NOTE =
   'Recurring collection is not built yet. These cycles were not collected on a schedule and no scheduler exists; a run happens only when a person starts one. The interval maths and the significance rules shown here are the real ones.'
 
 /** The `Schedule` row of a workspace record: the intended cadence, and the truth about it. */
-export const SCHEDULE_FACT = 'daily (intended); nothing schedules a cycle yet'
+export const SCHEDULE_FACT = 'daily (intended); nothing schedules a cycle yet, a person starts each one from the workspace record'
 
 /** Presented exactly as `score__flag` is: mono, uppercase, small, amber-bordered. */
 export function Planned() {

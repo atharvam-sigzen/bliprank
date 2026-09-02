@@ -35,7 +35,7 @@ describe('every component duplicated across the boundary is pinned', () => {
    * Nothing caught it because nothing looked. A copy with no pin is a copy that
    * will differ; the only question is when somebody notices.
    */
-  const PINNED = ['theme.tsx', 'headline.tsx', 'range-rail.tsx']
+  const PINNED = ['theme.tsx', 'headline.tsx', 'range-rail.tsx', 'ci-trend-chart.tsx']
 
   /**
    * Same basename on both sides, DIFFERENT ON PURPOSE — so the rule below

@@ -63,7 +63,7 @@
  * checking our arithmetic would be checking it against the wrong input.
  */
 
-import { BUNDLED_SCANS, type ScanResultFile } from '@/lib/scan-result'
+import { BUNDLED_SCANS, runInfoOf, type ScanResultFile } from '@/lib/scan-result'
 
 export interface StoredAnswer {
   readonly prompt: string
@@ -177,9 +177,14 @@ const typedDomain = (d: string) => d.trim().toLowerCase().replace(/^www\./, '')
  * matching domain is not a matching measurement.
  */
 export function evidenceUrl(scan: ScanResultFile): string {
-  return BUNDLED_SCANS.some((b) => typedDomain(b.domain) === typedDomain(scan.domain))
-    ? '/scan-answers.json'
-    : `/api/answers?domain=${encodeURIComponent(scan.domain)}`
+  // Membership by IDENTITY, not by domain: a later cycle of the bundled domain
+  // that this browser collected is a session scan, and its evidence is on the
+  // machine that collected it, not in the committed file for the earlier day.
+  if (BUNDLED_SCANS.includes(scan)) return '/scan-answers.json'
+  // The cycle's own day, so the route reads THAT cycle's answers and not the
+  // latest one's — which, after a new cycle, may be a different measurement.
+  const day = runInfoOf(scan).day
+  return `/api/answers?domain=${encodeURIComponent(scan.domain)}${day ? `&day=${day}` : ''}`
 }
 
 /**

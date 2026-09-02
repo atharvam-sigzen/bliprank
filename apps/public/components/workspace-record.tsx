@@ -9,6 +9,9 @@ import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { Headline } from '@/components/headline'
 import { RangeRail } from '@/components/range-rail'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
+import { CiTrendChart } from '@/components/ci-trend-chart'
+import { NewCycle } from '@/components/new-cycle'
+import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, trendOf } from '@/lib/cycles'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
 
@@ -77,6 +80,9 @@ export function WorkspaceRecord({ domain, context }: { domain: string; context: 
  * anything /api/scan cached into the registry.
  */
 function Measured({ workspace, context }: { workspace: Workspace; context: WorkspaceContext }) {
+  // A new cycle lands in the registry mid-render-life; bumping this re-reads
+  // it, so the trend acquires its point without a reload.
+  const [, refresh] = useState(0)
   const scan: ScanResultFile | null = scanFor(workspace.domain)
   // `hasData` is derived from exactly this call, so the branch cannot be taken.
   // The guard exists because the type system cannot know that, and falling back
@@ -94,6 +100,11 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   // chrome's switcher uses: scans() returns the bundled files by reference, so
   // a scan not in BUNDLED_SCANS is one this browser collected this session.
   const bundled = BUNDLED_SCANS.includes(scan)
+  // Every collected cycle of this domain under its current category, oldest
+  // first; `scan` is its last entry. Cycles under an earlier category are
+  // counted, named on the page, and never drawn (see lib/cycles.ts).
+  const cycles = cyclesFor(workspace.domain)
+  const excluded = earlierCategoryCycles(workspace.domain)
 
   return (
     <>
@@ -118,7 +129,8 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
               reads as a measurement. No line at all is the only honest option. */}
           {run.spentUsd === null ? null : <span className="note__line">cost ${run.spentUsd.toFixed(4)}</span>}
           <span className="note__gloss">
-            One cycle, collected by a budgeted runner. Opening this page collects nothing and costs nothing.
+            {cycles.length > 1 ? `${cycles.length} cycles, each collected by a budgeted runner; this is the latest.` : 'One cycle, collected by a budgeted runner.'}{' '}
+            Opening this page collects nothing and costs nothing.
           </span>
           {/* A DEMO IS LABELLED AS ONE. The bundled scans resolve for every
               visitor identically, so a reader who opened one from the switcher
@@ -199,6 +211,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
         </div>
       </section>
 
+      {/* THE TREND, WHEN THERE IS ONE TO DRAW. Two collected cycles or more;
+          below that the section further down keeps refusing it in words. */}
+      {cycles.length >= 2 ? <TrendSection cycles={cycles} subjectName={subject.name} /> : null}
+
       {/* The same comparison the Grader renders, from the same scan file. The
           zero-competitor branch inside it keeps its honest prose: a fallback
           scan is measured alone and says so rather than drawing a chart. */}
@@ -236,17 +252,28 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
             drawn yet.
           </p>
         ) : null}
-        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          There is no trend chart. A trend needs at least two cycles to compare and this workspace has one
-          {run.day ? (
-            <>
-              , collected on <span className="num">{run.day}</span>
-            </>
-          ) : null}
-          . A line through a single point would be drawing movement that has not been measured.
-        </p>
-        <WorkedExample />
+        {cycles.length >= 2 ? (
+          <p className="prose">
+            The trend is above, drawn from <span className="num">{cycles.length}</span> collected cycles. Nothing on this page is projected: every
+            point was bought on its own day, and the movement between neighbours is judged by the same rule as every comparison here.
+          </p>
+        ) : (
+          <>
+            <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
+              There is no trend chart. A trend needs at least two cycles to compare and this workspace has one
+              {run.day ? (
+                <>
+                  , collected on <span className="num">{run.day}</span>
+                </>
+              ) : null}
+              . A line through a single point would be drawing movement that has not been measured.
+            </p>
+            <WorkedExample />
+          </>
+        )}
       </section>
+
+      <NewCycle domain={workspace.domain} cycles={cycles} excluded={excluded} onCollected={() => refresh((g) => g + 1)} />
 
       {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
     </>
@@ -476,5 +503,70 @@ export function WorkedExample() {
         cycles they are drawn on was never collected on a schedule.
       </p>
     </div>
+  )
+}
+
+/**
+ * MENTION RATE OVER CYCLES — real data, on the real record.
+ *
+ * Until 2026-09-02 a trend existed only in apps/web, over fixture cycles that
+ * were never collected. This one is drawn from `cyclesFor`, which holds only
+ * scans that were actually bought, one per UTC day, and it uses the SAME chart
+ * component the worked example uses, pinned byte-identical across the two apps.
+ *
+ * The verdict beside it is `compare()`'s between the two newest cycles: no
+ * arrow, no colour and no emphasis unless the intervals separate, and "not
+ * comparable" rather than a movement when the stamp or the basis differs
+ * between them (R5). The chart itself breaks its line at such a boundary.
+ */
+function TrendSection({ cycles, subjectName }: { cycles: readonly ScanResultFile[]; subjectName: string }) {
+  const points = trendOf(cycles)
+  const movement = latestMovement(cycles)
+  const first = cycles[0]!
+  const last = cycles[cycles.length - 1]!
+  const significant = movement?.verdict.significance === 'higher' || movement?.verdict.significance === 'lower'
+  const glyph =
+    movement?.verdict.significance === 'higher' ? '▲' : movement?.verdict.significance === 'lower' ? '▼' : movement?.verdict.significance === 'not-comparable' ? '≠' : '–'
+  const gloss =
+    movement?.verdict.significance === 'no-significant-change'
+      ? 'The two confidence intervals overlap, so this sample cannot tell the cycles apart.'
+      : movement?.verdict.significance === 'insufficient-data'
+        ? 'Too few answers in one of the cycles to attempt the comparison.'
+        : movement?.verdict.significance === 'not-comparable'
+          ? 'The two cycles were produced under different scoring versions, collection paths or bases, so comparing them would attribute a definition change to the brand.'
+          : 'The intervals separate, and the cycles were measured to comparable precision.'
+
+  return (
+    <section className="section" id="trend">
+      <h2>Mention rate over cycles</h2>
+      <p className="prose">
+        <span className="num">{cycles.length}</span> collected cycles of {subjectName}, from <span className="num">{cycleDayOf(first)}</span> to{' '}
+        <span className="num">{cycleDayOf(last)}</span>. Each point is one day&apos;s answers to the recorded category&apos;s prompts, with its own
+        interval. Where two neighbouring points were measured on a different basis or scored by a different version, the line between them
+        breaks and the comparison is refused rather than made.
+      </p>
+      <div className="annotated">
+        <div className="annotated__body">
+          <CiTrendChart points={points} title={`${subjectName}: mention rate over ${cycles.length} cycles`} />
+        </div>
+        <aside className="note">
+          <span className="note__cap">Latest movement</span>
+          {movement ? (
+            <>
+              <span className="note__line">
+                {movement.current} vs {movement.previous}
+              </span>
+              <p className={`delta${significant ? ' delta--significant' : ''}`} style={{ marginTop: 'var(--space-2)' }}>
+                <span className="delta__glyph" aria-hidden="true">
+                  {glyph}
+                </span>
+                <span>{movement.verdict.label}</span>
+              </p>
+              <span className="note__gloss">{gloss}</span>
+            </>
+          ) : null}
+        </aside>
+      </div>
+    </section>
   )
 }

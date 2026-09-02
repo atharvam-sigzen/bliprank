@@ -314,11 +314,19 @@ function sessionScans(): readonly ScanResultFile[] {
   }
 }
 
-/** Stash a scan this session collected so every surface can find it. */
+/**
+ * Stash a scan this session collected so every surface can find it.
+ *
+ * ONE ENTRY PER DOMAIN PER DAY, since 2026-09-02 (ADR-0013). A cycle is one
+ * scan on one UTC day, and a domain may hold several: the store keeps them
+ * side by side so `cyclesFor` can draw a trend over them, and replaces only a
+ * same-day entry, which is the same measurement written again.
+ */
 export function rememberScan(scan: ScanResultFile): void {
   if (scan.status !== 'scanned' || !scan.domain) return
   try {
-    const kept = sessionScans().filter((s) => normaliseTyped(s.domain) !== normaliseTyped(scan.domain))
+    const day = runInfoOf(scan).day
+    const kept = sessionScans().filter((s) => !(normaliseTyped(s.domain) === normaliseTyped(scan.domain) && runInfoOf(s).day === day))
     globalThis.localStorage?.setItem(SESSION_KEY, JSON.stringify([...kept, scan]))
   } catch {
     /* failing to remember a scan must not break the page showing it */
@@ -353,10 +361,24 @@ export function normaliseTyped(input: string): string {
     .replace(/\.$/, '')
 }
 
-/** The scanned result for this domain, or null when this build has no scan for it. */
+/**
+ * The LATEST scanned cycle for this domain, or null when this build has none.
+ *
+ * Latest by the day its answers were bought, not by position in the registry:
+ * a cycle this browser collected after the bundled reference scan is the newer
+ * measurement and the record leads with it. On the same day the earlier entry
+ * wins, which is the bundled file — a session copy of the reference cycle is
+ * never allowed to shadow the committed one. Every cycle, in order, is
+ * `cyclesFor` in lib/cycles.ts.
+ */
 export function scanFor(domain: string): ScanResultFile | null {
   const typed = normaliseTyped(domain)
-  return scans().find((s) => normaliseTyped(s.domain) === typed && s.status === 'scanned') ?? null
+  let best: ScanResultFile | null = null
+  for (const s of scans()) {
+    if (s.status !== 'scanned' || normaliseTyped(s.domain) !== typed) continue
+    if (!best || runInfoOf(s).day > runInfoOf(best).day) best = s
+  }
+  return best
 }
 
 export const subjectOf = (s: ScanResultFile): ScanBrand => s.brands.find((b) => b.isSubject) ?? s.brands[0]!
