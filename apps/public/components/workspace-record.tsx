@@ -11,7 +11,7 @@ import { RangeRail } from '@/components/range-rail'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { NewCycle } from '@/components/new-cycle'
-import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, trendOf } from '@/lib/cycles'
+import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf } from '@/lib/cycles'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
 
@@ -83,6 +83,18 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   // A new cycle lands in the registry mid-render-life; bumping this re-reads
   // it, so the trend acquires its point without a reload.
   const [, refresh] = useState(0)
+  // Once, on load: cycles the server filed that this browser never saw — a run
+  // that finished after the tab closed, another browser, cleared site data.
+  // A 404 (the static deployment) adds nothing and says nothing.
+  useEffect(() => {
+    let live = true
+    void syncCycles(workspace.domain).then((added) => {
+      if (live && added > 0) refresh((g) => g + 1)
+    })
+    return () => {
+      live = false
+    }
+  }, [workspace.domain])
   const scan: ScanResultFile | null = scanFor(workspace.domain)
   // `hasData` is derived from exactly this call, so the branch cannot be taken.
   // The guard exists because the type system cannot know that, and falling back
@@ -533,7 +545,7 @@ function TrendSection({ cycles, subjectName }: { cycles: readonly ScanResultFile
       : movement?.verdict.significance === 'insufficient-data'
         ? 'Too few answers in one of the cycles to attempt the comparison.'
         : movement?.verdict.significance === 'not-comparable'
-          ? 'The two cycles were produced under different scoring versions, collection paths or bases, so comparing them would attribute a definition change to the brand.'
+          ? `These two cycles were ${movement.why ?? 'measured to precisions too different to compare'}, so comparing them would attribute a definition change to the brand. The line breaks there.`
           : 'The intervals separate, and the cycles were measured to comparable precision.'
 
   return (

@@ -17,7 +17,7 @@
  */
 
 import { compare, type Comparison, type Metric } from '@bliprank/stats'
-import { runInfoOf, scans, subjectOf, normaliseTyped, type ScanResultFile } from './scan-result'
+import { isScanResultFile, rememberScan, runInfoOf, scans, subjectOf, normaliseTyped, type ScanResultFile } from './scan-result'
 
 /** What the trend chart draws: one cycle, one metric. Same shape the worked example uses. */
 export interface TrendPoint {
@@ -82,11 +82,81 @@ export function trendOf(cycles: readonly ScanResultFile[]): readonly TrendPoint[
  * scoring bump, a changed basis or a thin sample refuses the comparison in the
  * same words the methodology page uses.
  */
-export function latestMovement(cycles: readonly ScanResultFile[]): { readonly current: string; readonly previous: string; readonly verdict: Comparison } | null {
+export function latestMovement(
+  cycles: readonly ScanResultFile[],
+): { readonly current: string; readonly previous: string; readonly verdict: Comparison; readonly why: string | null } | null {
   if (cycles.length < 2) return null
   const current = cycles[cycles.length - 1]!
   const previous = cycles[cycles.length - 2]!
-  return { current: cycleDayOf(current), previous: cycleDayOf(previous), verdict: compare(subjectOf(current).metric, subjectOf(previous).metric) }
+  const a = subjectOf(current).metric
+  const b = subjectOf(previous).metric
+  const verdict = compare(a, b)
+  return { current: cycleDayOf(current), previous: cycleDayOf(previous), verdict, why: verdict.significance === 'not-comparable' ? whyNotComparable(a, b) : null }
+}
+
+/**
+ * Which part of two measurements' provenance differs, in words a reader can
+ * act on. `compare()` refuses across a scoring version, a collection path or
+ * a basis and names the first two; the basis string it does not open. This
+ * does, segment by segment, so "≠" on the record says WHY: "the prompt count
+ * (10 against 17)", "the bank version (crm-software@1 against crm-software@2)".
+ * Null when nothing differs, which `compare()` would not have refused for.
+ */
+export function whyNotComparable(a: Metric, b: Metric): string | null {
+  if (a.algo_version !== b.algo_version) return `scored by different versions (${b.algo_version} against ${a.algo_version})`
+  if (a.collection_path !== b.collection_path) return `collected by different paths (${b.collection_path} against ${a.collection_path})`
+  return basisDifference(a.comparison_basis, b.comparison_basis)
+}
+
+/** The basis string, as `comparisonBasisFor` in services/grader/src/scan.ts writes it, one label per pipe-separated segment. */
+const BASIS_SEGMENTS = ['the basis format', 'the engine set', 'the locale', 'the geography', 'the bank version', 'the prompt count', 'the runs per cell'] as const
+
+export function basisDifference(current: string, previous: string): string | null {
+  const a = (current ?? '').split('|')
+  const b = (previous ?? '').split('|')
+  const strip = (s: string) => s.replace(/^(engines|unprompted|runs)=/, '')
+  const diffs: string[] = []
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (a[i] === b[i]) continue
+    const label = BASIS_SEGMENTS[i] ?? `basis field ${i + 1}`
+    diffs.push(`${label} (${strip(b[i] ?? 'absent')} against ${strip(a[i] ?? 'absent')})`)
+  }
+  return diffs.length ? `measured on a different basis: ${diffs.join(', ')}` : null
+}
+
+/**
+ * Remember every cycle the SERVER holds for this domain that this browser
+ * does not. Returns how many were added.
+ *
+ * The browser registry is the store that forgets: a run that finished after
+ * the tab closed was filed on disk and never reached `rememberScan`, so the
+ * record said one cycle and the button said "already collected today", with
+ * no click that reconciled them. This asks `/api/cycles` once. On a static
+ * deployment the route does not exist, the request 404s, and nothing is
+ * added or claimed — the same rule `loadAnswers` follows. A day this browser
+ * already holds is never replaced: the bundled reference cycle stays the
+ * committed file, not the server's re-derived copy of the same day.
+ */
+export async function syncCycles(domain: string, fetchImpl: typeof fetch = fetch): Promise<number> {
+  try {
+    const res = await fetchImpl(`/api/cycles?domain=${encodeURIComponent(normaliseTyped(domain))}`)
+    if (!res.ok) return 0
+    const body = (await res.json()) as { cycles?: unknown }
+    if (!Array.isArray(body?.cycles)) return 0
+    const known = new Set(datedCycles(domain).map(cycleDayOf))
+    let added = 0
+    for (const c of body.cycles) {
+      if (!isScanResultFile(c) || normaliseTyped(c.domain) !== normaliseTyped(domain)) continue
+      const day = cycleDayOf(c)
+      if (!day || known.has(day)) continue
+      rememberScan(c)
+      known.add(day)
+      added += 1
+    }
+    return added
+  } catch {
+    return 0
+  }
 }
 
 /**

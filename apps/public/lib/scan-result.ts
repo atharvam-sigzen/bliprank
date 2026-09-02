@@ -262,7 +262,7 @@ const SESSION_KEY = 'bliprank-session-scans'
  * client pages. Same discipline as readAgencyDomains/readCustomPrompts:
  * validate, drop what fails, never throw.
  */
-function isScanResultFile(s: unknown): s is ScanResultFile {
+export function isScanResultFile(s: unknown): s is ScanResultFile {
   if (typeof s !== 'object' || s === null) return false
   const f = s as Partial<ScanResultFile>
   return (

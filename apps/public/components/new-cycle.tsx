@@ -62,7 +62,22 @@ export function NewCycle({
           setState({ phase: 'refused', kind: 'cached', message: 'The scan service replayed a stored cycle instead of collecting a new one, so no new cycle was added.' })
         } else if (e.kind === 'error') setState({ phase: 'refused', kind: e.errorKind, message: e.message })
         else if (e.kind === 'result') {
-          const r = e.result as ScanResultFile & { reason?: string }
+          const r = e.result as ScanResultFile & { reason?: string; counts?: { cellsRequested: number; failed: number; collected: number; cacheHits: number } }
+          if (r.status === 'no-answers') {
+            // Two different facts, as the Grader distinguishes them: every
+            // request failed (a collection failure, most likely the provider
+            // quota running out part-way) is not "the engines never answer".
+            const n = r.counts
+            const allFailed = n !== undefined && n.failed > 0 && n.collected === 0 && n.cacheHits === 0
+            setState({
+              phase: 'refused',
+              kind: allFailed ? 'collection-failed' : 'no-answers',
+              message: allFailed
+                ? `All ${n.cellsRequested} requests for ${domain} failed, so nothing was collected and there is no new point. This is a collection failure, not a zero; the likeliest cause is the provider quota running out part-way. The requests that were attempted are still booked against this domain's monthly ceiling.`
+                : `The engines returned answers for ${domain} but none could be scored, so no new point was added.`,
+            })
+            return
+          }
           if (r.status !== 'scanned') {
             setState({ phase: 'refused', kind: r.status, message: r.reason ?? `The scan ended with status ${r.status}, so no new cycle was added.` })
             return
@@ -130,8 +145,8 @@ export function NewCycle({
 
       <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
         Started by a person, here. Schedule: {SCHEDULE_FACT}. A new cycle passes exactly the gates a first scan passes and, when live scanning is
-        on, spends real provider quota{latest ? ` for ${latest.counts.cellsRequested} requests, as the latest cycle did` : ''}. On a deployment
-        with no scan service the request is refused and nothing is added.
+        on, spends real provider quota: one request per prompt per engine{latest ? ` (the latest cycle had ${latest.counts.cellsRequested} cells)` : ''}, plus
+        any retries. On a deployment with no scan service the request is refused and nothing is added.
       </p>
     </section>
   )

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { wilson } from '@bliprank/stats'
-import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, nextCycleDay, trendOf } from './cycles'
+import { wilson, type Metric } from '@bliprank/stats'
+import { basisDifference, cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, nextCycleDay, syncCycles, trendOf, whyNotComparable } from './cycles'
 import { rememberScan, scanFor, SCAN, type ScanResultFile } from './scan-result'
 import { NO_RUN_BLOCK_SCAN } from './__fixtures__/no-run-block-scan'
 
@@ -150,5 +150,62 @@ describe('when the next cycle is possible', () => {
     expect(nextCycleDay([cycle('acme.test', '2026-09-02', 20)], '2026-09-02')).toEqual({ possible: false, from: '2026-09-03' })
     // Month and year roll correctly.
     expect(nextCycleDay([cycle('acme.test', '2026-12-31', 20)], '2026-12-31')).toEqual({ possible: false, from: '2027-01-01' })
+  })
+})
+
+describe('the server’s cycles reach the browser once, on load', () => {
+  const server = (cycles: unknown[], status = 200) =>
+    (async () => new Response(JSON.stringify({ domain: 'acme.test', cycles }), { status })) as unknown as typeof fetch
+
+  it('remembers cycles this browser does not hold, and reports how many', async () => {
+    rememberScan(cycle('acme.test', '2026-09-01', 20))
+    const added = await syncCycles('acme.test', server([cycle('acme.test', '2026-09-01', 40), cycle('acme.test', '2026-09-08', 30), cycle('acme.test', '2026-09-15', 35)]))
+    expect(added).toBe(2)
+    expect(cyclesFor('acme.test').map(cycleDayOf)).toEqual(['2026-09-01', '2026-09-08', '2026-09-15'])
+    // A day this browser already holds is never replaced by the server's copy.
+    expect(cyclesFor('acme.test')[0]!.brands[0]!.mentions).toBe(20)
+  })
+
+  it('a 404 — the static deployment — adds nothing and claims nothing', async () => {
+    expect(await syncCycles('acme.test', server([], 404))).toBe(0)
+    expect(await syncCycles('acme.test', (async () => { throw new Error('offline') }) as unknown as typeof fetch)).toBe(0)
+    expect(cyclesFor('acme.test')).toEqual([])
+  })
+
+  it('drops what is not a result file, or is another domain’s', async () => {
+    const added = await syncCycles('acme.test', server([{ junk: true }, cycle('other.test', '2026-09-08', 30), cycle('acme.test', '2026-09-08', 30)]))
+    expect(added).toBe(1)
+    expect(cyclesFor('acme.test').map(cycleDayOf)).toEqual(['2026-09-08'])
+    expect(cyclesFor('other.test')).toEqual([])
+  })
+})
+
+describe('why two cycles are not comparable, in words', () => {
+  // The basis as `comparisonBasisFor` writes it today; the fixture's BASIS is
+  // an older format and has no `unprompted=` or `@version` segment to differ on.
+  const GRADER_BASIS = 'grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1'
+  const m = (over: Partial<Metric>): Metric => ({ value: 0.3, ci_low: 0.2, ci_high: 0.4, n: 85, algo_version: 'det-2', collection_path: 'third-party-grounded', comparison_basis: GRADER_BASIS, ...over })
+
+  it('names the prompt count, which is the way it will actually differ', () => {
+    const a = m({ comparison_basis: GRADER_BASIS.replace('unprompted=17', 'unprompted=10') })
+    expect(whyNotComparable(a, m({}))).toBe('measured on a different basis: the prompt count (17 against 10)')
+  })
+
+  it('names the bank version after a competitor promotion', () => {
+    const a = m({ comparison_basis: GRADER_BASIS.replace('@1', '@2') })
+    expect(whyNotComparable(a, m({}))).toContain('the bank version (')
+    expect(whyNotComparable(a, m({}))).toContain('@1 against')
+  })
+
+  it('names a scoring version or a collection path before opening the basis', () => {
+    expect(whyNotComparable(m({ algo_version: 'det-3' }), m({}))).toBe('scored by different versions (det-2 against det-3)')
+    expect(whyNotComparable(m({ collection_path: 'official-api' }), m({}))).toContain('collected by different paths')
+  })
+
+  it('is null when nothing differs, and latestMovement carries it only for a refused pair', () => {
+    expect(whyNotComparable(m({}), m({}))).toBeNull()
+    rememberScan(cycle('acme.test', '2026-09-01', 10))
+    rememberScan(cycle('acme.test', '2026-09-08', 50))
+    expect(latestMovement(cyclesFor('acme.test'))!.why).toBeNull()
   })
 })
