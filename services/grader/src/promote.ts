@@ -43,7 +43,8 @@ import {
   type CompetitorCandidate,
   type PromotionThresholds,
 } from './promote-competitors.js'
-import { allBanks, recordedIn, trackedBrands } from './resolve-category.js'
+import { allBanks, readGeneratedBanks, recordedIn, trackedBrands } from './resolve-category.js'
+import { UNPROMPTED_INTENTS } from './scan.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
@@ -154,9 +155,50 @@ async function main(): Promise<void> {
     process.exit(2)
   }
 
-  const corpus = readCorpus(join(o.dataDir, 'answers'), bank.prompts.map((p) => p.text))
+  /*
+   * ⚠️ A PROMOTION ONLY REACHES A GENERATED BANK — refuse the rest, loudly.
+   *
+   * `withPromoted` runs inside `readGeneratedBanks`, so a promotion file written
+   * for one of the fourteen hand-authored banks is written, reported as a
+   * success, and then read by nothing. The operator is told six competitors were
+   * promoted and none were: a false success report, which is worse than a
+   * refusal because there is nothing to notice.
+   *
+   * Refusing rather than widening the merge is the correct half to build. A
+   * hand-authored bank's leader table is REVIEWED — curated aliases, narrowed
+   * attribution domains, deliberate omissions like `wave` and `kit` — and
+   * CLAUDE.md §4 puts that on the human side of the line. Promotion exists for
+   * the categories that have no such table, and it should not quietly acquire
+   * write access to the ones that do.
+   */
+  if (!readGeneratedBanks(o.dataDir).some((g) => g.bank.category === o.category)) {
+    process.stderr.write(
+      `refusing: "${o.category}" is a hand-authored bank, and promoted competitors are only merged into generated ones.\n` +
+        `  Its leader table is reviewed — curated aliases, narrowed attribution domains — and editing it is a human's job (CLAUDE.md §4).\n` +
+        `  Writing a promotion here would report a success that nothing reads.\n`,
+    )
+    process.exit(2)
+  }
+
+  /*
+   * ⚠️ UNPROMPTED PROMPTS ONLY — the same filter `runScan` applies (PROPERTY 2).
+   *
+   * This fed `readCorpus` every prompt in the bank. Across the hand-authored
+   * taxonomy that is 190 of 445 prompts which NAME A BRAND by construction —
+   * "HubSpot vs Salesforce for a 20-person sales team", "What do users complain
+   * about most with Pipedrive?" — and a brand named in the question is
+   * guaranteed a mention in the answer. Promoting from that evidence would be
+   * this system discovering competitors it had itself supplied, which is the
+   * exact circularity ADR-0009 Amendment 2 refuses on the authoring side.
+   *
+   * Harmless today only because the Grader collects unprompted cells and nothing
+   * else, so no such answer is in the store — an accident of the current
+   * collection scope, not a guarantee. The guarantee is this line.
+   */
+  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
+  const corpus = readCorpus(join(o.dataDir, 'answers'), unprompted.map((p) => p.text))
   process.stdout.write(
-    `promote · ${o.category} · ${bank.prompts.length} prompts · ${corpus.length} stored answers\n` +
+    `promote · ${o.category} · ${unprompted.length} unprompted prompts (of ${bank.prompts.length}) · ${corpus.length} stored answers\n` +
       `  bar: >=${o.thresholds.minAnswers} answers, >=${o.thresholds.minPrompts} prompts, >=${o.thresholds.minEngines} engines\n` +
       `  reads disk only — no provider call, no model call, nothing charged\n\n`,
   )

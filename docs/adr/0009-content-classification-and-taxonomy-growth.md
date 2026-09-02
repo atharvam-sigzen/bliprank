@@ -727,3 +727,67 @@ bump that implies.
 **The cost of this limitation scales with categories, not with corpus size.**
 One judgement call per category is affordable; it is the thing to watch when the
 taxonomy has two hundred of them.
+
+## Corrections, from re-reading this after it shipped
+
+Four defects, found by re-examining the module rather than by a failing test.
+Two of them contradicted claims made above, so the claims are corrected here
+rather than quietly patched.
+
+**1. A promotion for a hand-authored bank was written, reported as a success,
+and read by nothing.** `withPromoted` runs inside `readGeneratedBanks`, so
+`--apply --category crm-software` printed "6 competitors · bank version 1 -> 2"
+and changed nothing. A false success report is worse than a refusal, because
+there is nothing to notice. The runner now refuses, and refusing is the correct
+half to build: a hand-authored bank's leader table is reviewed — curated
+aliases, narrowed attribution domains, deliberate omissions like `wave` and
+`kit` — and CLAUDE.md §4 puts it on the human side. Promotion exists for the
+categories that have no such table and should not quietly acquire write access
+to the ones that do.
+
+**2. ⚠️ The version bump was trusted from the file, not enforced on read.**
+The section above says "the version bump is what makes `compare()` refuse
+them". That was true of what `buildPromotion` wrote and false of what
+`withPromoted` read: a promotion file hand-edited back to the bank's own version
+attached its competitors while claiming an **unchanged basis**, so `compare()`
+would have put a number scored against six rivals beside one scored against
+none and called the difference movement. Every sibling invariant in this store
+is re-checked on read — a leader with no evidence is dropped, `domains` is
+forced empty — and this one was the exception for no reason. Now
+`max(promoted.bankVersion, bank.version + 1)`.
+
+**3. Refusing every candidate discarded the refusal.** `readPromoted` returned
+null whenever `leaders` was empty, and a test asserted that was correct on the
+reasoning that "an operator who refuses everything has changed nothing". They
+have: they read the excerpts and decided. Because the bar is deterministic, the
+next run over the same corpus re-proposed every refused name with no memory —
+so the persistence this amendment is built around failed in exactly the case
+where every candidate was wrong. Null now means "nothing recorded at all"; a
+refusals-only file is remembered and attaches nothing.
+
+**4. The corpus admitted prompts that name a brand by construction.** Promotion
+was fed every prompt in the bank. Across the hand-authored taxonomy that is 190
+of 445 prompts — "HubSpot vs Salesforce for a 20-person sales team", "What do
+users complain about most with Pipedrive?" — and a brand named in the question
+is guaranteed a mention in the answer. Promoting from that evidence is this
+system discovering competitors it supplied itself, the same circularity
+Amendment 2 refuses on the authoring side. It was harmless only because the
+Grader collects unprompted cells and nothing else, so no such answer is in the
+store — an accident of the current collection scope, not a guarantee. The
+filter is now `UNPROMPTED_INTENTS`, the same one `runScan` applies.
+
+### Checked and left alone
+
+- **Promoted names join `trackedBrands`**, so Amendment 2's fourth refusal now
+  covers them: no future authored bank may name Odoo, QuickBooks, Xero,
+  Microsoft Dynamics 365, Salesforce or SAP Business One in a prompt. That is
+  correct — those are brands whose mention rates this product now publishes —
+  but it is also the `kit` failure mode with a new door: a *noise* promotion
+  would start discarding good generated banks. The six promoted names are
+  unambiguous, so there is nothing to fix today. It is a reason to keep the
+  human gate rather than to raise the bar and drop it.
+- **A prompt with no content terms** would render as 0% coverage in the AEO
+  report, reading as "your page covers none of this" when the truth is "there
+  was nothing to check". Zero of the 924 prompts across every bank hit it, and
+  `widestGap`'s secondary sort already prefers a real gap over it, so the fix
+  would be shorter than the comment explaining why it was needed.

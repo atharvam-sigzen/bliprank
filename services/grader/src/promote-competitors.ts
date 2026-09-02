@@ -396,20 +396,36 @@ export function readPromoted(dataDir: string, slug: string): PromotedCompetitors
         Number.isFinite(l.evidence.engines) &&
         l.evidence.engines > 0,
     )
-    if (leaders.length === 0) return null
+    /*
+     * ⚠️ A FILE OF PURE REFUSALS IS STILL A DECISION — fixed 2026-09-02.
+     *
+     * This returned null whenever `leaders` was empty, and a test asserted that
+     * was correct on the reasoning that "an operator who refuses everything has
+     * changed nothing". They have: they have read the excerpts and decided.
+     * Dropping the file threw that away, so the next run over the same corpus
+     * re-proposed the same wrong candidates with no memory of the refusal —
+     * defeating, in exactly the case where every candidate was wrong, the whole
+     * point of persisting `excluded` rather than leaving it in `--exclude`.
+     *
+     * Null now means "nothing recorded here at all". `withPromoted` still
+     * attaches nothing when `leaders` is empty, so a refusals-only file changes
+     * no bank and no version — it only remembers.
+     */
+    // Read back unvalidated beyond its shape: an exclusion can only ever REMOVE
+    // a competitor from a chart, so a malformed one fails safe in the direction
+    // that shows fewer rivals rather than more.
+    const excluded = Array.isArray(parsed.excluded)
+      ? parsed.excluded
+          .filter((e): e is { name: string; at: string } => typeof e?.name === 'string' && e.name.trim() !== '')
+          .map((e) => ({ name: e.name, at: typeof e.at === 'string' ? e.at : '' }))
+      : []
+    if (leaders.length === 0 && excluded.length === 0) return null
     return {
       category: slug,
       promotedAt: String(parsed.promotedAt ?? ''),
       algoVersion: String(parsed.algoVersion ?? ''),
       bankVersion: Number.isFinite(parsed.bankVersion) ? Number(parsed.bankVersion) : 2,
-      // Read back unvalidated beyond its shape: an exclusion can only ever
-      // REMOVE a competitor from a chart, so a malformed one fails safe in the
-      // direction that shows fewer rivals rather than more.
-      excluded: Array.isArray(parsed.excluded)
-        ? parsed.excluded
-            .filter((e): e is { name: string; at: string } => typeof e?.name === 'string' && e.name.trim() !== '')
-            .map((e) => ({ name: e.name, at: typeof e.at === 'string' ? e.at : '' }))
-        : [],
+      excluded,
       // ⚠️ `domains` is forced empty on READ as well as on write. A promoted
       // name was learned from prose; crediting a citation to it would be an
       // attribution nobody verified. See the header.

@@ -276,7 +276,14 @@ async function main(): Promise<void> {
   const capUsd = ledgerCap(o.dataDir)
 
   for (const plan of plans) {
-    const out = join(resultsDir(o.dataDir), `${plan.domain}.rescore.tmp.json`)
+    /*
+     * The scratch file goes BESIDE the results directory, not inside it.
+     * `results/` is a served store: `/api/scan` reads it by name, `storedResults`
+     * lists it, and `scan-result.test.ts` globs every `.json` in it. A crash
+     * between `runGrader` writing this file and the `unlinkSync` below would
+     * otherwise leave a scratch envelope that all three treat as a result.
+     */
+    const out = join(o.dataDir, `.rescore.${plan.domain}.tmp.json`)
     const result = await runGrader({
       domain: plan.domain,
       // The recorded scope, both of them. Anything else re-publishes a

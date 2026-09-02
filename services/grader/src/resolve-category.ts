@@ -314,7 +314,21 @@ function withPromoted(dataDir: string, bank: PromptBank): PromptBank {
   // the evidence lives. Carrying it into the bank would put an unversioned blob
   // into `comparison_basis`'s neighbourhood for no reader's benefit.
   const leaders = promoted.leaders.map(({ id, name, aliases, domains }) => ({ id, name, aliases, domains }))
-  return { ...bank, version: promoted.bankVersion, leaders }
+  /*
+   * ⚠️ THE BUMP IS ENFORCED HERE, NOT TRUSTED FROM THE FILE — fixed 2026-09-02.
+   *
+   * `buildPromotion` writes a raised `bankVersion`, and this used to attach the
+   * leaders at whatever the file said. A file hand-edited back to the bank's own
+   * version therefore attached competitors while claiming an UNCHANGED basis —
+   * so `compare()` would have put a number scored against six rivals beside one
+   * scored against none and called the difference movement. That is the single
+   * thing the bump exists to prevent.
+   *
+   * Every sibling invariant in this store is re-checked on read: a leader with
+   * no evidence is dropped, `domains` is forced empty. This one was the
+   * exception, and there was no reason for it to be.
+   */
+  return { ...bank, version: Math.max(promoted.bankVersion, bank.version + 1), leaders }
 }
 
 function writeGeneratedBank(dataDir: string, file: GeneratedBankFile): void {

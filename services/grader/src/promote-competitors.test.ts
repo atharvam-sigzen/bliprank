@@ -298,13 +298,45 @@ describe('the human override — a judgement the bar cannot make', () => {
     expect(excludedKeys(back).has('shopify')).toBe(true)
   })
 
-  it('a file with only refusals and no leaders is not a promotion', () => {
-    // `readPromoted` returns null with no usable leaders, and `withPromoted`
-    // then leaves the bank exactly as it was — including its version. An
-    // operator who refuses everything has changed nothing, which is correct.
+  it('⚠️ a file of pure refusals is still remembered', () => {
+    /*
+     * THIS TEST USED TO ASSERT THE OPPOSITE, AND THE REASONING WAS WRONG.
+     *
+     * It said `readPromoted` should return null for a file with no leaders,
+     * because "an operator who refuses everything has changed nothing". They
+     * have: they read the excerpts and decided. Dropping the file meant the next
+     * run over the same corpus — deterministic, so the same corpus reaches the
+     * same candidates — re-proposed every refused name with no memory of the
+     * refusal. The persistence feature failed in precisely the case where every
+     * candidate was wrong.
+     */
     const dir = tmp()
-    writePromotion(dir, buildPromotion('erp-software', [], { bankVersion: 1, now: 'now', exclude: ['Shopify'] }))
+    writePromotion(dir, buildPromotion('erp-software', [], { bankVersion: 1, now: 'now', exclude: ['Shopify', 'ERPNext'] }))
+    const back = readPromoted(dir, 'erp-software')
+    expect(back?.excluded?.map((e) => e.name)).toEqual(['Shopify', 'ERPNext'])
+    expect(excludedKeys(back).has('shopify')).toBe(true)
+    // It remembers and nothing else: no leaders, so no bank and no version move.
+    expect(back?.leaders).toEqual([])
+  })
+
+  it('a file with neither leaders nor refusals is nothing at all', () => {
+    const dir = tmp()
+    writePromotion(dir, buildPromotion('erp-software', [], { bankVersion: 1, now: 'now' }))
     expect(readPromoted(dir, 'erp-software')).toBeNull()
+  })
+
+  it('the refusal survives a round trip that promotes nothing, then blocks the candidate', () => {
+    // The full loop the fix exists for: refuse everything, come back later, and
+    // find the wrong candidate still refused rather than freshly proposed.
+    const dir = tmp()
+    writePromotion(dir, buildPromotion('erp-software', [], { bankVersion: 1, now: 't1', exclude: ['Shopify'] }))
+    const held = readPromoted(dir, 'erp-software')
+    const next = buildPromotion('erp-software', [candidate('Shopify'), candidate('Odoo')], {
+      bankVersion: 1,
+      now: 't2',
+      ...(held ? { existing: held } : {}),
+    })
+    expect(next.leaders.map((l) => l.name)).toEqual(['Odoo'])
   })
 })
 
@@ -362,6 +394,31 @@ describe('the merge — ADR-0009’s refusals are untouched', () => {
     expect(bank.version).toBe(2)
     // And no evidence blob leaks into the bank — the store is where it lives.
     expect(Object.keys(bank.leaders[0]!)).toEqual(['id', 'name', 'aliases', 'domains'])
+  })
+
+  it('⚠️ enforces the version bump on read, so a hand-edited file cannot defeat it', () => {
+    /*
+     * The bump is the whole guarantee: `comparisonBasisFor` stamps `slug@version`
+     * into every metric, and attaching competitors changes `position`. A file
+     * edited back to the bank's own version used to attach six rivals while
+     * claiming an unchanged basis — so `compare()` would have put a number
+     * scored against them beside one scored against none and called the
+     * difference movement.
+     */
+    const dir = tmp()
+    writeBank(dir, [])
+    mkdirSync(join(dir, 'promoted-competitors'), { recursive: true })
+    writeFileSync(
+      join(dir, 'promoted-competitors', 'made-up.json'),
+      JSON.stringify({
+        category: 'made-up',
+        bankVersion: 1, // hand-set back to the bank's own version
+        leaders: [{ id: 'promoted:x', name: 'Rival X', aliases: ['Rival X'], domains: [], evidence: { source: 'extracted', answers: 4, engines: 2 } }],
+      }),
+    )
+    const bank = allBanks(dir).find((b) => b.category === 'made-up')!
+    expect(bank.leaders.map((l) => l.name)).toEqual(['Rival X'])
+    expect(bank.version).toBeGreaterThan(1)
   })
 
   it('a category with nothing promoted is byte-for-byte what it was', () => {
