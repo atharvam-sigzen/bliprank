@@ -1,45 +1,174 @@
 /*
- * BlipRank design tokens — Minimalism / Swiss, dense dashboard scale.
+ * BLIPRANK — THE MEASUREMENT RECORD, dashboard side.
  *
- * This is an instrument panel, not a marketing site. Generic AI-startup
- * gradients would actively undermine a product selling measurement rigour, so
- * the palette is deliberately flat: blue for data, amber reserved for the one
- * thing that needs attention, and nothing decorative competing with a number.
+ * ONE token block, not five. This sheet used to carry five generations of
+ * palette stacked in source order — a Tailwind-blue original, two refinement
+ * passes, a material pass, and the ink-on-paper sync at the foot — with only
+ * the last live and 19% of every declaration in the file overridden by
+ * something further down. Nothing was wrong on screen; everything was wrong to
+ * read, and a sixth pass would have been written on top of the five. They are
+ * collapsed here, and the survivors of each (the scale, the faces, the radii,
+ * the lit edge, the dark shadows) are folded in rather than left stranded.
+ *
+ * THE PALETTE IS apps/public's, identically — asserted by "the palettes are
+ * identical" in apps/public/lib/head-to-head.test.ts, which parses both sheets:
+ *
+ *   paper    #F6F6F3  unbleached stock, not the blue-white every template ships
+ *   ink      #15181D  iron-gall blue-black; one ink family for all text
+ *   Prussian #1E5A7D  the data colour, 7.46:1 on the card — text-grade, so the
+ *                     same hue can label and draw
+ *   range    #3D7EA6  the interval band, 4.44:1 on card / 3.38:1 on a gridline
+ *   amber    #B8821F  attention ONLY (fixture stamp, short-sample notices)
+ *   oxide    #B3341F  refusals and destructive only
+ *
+ * Every ratio is measured by that suite over BOTH themes; the public stylesheet
+ * header carries the reasoning behind each one.
+ *
+ * THEME — three states, not two. An explicit choice stamps `data-theme` on
+ * <html> and must win in BOTH directions; with nothing stamped, the OS
+ * preference decides. A two-state implementation (a `.dark` class only) cannot
+ * express "I chose light on a dark-mode machine", which is the one a reader
+ * notices. `color-scheme` is set so the browser paints form controls,
+ * scrollbars and the canvas to match — without it a dark page keeps light
+ * scrollbars.
+ *
+ * A CONTROL BOUNDARY IS NOT A HAIRLINE. --color-border computes 1.24:1 against
+ * the card: right for a rule between sections, wrong for the edge of a text
+ * field, which is the only thing telling a reader where the input is. WCAG
+ * 1.4.11 asks 3:1 on exactly that, and --color-field-border clears it on the
+ * card, the paper and the muted surface, in both themes.
+ *
+ * --edge-light is one inset hairline: a panel catching light from above, which
+ * is what makes a flat rectangle feel like an object. Light gets white; dark
+ * gets a faint lift, because white-on-dark reads as a glow rather than an edge.
  */
 
 :root {
-  --color-primary: #1e40af;
-  --color-on-primary: #ffffff;
-  --color-secondary: #3b82f6;
-  --color-accent: #d97706;
-  --color-on-accent: #000000;
+  color-scheme: light;
 
-  --color-background: #f8fafc;
-  --color-foreground: #1e3a8a;
+  /* --- ink on paper ------------------------------------------------------ */
+  --color-background: #f6f6f3;
   --color-card: #ffffff;
-  --color-card-foreground: #1e3a8a;
-  --color-muted: #e9eef6;
-  --color-muted-foreground: #475569;
-  --color-border: #dbeafe;
-  --color-destructive: #b91c1c;
-  --color-ring: #1e40af;
+  --color-foreground: #15181d;
+  --color-card-foreground: #15181d;
+  --color-muted: #ecece7;
+  --color-muted-foreground: #5a5f66;
+  --color-border: #e1e1db;
+  --color-neutral-ink: #5a5f66;
 
-  /* Neutral by design: a movement inside the interval gets NO colour cue. */
-  --color-neutral-ink: #475569;
+  /* --- data: Prussian, and only on data ----------------------------------- */
+  --color-primary: #1e5a7d;
+  --color-on-primary: #ffffff;
+  --color-secondary: #3d7ea6;
+  --color-ring: #1e5a7d;
 
-  /* Dense dashboard scale (8–32px). */
+  /* --- semantics ---------------------------------------------------------- */
+  --color-accent: #b8821f;
+  --color-on-accent: #15181d;
+  --color-destructive: #b3341f;
+  --color-field-border: #83858a;
+
+  --color-delta-bg: #e4ebf1;
+  --color-delta-ink: #14384f;
+  --color-notice-bg: #f6eedc;
+  --color-notice-ink: #63460c;
+  --color-notice-border: var(--color-accent);
+
+  /* --- structure: dense dashboard scale (8-32px) -------------------------- */
   --space-1: 0.5rem;
   --space-2: 0.75rem;
   --space-3: 1rem;
   --space-4: 1.5rem;
   --space-5: 2rem;
 
-  --radius: 6px;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --hairline: 1px solid var(--color-border);
+
+  /* Shadows are tinted to the ink, never pure black on paper. */
+  --shadow-card: 0 1px 1px rgb(21 24 29 / 0.03), 0 2px 6px rgb(21 24 29 / 0.04);
+  --shadow-raised: 0 1px 1px rgb(21 24 29 / 0.04), 0 6px 18px rgb(21 24 29 / 0.08);
+  --shadow-pop: 0 12px 32px rgb(21 24 29 / 0.14);
+
+  --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --lift: translateY(-1px);
+
   /* Loaded and self-hosted by next/font in app/layout.tsx — see the note there.
-     The *-src variables are what next/font defines; these are the roles. */
+     The *-src variables are what next/font defines; these are the roles. The
+     serif goes on WORDS, the mono on every figure, and they never cross. */
   --font-display: var(--font-display-src), Georgia, 'Times New Roman', serif;
   --font-sans: var(--font-sans-src), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono-src), ui-monospace, 'SF Mono', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --color-background: #10151c;
+    --color-card: #192129;
+    --color-foreground: #e9ebe7;
+    --color-card-foreground: #e9ebe7;
+    --color-muted: #222b35;
+    --color-muted-foreground: #a5afb9;
+    --color-border: #2b333e;
+    --color-neutral-ink: #a5afb9;
+
+    --color-primary: #8fb8d8;
+    --color-on-primary: #0c1218;
+    --color-secondary: #6e97b8;
+    --color-ring: #8fb8d8;
+
+    --color-accent: #d9a23f;
+    --color-on-accent: #0c1218;
+    --color-destructive: #e4795f;
+    --color-field-border: #6d7987;
+
+    --color-delta-bg: #1c3247;
+    --color-delta-ink: #cce0f0;
+    --color-notice-bg: #2c230e;
+    --color-notice-ink: #e8cd96;
+
+    --shadow-card: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+    --shadow-raised: 0 1px 1px rgb(0 0 0 / 0.5), 0 6px 18px rgb(0 0 0 / 0.45);
+    --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
+
+    --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-background: #10151c;
+  --color-card: #192129;
+  --color-foreground: #e9ebe7;
+  --color-card-foreground: #e9ebe7;
+  --color-muted: #222b35;
+  --color-muted-foreground: #a5afb9;
+  --color-border: #2b333e;
+  --color-neutral-ink: #a5afb9;
+
+  --color-primary: #8fb8d8;
+  --color-on-primary: #0c1218;
+  --color-secondary: #6e97b8;
+  --color-ring: #8fb8d8;
+
+  --color-accent: #d9a23f;
+  --color-on-accent: #0c1218;
+  --color-destructive: #e4795f;
+  --color-field-border: #6d7987;
+
+  --color-delta-bg: #1c3247;
+  --color-delta-ink: #cce0f0;
+  --color-notice-bg: #2c230e;
+  --color-notice-ink: #e8cd96;
+
+  --shadow-card: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+  --shadow-raised: 0 1px 1px rgb(0 0 0 / 0.5), 0 6px 18px rgb(0 0 0 / 0.45);
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
+
+  --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
 *,
@@ -514,96 +643,6 @@ a:hover {
   text-decoration-thickness: 2.5px;
 }
 
-/* ==========================================================================
-   THEME — light, dark, and the system default
-   ==========================================================================
-   Three states, not two. An explicit choice stamps `data-theme` on <html> and
-   must win in BOTH directions; with nothing stamped, the OS preference decides.
-   A two-state implementation (`.dark` class only) cannot express "I chose light
-   on a dark-mode machine", which is the one a reader notices.
-
-   Every dark value below was measured before it was written, not adjusted until
-   it looked right: text at 4.5:1 and every chart mark at 3:1 against every
-   surface it lands on. The contrast suite runs over BOTH palettes, so a dark
-   theme cannot ship half-verified.
-
-   `color-scheme` is set so the browser paints form controls, scrollbars and the
-   canvas to match — without it a dark page keeps light scrollbars. */
-
-:root {
-  color-scheme: light;
-
-  /* Tokens for the two components that carried raw hex. A hardcoded #dbeafe is
-     invisible to a theme switch: it stays a light-mode colour on a dark page. */
-  --color-delta-bg: #dbeafe;
-  --color-delta-ink: #14306e;
-  --color-notice-bg: #fffbeb;
-  --color-notice-ink: #713f12;
-  --color-notice-border: var(--color-accent);
-
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04);
-  --shadow-pop: 0 4px 16px rgb(15 23 42 / 0.16);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-
-    --color-primary: #7ba7f0;
-    --color-on-primary: #060a13;
-    --color-secondary: #4d8ae0;
-    --color-accent: #f5a524;
-    --color-on-accent: #060a13;
-
-    --color-background: #060a13;
-    --color-foreground: #e6edf9;
-    --color-card: #121b2e;
-    --color-card-foreground: #e6edf9;
-    --color-muted: #1e2a42;
-    --color-muted-foreground: #a3b3cc;
-    --color-border: #2c3d5a;
-    --color-destructive: #f87171;
-    --color-ring: #7ba7f0;
-    --color-neutral-ink: #a3b3cc;
-
-    --color-delta-bg: #1e3a6e;
-    --color-delta-ink: #cfe0ff;
-    --color-notice-bg: #2a1f08;
-    --color-notice-ink: #f6dcb0;
-
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.55);
-  }
-}
-
-:root[data-theme='dark'] {
-  color-scheme: dark;
-
-  --color-primary: #7ba7f0;
-  --color-on-primary: #060a13;
-  --color-secondary: #4d8ae0;
-  --color-accent: #f5a524;
-  --color-on-accent: #060a13;
-
-  --color-background: #060a13;
-  --color-foreground: #e6edf9;
-  --color-card: #121b2e;
-  --color-card-foreground: #e6edf9;
-  --color-muted: #1e2a42;
-  --color-muted-foreground: #a3b3cc;
-  --color-border: #2c3d5a;
-  --color-destructive: #f87171;
-  --color-ring: #7ba7f0;
-  --color-neutral-ink: #a3b3cc;
-
-  --color-delta-bg: #1e3a6e;
-  --color-delta-ink: #cfe0ff;
-  --color-notice-bg: #2a1f08;
-  --color-notice-ink: #f6dcb0;
-
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.55);
-}
 
 /* The chassis strip is now `.navbar`: two tiers, identity then navigation.
    Mirrored from apps/public — one bar across both deploys. It is defined at
@@ -794,107 +833,6 @@ body {
   }
 }
 
-/* ==========================================================================
-   REFINEMENT LAYER
-   ==========================================================================
-   Five things were making this read as unfinished, and none of them was the
-   colour scheme:
-
-   1. TINTED CHROME. Borders were #DBEAFE — baby blue. Every rule, divider and
-      card edge on the page was a pale brand tint. Chrome is now true neutral
-      and the brand hue is reserved for data, which is the single biggest
-      difference between a template and a product.
-
-   2. NAVY BODY TEXT. Foreground was #1E3A8A. Coloured body copy reads as a
-      theme applied to a document rather than an interface; near-black reads as
-      typeset.
-
-   3. NO TABULAR FIGURES. In a proportional font the digit 1 is narrower than 8,
-      so a column of percentages does not line up and the decimal points drift.
-      On a page that is almost entirely numbers this is the loudest possible
-      tell. `tabular-nums` everywhere a figure appears.
-
-   4. NO TYPE SCALE. Everything sat between 0.6875 and 1.25rem with one weight,
-      so nothing had rank. Display, title, section and label are now distinct in
-      size, weight AND tracking — large type gets negative tracking, small caps
-      get positive, which is what makes set type look set rather than scaled.
-
-   5. NO ELEVATION AND NO ROOM. Cards had a 1px shadow at 4% and 16px of
-      padding. Content pressed against its own edges. Real (still restrained)
-      elevation, and padding that lets a number breathe.
-
-   The dense-dashboard brief is unchanged: this is not more decoration, it is
-   the same information given rank, rhythm and alignment. */
-
-:root {
-  /* Chrome: true neutrals. */
-  --color-background: #fafbfd;
-  --color-card: #ffffff;
-  --color-foreground: #0f1419;
-  --color-card-foreground: #0f1419;
-  --color-muted: #f2f4f7;
-  --color-muted-foreground: #5a6675;
-  --color-border: #e4e7ec;
-  --color-neutral-ink: #5a6675;
-
-  /* Data: the brand hue, and only here. */
-  --color-primary: #1d4ed8;
-  --color-secondary: #3579ee;
-  --color-ring: #1d4ed8;
-
-  --color-delta-bg: #e8effc;
-  --color-delta-ink: #10357e;
-
-  /* A hairline that is a real hairline on a retina screen. */
-  --hairline: 1px solid var(--color-border);
-
-  --shadow-card: 0 1px 1px rgb(15 20 25 / 0.03), 0 2px 6px rgb(15 20 25 / 0.04);
-  --shadow-raised: 0 1px 1px rgb(15 20 25 / 0.04), 0 6px 18px rgb(15 20 25 / 0.08);
-  --shadow-pop: 0 12px 32px rgb(15 20 25 / 0.14);
-
-  --radius: 8px;
-  --radius-sm: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-background: #080b11;
-    --color-card: #111720;
-    --color-foreground: #e9edf4;
-    --color-card-foreground: #e9edf4;
-    --color-muted: #181f29;
-    --color-muted-foreground: #96a1b2;
-    --color-border: #242c38;
-    --color-neutral-ink: #96a1b2;
-    --color-primary: #82abf5;
-    --color-secondary: #4d8ae0;
-    --color-ring: #82abf5;
-    --color-delta-bg: #16305c;
-    --color-delta-ink: #cfe0ff;
-    --shadow-card: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
-    --shadow-raised: 0 1px 1px rgb(0 0 0 / 0.5), 0 6px 18px rgb(0 0 0 / 0.45);
-    --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
-  }
-}
-
-:root[data-theme='dark'] {
-  --color-background: #080b11;
-  --color-card: #111720;
-  --color-foreground: #e9edf4;
-  --color-card-foreground: #e9edf4;
-  --color-muted: #181f29;
-  --color-muted-foreground: #96a1b2;
-  --color-border: #242c38;
-  --color-neutral-ink: #96a1b2;
-  --color-primary: #82abf5;
-  --color-secondary: #4d8ae0;
-  --color-ring: #82abf5;
-  --color-delta-bg: #16305c;
-  --color-delta-ink: #cfe0ff;
-  --shadow-card: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
-  --shadow-raised: 0 1px 1px rgb(0 0 0 / 0.5), 0 6px 18px rgb(0 0 0 / 0.45);
-  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.6);
-}
 
 /* --- type ---------------------------------------------------------------- */
 
@@ -1419,40 +1357,6 @@ main > h1 {
    gradients, and no surface competes with a number for attention.
    ========================================================================== */
 
-/*
- * The lit top edge. One inset hairline is the whole trick — it reads as a panel
- * catching light from above, which is what makes a flat rectangle feel like an
- * object. Light theme gets white; dark theme gets a faint warm lift, because
- * white-on-dark reads as a glow rather than as an edge.
- */
-:root {
-  --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.9);
-  --lift: translateY(-1px);
-  /*
-   * A CONTROL BOUNDARY IS NOT A HAIRLINE, AND --color-border IS ONLY A HAIRLINE.
-   *
-   * --color-border computes 1.24:1 against the card. That is right for a rule
-   * between sections and wrong for the edge of a text field, which is the only
-   * thing telling a reader where the input is — WCAG 1.4.11 asks for 3:1 on
-   * exactly that. The old inline style used --color-border and nothing could see
-   * it, because inline colours never reach the contrast suite.
-   *
-   * Tuned to clear 3:1 on the card AND on the page background, in both themes,
-   * without going as heavy as --color-muted-foreground (5.85:1), which reads as
-   * a filled outline rather than an edge. Asserted, not eyeballed.
-   */
-  --color-field-border: #828d9e;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.06);
-    --color-field-border: #5b6a80;
-  }
-}
-:root[data-theme='dark'] {
-  --edge-light: inset 0 1px 0 rgb(255 255 255 / 0.06);
-  --color-field-border: #5b6a80;
-}
 
 .card,
 .stamp,
@@ -1673,99 +1577,6 @@ body {
   }
 }
 
-/* ==========================================================================
-   THE MEASUREMENT RECORD — palette sync
-   ==========================================================================
-   The two apps must ship IDENTICAL colour tokens ("the palettes are
-   identical" in apps/public/lib/head-to-head.test.ts), so the ink-on-paper
-   palette lands here the moment it lands there. This block overrides every
-   colour token; the dashboard's structural redesign (record sheet, margin,
-   chassis) follows in its own pass — until then it is the old layout in the
-   new ink, which is a coherent interim state rather than a broken one.
-
-   paper #F6F6F3 · ink #15181D · Prussian #1E5A7D (data, 7.46:1 on card) ·
-   range #3D7EA6 (band, 4.44:1) · amber = attention only · oxide = refusal
-   only. Every ratio asserted by the suite, both themes. See the public
-   stylesheet header for the full reasoning.
-   ========================================================================== */
-
-:root {
-  --color-background: #f6f6f3;
-  --color-card: #ffffff;
-  --color-foreground: #15181d;
-  --color-card-foreground: #15181d;
-  --color-muted: #ecece7;
-  --color-muted-foreground: #5a5f66;
-  --color-border: #e1e1db;
-  --color-neutral-ink: #5a5f66;
-  --color-primary: #1e5a7d;
-  --color-on-primary: #ffffff;
-  --color-secondary: #3d7ea6;
-  --color-ring: #1e5a7d;
-  --color-accent: #b8821f;
-  --color-on-accent: #15181d;
-  --color-destructive: #b3341f;
-  --color-field-border: #83858a;
-  --color-delta-bg: #e4ebf1;
-  --color-delta-ink: #14384f;
-  --color-notice-bg: #f6eedc;
-  --color-notice-ink: #63460c;
-  --color-notice-border: var(--color-accent);
-
-  --shadow-card: 0 1px 1px rgb(21 24 29 / 0.03), 0 2px 6px rgb(21 24 29 / 0.04);
-  --shadow-raised: 0 1px 1px rgb(21 24 29 / 0.04), 0 6px 18px rgb(21 24 29 / 0.08);
-  --shadow-pop: 0 12px 32px rgb(21 24 29 / 0.14);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-background: #10151c;
-    --color-card: #192129;
-    --color-foreground: #e9ebe7;
-    --color-card-foreground: #e9ebe7;
-    --color-muted: #222b35;
-    --color-muted-foreground: #a5afb9;
-    --color-border: #2b333e;
-    --color-neutral-ink: #a5afb9;
-    --color-primary: #8fb8d8;
-    --color-on-primary: #0c1218;
-    --color-secondary: #6e97b8;
-    --color-ring: #8fb8d8;
-    --color-accent: #d9a23f;
-    --color-on-accent: #0c1218;
-    --color-destructive: #e4795f;
-    --color-field-border: #6d7987;
-    --color-delta-bg: #1c3247;
-    --color-delta-ink: #cce0f0;
-    --color-notice-bg: #2c230e;
-    --color-notice-ink: #e8cd96;
-    --color-notice-border: var(--color-accent);
-  }
-}
-
-:root[data-theme='dark'] {
-  --color-background: #10151c;
-  --color-card: #192129;
-  --color-foreground: #e9ebe7;
-  --color-card-foreground: #e9ebe7;
-  --color-muted: #222b35;
-  --color-muted-foreground: #a5afb9;
-  --color-border: #2b333e;
-  --color-neutral-ink: #a5afb9;
-  --color-primary: #8fb8d8;
-  --color-on-primary: #0c1218;
-  --color-secondary: #6e97b8;
-  --color-ring: #8fb8d8;
-  --color-accent: #d9a23f;
-  --color-on-accent: #0c1218;
-  --color-destructive: #e4795f;
-  --color-field-border: #6d7987;
-  --color-delta-bg: #1c3247;
-  --color-delta-ink: #cce0f0;
-  --color-notice-bg: #2c230e;
-  --color-notice-ink: #e8cd96;
-  --color-notice-border: var(--color-accent);
-}
 
 /* ==========================================================================
    THE CHASSIS STRIP — one row
