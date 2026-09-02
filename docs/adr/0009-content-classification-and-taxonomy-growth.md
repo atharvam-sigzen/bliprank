@@ -790,4 +790,6 @@ filter is now `UNPROMPTED_INTENTS`, the same one `runScan` applies.
   report, reading as "your page covers none of this" when the truth is "there
   was nothing to check". Zero of the 924 prompts across every bank hit it, and
   `widestGap`'s secondary sort already prefers a real gap over it, so the fix
-  would be shorter than the comment explaining why it was needed.
+  would be shorter than the comment explaining why it was needed. (`widestGap`
+  went with the `--draft` path on 2026-09-02; the report itself sorts the same
+  way, and the observation stands.)

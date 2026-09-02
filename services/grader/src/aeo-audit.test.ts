@@ -9,22 +9,20 @@
  *      run through a holdout. A test asserts the hedge, because it is the sort
  *      of sentence that gets "tightened" in a later edit.
  *
- *   3. NOTHING IS PUBLISHED. The draft path reaches exactly one host, the
- *      configured model endpoint, and returns a string. There is no write.
+ *   3. NOTHING IS GENERATED. The module reads HTML and returns facts about it;
+ *      it imports no model transport and makes no network call.
  */
 
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   auditSite,
   coverageFor,
-  draftGapContent,
   jsonLdTypes,
   promptTerms,
   questionHeadings,
-  widestGap,
   wholeDocumentText,
 } from './aeo-audit.js'
-import type { BankAuthorConfig } from './bank-author.js'
 
 const page = (body: string, head = ''): string => `<!doctype html><html><head>${head}</head><body>${body}</body></html>`
 
@@ -153,88 +151,15 @@ describe('the findings — facts about a document, hedged about mechanism', () =
     expect(auditSite(bare, { domain: 'x.com', prompts: [] }).truncated).toBe(false)
   })
 
-  it('picks the least-covered prompt as the gap worth drafting for', () => {
-    const html = page('<p>We sell ERP software for jewellery retailers in India.</p>')
-    const report = auditSite(html, { domain: 'x.com', prompts: ['erp for jewellery retailers', 'payroll for construction crews'] })
-    expect(widestGap(report)!.prompt).toBe('payroll for construction crews')
-  })
 })
 
-describe('the draft — one host, one string, no write anywhere', () => {
-  const CONFIG: BankAuthorConfig = {
-    provider: 'openai-compatible',
-    model: 'primary/model:free',
-    fallbackModel: 'fallback/model:free',
-    baseUrl: 'https://example.test/api/v1',
-    apiKey: 'k',
-    timeoutMs: 1_000,
-  }
-  const reply = (text: string) => new Response(JSON.stringify({ choices: [{ message: { content: text } }] }), { status: 200 })
-  const input = (fetchImpl: typeof fetch, config = CONFIG, log?: (m: string) => void) => ({
-    domain: 'acme.com',
-    title: 'Acme',
-    description: 'We do things',
-    headings: 'Things',
-    prompt: 'payroll for construction crews',
-    missingTerms: ['payroll', 'construction'],
-    config,
-    fetchImpl,
-    ...(log ? { log } : {}),
-  })
-
-  it('⚠️ reaches exactly one host, and it is the configured model endpoint', () => {
-    // The property that matters most here: a report that diagnoses someone
-    // else's site must not be able to touch it. Nothing in this path takes a
-    // URL from the audited domain.
-    const seen: string[] = []
-    const doFetch = (async (url: unknown) => {
-      seen.push(String(url))
-      return reply('## Payroll\n\nWe run payroll.')
-    }) as unknown as typeof fetch
-    return draftGapContent(input(doFetch)).then((out) => {
-      expect(seen).toEqual(['https://example.test/api/v1/chat/completions'])
-      expect(out).toContain('## Payroll')
-    })
-  })
-
-  it('puts the gap and its missing terms in front of the model', async () => {
-    let body: { messages: { role: string; content: string }[] } = { messages: [] }
-    const doFetch = (async (_u: unknown, init?: RequestInit) => {
-      body = JSON.parse(String(init?.body)) as typeof body
-      return reply('## x')
-    }) as unknown as typeof fetch
-    await draftGapContent(input(doFetch))
-    const user = body.messages.find((m) => m.role === 'user')!.content
-    expect(user).toContain('payroll for construction crews')
-    expect(user).toContain('payroll, construction')
-    // And the system prompt forbids the two things a draft must never do.
-    const system = body.messages.find((m) => m.role === 'system')!.content
-    expect(system).toContain('Name no competitor')
-    expect(system).toMatch(/do not write one|Claim no award/)
-  })
-
-  it('never throws: a dead model falls to the fallback, and two dead models yield null', async () => {
-    const asked: string[] = []
-    const failing = (async (_u: unknown, init?: RequestInit) => {
-      asked.push((JSON.parse(String(init?.body)) as { model: string }).model)
-      return new Response('rate limited', { status: 429 })
-    }) as unknown as typeof fetch
-    const logs: string[] = []
-    await expect(draftGapContent(input(failing, CONFIG, (m) => logs.push(m)))).resolves.toBeNull()
-    expect(asked).toEqual(['primary/model:free', 'fallback/model:free'])
-    expect(logs.join(' ')).toContain('429')
-  })
-
-  it('the anthropic provider gets null and a logged reason, not a wrong-shaped request', () => {
-    // Documented ceiling: that transport is a forced tool call shaped for a
-    // bank, and this needs prose. Silence would look like a dead model.
-    const logs: string[] = []
-    const never = (async () => {
-      throw new Error('must not be called')
-    }) as unknown as typeof fetch
-    return draftGapContent(input(never, { ...CONFIG, provider: 'anthropic' }, (m) => logs.push(m))).then((out) => {
-      expect(out).toBeNull()
-      expect(logs.join(' ')).toContain('no prose transport')
-    })
+describe('the report generates nothing', () => {
+  it('imports no model transport and makes no network call of its own', () => {
+    // The --draft path was removed on 2026-09-02. This pins the removal: the
+    // module that diagnoses a customer's page may not be able to write one.
+    const src = readFileSync(new URL('./aeo-audit.ts', import.meta.url), 'utf8')
+    expect(src).not.toMatch(/bank-author/)
+    expect(src).not.toMatch(/\bfetch\s*\(/)
+    expect(src).not.toMatch(/draftGapContent|DRAFT_SYSTEM/)
   })
 })

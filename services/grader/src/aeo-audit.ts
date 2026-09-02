@@ -21,13 +21,15 @@
  * this category compete on and this one does not.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * ⚠️ IT DIAGNOSES. IT NEVER PUBLISHES.
+ * ⚠️ IT DIAGNOSES. IT NEVER GENERATES, AND IT NEVER PUBLISHES.
  *
  * There is no CMS write, no API token, no "apply this fix" path, and no code
- * here that can change a byte of the customer's site. A draft is returned as a
- * string for a person to read, edit and paste, or throw away. That is a product
- * decision, not a scope limit: the fastest way to destroy a measurement product
- * is for it to also be the thing that edits the page being measured.
+ * here that can change a byte of the customer's site. Nor is there a model
+ * call: a `--draft` path that wrote suggested copy for the widest gap existed
+ * until 2026-09-02 and was removed, because a measurement product that also
+ * writes the page being measured has become part of the thing it measures.
+ * That is a product decision, not a scope limit. This module takes HTML and
+ * returns facts about it, and a test pins the absence of any transport import.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * THE FETCH IS `fetch-site.ts`'S, UNCHANGED.
@@ -40,7 +42,6 @@
  */
 
 import { extractSiteText } from '@bliprank/taxonomy'
-import { askText, type BankAuthorConfig } from './bank-author.js'
 
 export type FindingStatus = 'present' | 'weak' | 'missing'
 
@@ -410,107 +411,4 @@ export function auditSite(
     schemaTypes: types,
     words,
   }
-}
-
-/*
- * ─────────────────────────────────────────────────────────────────────────────
- * THE DRAFT.
- */
-
-const DRAFT_SYSTEM = `You draft a short piece of web copy for a company's own site.
-
-You are given: the company's domain, what its homepage currently says about
-itself, and ONE question that real buyers in its market ask AI assistants — a
-question the homepage does not currently address.
-
-Write a heading and two to four short paragraphs that answer that question
-directly and specifically, in the company's own voice, as copy that would sit on
-their site.
-
-Rules:
-- Answer the question in the FIRST sentence. Do not build up to it.
-- Use only what the homepage already tells you about this company. If you do not
-  know a number, a price, a customer count or a certification, do not write one.
-- Name no competitor and make no comparative claim.
-- Claim no award, no ranking and no statistic.
-- British-neutral English. No em-dashes. No marketing superlatives.
-- Plain markdown: one "## " heading, then paragraphs. Nothing else.
-
-This is a DRAFT for a person to edit. It will not be published by anything.`
-
-export interface DraftInput {
-  readonly domain: string
-  readonly title: string
-  readonly description: string
-  readonly headings: string
-  /** The question the page does not address — one of the bank's own prompts. */
-  readonly prompt: string
-  /** The terms of that question the page never uses. Named, so the draft covers them. */
-  readonly missingTerms: readonly string[]
-  readonly config: BankAuthorConfig
-  readonly fetchImpl?: typeof fetch
-  readonly log?: (message: string) => void
-}
-
-/**
- * Draft one answer block for one gap. Optional, and off unless a key is set.
- *
- * ⚠️ NEVER THROWS, AND NEVER PUBLISHES. It returns a string for a person to
- * read, edit and paste, or null when no model answered — the same degradation
- * `authorBank` makes, so an unconfigured author and a rate-limited one reach the
- * caller as one outcome. There is no code path from here to the customer's site.
- *
- * ⚠️ A MODEL IS ALLOWED HERE, AND THAT IS NOT A CONTRADICTION OF R1. R1 governs
- * SCORING: a number must be reproducible, so nothing that produces one may call
- * a model. This produces prose for a human to edit, which is CLAUDE.md §6's
- * "customer-facing generation" — the same category as the prompt-bank author,
- * behind the same seam and the same env vars. No number anywhere depends on what
- * it returns, and nothing stores it.
- *
- * ponytail: `openai-compatible` only. The Anthropic transport in `bank-author`
- * is a forced tool call shaped for a bank, and this needs prose; a config on
- * that provider gets null and a logged line rather than a wrong-shaped request.
- * Upgrade path if anyone runs Anthropic in anger: a plain text branch in
- * `askText`, about six lines.
- */
-export async function draftGapContent(input: DraftInput): Promise<string | null> {
-  const log = input.log ?? (() => {})
-  if (input.config.provider !== 'openai-compatible') {
-    log(`aeo-draft: provider "${input.config.provider}" has no prose transport; no draft was written`)
-    return null
-  }
-
-  const user = [
-    `Domain: ${input.domain}`,
-    `Homepage title: ${input.title || '(none)'}`,
-    `Homepage description: ${input.description || '(none)'}`,
-    `Homepage headings: ${input.headings.slice(0, 1_500) || '(none)'}`,
-    '',
-    `The question buyers ask that this page does not address:`,
-    `  "${input.prompt}"`,
-    '',
-    `Terms from that question the page never uses: ${input.missingTerms.join(', ') || '(none)'}`,
-  ].join('\n')
-
-  const models = [input.config.model, ...(input.config.fallbackModel ? [input.config.fallbackModel] : [])]
-  for (const [i, model] of models.entries()) {
-    try {
-      const text = await askText(input.config, model, DRAFT_SYSTEM, user, {
-        maxTokens: 1_200,
-        ...(input.fetchImpl ? { fetchImpl: input.fetchImpl } : {}),
-      })
-      if (!text.trim()) throw new Error(`${model} returned nothing`)
-      if (i > 0) log(`aeo-draft: ${input.config.model} did not answer; ${model} did`)
-      return text.trim()
-    } catch (e) {
-      log(`aeo-draft: ${model} failed (${(e as Error).message})`)
-    }
-  }
-  return null
-}
-
-/** The gap most worth drafting for: the prompt the page covers least. */
-export function widestGap(report: AeoReport): PromptCoverage | null {
-  const ranked = [...report.coverage].sort((a, b) => a.ratio - b.ratio || b.missing.length - a.missing.length)
-  return ranked[0] ?? null
 }

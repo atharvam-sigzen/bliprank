@@ -2,7 +2,6 @@
  * `pnpm grader:aeo` — the gap report for one domain.
  *
  *   pnpm grader:aeo -- --domain sigzen.com
- *   pnpm grader:aeo -- --domain sigzen.com --draft
  *
  * It resolves the domain's category the same way a scan does, fetches the
  * homepage through the SSRF boundary the classifier already uses, and reports
@@ -10,15 +9,16 @@
  * actually asks.
  *
  * ⚠️ WHAT IT COSTS. One outbound GET to the domain's own homepage — the same one
- * `/api/preview` makes — and, with `--draft`, one call to the bank-author model.
- * Zero provider quota: nothing here touches OpenWeb Ninja, so no scan is spent
- * and `COLLECTION_ENABLED` does not gate it (R3 governs COLLECTION, and this
- * collects nothing).
+ * `/api/preview` makes. Zero provider quota: nothing here touches OpenWeb Ninja,
+ * so no scan is spent and `COLLECTION_ENABLED` does not gate it (R3 governs
+ * COLLECTION, and this collects nothing). The bank author may be consulted by
+ * `resolveCategory` for a domain no category fits, exactly as a preview would.
  *
- * ⚠️ IT DIAGNOSES AND IT NEVER PUBLISHES. `--draft` prints markdown to stdout for
- * a person to read, edit and paste. There is no flag that writes to a site, no
- * CMS credential is read, and no code path from this file reaches anything the
- * customer owns.
+ * ⚠️ IT DIAGNOSES. IT NEVER GENERATES AND IT NEVER PUBLISHES. There is no flag
+ * that writes copy, no flag that writes to a site, no CMS credential is read,
+ * and no code path from this file reaches anything the customer owns. A
+ * `--draft` flag that had one gap written up as suggested copy was removed on
+ * 2026-09-02: diagnose only.
  *
  * ⚠️ AND IT DOES NOT CLAIM CAUSATION. Every finding is a fact about a document.
  * None of them has been shown to move a mention rate, because that needs a
@@ -28,11 +28,10 @@
  */
 
 import { join } from 'node:path'
-import { auditSite, draftGapContent, widestGap, type AeoReport, type Finding } from './aeo-audit.js'
+import { auditSite, type AeoReport, type Finding } from './aeo-audit.js'
 import { bankAuthorConfig } from './bank-author.js'
 import { fetchSiteHtml } from './fetch-site.js'
 import { loadApiKey } from './load-key.js'
-import { extractSiteText } from '@bliprank/taxonomy'
 import { resolveCategory } from './resolve-category.js'
 import { UNPROMPTED_INTENTS } from './scan.js'
 
@@ -41,7 +40,6 @@ const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$
 export interface AeoOptions {
   readonly domain: string
   readonly dataDir: string
-  readonly draft: boolean
   readonly maxPrompts: number
 }
 
@@ -61,7 +59,6 @@ export function parseAeoArgs(argv: readonly string[]): AeoOptions | { readonly r
   return {
     domain,
     dataDir: args.get('data') ?? join(here, '..', 'data-live'),
-    draft: args.has('draft'),
     maxPrompts,
   }
 }
@@ -158,45 +155,6 @@ async function main(): Promise<void> {
       `   Every line above is a fact about a document. Whether changing one moves a mention\n` +
       `   rate needs a holdout and a difference-in-differences, and we have not run one.\n` +
       `   Treat it as a checklist of things that are missing, not as a list of things that work.\n`,
-  )
-
-  if (!o.draft) {
-    process.stdout.write(`\nRe-run with --draft to have one gap drafted as suggested copy (one model call, published nowhere).\n`)
-    return
-  }
-  if (!author) {
-    process.stdout.write(`\n--draft: no author key configured, so nothing was drafted. Set OPENROUTER_API_KEY (CLAUDE.md §7).\n`)
-    return
-  }
-
-  const gap = widestGap(report)
-  if (!gap || gap.missing.length === 0) {
-    process.stdout.write(`\n--draft: no prompt has uncovered terms, so there is no gap to draft for.\n`)
-    return
-  }
-
-  const site = extractSiteText(fetched.html)
-  const draft = await draftGapContent({
-    domain: o.domain,
-    title: site.title,
-    description: site.description,
-    headings: site.headings,
-    prompt: gap.prompt,
-    missingTerms: gap.missing,
-    config: author,
-    log: (m) => process.stdout.write(`  ${m}\n`),
-  })
-  if (!draft) {
-    process.stdout.write(`\n--draft: no model answered, so nothing was drafted. The report above stands on its own.\n`)
-    return
-  }
-  process.stdout.write(
-    `\n─────────────────────────────────────────────────────────────────────────────\n` +
-      `DRAFT for: "${gap.prompt}"\n` +
-      `covering: ${gap.missing.join(', ')}\n` +
-      `⚠️ UNREVIEWED, AND PUBLISHED NOWHERE. Model-written copy about someone else's\n` +
-      `   business. Read every claim in it before any of it goes near a live page.\n` +
-      `─────────────────────────────────────────────────────────────────────────────\n\n${draft}\n`,
   )
 }
 
