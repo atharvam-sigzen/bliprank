@@ -95,6 +95,12 @@ describe('POST /api/preview', () => {
     expect(body.engines).toHaveLength(5)
     // A hand-authored category has competitors, so the head-to-head is real.
     expect(body.competitors.length).toBeGreaterThan(0)
+    // And the subject is not among them. pipedrive.com IS a tracked leader of
+    // this bank; the scan excludes it from the comparison set, so the preview
+    // must promise the chart the scan actually draws: seven rivals, not eight
+    // brands with the reader's own in the list.
+    expect(body.competitors).not.toContain('Pipedrive')
+    expect(body.competitors).toHaveLength(7)
   })
 
   it('shows ONLY unprompted prompts — a preview that lied about intent would be worse than none', async () => {

@@ -4,7 +4,7 @@ import { ENGINES } from '@bliprank/contracts'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
-import { UNPROMPTED_INTENTS } from '../../../../../services/grader/src/scan.js'
+import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/src/scan.js'
 import { resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
 import {
@@ -150,7 +150,11 @@ export async function POST(req: Request): Promise<Response> {
       ...(resolved.fallback ? { fallback: resolved.fallback } : {}),
       prompts: unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent })),
       engines: [...ENGINES],
-      competitors: resolved.bank.leaders.map((l) => l.name),
+      // The subject is not its own rival. `runScan` drops the leader the domain
+      // matched from the comparison set (scan.ts); a preview that listed it
+      // promised an eight-bar chart the scan draws with seven, with the reader's
+      // own brand named as one of the brands they will be ranked against.
+      competitors: resolved.bank.leaders.filter((l) => l.id !== subjectFor(domain, resolved.bank).spec.id).map((l) => l.name),
     }
     return json(body)
   } catch (e) {
