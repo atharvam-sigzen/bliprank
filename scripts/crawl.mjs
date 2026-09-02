@@ -12,8 +12,9 @@
  * from its own seeded storage.
  *
  * ⚠️ CANNOT SPEND: every request to the provider or /api/scan is aborted at the
- * browser level. The one scan it performs is pipedrive.com, answered from the
- * committed result client-side before any fetch.
+ * browser level. The one scan it performs is pipedrive.com: its preview is
+ * answered with a canned body, and confirming it is served from the record
+ * bundled with the build, so no fetch ever leaves the machine.
  *
  * Usage: node scripts/crawl.mjs
  */
@@ -122,6 +123,31 @@ async function harvestGraderState(page, domain, label, from, reached, queue, edg
       { timeout: 15000 },
     )
     .catch(() => {})
+
+  /*
+   * THE PREVIEW IS NOT THE END OF THE FLOW. Since 2179a54 every domain, the
+   * bundled ones included, stops at a preview whose headline is `.record__domain`
+   * and whose only way forward is "Run this scan". Harvesting there found the
+   * preview's three links and reported /dashboard unreachable by click, for a
+   * day, while the button that reaches it sat unpressed on the screen. So the
+   * button is pressed, exactly as a person would, and the wait runs again for
+   * the states a scan actually ends in: a rail, a refusal, or the handoff.
+   * Nothing is collected by pressing it: the bundled domain is served from the
+   * build, and any other request to /api/scan is aborted by this crawl's guard.
+   */
+  const confirm = await page.$('.record__action.btn--primary')
+  if (confirm && !(await page.$('section.record .rail, section.record--refused'))) {
+    await confirm.click().catch(() => {})
+    await page
+      .waitForFunction(
+        () =>
+          document.querySelector('section.record .rail') !== null ||
+          document.querySelector('section.record--refused') !== null ||
+          [...document.querySelectorAll('button')].some((b) => /open in dashboard/i.test(b.textContent ?? '')),
+        { timeout: 15000 },
+      )
+      .catch(() => {})
+  }
 
   for (const h of await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href))) {
     const k = normalise(h)
