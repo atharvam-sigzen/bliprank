@@ -1,0 +1,330 @@
+{
+  "domain": "pipedrive.com",
+  "finalUrl": "https://www.pipedrive.com/",
+  "truncated": false,
+  "findings": [
+    {
+      "id": "json-ld",
+      "status": "present",
+      "what": "2 JSON-LD block(s), all parsing.",
+      "why": "The page describes itself in a machine-readable form.",
+      "evidence": "Answer, DefinedTerm, FAQPage, Organization, Question, SubscribeAction"
+    },
+    {
+      "id": "entity-schema",
+      "status": "present",
+      "what": "The page names an entity type for itself.",
+      "why": "This is where a page states, unambiguously, which thing it is about. A brand whose name is ambiguous in prose has one place to be unambiguous, and this is it. Untested against citation rates.",
+      "evidence": "Answer, DefinedTerm, FAQPage, Organization, Question, SubscribeAction"
+    },
+    {
+      "id": "faq",
+      "status": "present",
+      "what": "FAQ or Q&A structured data is present.",
+      "why": "Question-and-answer content is the shape an answer engine is quoting from when it quotes a page at all.",
+      "evidence": "FAQPage"
+    },
+    {
+      "id": "meta-description",
+      "status": "weak",
+      "what": "Description is 505 characters (useful band is roughly 70–160).",
+      "why": "Short says too little to be a self-description; long is truncated where it is displayed. The band is a convention, not a measurement.",
+      "evidence": "Sales CRM & Pipeline Management Software Pipedrive is the easy-to-use, #1 user-rated CRM tool. Get more qualified leads and grow your busine"
+    },
+    {
+      "id": "title",
+      "status": "present",
+      "what": "Title is 52 characters.",
+      "why": "The page states what it is.",
+      "evidence": "Sales CRM & Pipeline Management Software | Pipedrive"
+    },
+    {
+      "id": "h1",
+      "status": "present",
+      "what": "One <h1>.",
+      "why": "The document's own statement of its subject. One is the convention; none leaves it unstated and several leave it contested.",
+      "evidence": "The easy and effective CRM for closing deals"
+    },
+    {
+      "id": "content-depth",
+      "status": "present",
+      "what": "About 2341 words of page text.",
+      "why": "There is enough of the page's own prose for a sentence to be quoted out of it.",
+      "evidence": "Sales CRM & Pipeline Management Software | Pipedrive Skip to main content Features Pipeline management Lead management Sales inbox Sales aut"
+    },
+    {
+      "id": "robots",
+      "status": "present",
+      "what": "No noindex/nosnippet directive.",
+      "why": "Nothing on the page refuses to be read.",
+      "evidence": "max-image-preview:large"
+    },
+    {
+      "id": "canonical",
+      "status": "present",
+      "what": "A canonical URL is declared.",
+      "why": "Which address is the real one, when the same page is reachable at several. Absent, the citation a scan attributes to you may be split across duplicates of the same page.",
+      "evidence": "https://www.pipedrive.com"
+    }
+  ],
+  "coverage": [
+    {
+      "prompt": "What is the best CRM for a solo founder just starting out?",
+      "covered": [
+        "crm",
+        "founder",
+        "just",
+        "out"
+      ],
+      "missing": [
+        "solo",
+        "starting"
+      ],
+      "ratio": 0.6666666666666666
+    },
+    {
+      "prompt": "Which CRM works best for a 10-person B2B sales team?",
+      "covered": [
+        "crm",
+        "works",
+        "sales",
+        "team"
+      ],
+      "missing": [
+        "person",
+        "b2b"
+      ],
+      "ratio": 0.6666666666666666
+    },
+    {
+      "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+      "covered": [
+        "crm",
+        "market",
+        "company",
+        "spreadsheets"
+      ],
+      "missing": [
+        "mid",
+        "outgrown"
+      ],
+      "ratio": 0.6666666666666666
+    },
+    {
+      "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+      "covered": [
+        "crm",
+        "should",
+        "marketing",
+        "agency",
+        "manage",
+        "pipelines"
+      ],
+      "missing": [
+        "client"
+      ],
+      "ratio": 0.8571428571428571
+    },
+    {
+      "prompt": "Which CRM is best for a small business in the UK?",
+      "covered": [
+        "crm",
+        "small",
+        "business"
+      ],
+      "missing": [],
+      "ratio": 1
+    },
+    {
+      "prompt": "Best CRM for a startup in India with a small sales team",
+      "covered": [
+        "crm",
+        "startup",
+        "small",
+        "sales",
+        "team"
+      ],
+      "missing": [
+        "india"
+      ],
+      "ratio": 0.8333333333333334
+    },
+    {
+      "prompt": "Which CRM do large enterprise sales organisations typically use?",
+      "covered": [
+        "crm",
+        "large",
+        "sales",
+        "typically"
+      ],
+      "missing": [
+        "enterprise",
+        "organisations"
+      ],
+      "ratio": 0.6666666666666666
+    },
+    {
+      "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+      "covered": [
+        "crms",
+        "free"
+      ],
+      "missing": [
+        "plan",
+        "limits"
+      ],
+      "ratio": 0.5
+    },
+    {
+      "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+      "covered": [
+        "crm",
+        "team",
+        "set"
+      ],
+      "missing": [
+        "easiest",
+        "non",
+        "technical",
+        "own"
+      ],
+      "ratio": 0.42857142857142855
+    },
+    {
+      "prompt": "Best CRM for a field sales team in the UAE",
+      "covered": [
+        "crm",
+        "field",
+        "sales",
+        "team"
+      ],
+      "missing": [
+        "uae"
+      ],
+      "ratio": 0.8
+    },
+    {
+      "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+      "covered": [
+        "move",
+        "customer",
+        "data",
+        "out",
+        "spreadsheets",
+        "into",
+        "crm",
+        "history"
+      ],
+      "missing": [
+        "losing"
+      ],
+      "ratio": 0.8888888888888888
+    },
+    {
+      "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+      "covered": [
+        "crm"
+      ],
+      "missing": [
+        "bill",
+        "doubled",
+        "added",
+        "seats",
+        "options"
+      ],
+      "ratio": 0.16666666666666666
+    },
+    {
+      "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+      "covered": [
+        "get",
+        "sales",
+        "team",
+        "log",
+        "calls",
+        "emails",
+        "crm"
+      ],
+      "missing": [
+        "actually"
+      ],
+      "ratio": 0.875
+    },
+    {
+      "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+      "covered": [
+        "crm",
+        "full",
+        "contacts",
+        "stop",
+        "recurring"
+      ],
+      "missing": [
+        "duplicate",
+        "clean"
+      ],
+      "ratio": 0.7142857142857143
+    },
+    {
+      "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+      "covered": [
+        "connect",
+        "crm",
+        "calendar"
+      ],
+      "missing": [
+        "gmail",
+        "nothing",
+        "entered",
+        "twice"
+      ],
+      "ratio": 0.42857142857142855
+    },
+    {
+      "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+      "covered": [
+        "sales",
+        "forecast",
+        "crm",
+        "never",
+        "close",
+        "closes"
+      ],
+      "missing": [
+        "actually",
+        "fix"
+      ],
+      "ratio": 0.75
+    },
+    {
+      "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+      "covered": [
+        "track",
+        "leads",
+        "through",
+        "crm"
+      ],
+      "missing": [
+        "come",
+        "whatsapp"
+      ],
+      "ratio": 0.6666666666666666
+    }
+  ],
+  "meanCoverage": 0.6809290382819794,
+  "schemaTypes": [
+    "Answer",
+    "DefinedTerm",
+    "FAQPage",
+    "Organization",
+    "Question",
+    "SubscribeAction"
+  ],
+  "words": 2341,
+  "category": "crm-software",
+  "day": "2026-08-25",
+  "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+  "fetchedAt": "2026-09-02T12:04:53.365Z",
+  "bytes": 406194,
+  "promptCount": 17
+}

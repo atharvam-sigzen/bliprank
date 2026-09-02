@@ -65,6 +65,15 @@
 
 import { BUNDLED_SCANS, runInfoOf, type ScanResultFile } from '@/lib/scan-result'
 
+/** One source an answer cited, with the class the scan's own rules assigned it (ADR-0005, ADR-0014). */
+export interface StoredCitation {
+  readonly url: string
+  readonly position: number
+  readonly sourceClass: string
+  /** The registrable domain the class was decided on. What a surface prints. */
+  readonly domain: string
+}
+
 export interface StoredAnswer {
   readonly prompt: string
   readonly engine: string
@@ -83,6 +92,8 @@ export interface StoredAnswer {
    */
   readonly empty: boolean
   readonly collectedAt: string
+  /** Every source this answer cited, in the engine's order. Empty when it cited none. */
+  readonly citations: readonly StoredCitation[]
 }
 
 export interface ScanAnswers {
@@ -90,7 +101,20 @@ export interface ScanAnswers {
   readonly category: string
   readonly day: string
   readonly comparisonBasis: string
+  /** The scoring rule set that classified the citations; '' on a file written before they were carried. */
+  readonly algoVersion: string
   readonly answers: readonly StoredAnswer[]
+}
+
+function parseCitations(value: unknown): readonly StoredCitation[] {
+  if (!Array.isArray(value)) return []
+  const out: StoredCitation[] = []
+  for (const c of value) {
+    const x = (c ?? {}) as Partial<StoredCitation>
+    if (typeof x.url !== 'string' || !x.url || typeof x.sourceClass !== 'string' || typeof x.domain !== 'string') continue
+    out.push({ url: x.url, position: typeof x.position === 'number' && Number.isFinite(x.position) ? x.position : out.length, sourceClass: x.sourceClass, domain: x.domain })
+  }
+  return out
 }
 
 /** What a surface gets back: the evidence, or a sentence saying why not. */
@@ -119,12 +143,14 @@ export function parseAnswers(value: unknown): ScanAnswers | null {
     // existed still distinguishes an absent answer from a silent one.
     empty: a.empty === true || a.text.trim() === '',
     collectedAt: typeof a.collectedAt === 'string' ? a.collectedAt : '',
+    citations: parseCitations((a as { citations?: unknown }).citations),
   }))
   return {
     domain: v.domain,
     category: typeof v.category === 'string' ? v.category : '',
     day: typeof v.day === 'string' ? v.day : '',
     comparisonBasis: typeof v.comparisonBasis === 'string' ? v.comparisonBasis : '',
+    algoVersion: typeof v.algoVersion === 'string' ? v.algoVersion : '',
     answers,
   }
 }
@@ -143,6 +169,13 @@ export function belongsTo(answers: ScanAnswers, scan: ScanResultFile): string | 
   if (!answers.comparisonBasis) return 'this evidence file does not record which measurement it belongs to'
   if (answers.comparisonBasis !== scan.comparisonBasis) {
     return 'these answers are from a scan measured on a different basis, so they are not the input to the numbers above'
+  }
+  // The citations' classes are re-derived at read time under the scorer THEN in
+  // force. If that is not the rule set the result was scored with, the classes
+  // on screen are not the classes behind the result's own citation counts (R5).
+  // A file too old to name a rule set is allowed, and says so on the surface.
+  if (answers.algoVersion && scan.algoVersion && answers.algoVersion !== scan.algoVersion) {
+    return `this evidence was classified under ${answers.algoVersion} while the numbers above were scored under ${scan.algoVersion}, so its source classes are not the ones behind them`
   }
   return null
 }
@@ -195,7 +228,7 @@ export function evidenceUrl(scan: ScanResultFile): string {
  * sits under a number and "could not load" with no reason invites the reader to
  * assume the evidence is being withheld rather than missing.
  */
-export async function loadAnswers(scan: ScanResultFile, fetchImpl: typeof fetch = fetch): Promise<AnswersResult> {
+async function fetchAnswers(scan: ScanResultFile, fetchImpl: typeof fetch): Promise<AnswersResult> {
   let raw: unknown
   try {
     const res = await fetchImpl(evidenceUrl(scan))
@@ -211,6 +244,12 @@ export async function loadAnswers(scan: ScanResultFile, fetchImpl: typeof fetch 
             : `The answer store answered ${res.status}, so the text behind these numbers could not be read.`,
       }
     }
+    // A static host that answers an unknown path with its own HTML not-found
+    // page and a 200 is the deployment saying the route does not exist, not
+    // the store saying something unparseable.
+    if (/text\/html/i.test(res.headers.get('content-type') ?? '')) {
+      return { ok: false, message: 'The answers for this scan are not available in this build. They live on the machine that collected them.' }
+    }
     raw = (await res.json()) as unknown
   } catch (e) {
     return { ok: false, message: `Could not reach the answer store: ${(e as Error).message}` }
@@ -221,4 +260,29 @@ export async function loadAnswers(scan: ScanResultFile, fetchImpl: typeof fetch 
   const wrong = belongsTo(parsed, scan)
   if (wrong) return { ok: false, message: `${wrong}. Nothing is shown rather than the wrong text under the right number.` }
   return { ok: true, answers: parsed }
+}
+
+/**
+ * ONE DOWNLOAD PER SCAN. Two sections read the evidence now — the per-question
+ * drawer and the cited sources — and the file is the largest thing on the
+ * page. A successful read is memoised per evidence URL and basis for the life
+ * of the page; a refusal is not, so a 404 on a deployment that later gains the
+ * route, or a network blip, is retried on the next press. An injected fetch
+ * (tests) bypasses the memo: a test that fakes two different servers for one
+ * scan must see both.
+ */
+const memo = new Map<string, Promise<AnswersResult>>()
+
+export function loadAnswers(scan: ScanResultFile, fetchImpl: typeof fetch = fetch): Promise<AnswersResult> {
+  if (fetchImpl !== fetch) return fetchAnswers(scan, fetchImpl)
+  const key = `${evidenceUrl(scan)}|${scan.comparisonBasis}`
+  let held = memo.get(key)
+  if (!held) {
+    held = fetchAnswers(scan, fetchImpl).then((r) => {
+      if (!r.ok) memo.delete(key)
+      return r
+    })
+    memo.set(key, held)
+  }
+  return held
 }

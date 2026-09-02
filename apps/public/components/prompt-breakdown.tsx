@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { answerKey, indexAnswers, loadAnswers, type AnswerIndex, type StoredAnswer } from '@/lib/answers'
+import { answerKey, indexAnswers, loadAnswers, type AnswerIndex, type StoredAnswer, type StoredCitation } from '@/lib/answers'
+import { shortFor } from '@/lib/citations'
 import { byEngine, promptBreakdown, type BreakdownLine } from '@/lib/prompt-breakdown'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
@@ -405,11 +406,45 @@ function Evidence({ scan, lines, subjectName }: { scan: ScanResultFile; lines: r
                     {answer.text}
                   </pre>
                 )}
+                {/* The sources this answer cited, each with the class the scan's
+                    own rules gave it. "None" is stated, because an engine that
+                    cites nothing (gemini, in this corpus) is a fact worth a line
+                    and not a blank. */}
+                {answer && !answer.empty ? <Cites citations={answer.citations} /> : null}
               </article>
             )
           })}
         </details>
       ))}
     </section>
+  )
+}
+
+/** How many citations one answer's list shows before it says "and N more". The corpus maximum is 11. */
+const MAX_CITES_SHOWN = 40
+
+function Cites({ citations }: { citations: readonly StoredCitation[] }) {
+  if (citations.length === 0) return <p className="cites cites--none">No sources cited by this engine for this answer.</p>
+  const shown = citations.slice(0, MAX_CITES_SHOWN)
+  return (
+    <ul className="cites" aria-label="Sources this answer cited">
+      {shown.map((k) => (
+        <li key={`${k.position}-${k.url}`}>
+          {/* A link only for an absolute web URL that names a host. A provider's
+              own redirect (`/goto?url=…`) is stored verbatim at collection and
+              would resolve against THIS site; a `data:` or other scheme is not
+              a place to send a reader. Those are named, not linked. */}
+          {k.domain && /^https?:\/\//i.test(k.url) ? (
+            <a className="cites__host" href={k.url} target="_blank" rel="noreferrer noopener nofollow">
+              {k.domain}
+            </a>
+          ) : (
+            <span className="cites__host cites__host--unresolvable">an engine redirect link naming no site</span>
+          )}
+          <span className="flag">{shortFor(k.sourceClass)}</span>
+        </li>
+      ))}
+      {citations.length > shown.length ? <li className="cites--none">and {citations.length - shown.length} more</li> : null}
+    </ul>
   )
 }

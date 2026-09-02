@@ -5,6 +5,8 @@ import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProven
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { Headline } from '@/components/headline'
+import { CitedSources } from '@/components/cited-sources'
+import { GapReport } from '@/components/gap-report'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { RangeRail } from '@/components/range-rail'
 import { PromptPreview } from '@/components/prompt-preview'
@@ -537,6 +539,10 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           3 of the 6 questions we asked") likely belongs in the simple view. Not
           invented here. */}
       <PromptBreakdown scan={scan} />
+
+      {/* The two diagnostics, from the same evidence and the page itself (ADR-0014). */}
+      <CitedSources scan={scan} />
+      <GapReport scan={scan} />
 
       <OpenWorkspaceButton domain={scan.domain} label="Open in dashboard" />
       <ResetButton onReset={onReset} />

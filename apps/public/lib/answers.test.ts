@@ -213,3 +213,25 @@ describe('⚠️ where the evidence is fetched from', () => {
     expect(asked).toEqual(['/api/answers?domain=acme.example'])
   })
 })
+
+describe('⚠️ the rule-set check — the classes on screen are the classes behind the number (R5)', () => {
+  it('refuses evidence classified under a different scorer version than the result was scored with', () => {
+    const evidence = parseAnswers(file({ algoVersion: 'det-3' }))!
+    const why = belongsTo(evidence, scan({ algoVersion: 'det-2' }))
+    expect(why).toContain('det-3')
+    expect(why).toContain('det-2')
+  })
+
+  it('accepts the same version, and a file too old to name one', () => {
+    expect(belongsTo(parseAnswers(file({ algoVersion: 'det-2' }))!, scan({ algoVersion: 'det-2' }))).toBeNull()
+    expect(belongsTo(parseAnswers(file({}))!, scan({ algoVersion: 'det-2' }))).toBeNull()
+    expect(parseAnswers(file({}))!.algoVersion).toBe('')
+  })
+
+  it('a static host answering the route with its own HTML page is the deployment, not the store', async () => {
+    const html = (async () => new Response('<!doctype html><h1>Not found</h1>', { status: 200, headers: { 'content-type': 'text/html' } })) as unknown as typeof fetch
+    const got = await loadAnswers(scan({ domain: 'acme.example' }), html)
+    expect(got.ok).toBe(false)
+    if (!got.ok) expect(got.message).toContain('not available in this build')
+  })
+})

@@ -5,6 +5,8 @@ import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bl
 import { ActionLink } from '@/components/action-link'
 import { themedUrl, useDepth, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
+import { CitedSources } from '@/components/cited-sources'
+import { GapReport } from '@/components/gap-report'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { Headline } from '@/components/headline'
 import { RangeRail } from '@/components/range-rail'
@@ -236,6 +238,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
           absence when the file predates `promptRows`, so this surface makes no
           claim about the split that the data does not carry. */}
       <PromptBreakdown scan={scan} />
+
+      {/* The two diagnostics, from the same evidence and the page itself (ADR-0014). */}
+      <CitedSources scan={scan} />
+      <GapReport scan={scan} />
 
       {/*
         ⚠️ THE CHART THIS COMPONENT STILL REFUSES TO DRAW.

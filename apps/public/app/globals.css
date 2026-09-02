@@ -3417,3 +3417,77 @@ h3.record__title,
   max-height: 30rem;
   overflow-y: auto;
 }
+
+/* ==========================================================================
+   THE SOURCES AND THE GAP REPORT — ADR-0014
+   ==========================================================================
+   Two lists on the paper. Neither is a card: a citation list sits under the
+   answer it belongs to in the mono figure voice, and a finding is a row with
+   its status in the margin column, the way the rail keeps its papers beside
+   it. Missing is set in weight, never in colour alone.
+   ========================================================================== */
+
+.cites {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.cites--none {
+  color: var(--color-muted-foreground);
+}
+
+.cites__host {
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.findings {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.finding {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.finding__status {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-top: 2px;
+  color: var(--color-muted-foreground);
+}
+
+.finding--missing .finding__status {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+.finding__what {
+  margin: 0;
+}
+
+.finding__evidence {
+  margin: 2px 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.finding__why {
+  margin: 4px 0 0;
+}
