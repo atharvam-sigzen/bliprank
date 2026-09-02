@@ -58,7 +58,11 @@ export async function GET(req: Request): Promise<Response> {
   // the request reaches a path.
   if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return json({ message: 'Pass ?domain=example.com' }, 400)
 
-  const got = await readScanAnswers(DATA, domain)
+  // A specific cycle, when the client names one. Day-shaped or nothing: the
+  // value reaches a file name inside `readCycle`, which refuses anything else.
+  const dayParam = new URL(req.url).searchParams.get('day') ?? ''
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(dayParam) ? dayParam : undefined
+  const got = await readScanAnswers(DATA, domain, day)
   if ('refuse' in got) {
     // 404 rather than 500: "this machine holds no evidence for that domain" is
     // an absence, and the client renders an absence differently from a fault.
