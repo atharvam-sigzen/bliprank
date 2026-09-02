@@ -299,3 +299,116 @@ export function confidenceGrade(
   if (w <= t.C) return { grade: 'C', note: `${spread} — indicative only`, provisional: true }
   return { grade: 'D', note: `${spread} — too few runs to conclude anything`, provisional: true }
 }
+
+/* ==========================================================================
+   FREQUENCY — a rate as a spoken quantity
+   ==========================================================================
+   ⚠️ HUMAN REVIEW REQUIRED: packages/stats — the rounding rule below decides
+   what a customer is told their number is. Check the three judgements marked
+   JUDGEMENT, and the deferral marked DEFERRED, before this reaches a customer.
+
+   WHY THIS EXISTS. The simple depth (see apps/public data-depth) must state a
+   measurement in plain language WITHOUT dropping its interval — the whole
+   product claim is that a number never appears without how much it does not
+   know. The way to keep both is to typeset the interval as language rather
+   than as a figure and a rail:
+
+       "AI assistants mention acme.com in about 1 in 4 answers.
+        Could be as few as 1 in 6, or as many as 1 in 3."
+
+   That sentence carries value, ci_low, ci_high and (with the clause the caller
+   appends) n. It satisfies R8 in words. A tooltip would not: it fails on touch,
+   in print, and in the screenshot a customer sends their board.
+
+   Frequencies rather than percentages because people read them more accurately,
+   and — the reason that matters here — because the WIDTH of an interval is
+   audible in a frequency and silent in a percentage. "17.0–31.2%" reads as
+   precision; "as few as 1 in 6, as many as 1 in 3" reads as the uncertainty it
+   is, to a reader who has never thought about a confidence interval.
+
+   This function returns numerals and the k values, never a sentence. The voice
+   belongs to the surface; the arithmetic and the refusals belong here.
+   ========================================================================== */
+
+/**
+ * The largest denominator worth speaking. Above one answer in two, "1 in k"
+ * stops being idiomatic — 1/0.6 rounds to "1 in 2", which understates, and
+ * there is no natural single-numerator phrasing above a half.
+ */
+const FREQUENCY_CEILING = 0.5
+
+export type Frequency =
+  /**
+   * A speakable ratio. `point` carries "about" at the call site, never here.
+   * The k values are exposed so a caller can see when the bounds collapse onto
+   * the estimate and choose not to print a range that is no range.
+   */
+  | { readonly kind: 'ratio'; readonly point: string; readonly low: string; readonly high: string; readonly pointK: number; readonly lowK: number; readonly highK: number }
+  /** p̂ = 0. Not a missing value: a finding, and it still has an upper bound. */
+  | { readonly kind: 'none'; readonly high: string; readonly highK: number }
+  /** Frequency framing would mislead here. The caller falls back to percentages. */
+  | { readonly kind: 'unavailable'; readonly reason: string }
+
+/** "1 in 4", or "none at all" for an unbounded denominator. */
+const inOne = (k: number): string => (Number.isFinite(k) ? `1 in ${k}` : 'none at all')
+
+/**
+ * A metric as a spoken frequency, or an explicit refusal to speak it.
+ *
+ * JUDGEMENT 1 — THE ROUNDING IS OUTWARD ON THE BOUNDS AND NEAREST ON THE
+ * ESTIMATE. The point estimate rounds to nearest, because the surface says
+ * "about" in front of it. The bounds round the way that WIDENS the spoken
+ * range: the low bound's denominator rounds up (a bigger k is a smaller rate)
+ * and the high bound's rounds down. So the sentence a customer reads always
+ * CONTAINS the computed interval and can never be tighter than it. Rounding to
+ * nearest on the bounds would be more accurate on average and would sometimes
+ * state a range narrower than the one the arithmetic supports, which is the one
+ * error this package exists to refuse.
+ *
+ * JUDGEMENT 2 — ABOVE ONE ANSWER IN TWO IT REFUSES rather than approximating.
+ * See FREQUENCY_CEILING. The test is on ci_high, not on the estimate: an
+ * interval that reaches past a half cannot be spoken as "1 in k" at its top end
+ * however small its centre is.
+ *
+ * JUDGEMENT 3 — ZERO IS A FINDING, NOT AN ABSENCE. p̂ = 0 returns 'none' with
+ * its upper bound, so the surface can say "not mentioned in any of the 150
+ * answers, and the most that could be hiding in a sample this size is about 1
+ * in 60". A zero with no upper bound is the shape of a bug being reported as a
+ * result.
+ *
+ * DEFERRED — THE GOOD-NEWS CASE HAS NO PHRASING YET. A brand mentioned in 70%
+ * of answers gets 'unavailable' and a percentage sentence, because "7 in 10"
+ * needs a numerator this function does not produce. That is a copy decision
+ * with a statistical edge (what does the numerator round to?), so it is left
+ * for the human who owns this file rather than approximated by me.
+ */
+export function formatFrequency(m: Metric): Frequency {
+  if (!Number.isFinite(m.value) || !Number.isFinite(m.ci_low) || !Number.isFinite(m.ci_high)) {
+    return { kind: 'unavailable', reason: 'the metric is not a finite proportion' }
+  }
+  if (m.n < 1) {
+    return { kind: 'unavailable', reason: 'nothing was measured' }
+  }
+  if (m.ci_high > FREQUENCY_CEILING) {
+    // Includes every p̂ above a half, since ci_high >= value for a Wilson interval.
+    return { kind: 'unavailable', reason: 'the interval reaches above one answer in two' }
+  }
+
+  // ci_high = 0 only when the interval is degenerate; there is no upper bound to
+  // speak and "1 in Infinity" is not a sentence.
+  const highK = m.ci_high > 0 ? Math.floor(1 / m.ci_high) : Number.POSITIVE_INFINITY
+  if (!Number.isFinite(highK)) {
+    return { kind: 'unavailable', reason: 'the interval has no upper bound to state' }
+  }
+
+  if (m.value <= 0) {
+    return { kind: 'none', high: inOne(highK), highK }
+  }
+
+  // Infinity when ci_low is 0 — a real and common case at small n, and the
+  // honest phrase for it is "none at all" rather than a very large denominator.
+  const lowK = m.ci_low > 0 ? Math.ceil(1 / m.ci_low) : Number.POSITIVE_INFINITY
+  const pointK = Math.round(1 / m.value)
+
+  return { kind: 'ratio', point: inOne(pointK), low: inOne(lowK), high: inOne(highK), pointK, lowK, highK }
+}
