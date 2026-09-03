@@ -1,13 +1,15 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
+import { classifyDomain } from '@bliprank/taxonomy'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
 import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/src/scan.js'
-import { resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
+import { allBanks, allCategories, readCategoryRecord, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
 import {
+  DEFAULT_VISITOR_WINDOW_MS,
   checkVisitorThrottle,
   extractClientIp,
   recordVisitorScan,
@@ -49,7 +51,36 @@ import {
  * So it reuses `checkVisitorThrottle` against a SEPARATE ledger with a higher
  * ceiling: previewing is meant to be cheap and repeatable, scanning is not, and
  * one shared counter would make looking at your prompts cost you a scan.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⚠️ THE VISITOR THROTTLE TRUSTS A HEADER THE CALLER WRITES, so it is not the
+ * bound. `extractClientIp` reads `cf-connecting-ip` / `x-forwarded-for`, which
+ * a real edge sets and strips, and which on the local demo — or any deployment
+ * without a proxy in front — are whatever the request says they are. A loop
+ * that changes the header per request is as many "visitors" as it likes, and
+ * the throttle above sees each of them once. Found by the ADR-0014 review on
+ * `/api/gaps` and fixed there first; this is the same fix.
+ *
+ * What a caller could make the machine do, unbounded: read one homepage per
+ * distinct domain named (a fetch proxy for arbitrary hosts, one GET each) and
+ * author a bank for each (a free-tier model call, and a record and a bank file
+ * on disk, per domain). Not twice per domain — a failed read still records a
+ * fallback, records are write-once, and a recorded domain resolves at rung 0
+ * with no fetch — so the vector is breadth, not depth.
+ *
+ * So the bound that does not trust the caller is GLOBAL: this many previews
+ * that would actually cost — an unrecorded domain the host alone cannot
+ * classify — per rolling hour, across everyone, on one ledger, plus a cap on
+ * how many may be in flight at once. A recorded or host-classified domain
+ * costs nothing outbound and is not counted against it, so the ordinary path
+ * (preview the domain you are about to scan) is unaffected until an attack is
+ * actually under way, and the refusal says which limit it hit.
  */
+
+/** Previews that would fetch a homepage or author a bank, per hour, across every caller. */
+const DEFAULT_MAX_COSTING_PREVIEWS_PER_HOUR = 60
+const MAX_IN_FLIGHT = 2
+let inFlight = 0
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -63,12 +94,13 @@ const resolveRoot = (): string => {
   return join(process.cwd(), '..', '..')
 }
 const ROOT = resolveRoot()
-const DATA = join(ROOT, 'services', 'grader', 'data-live')
+/** Per request, so a test can point the route at a scratch directory through `GRADER_DATA_DIR`. */
+const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(ROOT, 'services', 'grader', 'data-live')
 
 const normalise = (d: string): string =>
   d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
-const previewThrottleConfig = (env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+const previewThrottleConfig = (DATA: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_PREVIEWS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_PREVIEWS_PER_HOUR),
   windowMs: Number(env['GRADER_VISITOR_WINDOW_MS'] ?? 60 * 60 * 1000),
   // A DIFFERENT FILE from the scan throttle's. Sharing one would mean three
@@ -76,6 +108,23 @@ const previewThrottleConfig = (env: NodeJS.ProcessEnv): VisitorThrottleConfig =>
   // scanning safer would instead make it impossible.
   ledgerFile: join(DATA, 'preview-throttle.json'),
 })
+
+/** The same rolling-window machinery under one shared key: the bound that does not care who asked. */
+const globalCapConfig = (DATA: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+  maxScansPerHour: Number(env['GRADER_MAX_COSTING_PREVIEWS_PER_HOUR'] ?? DEFAULT_MAX_COSTING_PREVIEWS_PER_HOUR),
+  windowMs: DEFAULT_VISITOR_WINDOW_MS,
+  ledgerFile: join(DATA, 'preview-global-cap.json'),
+})
+const GLOBAL_KEY = '*'
+
+/**
+ * Would previewing this domain fetch a page or call a model? Rung 0 (a
+ * record) and rungs 1 and 2 (the host alone classifies it) cost nothing
+ * outbound; everything else reaches the homepage and, failing that, the
+ * author. Decided the way `resolveCategory` decides it, from the same inputs.
+ */
+const wouldCost = (DATA: string, domain: string): boolean =>
+  readCategoryRecord(DATA, domain) === null && classifyDomain(domain, allBanks(DATA), allCategories(DATA)).status !== 'classified'
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
@@ -86,8 +135,10 @@ export async function POST(req: Request): Promise<Response> {
   const domain = normalise(String(raw ?? ''))
   if (!domain) return json({ kind: 'input', message: 'Enter a domain, for example pipedrive.com' }, 400)
 
-  const cfg = previewThrottleConfig(env)
-  const verdict = checkVisitorThrottle(extractClientIp(req), cfg, new Date())
+  const DATA = dataDir(env)
+  const now = new Date()
+  const cfg = previewThrottleConfig(DATA, env)
+  const verdict = checkVisitorThrottle(extractClientIp(req), cfg, now)
   if (!verdict.ok) {
     return json(
       {
@@ -97,14 +148,37 @@ export async function POST(req: Request): Promise<Response> {
       429,
     )
   }
+  mkdirSync(DATA, { recursive: true })
+
+  // THE BOUND THAT DOES NOT TRUST THE CALLER. Only for a preview that would
+  // actually fetch or author; a recorded or host-classified domain is free and
+  // passes untouched, so an exhausted cap never stops the ordinary path.
+  const costs = wouldCost(DATA, domain)
+  const global = globalCapConfig(DATA, env)
+  if (costs) {
+    const capVerdict = checkVisitorThrottle(GLOBAL_KEY, global, now)
+    if (!capVerdict.ok) {
+      return json(
+        {
+          kind: 'preview-global-cap',
+          message: `This service has already read ${global.maxScansPerHour} new domains' homepages in the last hour, which is its ceiling for everyone combined. Nothing was fetched, collected or charged; it resets in about ${capVerdict.resetInMinutes} minutes. A domain that has already been looked up still previews instantly.`,
+        },
+        429,
+      )
+    }
+    if (inFlight >= MAX_IN_FLIGHT) {
+      return json({ kind: 'preview-busy', message: 'The preview service is busy reading other homepages. Try again in a moment; nothing was fetched.' }, 503)
+    }
+  }
   // Recorded BEFORE the work, not after. The cost this limit exists to bound is
   // the outbound fetch and the authoring call, and both happen below — counting
   // afterwards would let a burst of concurrent requests all pass the check and
   // then all spend. The scan route counts after for the opposite and equally
   // correct reason: there, a refusal genuinely spends nothing.
-  mkdirSync(DATA, { recursive: true })
-  recordVisitorScan(extractClientIp(req), cfg, new Date())
+  recordVisitorScan(extractClientIp(req), cfg, now)
+  if (costs) recordVisitorScan(GLOBAL_KEY, global, now)
 
+  if (costs) inFlight += 1
   try {
     const resolved = await resolveCategory(domain, {
       dataDir: DATA,
@@ -160,5 +234,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch (e) {
     // Never a blank screen and never an invented category: say what broke.
     return json({ kind: 'failed', message: `The preview could not be built: ${(e as Error).message}` }, 500)
+  } finally {
+    if (costs) inFlight -= 1
   }
 }

@@ -49,9 +49,9 @@ const resolveRoot = (): string => {
 }
 const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(resolveRoot(), 'services', 'grader', 'data-live')
 
-export const DEFAULT_MAX_GAP_REPORTS_PER_VISITOR_PER_HOUR = 20
+const DEFAULT_MAX_GAP_REPORTS_PER_VISITOR_PER_HOUR = 20
 /** Reads of ONE domain's homepage an hour, across every visitor. A page does not change six times an hour. */
-export const DEFAULT_MAX_GAP_REPORTS_PER_DOMAIN_PER_HOUR = 6
+const DEFAULT_MAX_GAP_REPORTS_PER_DOMAIN_PER_HOUR = 6
 const MAX_IN_FLIGHT = 2
 let inFlight = 0
 

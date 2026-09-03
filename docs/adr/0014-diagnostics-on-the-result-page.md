@@ -127,6 +127,17 @@ count beside it; a dead ternary; a static host answering a route's path with
 its own HTML page and a 200 is now read as "not available in this build" on
 both loaders; a vacuous assertion in the render test.
 
+**`/api/preview`, fixed the same way on 2026-09-03.** The preview reads any
+caller-named homepage once and may author a bank for it, and its only throttle
+was the same header-keyed one. A failed read still records a fallback and
+records are write-once, so one domain is never read twice; the vector is
+breadth — unbounded distinct hosts, one GET and one model call each. The bound
+that does not trust the caller is therefore global: sixty previews that would
+cost (an unrecorded domain the host alone cannot classify) per hour across
+everyone, on one ledger, plus two in flight. A recorded or host-classified
+domain is free and passes an exhausted cap untouched. Tested with a fresh
+header per request, which is what an attacker sends.
+
 Left as they are, and named: `zoho-crm`'s attribution domain is `crm.zoho.com`
 by design (ADR-0005 narrows it), so `www.zoho.com/crm` citations read as
 "other" beside a chart that names Zoho CRM, and likewise Dynamics — the bank
