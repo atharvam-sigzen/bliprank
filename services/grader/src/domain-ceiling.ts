@@ -221,10 +221,13 @@ export function recordDomainCalls(domain: string, calls: number, cfg: DomainCeil
  * force — `GRADER_PROMPTS_PER_SCAN` when set — so the margin stated above holds
  * at 10 prompts and at 20, rather than only at 17.
  */
-export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): DomainCeilingConfig => {
+export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env, cellsPerCycle?: number): DomainCeilingConfig => {
   const explicit = env['GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH']
   const prompts = Number(env['GRADER_PROMPTS_PER_SCAN'] ?? DEFAULT_PROMPTS_PER_SCAN)
-  const derived = Number.isFinite(prompts) && prompts > 0 ? ceilingFor(prompts * ENGINES.length) : DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH
+  // The cycle's ACTUAL cell count when the caller knows it (curated plus the
+  // domain's own prompts, ADR-0016), so the stated margin holds for a domain
+  // asking more than the bank; the prompt count in force otherwise.
+  const derived = cellsPerCycle !== undefined && Number.isFinite(cellsPerCycle) && cellsPerCycle > 0 ? ceilingFor(cellsPerCycle) : Number.isFinite(prompts) && prompts > 0 ? ceilingFor(prompts * ENGINES.length) : DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH
   return {
     maxCallsPerMonth: explicit !== undefined && explicit !== '' ? Number(explicit) : derived,
     ledgerFile: join(dataDir, 'domain-ceiling.json'),

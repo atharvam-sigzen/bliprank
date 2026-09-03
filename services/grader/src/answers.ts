@@ -47,15 +47,15 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { r2KeyFor } from '@bliprank/collector'
+import { AnswerIndex, r2KeyFor } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
-import { FileBlobStore } from './local-store.js'
+import { FileBlobStore, FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { latestCycle, readCycle } from './cycles.js'
 import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scorer'
 import type { Citation } from '@bliprank/contracts'
 import { competitorsFor } from './competitor-overrides.js'
-import { basisOf, cellsFor, subjectFor } from './scan.js'
+import { basisOf, cellsFor, customCellsFor, subjectFor } from './scan.js'
 
 /**
  * One source an answer cited, with the class the scorer assigned it.
@@ -86,6 +86,8 @@ export interface StoredAnswer {
   readonly collectedAt: string
   /** Every source the engine cited for this answer, in its own order. Empty when it cited none. */
   readonly citations: readonly StoredCitation[]
+  /** True for an answer to one of the customer's own prompts (ADR-0016): evidence for the second block, never for the headline. */
+  readonly custom?: true
 }
 
 /**
@@ -112,6 +114,8 @@ export interface ScoredRun {
   readonly text: string
   readonly collectedAt: string
   readonly row: ScoreRow
+  /** An answer to one of the customer's own prompts. */
+  readonly custom?: true
 }
 
 export interface ScoredCycle {
@@ -153,7 +157,15 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   if (!bank) return { refuse: `${domain}: no bank for category ${slug}` }
 
   const basis = basisOf(stored.comparisonBasis ?? '')
-  const cells = cellsFor(bank, basis.engines ?? ([...ENGINES] as EngineId[]), day, basis.maxPrompts)
+  const engines = basis.engines ?? ([...ENGINES] as EngineId[])
+  // The custom prompts this cycle asked are in its own block, verbatim; their
+  // answers are evidence for that block and are marked so the reader keeps
+  // them apart from the headline's sample.
+  const customPrompts = (stored as { customPrompts?: { prompts?: unknown } }).customPrompts?.prompts
+  const cells = [
+    ...cellsFor(bank, engines, day, basis.maxPrompts).map((c) => ({ ...c, custom: false })),
+    ...(Array.isArray(customPrompts) ? customCellsFor(bank, engines, day, customPrompts.filter((p): p is string => typeof p === 'string')).map((c) => ({ ...c, custom: true })) : []),
+  ]
 
   // The same subject and competitor specs the scan scored with, derived the
   // same way, so a citation's class here is the class the scan's rows carry.
@@ -167,11 +179,17 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   const competitors = cs.competitors.filter((b) => b.id !== subject.id)
 
   const blob = new FileBlobStore(join(dataDir, 'answers'))
+  // The index says where each cell's object is, qualified by whichever adapter
+  // fetched it (ADR-0003 Amendment 1): the provider on a live run, the fixture
+  // adapter on an offline one. Guessing the provider's key would read a
+  // fixture cycle as a scan with no evidence at all. A cell the index does not
+  // hold falls back to the provider-qualified key, which is how every cycle
+  // collected before the index was consulted here was written.
+  const index = new AnswerIndex(new FileKV(join(dataDir, 'index.json')))
+  const { hits } = await index.lookup(cells.map((c) => c.cell))
   const runs: ScoredRun[] = []
   for (const c of cells) {
-    // Path-qualified exactly as the collector wrote it. An unqualified key would
-    // miss every object and report a scan with no evidence at all.
-    const body = await blob.get(r2KeyFor(c.cell, `openwebninja:${c.engine}`))
+    const body = await blob.get(hits.get(c.cell.key)?.r2Key ?? r2KeyFor(c.cell, `openwebninja:${c.engine}`))
     if (!body) continue
     try {
       const parsed = JSON.parse(body) as { runs?: { text?: unknown; collectedAt?: unknown; citations?: unknown }[] }
@@ -186,7 +204,7 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
             })
           : []
         const row = scoreAnswer({ answer: { text: run.text, citations: cited }, brand: subject, competitors })
-        runs.push({ prompt: c.prompt, engine: c.engine, text: run.text, collectedAt: typeof run.collectedAt === 'string' ? run.collectedAt : '', row })
+        runs.push({ prompt: c.prompt, engine: c.engine, text: run.text, collectedAt: typeof run.collectedAt === 'string' ? run.collectedAt : '', row, ...(c.custom ? { custom: true as const } : {}) })
       }
     } catch {
       // A corrupt object costs one answer's evidence, not the report. The
@@ -226,6 +244,7 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
       empty: r.text.trim() === '',
       collectedAt: r.collectedAt,
       citations: r.row.citations.map((k) => ({ url: k.url, position: k.position, sourceClass: k.sourceClass, domain: k.domain })),
+      ...(r.custom ? { custom: true as const } : {}),
     })),
   }
 }

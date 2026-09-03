@@ -528,3 +528,30 @@ describe('a per-domain competitor override reaches the scan through the resolver
     expect(overridden.brands.find((b) => b.id === semrush.id)!.mentions).toBe(overridden.counts.answersScored)
   })
 })
+
+describe('the customer’s own prompts are a second measurement, never the headline (ADR-0016)', () => {
+  it('custom cells are collected in the same loop, scored into their own block on their own basis, and the headline is byte-identical to a scan without them', async () => {
+    const text = (prompt: string) => (prompt.startsWith('custom:') ? 'Only Pipedrive here.' : 'HubSpot and Pipedrive both.')
+    const plain = await runScan(req('pipedrive.com'), deps(text))
+    const withCustom = await runScan(req('pipedrive.com', { customPrompts: { version: 2, prompts: ['custom: which crm works offline', 'custom: best crm for a two-person studio'] } }), deps(text))
+    expect(plain.status).toBe('scanned')
+    expect(withCustom.status).toBe('scanned')
+    if (plain.status !== 'scanned' || withCustom.status !== 'scanned') return
+    // The headline sample, its basis, its brands and its rows: unchanged.
+    expect(withCustom.comparisonBasis).toBe(plain.comparisonBasis)
+    expect(withCustom.brands).toEqual(plain.brands)
+    expect(withCustom.promptRows).toEqual(plain.promptRows)
+    expect(plain).not.toHaveProperty('customPrompts')
+    // The custom block: its own basis, its own answers, its own rows.
+    const c = withCustom.customPrompts!
+    expect(c.version).toBe(2)
+    expect(c.comparisonBasis).toBe(`${plain.comparisonBasis.replace(/unprompted=\d+/, 'unprompted=0')}|custom=2@2`)
+    expect(c.counts).toEqual({ cellsRequested: 2 * ENGINES.length, answersScored: 2 * ENGINES.length })
+    expect(c.promptRows.every((r) => r.prompt.startsWith('custom:'))).toBe(true)
+    expect(c.brands.find((b) => b.isSubject)!.mentions).toBe(2 * ENGINES.length)
+    expect(c.brands.find((b) => b.id === 'hubspot')!.mentions).toBe(0)
+    // The cycle's counts are the whole cycle; the block's are its share.
+    expect(withCustom.counts.cellsRequested).toBe(plain.counts.cellsRequested + c.counts.cellsRequested)
+    expect(withCustom.counts.answersScored).toBe(plain.counts.answersScored + c.counts.answersScored)
+  })
+})

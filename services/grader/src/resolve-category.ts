@@ -408,7 +408,7 @@ export function correctCategory(dataDir: string, req: CategoryCorrectionRequest)
 /** Whitespace folded, control characters removed: a reason is read in a terminal and on a page, and must carry nothing but words. */
 export function plainText(s: string): string {
   // Whitespace first: a newline is a control character too, and stripping it before folding would glue two words.
-  return s.replace(/\s+/g, ' ').replace(/\p{Cc}/gu, '').trim()
+  return s.replace(/\s+/g, ' ').replace(/[\p{Cc}\p{Cf}]/gu, '').trim()
 }
 
 /** A generated bank, on disk, paired with the category the classifier sees. */

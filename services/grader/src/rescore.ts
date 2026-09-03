@@ -51,13 +51,14 @@
 import { copyFileSync, existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { AnswerIndex, type OwnPlan } from '@bliprank/collector'
-import { ENGINES, type EngineId } from '@bliprank/contracts'
+import { ENGINES, parseBasis, type EngineId } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, defaultGateConfig } from './live-gate.js'
 import { loadApiKey } from './load-key.js'
 import { FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { runGrader } from './run.js'
-import { basisOf, cellsFor } from './scan.js'
+import { basisOf, cellsFor, customCellsFor } from './scan.js'
+import { customPromptsAt } from './custom-prompts.js'
 import { overrideAt } from './override-store.js'
 import { latestPath, listCycles, storedResults } from './cycles.js'
 
@@ -135,6 +136,8 @@ interface Plan {
   readonly missing: readonly string[]
   /** The competitor-set version the cycle recorded; null for the category's own. Pinned on the re-run. */
   readonly competitorSet: number | null
+  /** The custom prompt set the cycle asked; null when it asked none. Pinned on the re-run. */
+  readonly customPrompts: number | null
 }
 
 
@@ -181,7 +184,14 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
   const maxPrompts = basis.maxPrompts ?? fallbackPrompts
   const engines = basis.engines ?? ([...ENGINES] as EngineId[])
 
-  const cells = cellsFor(bank, engines, day, maxPrompts)
+  // The custom prompts THIS cycle asked, at the version its own block records
+  // (ADR-0016). Their cells must be in the store too, or the re-derivation
+  // would buy them; and the version is pinned on the re-run.
+  const customBasis = parseBasis((stored as { customPrompts?: { comparisonBasis?: string } }).customPrompts?.comparisonBasis ?? '')
+  const customVersion = customBasis?.custom?.version ?? null
+  const customSet = customVersion === null ? null : customPromptsAt(dataDir, domain, customVersion)
+  if (customVersion !== null && !customSet) return { refuse: `${domain}: this cycle asked custom prompt set ${customVersion}, which the store no longer holds` }
+  const cells = [...cellsFor(bank, engines, day, maxPrompts), ...(customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [])]
   const index = new AnswerIndex(new FileKV(join(dataDir, 'index.json')))
   const { hits } = await index.lookup(cells.map((c) => c.cell))
   const missing = cells.filter((c) => !hits.has(c.cell.key)).map((c) => `${c.engine} ${c.prompt.slice(0, 40)}`)
@@ -198,6 +208,7 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
     cells: cells.length,
     missing,
     competitorSet,
+    customPrompts: customVersion,
   }
 }
 
@@ -288,6 +299,7 @@ async function main(): Promise<void> {
       capUsd,
       maxPrompts: plan.maxPrompts,
       competitorSet: plan.competitorSet,
+      customPrompts: plan.customPrompts,
       dataDir: o.dataDir,
       outFile: out,
       log: () => {},

@@ -23,7 +23,8 @@
     "grader:publishers": "tsx services/grader/src/publishers.ts",
     "grader:version-diff": "tsx services/grader/src/version-diff.ts",
     "grader:correct": "tsx services/grader/src/correct.ts",
-    "grader:competitors": "tsx services/grader/src/competitors.ts"
+    "grader:competitors": "tsx services/grader/src/competitors.ts",
+    "grader:prompts": "tsx services/grader/src/prompts.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

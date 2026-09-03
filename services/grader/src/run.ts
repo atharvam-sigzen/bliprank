@@ -50,6 +50,7 @@ import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.js'
 import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
 import { competitorsFor } from './competitor-overrides.js'
+import { customPromptsAt, readCustomPromptSet } from './custom-prompts.js'
 import type { CategoryResolution } from './scan.js'
 import { allBanks, allCategories, resolveCategory, readCategoryRecord, type CategoryRecord } from './resolve-category.js'
 import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
@@ -88,6 +89,13 @@ export interface RunnerOptions {
    * no longer holds fails the run rather than substituting today's.
    */
   readonly competitorSet?: number | null
+  /**
+   * The custom prompt set to ask (ADR-0016, decision 4). Omitted: the set in
+   * force now, read from the store. `null`: none, for re-deriving a cycle that
+   * asked none. A number: that recorded version; one the store no longer holds
+   * fails the run rather than substituting today's.
+   */
+  readonly customPrompts?: number | null
 }
 
 export function parseArgs(
@@ -405,8 +413,20 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
               fromRecord(domain, offlineRecord, offlineBank, offlineRecord.slug === FALLBACK_SLUG ? { reason: 'unclassified', detail: offlineRecord.evidence, candidates: [] } : undefined)
           : undefined
 
+    // The customer's own prompts: the set in force, or the version pinned by
+    // a re-derivation. Read beside the scan, so what is asked is what the record
+    // page shows, and a pinned version the store lost fails rather than drifts.
+    const customSet = o.customPrompts === null ? null : o.customPrompts === undefined ? readCustomPromptSet(o.dataDir, o.domain) : customPromptsAt(o.dataDir, o.domain, o.customPrompts)
+    if (o.customPrompts !== undefined && o.customPrompts !== null && !customSet) throw new Error(`${o.domain}: custom prompt set ${o.customPrompts} is not on record; a measurement under another set is a different measurement`)
     const result = await runScan(
-      { domain: o.domain, engines: o.engines, day: o.day, runsPerCell: 1, ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}) },
+      {
+        domain: o.domain,
+        engines: o.engines,
+        day: o.day,
+        runsPerCell: 1,
+        ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}),
+        ...(customSet && customSet.prompts.length ? { customPrompts: { version: customSet.version, prompts: customSet.prompts } } : {}),
+      },
       {
         orchestrator,
         blob,
@@ -452,10 +472,12 @@ async function main(): Promise<void> {
   // Print the bill before incurring it, never after. `/backfill` holds the same
   // rule and it is the difference between a decision and a discovery.
   const promptsIfWhole = opts.maxPrompts ?? 17
-  const worst = estimateUsd(opts, promptsIfWhole)
+  // The customer's own prompts are cells too (ADR-0016); a bill that left them out would be a discovery, not a decision.
+  const customIfWhole = opts.customPrompts === null ? 0 : (opts.customPrompts === undefined ? readCustomPromptSet(opts.dataDir, opts.domain) : customPromptsAt(opts.dataDir, opts.domain, opts.customPrompts))?.prompts.length ?? 0
+  const worst = estimateUsd(opts, promptsIfWhole + customIfWhole)
   opts.log(
     `grader scan · ${opts.domain} · mode=${opts.mode} · plan=${opts.plan} · day=${opts.day}\n` +
-      `  ${opts.engines.length} engines x up to ${promptsIfWhole} unprompted prompts x 1 run\n` +
+      `  ${opts.engines.length} engines x up to ${promptsIfWhole} unprompted prompts${customIfWhole ? ` + ${customIfWhole} of the domain's own` : ''} x 1 run\n` +
       `  worst case (every cell a miss): $${worst.toFixed(4)} against a $${opts.capUsd.toFixed(2)} cap`,
   )
   if (preview) {

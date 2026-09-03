@@ -54,6 +54,7 @@ export function tallyOther(evidence: readonly { readonly subject: string; readon
   const agg = new Map<string, { citations: number; answers: Set<string>; prompts: Set<string>; engines: Set<string>; subjects: Set<string>; sample: string }>()
   for (const { subject, answers } of evidence) {
     answers.answers.forEach((a, i) => {
+      if (a.custom) return // the customer's own prompts are not the corpus a publisher is proposed from
       for (const k of a.citations) {
         if (k.sourceClass !== 'other' || !k.domain) continue
         const h = agg.get(k.domain) ?? { citations: 0, answers: new Set(), prompts: new Set(), engines: new Set(), subjects: new Set(), sample: k.url }
@@ -112,7 +113,7 @@ export interface DryRun {
  * as in `classifyCitation`.
  */
 export function applyRegistry(answers: ScanAnswers, registry: Readonly<Record<string, string>> = PUBLISHER_REGISTRY): DryRun {
-  const all = answers.answers.flatMap((a) => a.citations)
+  const all = answers.answers.filter((a) => !a.custom).flatMap((a) => a.citations)
   const matchedCounts = new Map<string, number>()
   let otherBefore = 0
   for (const k of all) {
