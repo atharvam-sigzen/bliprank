@@ -16,6 +16,7 @@
  * used to be demonstrated only on fixtures.
  */
 
+import { basisDifference } from '@bliprank/contracts/basis'
 import { compare, type Comparison, type Metric } from '@bliprank/stats'
 import { isScanResultFile, rememberScan, runInfoOf, scans, subjectOf, normaliseTyped, type ScanResultFile } from './scan-result'
 
@@ -108,21 +109,9 @@ export function whyNotComparable(a: Metric, b: Metric): string | null {
   return basisDifference(a.comparison_basis, b.comparison_basis)
 }
 
-/** The basis string, as `comparisonBasisFor` in services/grader/src/scan.ts writes it, one label per pipe-separated segment. */
-const BASIS_SEGMENTS = ['the basis format', 'the engine set', 'the locale', 'the geography', 'the bank version', 'the prompt count', 'the runs per cell'] as const
-
-export function basisDifference(current: string, previous: string): string | null {
-  const a = (current ?? '').split('|')
-  const b = (previous ?? '').split('|')
-  const strip = (s: string) => s.replace(/^(engines|unprompted|runs)=/, '')
-  const diffs: string[] = []
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    if (a[i] === b[i]) continue
-    const label = BASIS_SEGMENTS[i] ?? `basis field ${i + 1}`
-    diffs.push(`${label} (${strip(b[i] ?? 'absent')} against ${strip(a[i] ?? 'absent')})`)
-  }
-  return diffs.length ? `measured on a different basis: ${diffs.join(', ')}` : null
-}
+// The basis shape and its words are one definition, shared with the grader that
+// writes the string (ADR-0016). This file used to carry a positional copy of the
+// labels; the copy is gone, so a segment cannot exist on one side only.
 
 /**
  * Remember every cycle the SERVER holds for this domain that this browser

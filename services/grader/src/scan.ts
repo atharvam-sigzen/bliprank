@@ -34,7 +34,7 @@
  *    "not comparable" for every row.
  */
 
-import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
+import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
 import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
@@ -303,15 +303,17 @@ export function subjectFor(domain: string, bank: PromptBank, siteTitle?: string)
  * side by side rather than reporting the difference as movement.
  */
 export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number): string {
-  return [
-    'grader',
-    `engines=${[...engines].sort().join(',')}`,
-    bank.locale,
-    bank.geo,
-    `${bank.category}@${bank.version}`,
-    `unprompted=${promptCount}`,
-    `runs=${runsPerCell}`,
-  ].join('|')
+  // The shape lives in @bliprank/contracts (ADR-0016), shared with the reader
+  // that explains a refused comparison, so the two cannot drift.
+  return formatBasis({
+    format: 'grader',
+    engines,
+    locale: bank.locale,
+    geo: bank.geo,
+    bank: { slug: bank.category, version: bank.version },
+    unprompted: promptCount,
+    runs: runsPerCell,
+  })
 }
 
 /**
@@ -367,16 +369,18 @@ export function cellsFor(
  * narrow is as wrong as guessing wide.
  */
 export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number; readonly engines?: readonly EngineId[] } {
+  const b = parseBasis(comparisonBasis ?? '')
+  // A string the shared definition cannot parse is read by key, as this
+  // function always did: a file that recorded its scope in a partial or older
+  // form still gets the segments it did record, and nothing it did not.
   const parts = (comparisonBasis ?? '').split('|')
-  const prompts = Number(parts.find((p) => p.startsWith('unprompted='))?.slice('unprompted='.length))
-  const engineList = parts
-    .find((p) => p.startsWith('engines='))
-    ?.slice('engines='.length)
-    .split(',')
-    .filter((e): e is EngineId => (ENGINE_IDS as readonly string[]).includes(e))
+  const prompts = b ? b.unprompted : Number(parts.find((p) => p.startsWith('unprompted='))?.slice('unprompted='.length))
+  const engineList = (b ? b.engines : parts.find((p) => p.startsWith('engines='))?.slice('engines='.length).split(',') ?? []).filter((e): e is EngineId =>
+    (ENGINE_IDS as readonly string[]).includes(e),
+  )
   return {
     ...(Number.isInteger(prompts) && prompts > 0 ? { maxPrompts: prompts } : {}),
-    ...(engineList && engineList.length > 0 ? { engines: engineList } : {}),
+    ...(engineList.length > 0 ? { engines: engineList } : {}),
   }
 }
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { wilson, type Metric } from '@bliprank/stats'
-import { basisDifference, cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, nextCycleDay, syncCycles, trendOf, whyNotComparable } from './cycles'
+import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, nextCycleDay, syncCycles, trendOf, whyNotComparable } from './cycles'
 import { rememberScan, scanFor, SCAN, type ScanResultFile } from './scan-result'
 import { NO_RUN_BLOCK_SCAN } from './__fixtures__/no-run-block-scan'
 
