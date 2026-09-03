@@ -163,14 +163,14 @@ hatch, and it leaves a trail.
 
 ## Build order, each step reviewed before the next
 
-1. This ADR, the shared basis definition and its drift test.
+1. This ADR, the shared basis definition and its drift test. **Landed 2026-09-03.**
 2. Category correction: record fields, `correctCategory`, the request store
-   and route, the operator command, the record surface.
+   and route, the operator command, the record surface. **Landed 2026-09-03.**
 3. Competitor overrides: the file, the reviewed-source rule, the scan-time
-   merge, the basis tail, request and apply.
+   merge, the basis tail, request and apply. **Landed 2026-09-03.**
 4. Custom prompts: the store and validation, the request path from the
    existing page, the scan request field, cells, ceiling, the second metric
-   block, the record surface.
+   block, the record surface. **Landed 2026-09-03.**
 5. Full-suite gate and a real-runner test of one synthetic cycle carrying
    custom prompts and an override, with only the network replaced.
 
