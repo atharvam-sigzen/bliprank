@@ -103,13 +103,23 @@ and flips nothing, which says only that scoring did not move.)
 - **Exclude is always allowed.** It is promotion's exclusion mechanism, per
   domain: "our integration partner, not a rival" without changing what every
   other domain in the category measures.
-- **Include is allowed only from reviewed sources**: any leader in any
-  taxonomy bank, or any candidate the promotion tally has already produced
-  for the category. Both carry reviewed alias sets. Free-text names are
-  refused: a hand-typed name with no alias set produces false mentions, and
-  the competitor set decides position, which decides the score. Decided by
-  the owner on 2026-09-03.
-- The subject is never in its own override.
+- **Include is allowed only from reviewed sources**: a leader of any bank
+  this build holds, hand-authored or promoted, each with a reviewed alias
+  set. Free-text names are refused: a hand-typed name with no alias set
+  produces false mentions, and the competitor set decides position, which
+  decides the score. Decided by the owner on 2026-09-03. *Amended after the
+  step-3 review:* the first wording also admitted "any candidate the
+  promotion tally has already produced". It does not. A tally candidate has
+  no reviewed alias set and the tally is not a store an override could
+  version against; it is included by promoting it first (`grader:promote`),
+  so it passes the same bar and the same bump every other rival passed.
+- The subject is never in its own override: not by id, and not by a sibling
+  bank's leader whose domain is the subject's host or whose name is the
+  subject's name.
+- Clearing an override is a new version too: the set moved back, and the
+  cycles under the old set are not comparable with the ones after.
+- A category correction is refused while an override is in force; the
+  override was checked against the old category's set and is cleared first.
 - The basis gains `set=<override version>` from the first override on. The
   next cycle is not comparable with the last, and the record says "the
   competitor set" changed, which is true.
@@ -145,8 +155,9 @@ hatch, and it leaves a trail.
 ## What is deliberately not done
 
 - No re-classification on correction, ever. The person chooses from the list.
-- No free-text competitor names. No per-domain prompt bank edits beyond the
-  custom list. No scheduler. No identity.
+- No free-text competitor names, and no include from an un-promoted tally
+  candidate. No per-domain prompt bank edits beyond the custom list. No
+  scheduler. No identity.
 - No write to a stored cycle. A correction changes what the next cycle
   measures; it never rewrites what a past one measured (R5).
 
