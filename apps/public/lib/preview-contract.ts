@@ -48,6 +48,8 @@ export interface PreviewResponse {
   /** THE ACTUAL PROMPTS, verbatim, in the order a cycle would send them. */
   readonly prompts: readonly { readonly text: string; readonly intent: string }[]
   readonly engines: readonly string[]
-  /** Competitors the scan will rank against. Empty for a generated or fallback bank. */
+  /** Competitors the scan will rank against: the category's set, or this domain's override over it. Empty when neither names any. */
   readonly competitors: readonly string[]
+  /** The per-domain competitor override version in force, when one is (ADR-0016). */
+  readonly competitorSet?: number
 }

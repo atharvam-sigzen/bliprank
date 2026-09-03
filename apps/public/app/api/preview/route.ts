@@ -7,6 +7,7 @@ import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
 import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/src/scan.js'
 import { allBanks, allCategories, readCategoryRecord, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
+import { competitorsFor } from '../../../../../services/grader/src/competitor-overrides.js'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
 import {
   DEFAULT_VISITOR_WINDOW_MS,
@@ -210,6 +211,7 @@ export async function POST(req: Request): Promise<Response> {
     // scan it previews and becomes worse than no preview at all.
     const unprompted = resolved.bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
 
+    const competitorSet = competitorsFor(DATA, domain, resolved.bank, subjectFor(domain, resolved.bank, resolved.record.brandName).spec.id) ?? { competitors: [], missing: [] }
     const body: PreviewResponse = {
       domain,
       category: resolved.bank.category,
@@ -230,7 +232,9 @@ export async function POST(req: Request): Promise<Response> {
       // matched from the comparison set (scan.ts); a preview that listed it
       // promised an eight-bar chart the scan draws with seven, with the reader's
       // own brand named as one of the brands they will be ranked against.
-      competitors: resolved.bank.leaders.filter((l) => l.id !== subjectFor(domain, resolved.bank).spec.id).map((l) => l.name),
+      // The domain's override laid over the category's set, when one is in force (ADR-0016): what a scan would measure against.
+      competitors: competitorSet.competitors.map((l) => l.name),
+      ...(competitorSet.set !== undefined ? { competitorSet: competitorSet.set } : {}),
     }
     return json(body)
   } catch (e) {

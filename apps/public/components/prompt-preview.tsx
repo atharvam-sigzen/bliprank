@@ -72,7 +72,9 @@ function sourceLine(preview: PreviewResponse): { cap: string; line: string; glos
          * when it told an authored category it had not been categorised.
          */
         gloss: preview.competitors.length
-          ? 'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human. The competitors listed were not chosen by us — each was promoted because the engines themselves named it in answers we collected.'
+          ? preview.competitorSet !== undefined
+            ? 'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human. The competitors listed are this domain\'s own adjusted set: chosen by a person from rivals whose alias tables have been reviewed, not guessed by us.'
+            : 'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human. The competitors listed were not chosen by us — each was promoted because the engines themselves named it in answers we collected.'
           : 'No category we hold fitted this business, so one was written for it from your homepage and kept. The prompts below have not been reviewed by a human, and no competitors were named — we will not guess who you compete with.',
         flag: true,
       }

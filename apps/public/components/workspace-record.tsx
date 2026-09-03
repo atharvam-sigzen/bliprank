@@ -14,6 +14,7 @@ import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { NewCycle } from '@/components/new-cycle'
 import { CategoryCorrection } from '@/components/category-correction'
+import { CompetitorOverrides } from '@/components/competitor-overrides'
 import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf } from '@/lib/cycles'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
@@ -477,6 +478,7 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
           until a person applies it on the machine that holds the record
           (ADR-0016). On a deployment without that machine it says so. */}
       <CategoryCorrection domain={workspace.domain} />
+      <CompetitorOverrides domain={workspace.domain} />
 
       {context === 'brand' ? (
         <div style={{ marginTop: 'var(--space-3)' }}>
