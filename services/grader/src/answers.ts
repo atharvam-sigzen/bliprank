@@ -54,7 +54,8 @@ import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { latestCycle, readCycle } from './cycles.js'
 import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scorer'
 import type { Citation } from '@bliprank/contracts'
-import { basisOf, cellsFor, leadersOf, subjectFor } from './scan.js'
+import { competitorsFor } from './competitor-overrides.js'
+import { basisOf, cellsFor, subjectFor } from './scan.js'
 
 /**
  * One source an answer cited, with the class the scorer assigned it.
@@ -157,7 +158,13 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   // The same subject and competitor specs the scan scored with, derived the
   // same way, so a citation's class here is the class the scan's rows carry.
   const { spec: subject } = subjectFor(domain, bank, record?.brandName)
-  const competitors = leadersOf(bank).filter((b) => b.id !== subject.id)
+  // The competitor set THIS cycle was measured against: the category's, or
+  // the per-domain override at the version its basis records (ADR-0016). An
+  // override the store no longer holds is a refusal, never today's set.
+  const cs = competitorsFor(dataDir, domain, bank, subject.id, basis.set ?? null)
+  if (!cs) return { refuse: `${domain}: this cycle was measured against competitor set ${basis.set}, which the store no longer holds` }
+  if (cs.missing.length) return { refuse: `${domain}: this cycle's competitor set included ${cs.missing.join(', ')}, which this build no longer holds` }
+  const competitors = cs.competitors.filter((b) => b.id !== subject.id)
 
   const blob = new FileBlobStore(join(dataDir, 'answers'))
   const runs: ScoredRun[] = []

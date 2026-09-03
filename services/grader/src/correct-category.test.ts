@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { applyOverride } from './competitor-overrides.js'
 import { correctCategory, readCategoryRecord, recordCategory } from './resolve-category.js'
 
 /**
@@ -93,6 +94,13 @@ describe('a correction is a new record, one version up, with its history inside 
     first()
     const r = correctCategory(dir, { host: 'acme.test', slug: 'accounting-software', reason: 'the  pricing\x1b[31m page\n sells accounting', by: 'oper\x07ator' })
     expect(r).toMatchObject({ correction: { reason: 'the pricing[31m page sells accounting', by: 'operator' } })
+  })
+
+  it('a correction is refused while a competitor override is in force, and names the command that clears it', () => {
+    first()
+    applyOverride(dir, { host: 'acme.test', exclude: ['hubspot'], include: [], reason: 'HubSpot is our integration partner', by: 'operator' })
+    expect(correctCategory(dir, { host: 'acme.test', slug: 'accounting-software', reason: 'the pricing page sells accounting modules', by: 'operator' })).toMatchObject({ refuse: expect.stringContaining('grader:competitors') })
+    expect(readCategoryRecord(dir, 'acme.test')?.slug).toBe('crm-software')
   })
 
   it('recordCategory still refuses to overwrite a corrected record', () => {

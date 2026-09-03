@@ -47,8 +47,11 @@ import { fixtureAdapter } from '@bliprank/collector/fixture'
 import { loadApiKey } from './load-key.js'
 import { FileBlobStore, FileKV } from './local-store.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
-import { runScan, type ScanProgress, type ScanResult } from './scan.js'
-import { allBanks, allCategories, resolveCategory } from './resolve-category.js'
+import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.js'
+import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
+import { competitorsFor } from './competitor-overrides.js'
+import type { CategoryResolution } from './scan.js'
+import { allBanks, allCategories, resolveCategory, readCategoryRecord, type CategoryRecord } from './resolve-category.js'
 import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
 
 /** Provider ceiling for one API key, shared across engines. */
@@ -77,6 +80,14 @@ export interface RunnerOptions {
    * unauthorable domain falls back exactly as before.
    */
   readonly author?: BankAuthorConfig | undefined
+  /**
+   * The competitor-set version to measure under (ADR-0016). Omitted: the
+   * override in force now. `null`: the category's own set, no override. A
+   * number: that recorded override, so a re-derivation of a stored cycle
+   * measures against the set the cycle was measured with; a version the store
+   * no longer holds fails the run rather than substituting today's.
+   */
+  readonly competitorSet?: number | null
 }
 
 export function parseArgs(
@@ -352,6 +363,33 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
      * so a generated bank on a fixture run would collect nothing and report
      * `no-answers` — a confusing way to say "this mode cannot do that".
      */
+    /*
+     * ...EXCEPT THAT A RECORDED DECISION IS READ IN EVERY MODE (ADR-0016). A
+     * record is a file, not a fetch: reading it keeps `--fixture` offline, and
+     * it is what lets an offline run measure against the domain's competitor
+     * override and stamp `set=` into its basis exactly as a live run would. The
+     * homepage GET and the author stay live-only. With no record, an offline
+     * run classifies from the host alone, as it always did.
+     */
+    const fromRecord = (domain: string, record: CategoryRecord, bank: PromptBank, fallback?: CategoryResolution['fallback']): CategoryResolution => {
+      // The domain's competitor override: the one in force, or the one pinned
+      // by `competitorSet`, so the scan measures against the set the record
+      // page shows (or a stored cycle recorded) and stamps its version.
+      const cs = competitorsFor(o.dataDir, domain, bank, subjectFor(domain, bank, record.brandName).spec.id, o.competitorSet)
+      if (!cs) throw new Error(`${domain}: competitor set ${o.competitorSet} is not on record; a measurement under another set is a different measurement`)
+      if (cs.missing.length) throw new Error(`${domain}: the competitor set includes ${cs.missing.join(', ')}, which this build no longer holds`)
+      return {
+        slug: record.slug,
+        bank,
+        signal: record.source,
+        evidence: record.evidence,
+        ...(record.brandName ? { brandName: record.brandName } : {}),
+        ...(fallback ? { fallback } : {}),
+        ...(cs.set !== undefined ? { competitorSet: { version: cs.set, competitors: cs.competitors } } : {}),
+      }
+    }
+    const offlineRecord = o.mode !== 'live' ? readCategoryRecord(o.dataDir, o.domain) : null
+    const offlineBank = offlineRecord ? allBanks(o.dataDir).find((b) => b.category === offlineRecord.slug) : undefined
     const resolver =
       o.mode === 'live'
         ? async (domain: string) => {
@@ -360,16 +398,12 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
               author: o.author,
               log: o.log,
             })
-            return {
-              slug: r.record.slug,
-              bank: r.bank,
-              signal: r.record.source,
-              evidence: r.record.evidence,
-              ...(r.record.brandName ? { brandName: r.record.brandName } : {}),
-              ...(r.fallback ? { fallback: r.fallback } : {}),
-            }
+            return fromRecord(domain, r.record, r.bank, r.fallback)
           }
-        : undefined
+        : offlineRecord && offlineBank
+          ? async (domain: string) =>
+              fromRecord(domain, offlineRecord, offlineBank, offlineRecord.slug === FALLBACK_SLUG ? { reason: 'unclassified', detail: offlineRecord.evidence, candidates: [] } : undefined)
+          : undefined
 
     const result = await runScan(
       { domain: o.domain, engines: o.engines, day: o.day, runsPerCell: 1, ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}) },

@@ -58,6 +58,7 @@ import { FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { runGrader } from './run.js'
 import { basisOf, cellsFor } from './scan.js'
+import { overrideAt } from './override-store.js'
 import { latestPath, listCycles, storedResults } from './cycles.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
@@ -132,6 +133,8 @@ interface Plan {
   readonly engines: readonly EngineId[]
   readonly cells: number
   readonly missing: readonly string[]
+  /** The competitor-set version the cycle recorded; null for the category's own. Pinned on the re-run. */
+  readonly competitorSet: number | null
 }
 
 
@@ -168,6 +171,13 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
   // The scope this result was MEASURED over, not the scope a scan would use
   // today. See `basisOf`.
   const basis = basisOf(stored.comparisonBasis ?? '')
+  // The competitor set THIS cycle was measured against, pinned for the
+  // re-derivation (ADR-0016): the category's own when its basis carries no
+  // `set=`, else the recorded override, which the store must still hold.
+  const competitorSet = basis.set ?? null
+  if (competitorSet !== null && !overrideAt(dataDir, domain, competitorSet)) {
+    return { refuse: `${domain}: this cycle was measured against competitor set ${competitorSet}, which the store no longer holds; a re-derivation under another set is a different measurement` }
+  }
   const maxPrompts = basis.maxPrompts ?? fallbackPrompts
   const engines = basis.engines ?? ([...ENGINES] as EngineId[])
 
@@ -187,6 +197,7 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
     engines,
     cells: cells.length,
     missing,
+    competitorSet,
   }
 }
 
@@ -276,6 +287,7 @@ async function main(): Promise<void> {
       apiKey: found.key,
       capUsd,
       maxPrompts: plan.maxPrompts,
+      competitorSet: plan.competitorSet,
       dataDir: o.dataDir,
       outFile: out,
       log: () => {},

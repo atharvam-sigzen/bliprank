@@ -107,6 +107,13 @@ export interface CategoryResolution {
   /** The recorded trading name, when the decision has one. See `subjectFor`. */
   readonly brandName?: string
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
+  /**
+   * The domain's own competitor set, when an override is in force
+   * (ADR-0016): the category's leaders with the override laid over them, and
+   * the override version the basis must carry as `set=`. Absent, the
+   * category's set applies alone and the basis is unchanged.
+   */
+  readonly competitorSet?: { readonly version: number; readonly competitors: readonly BrandSpec[] }
 }
 
 export interface ScanProgress {
@@ -302,9 +309,11 @@ export function subjectFor(domain: string, bank: PromptBank, siteTitle?: string)
  * includes prompts that name brands — and `compare()` must refuse to put them
  * side by side rather than reporting the difference as movement.
  */
-export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number): string {
+export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number, competitorSet?: number): string {
   // The shape lives in @bliprank/contracts (ADR-0016), shared with the reader
-  // that explains a refused comparison, so the two cannot drift.
+  // that explains a refused comparison, so the two cannot drift. `set=` is
+  // appended only when a per-domain override is in force, so a measurement
+  // without one formats exactly as it always did.
   return formatBasis({
     format: 'grader',
     engines,
@@ -313,6 +322,7 @@ export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[
     bank: { slug: bank.category, version: bank.version },
     unprompted: promptCount,
     runs: runsPerCell,
+    ...(competitorSet !== undefined ? { set: competitorSet } : {}),
   })
 }
 
@@ -368,7 +378,7 @@ export function cellsFor(
  * file that never recorded its scope cannot have it recovered, and guessing
  * narrow is as wrong as guessing wide.
  */
-export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number; readonly engines?: readonly EngineId[] } {
+export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number; readonly engines?: readonly EngineId[]; readonly set?: number } {
   const b = parseBasis(comparisonBasis ?? '')
   // A string the shared definition cannot parse is read by key, as this
   // function always did: a file that recorded its scope in a partial or older
@@ -378,9 +388,12 @@ export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number
   const engineList = (b ? b.engines : parts.find((p) => p.startsWith('engines='))?.slice('engines='.length).split(',') ?? []).filter((e): e is EngineId =>
     (ENGINE_IDS as readonly string[]).includes(e),
   )
+  const setRaw = b ? b.set : Number(parts.find((p) => p.startsWith('set='))?.slice('set='.length))
   return {
     ...(Number.isInteger(prompts) && prompts > 0 ? { maxPrompts: prompts } : {}),
     ...(engineList.length > 0 ? { engines: engineList } : {}),
+    // The competitor-set version this measurement was taken under, when a per-domain override was in force (ADR-0016).
+    ...(setRaw !== undefined && Number.isInteger(setRaw) && setRaw >= 1 ? { set: setRaw } : {}),
   }
 }
 
@@ -449,12 +462,15 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   let categorySource: { signal: string; evidence: string } | undefined
   // The RECORDED trading name, never a fresh read of the site. See `subjectFor`.
   let brandName: string | undefined
+  // The domain's override over the category's set, when one is in force.
+  let competitorSet: CategoryResolution['competitorSet']
 
   if (deps.resolveCategory) {
     const resolved = await deps.resolveCategory(req.domain)
     slug = resolved.slug
     bank = resolved.bank
     brandName = resolved.brandName
+    competitorSet = resolved.competitorSet
     categorySource = { signal: resolved.signal, evidence: resolved.evidence }
     if (resolved.fallback) fallback = resolved.fallback
   } else if (classification.status === 'classified') {
@@ -480,7 +496,8 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   const prompts = promptsFor(bank, req.maxPrompts)
 
   const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank, brandName)
-  const competitors = leadersOf(bank).filter((c) => c.id !== subject.id)
+  // The override's set when there is one, the category's otherwise; the subject is never its own rival either way.
+  const competitors = (competitorSet?.competitors ?? leadersOf(bank)).filter((c) => c.id !== subject.id)
   const scored: BrandSpec[] = [subject, ...competitors]
 
   const cells = cellsFor(bank, req.engines, req.day, req.maxPrompts)
@@ -532,7 +549,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
 
   // PROPERTY 3. One basis for every brand, because every brand is scored over
   // the same answers from the same scan.
-  const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell)
+  const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell, competitorSet?.version)
   const n = answers.length
 
   /*

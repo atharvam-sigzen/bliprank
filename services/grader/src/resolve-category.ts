@@ -72,6 +72,7 @@ import {
 } from '@bliprank/taxonomy'
 import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
+import { readOverride } from './override-store.js'
 import { readPromoted } from './promote-competitors.js'
 import {
   GENERATED_DISCOVERY,
@@ -372,6 +373,13 @@ export function correctCategory(dataDir: string, req: CategoryCorrectionRequest)
   if (slug === FALLBACK_SLUG) return { refuse: `${FALLBACK_SLUG} is the absence of a category, not one to choose; a correction names a category` }
   if (!allBanks(dataDir).some((b) => b.category === slug)) {
     return { refuse: `no bank for ${JSON.stringify(slug)} in this build. A category this build cannot measure cannot be chosen; the choices are ${allBanks(dataDir).map((b) => b.category).join(', ')}` }
+  }
+  // A competitor override was checked against the OLD category's set; under
+  // the new one its exclusions are no-ops and its inclusions unreviewed for
+  // this category. It is cleared first, by the same operator, on the record.
+  const override = readOverride(dataDir, host)
+  if (override) {
+    return { refuse: `${host} has a competitor override in force (set ${override.version}) that was checked against ${override.host}'s current category. Clear it first: pnpm grader:competitors -- --domain ${host} --exclude --reason "category corrected" --apply` }
   }
   return withRecordLock(dataDir, () => {
     const store = readRecords(dataDir)

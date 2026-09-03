@@ -495,3 +495,36 @@ describe('promptRows — the per-prompt, per-engine evidence behind the rate', (
     expect(r.promptRows.every((row) => row.competitorsMentioned.includes('HubSpot'))).toBe(true)
   })
 })
+
+describe('a per-domain competitor override reaches the scan through the resolver (ADR-0016)', () => {
+  it('the excluded rival is not scored, the included one is, and the basis carries set=<version>; without an override nothing changes', async () => {
+    const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const hubspot = bank.leaders.find((l) => l.id === 'hubspot')!
+    const semrush = DEMO_BANKS.find((b) => b.category === 'seo-tools')!.leaders.find((l) => l.id === 'semrush')!
+    const text = () => 'HubSpot and Semrush and Acme all get a mention.'
+    const resolver = (competitorSet?: { version: number; competitors: { id: string; name: string; aliases: string[]; domains: string[] }[] }) => async () => ({
+      slug: 'crm-software',
+      bank,
+      signal: 'site-content',
+      evidence: 'x',
+      ...(competitorSet ? { competitorSet } : {}),
+    })
+    const plain = await runScan(req('acme.example'), { ...deps(text), resolveCategory: resolver() })
+    const overridden = await runScan(req('acme.example'), {
+      ...deps(text),
+      resolveCategory: resolver({
+        version: 3,
+        competitors: [...bank.leaders.filter((l) => l.id !== 'hubspot'), semrush].map((l) => ({ id: l.id, name: l.name, aliases: [...l.aliases], domains: [...l.domains] })),
+      }),
+    })
+    expect(plain.status).toBe('scanned')
+    expect(overridden.status).toBe('scanned')
+    if (plain.status !== 'scanned' || overridden.status !== 'scanned') return
+    expect(plain.comparisonBasis).not.toContain('set=')
+    expect(plain.brands.map((b) => b.id)).toContain(hubspot.id)
+    expect(overridden.comparisonBasis).toBe(`${plain.comparisonBasis}|set=3`)
+    expect(overridden.brands.map((b) => b.id)).not.toContain(hubspot.id)
+    expect(overridden.brands.map((b) => b.id)).toContain(semrush.id)
+    expect(overridden.brands.find((b) => b.id === semrush.id)!.mentions).toBe(overridden.counts.answersScored)
+  })
+})

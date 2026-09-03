@@ -26,7 +26,8 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { DEMO_BANKS } from '@bliprank/taxonomy'
 import { FileKV } from './local-store.js'
 import { auditPathFor, planRescore, storedResults } from './rescore.js'
-import { cyclePath, cyclesDir } from './cycles.js'
+import { cyclePath, cyclesDir, writeCycle } from './cycles.js'
+import { recordCategory } from './resolve-category.js'
 import { basisOf, cellsFor } from './scan.js'
 
 const dirs: string[] = []
@@ -222,5 +223,30 @@ describe('history is kept, R5', () => {
     await seed(dir)
     writeFileSync(join(dir, 'results', 'pipedrive.com.det-1.audit.json'), '{}')
     expect(storedResults(dir)).toEqual(['pipedrive.com'])
+  })
+})
+
+describe('a re-derivation under another competitor set is a different measurement (ADR-0016)', () => {
+  it('refuses when the stored basis names a set version the override no longer stands at', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bliprank-rescore-set-'))
+    try {
+      recordCategory(dir, { host: 'acme.test', slug: 'crm-software', source: 'site-content', evidence: 'x', decidedAt: '2026-08-01', generated: false })
+      writeCycle(dir, {
+        status: 'scanned',
+        domain: 'acme.test',
+        category: 'crm-software',
+        categoryName: 'CRM',
+        comparisonBasis: 'grader|engines=chatgpt|en-US|US|crm-software@1|unprompted=2|runs=1|set=2',
+        algoVersion: 'det-2',
+        collectedAt: '2026-08-20T10:00:00.000Z',
+        run: { mode: 'live', plan: 'payg', day: '2026-08-20', engines: ['chatgpt'], capUsd: 5, at: '2026-08-20T10:01:00.000Z' },
+        counts: { cellsRequested: 2, cacheHits: 0, collected: 2, failed: 0, answersScored: 2, providerCalls: 2 },
+        brands: [],
+      } as never)
+      const plan = await planRescore(dir, 'acme.test', 2)
+      expect(plan).toMatchObject({ refuse: expect.stringContaining('competitor set 2, which the store no longer holds') })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

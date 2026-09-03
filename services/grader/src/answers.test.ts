@@ -134,3 +134,12 @@ describe('every answer carries its citations, classified by the scan’s own rul
     expect(b!.citations).toEqual([])
   })
 })
+
+describe('the competitor set a cycle was measured against (ADR-0016)', () => {
+  it('a cycle whose basis names an override version the store does not hold is refused, never read under today’s set', async () => {
+    writeCycle(dir, { ...cycle('2026-08-20', 'crm-software'), comparisonBasis: 'grader|engines=chatgpt|en-US|US|crm-software@1|unprompted=2|runs=1|set=4' } as never)
+    recordCategory(dir, { host: DOMAIN, slug: 'crm-software', source: 'site-content', evidence: 'x', decidedAt: '2026-08-01T00:00:00.000Z', generated: false })
+    const got = await readScanAnswers(dir, DOMAIN, '2026-08-20')
+    expect(got).toMatchObject({ refuse: expect.stringContaining('competitor set 4') })
+  })
+})
