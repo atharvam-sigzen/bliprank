@@ -21,7 +21,8 @@
     "grader:rescore": "tsx services/grader/src/rescore.ts",
     "grader:answers": "tsx services/grader/src/answers.ts",
     "grader:publishers": "tsx services/grader/src/publishers.ts",
-    "grader:version-diff": "tsx services/grader/src/version-diff.ts"
+    "grader:version-diff": "tsx services/grader/src/version-diff.ts",
+    "grader:correct": "tsx services/grader/src/correct.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

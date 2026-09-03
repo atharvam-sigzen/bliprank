@@ -57,7 +57,7 @@
  * reviewed.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   DEMO_BANKS,
@@ -98,7 +98,7 @@ export { GENERATED_DISCOVERY, GENERATED_PROBLEM_LED, type BankAuthorConfig, type
  * provenance is about the decision, freshness is about this lookup, and
  * collapsing them loses the one a reader actually wants first.
  */
-export type CategorySource = 'leader-domain' | 'domain-token' | 'site-content' | 'generated' | 'fallback'
+export type CategorySource = 'leader-domain' | 'domain-token' | 'site-content' | 'generated' | 'fallback' | 'correction'
 
 /** What gets written down, permanently, the first time a domain is seen. */
 export interface CategoryRecord {
@@ -121,7 +121,31 @@ export interface CategoryRecord {
    * the match on their own.
    */
   readonly brandName?: string
+  /**
+   * 1 when first decided, one more per correction (ADR-0016). A record written
+   * before corrections existed carries no version on disk and reads as 1.
+   */
+  readonly version: number
+  /** Every earlier record of this host, complete, oldest first. Present only once a correction has happened. */
+  readonly superseded?: readonly SupersededRecord[]
+  /** How this record replaced the one before it. Present only on a corrected record. */
+  readonly correction?: CategoryCorrection
 }
+
+/** A record as it was before a correction replaced it. Its own history is not nested: the current record's list holds all of it. */
+export type SupersededRecord = Omit<CategoryRecord, 'superseded'>
+
+export interface CategoryCorrection {
+  /** The slug this record replaced. */
+  readonly from: string
+  /** Who applied it. There is no identity in the product yet, so this is the operator's word. */
+  readonly by: string
+  readonly reason: string
+  readonly at: string
+}
+
+/** What a first decision writes. The version is stamped by `recordCategory`; history and correction cannot exist yet. */
+export type NewCategoryRecord = Omit<CategoryRecord, 'version' | 'superseded' | 'correction'>
 
 export interface ResolvedCategory {
   readonly record: CategoryRecord
@@ -169,16 +193,84 @@ export interface ResolveDeps {
  * already live here. When accounts exist this becomes a table with the same two
  * columns and the same write-once rule.
  *
- * ponytail: single-process, last-writer-wins. Two concurrent first-scans of the
- * same brand-new domain can both derive it; both derive the same answer from the
- * same signals, so the loss is one wasted fetch, not an inconsistent record.
- * Upgrade path when this is multi-process: an INSERT ... ON CONFLICT DO NOTHING.
+ * Two writers since ADR-0016: `recordCategory` (a first decision) and
+ * `correctCategory` (a person's replacement). Each is a read-modify-write of
+ * one file, and the two do NOT agree on the answer the way two first-scans
+ * did, so a lost write is no longer one wasted fetch: it is a correction gone
+ * with its request marked applied. Both writers therefore take the same lock,
+ * a `wx`-created file beside the store, held for the write only. A lock older
+ * than a few seconds is a crash's, and is taken over.
+ *
+ * ⚠️ NOT BYTE-PRESERVING FOR OTHER HOSTS. The store is validated on read and
+ * written back whole, so a write by either writer normalises every record it
+ * did not touch: a missing `version` becomes 1, an unknown field is dropped,
+ * keys are reordered. Semantically nothing changes; a hand-added field would.
+ *
+ * ponytail: a file lock, single machine. Upgrade path when this is
+ * multi-process: a row per record with INSERT ... ON CONFLICT and a version
+ * check on the correction.
  */
 
 const recordsFile = (dataDir: string): string => join(dataDir, 'domain-categories.json')
+const lockFile = (dataDir: string): string => join(dataDir, 'domain-categories.lock')
+const LOCK_STALE_MS = 5000
+const LOCK_TRIES = 200
+
+/** Run `fn` holding the store's lock. Synchronous, because every caller is: a route handler's write, or the CLI. */
+export function withRecordLock<T>(dataDir: string, fn: () => T): T {
+  mkdirSync(dataDir, { recursive: true })
+  const lock = lockFile(dataDir)
+  for (let i = 0; i < LOCK_TRIES; i++) {
+    let fd: number | null = null
+    try {
+      fd = openSync(lock, 'wx')
+    } catch {
+      // Held. A holder that died leaves a stale file; take it over after LOCK_STALE_MS.
+      try {
+        if (Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS) rmSync(lock, { force: true })
+      } catch {
+        /* vanished between the check and the stat: try again */
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10)
+      continue
+    }
+    try {
+      return fn()
+    } finally {
+      closeSync(fd)
+      rmSync(lock, { force: true })
+    }
+  }
+  throw new Error(`could not take the category record lock at ${lock} after ${LOCK_TRIES} tries`)
+}
 const banksDir = (dataDir: string): string => join(dataDir, 'generated-banks')
 
 type RecordStore = Record<string, CategoryRecord>
+
+/** One record's shape, checked field by field. Null when it is not a record. `superseded` is checked one level down and never nested. */
+function shapeRecord(host: string, value: unknown, withHistory: boolean): CategoryRecord | null {
+  if (typeof value !== 'object' || value === null) return null
+  const r = value as Partial<CategoryRecord>
+  if (typeof r.slug !== 'string' || !r.slug || typeof r.source !== 'string') return null
+  const c = r.correction
+  const correction: CategoryCorrection | undefined =
+    typeof c === 'object' && c !== null && typeof c.from === 'string' && typeof c.by === 'string' && typeof c.reason === 'string' && typeof c.at === 'string'
+      ? { from: c.from, by: c.by, reason: c.reason, at: c.at }
+      : undefined
+  const superseded = withHistory && Array.isArray(r.superseded) ? r.superseded.map((v) => shapeRecord(host, v, false)).filter((v): v is CategoryRecord => v !== null) : []
+  return {
+    host,
+    slug: r.slug,
+    source: r.source as CategorySource,
+    evidence: typeof r.evidence === 'string' ? r.evidence : '',
+    decidedAt: typeof r.decidedAt === 'string' ? r.decidedAt : '',
+    generated: r.generated === true,
+    ...(typeof r.brandName === 'string' && r.brandName ? { brandName: r.brandName } : {}),
+    version: typeof r.version === 'number' && Number.isInteger(r.version) && r.version >= 1 ? r.version : 1,
+    ...(superseded.length ? { superseded } : {}),
+    ...(correction ? { correction } : {}),
+  }
+}
 
 function readRecords(dataDir: string): RecordStore {
   const f = recordsFile(dataDir)
@@ -192,18 +284,8 @@ function readRecords(dataDir: string): RecordStore {
       // legal JSON. Same discipline as readAgencyDomains: validate, drop what
       // fails, never throw. A dropped record means the domain is re-derived,
       // which is recoverable; a malformed one crashing the route is not.
-      const r = value as Partial<CategoryRecord>
-      if (typeof r.slug === 'string' && r.slug && typeof r.source === 'string') {
-        out[host] = {
-          host,
-          slug: r.slug,
-          source: r.source as CategorySource,
-          evidence: typeof r.evidence === 'string' ? r.evidence : '',
-          decidedAt: typeof r.decidedAt === 'string' ? r.decidedAt : '',
-          generated: r.generated === true,
-          ...(typeof r.brandName === 'string' && r.brandName ? { brandName: r.brandName } : {}),
-        }
-      }
+      const record = shapeRecord(host, value, true)
+      if (record) out[host] = record
     }
     return out
   } catch {
@@ -239,13 +321,86 @@ export function recordedIn(dataDir: string, slug: string): readonly CategoryReco
  * with the version bump and history that implies, exactly as R5 requires of a
  * score row.
  */
-export function recordCategory(dataDir: string, record: CategoryRecord): CategoryRecord {
-  const store = readRecords(dataDir)
-  const existing = store[record.host]
-  if (existing) return existing
-  mkdirSync(dataDir, { recursive: true })
-  writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [record.host]: record }, null, 2) + '\n')
-  return record
+export function recordCategory(dataDir: string, record: NewCategoryRecord): CategoryRecord {
+  return withRecordLock(dataDir, () => {
+    const store = readRecords(dataDir)
+    const existing = store[record.host]
+    if (existing) return existing
+    const first: CategoryRecord = { ...record, version: 1 }
+    writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [record.host]: first }, null, 2) + '\n')
+    return first
+  })
+}
+
+export interface CategoryCorrectionRequest {
+  readonly host: string
+  /** The slug a PERSON chose from the categories this build can measure. Never derived. */
+  readonly slug: string
+  readonly reason: string
+  readonly by: string
+  /** ISO time; now when absent. */
+  readonly at?: string
+}
+
+/**
+ * THE SECOND WRITER, and the only way a recorded category changes (ADR-0016).
+ *
+ * `recordCategory` refuses to overwrite, and still does. This does not
+ * overwrite either: it writes a NEW record, one version up, carrying every
+ * earlier record whole and a note of who replaced it, why, and from what. A
+ * correction is a decision a person took, so nothing here reads the homepage
+ * or runs the classifier; the slug is the one given, checked only for being a
+ * category this build can measure. Refusals are returned, never thrown, and
+ * each names what to do instead.
+ *
+ * What a correction does NOT touch: any stored cycle. A cycle names its own
+ * category and is read under it forever; the correction changes what the NEXT
+ * cycle measures, which is why the record shows the earlier cycles as kept
+ * and not drawn (lib/cycles.ts).
+ */
+export function correctCategory(dataDir: string, req: CategoryCorrectionRequest): CategoryRecord | { readonly refuse: string } {
+  const host = normaliseHost(req.host)
+  if (!host) return { refuse: `${JSON.stringify(req.host)} is not a domain` }
+  const reason = plainText(req.reason)
+  if (reason.length < 10) return { refuse: 'a correction carries a reason of at least ten characters, because it is read years later beside the number it changed' }
+  const by = plainText(req.by)
+  if (!by) return { refuse: 'a correction names who applied it' }
+  const slug = req.slug.trim()
+  // The general bank is what a domain gets when NO category fits. Choosing it is
+  // not a correction to a category; the surfaces would then say "we could not
+  // identify a category" about a decision a person took.
+  if (slug === FALLBACK_SLUG) return { refuse: `${FALLBACK_SLUG} is the absence of a category, not one to choose; a correction names a category` }
+  if (!allBanks(dataDir).some((b) => b.category === slug)) {
+    return { refuse: `no bank for ${JSON.stringify(slug)} in this build. A category this build cannot measure cannot be chosen; the choices are ${allBanks(dataDir).map((b) => b.category).join(', ')}` }
+  }
+  return withRecordLock(dataDir, () => {
+    const store = readRecords(dataDir)
+    const existing = store[host]
+    if (!existing) return { refuse: `${host} has no category record. A first scan decides one; a correction replaces a decision, not an absence.` }
+    if (slug === existing.slug) return { refuse: `${host} is already recorded as ${slug}; nothing to correct` }
+    const at = req.at ?? new Date().toISOString()
+    const { superseded: history = [], ...prior } = existing
+    const record: CategoryRecord = {
+      host,
+      slug,
+      source: 'correction',
+      evidence: `corrected from ${existing.slug} by ${by}: ${reason}`,
+      decidedAt: at,
+      generated: readGeneratedBanks(dataDir).some((g) => g.bank.category === slug),
+      ...(existing.brandName ? { brandName: existing.brandName } : {}),
+      version: existing.version + 1,
+      superseded: [...history, prior],
+      correction: { from: existing.slug, by, reason, at },
+    }
+    writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [host]: record }, null, 2) + '\n')
+    return record
+  })
+}
+
+/** Whitespace folded, control characters removed: a reason is read in a terminal and on a page, and must carry nothing but words. */
+export function plainText(s: string): string {
+  // Whitespace first: a newline is a control character too, and stripping it before folding would glue two words.
+  return s.replace(/\s+/g, ' ').replace(/\p{Cc}/gu, '').trim()
 }
 
 /** A generated bank, on disk, paired with the category the classifier sees. */
