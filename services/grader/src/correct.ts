@@ -6,6 +6,7 @@
  *   pnpm grader:correct -- --domain acme.com --to erp-software --reason "sells ERP, see /pricing" --apply
  *   pnpm grader:correct -- --domain acme.com --apply           apply the pending request as filed
  *   pnpm grader:correct -- --domain acme.com --decline --note "the homepage says CRM"
+ *   GRADER_DATA_DIR=<dir> pnpm grader:correct             any of the above against another store (also --data <dir>)
  *
  * ⚠️ `--apply` IS A HUMAN ACT AND THE CODE TREATS IT AS ONE. A category
  * decides which prompts are asked and which rivals the number is ranked
@@ -41,7 +42,7 @@ export interface CorrectOptions {
   readonly decline: boolean
 }
 
-export function parseCorrectArgs(argv: readonly string[]): CorrectOptions | { readonly refuse: string } {
+export function parseCorrectArgs(argv: readonly string[], env: NodeJS.ProcessEnv = process.env): CorrectOptions | { readonly refuse: string } {
   const args = new Map<string, string>()
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!
@@ -58,7 +59,8 @@ export function parseCorrectArgs(argv: readonly string[]): CorrectOptions | { re
   if ((apply || decline) && !domain) return { refuse: `--${apply ? 'apply' : 'decline'} needs --domain` }
   if (args.has('to') && !args.has('reason')) return { refuse: '--to needs --reason: a correction carries why, for whoever reads the number later' }
   return {
-    dataDir: args.get('data') ?? join(here, '..', 'data-live'),
+    // The same variable the routes read, so a scratch store needs no flag: GRADER_DATA_DIR=<dir> pnpm grader:correct
+    dataDir: args.get('data') ?? env['GRADER_DATA_DIR'] ?? join(here, '..', 'data-live'),
     ...(domain ? { domain } : {}),
     ...(args.has('to') ? { to: args.get('to')! } : {}),
     ...(args.has('reason') ? { reason: args.get('reason')! } : {}),

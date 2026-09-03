@@ -24,6 +24,8 @@ describe('the arguments', () => {
     const ok = parseCorrectArgs(['--domain', 'a.test', '--to', 'erp-software', '--reason', 'because', '--apply', '--data', dir])
     expect(ok).toMatchObject({ domain: 'a.test', to: 'erp-software', reason: 'because', apply: true, decline: false, by: 'operator', dataDir: dir })
     expect(parseCorrectArgs([])).toMatchObject({ apply: false, decline: false })
+    expect(parseCorrectArgs([], { GRADER_DATA_DIR: dir })).toMatchObject({ dataDir: dir })
+    expect(parseCorrectArgs(['--data', 'elsewhere'], { GRADER_DATA_DIR: dir })).toMatchObject({ dataDir: 'elsewhere' })
   })
 })
 
