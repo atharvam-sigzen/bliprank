@@ -76,7 +76,7 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
   return (
     <>
       <p className="prose">
-        Across the <span className="num">{answers.answers.length}</span> answers the engines made <span className="num">{mix.total}</span>{' '}
+        Across the <span className="num">{answers.answers.filter((a) => !a.custom).length}</span> answers the engines made <span className="num">{mix.total}</span>{' '}
         {mix.total === 1 ? 'citation' : 'citations'} to <span className="num">{mix.hosts.length === 0 ? 0 : hostCount(answers)}</span> distinct sites:{' '}
         <span className="num">{mix.answersWithAny}</span> answers cited at least one source and <span className="num">{mix.answersWithout}</span>{' '}
         cited none.

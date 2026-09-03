@@ -94,6 +94,8 @@ export interface StoredAnswer {
   readonly collectedAt: string
   /** Every source this answer cited, in the engine's order. Empty when it cited none. */
   readonly citations: readonly StoredCitation[]
+  /** An answer to one of the customer's own prompts (ADR-0016): evidence for the second block, never counted in the headline's diagnostics. */
+  readonly custom?: true
 }
 
 export interface ScanAnswers {
@@ -131,6 +133,11 @@ function isStoredAnswer(a: unknown): a is StoredAnswer {
  * arrive as untyped JSON and one malformed entry would reach `.text.length` in a
  * render. Same discipline as `isScanBrand`.
  */
+/** The headline's own answers: everything that is not an answer to a custom prompt. The diagnostics count these and only these. */
+export function headlineAnswers(answers: ScanAnswers): ScanAnswers {
+  return { ...answers, answers: answers.answers.filter((a) => !a.custom) }
+}
+
 export function parseAnswers(value: unknown): ScanAnswers | null {
   if (typeof value !== 'object' || value === null) return null
   const v = value as Partial<ScanAnswers>
@@ -144,6 +151,7 @@ export function parseAnswers(value: unknown): ScanAnswers | null {
     empty: a.empty === true || a.text.trim() === '',
     collectedAt: typeof a.collectedAt === 'string' ? a.collectedAt : '',
     citations: parseCitations((a as { citations?: unknown }).citations),
+    ...((a as { custom?: unknown }).custom === true ? { custom: true as const } : {}),
   }))
   return {
     domain: v.domain,

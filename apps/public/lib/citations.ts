@@ -17,7 +17,7 @@
  */
 
 import { wilson, type Metric } from '@bliprank/stats'
-import type { ScanAnswers, StoredCitation } from './answers'
+import { headlineAnswers, type ScanAnswers, type StoredCitation } from './answers'
 
 export const SOURCE_ORDER = ['owned', 'competitor', 'review', 'community', 'video', 'earned_media', 'reference', 'other'] as const
 export type SourceClass = (typeof SOURCE_ORDER)[number]
@@ -90,7 +90,9 @@ const provenance = (answers: ScanAnswers) => ({
   comparison_basis: answers.comparisonBasis,
 })
 
-export function citationMix(answers: ScanAnswers, topHosts = 12): CitationMix {
+export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
+  // The headline's answers only: a custom prompt's answers are evidence for the second block, not for this sample (ADR-0016).
+  const answers = headlineAnswers(evidence)
   const all: StoredCitation[] = answers.answers.flatMap((a) => a.citations)
   const total = all.length
   const answersWithAny = answers.answers.filter((a) => a.citations.length > 0).length

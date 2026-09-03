@@ -7,6 +7,7 @@ import { themedUrl, useDepth, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { CitedSources } from '@/components/cited-sources'
 import { GapReport } from '@/components/gap-report'
+import { CustomPromptsBlock } from '@/components/custom-prompts-block'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { Headline } from '@/components/headline'
 import { RangeRail } from '@/components/range-rail'
@@ -240,6 +241,8 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
           absence when the file predates `promptRows`, so this surface makes no
           claim about the split that the data does not carry. */}
       <PromptBreakdown scan={scan} />
+      {/* THE SECOND MEASUREMENT, when this cycle asked the customer's own prompts (ADR-0016). Its own record; never folded into the one above. */}
+      <CustomPromptsBlock scan={scan} cycles={cycles} />
 
       {/* The two diagnostics, from the same evidence and the page itself (ADR-0014). */}
       <CitedSources scan={scan} />

@@ -5,6 +5,7 @@ import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan, utcDay } fro
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
 import { latestCycle, writeCycle, type CycleResult } from '../../../../../services/grader/src/cycles.js'
+import { readCustomPromptSet } from '../../../../../services/grader/src/custom-prompts.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
 import { allBanks, readCategoryRecord } from '../../../../../services/grader/src/resolve-category.js'
 import { basisOf, promptsFor } from '../../../../../services/grader/src/scan.js'
@@ -320,8 +321,12 @@ export async function POST(req: Request): Promise<Response> {
         //    than the visitor throttle (one subject, not one browser). A retry
         //    storm on one domain is many scans from many IPs over many hours,
         //    which is invisible to both of its neighbours here.
-        const ceilingCfg = defaultDomainCeilingConfig(DATA, env)
-        const ceiling = checkDomainCeiling(domain, cfg.callsPerEngine * ENGINES.length, ceilingCfg, now)
+        //    The domain's own prompts are cells too (ADR-0016): the ceiling is
+        //    derived from this cycle's actual cell count and checked against it.
+        const customCount = readCustomPromptSet(DATA, domain)?.prompts.length ?? 0
+        const cellsThisCycle = (cfg.callsPerEngine + customCount) * ENGINES.length
+        const ceilingCfg = defaultDomainCeilingConfig(DATA, env, cellsThisCycle)
+        const ceiling = checkDomainCeiling(domain, cellsThisCycle, ceilingCfg, now)
         if (!ceiling.ok) {
           send(c, 'error', { kind: ceiling.reason, message: ceiling.message })
           return done(c)
@@ -330,7 +335,8 @@ export async function POST(req: Request): Promise<Response> {
         // 4. THE GATE. Burst cap and the provider's own remaining quota, both
         //    checked before anything is spent, both failing closed.
         send(c, 'stage', { stage: 'checking quota' })
-        const gate = await checkGate(domain, cfg, found.key, now)
+        // Sized to the WHOLE cycle, custom cells included, or the check passes and the quota runs out part-way.
+        const gate = await checkGate(domain, { ...cfg, callsPerEngine: cfg.callsPerEngine + customCount }, found.key, now)
         if (!gate.ok) {
           send(c, 'error', { kind: gate.reason, message: gate.message })
           return done(c)
@@ -338,8 +344,8 @@ export async function POST(req: Request): Promise<Response> {
 
         send(c, 'stage', { stage: 'classifying' })
 
-        const total = cfg.callsPerEngine * ENGINES.length
-        send(c, 'begin', { domain, total, engines: ENGINES.length, prompts: cfg.callsPerEngine })
+        const total = (cfg.callsPerEngine + customCount) * ENGINES.length
+        send(c, 'begin', { domain, total, engines: ENGINES.length, prompts: cfg.callsPerEngine + customCount })
 
         // runGrader, not a hand-rolled orchestrator: it carries the run lock,
         // the spend ledger, the rate budget and the topology declaration. A
