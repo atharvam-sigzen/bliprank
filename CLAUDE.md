@@ -322,8 +322,14 @@ derived, not fixed: `2 cycles × cells per cycle × 1.2 retry headroom` (204 at
 cited (every citation classified by the scan's own rules, shares with
 intervals, most-cited sites) and the gap report (the homepage against the
 cycle's prompts). Both are evidence fetched on request, never written into a
-result; nothing generates or publishes. No publisher registry exists, so
-`earned_media` is never assigned and most citations read as "other".
+result; nothing generates or publishes.
+**Publisher registry (ADR-0015, 2026-09-03, PROPOSED):** the citation classifier
+is pinned under det-2 (`source-class-pin.test.ts`). A registry of 59 editorial
+outlets with four admission criteria sits in `packages/taxonomy/src/publishers.ts`
+and is **not wired**: wiring it is det-3 plus a re-score. Measured dry run: it
+moves the reference scan's "other" share from 88.7% to 86.5%; the rest of
+"other" is retailers, redirects, vendors and listicles, which need new classes,
+not a longer list. `pnpm grader:publishers` proposes candidates and never writes.
 **Known gap, not urgent:** `/score-version` does not work as written — it points
 at `services/scorer/version.ts`, which does not exist (the constant is
 `SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), and it gates on a
