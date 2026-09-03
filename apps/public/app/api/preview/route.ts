@@ -221,6 +221,8 @@ export async function POST(req: Request): Promise<Response> {
       verified: resolved.bank.verified,
       generated: resolved.record.generated,
       decidedAt: resolved.record.decidedAt,
+      version: resolved.record.version,
+      ...(resolved.record.correction ? { correction: resolved.record.correction } : {}),
       ...(resolved.fallback ? { fallback: resolved.fallback } : {}),
       prompts: unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent })),
       engines: [...ENGINES],

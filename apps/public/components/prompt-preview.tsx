@@ -46,6 +46,13 @@ function sourceLine(preview: PreviewResponse): { cap: string; line: string; glos
         gloss: 'We fetched the page once, matched its own words against the category vocabulary, and wrote the answer down. It will not change between scans.',
         flag: false,
       }
+    case 'correction':
+      return {
+        cap: 'Corrected by a person',
+        line: preview.correction ? `from ${preview.correction.from}, ${preview.correction.at.slice(0, 10)}` : preview.evidence,
+        gloss: `A person chose this category from the list and wrote down why${preview.correction ? `: "${preview.correction.reason}"` : ''}. Nothing was re-derived, and the earlier record is kept beside this one.`,
+        flag: false,
+      }
     case 'generated':
       return {
         cap: 'New category',
@@ -149,6 +156,7 @@ export function PromptPreview({
           {preview.previouslyDecided ? (
             <span className="note__line">
               decided{preview.decidedAt ? ` ${preview.decidedAt.slice(0, 10)}` : ' earlier'}, reused since
+              {preview.version > 1 ? ` · record version ${preview.version}` : ''}
             </span>
           ) : null}
           <span className="note__gloss">

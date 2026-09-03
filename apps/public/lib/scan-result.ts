@@ -63,7 +63,7 @@ export interface ScanResultFile {
   /**
    * Which rung of the classifier decided the category, and what it matched.
    *
-   * `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`.
+   * `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback` | `correction`.
    * Declared here because "no competitors" has two entirely different causes and
    * a surface may not conflate them: the FALLBACK bank has no leaders because we
    * could not place the business, while a GENERATED category has none because we

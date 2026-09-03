@@ -39,6 +39,10 @@ export interface PreviewResponse {
   /** True when the bank was authored for this domain rather than chosen for it. */
   readonly generated: boolean
   readonly decidedAt: string
+  /** Record version: 1 when first decided, one more per correction (ADR-0016). */
+  readonly version: number
+  /** Present when a person corrected the recorded category. */
+  readonly correction?: { readonly from: string; readonly at: string; readonly by: string; readonly reason: string }
   /** Set when the category could not be decided and the general bank applies. */
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
   /** THE ACTUAL PROMPTS, verbatim, in the order a cycle would send them. */

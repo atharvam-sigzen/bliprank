@@ -13,6 +13,7 @@ import { RangeRail } from '@/components/range-rail'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { NewCycle } from '@/components/new-cycle'
+import { CategoryCorrection } from '@/components/category-correction'
 import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf } from '@/lib/cycles'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
@@ -470,6 +471,12 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
           {SCHEDULE_FACT}; a run happens only when a person starts one <Planned />
         </dd>
       </dl>
+
+      {/* THE ONE EDITABLE THING, AND IT IS NOT EDITED HERE. The category row
+          above is a fact; this files a request against it, shown as pending
+          until a person applies it on the machine that holds the record
+          (ADR-0016). On a deployment without that machine it says so. */}
+      <CategoryCorrection domain={workspace.domain} />
 
       {context === 'brand' ? (
         <div style={{ marginTop: 'var(--space-3)' }}>
