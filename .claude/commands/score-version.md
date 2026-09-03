@@ -37,6 +37,9 @@ edited.
    row you had to change that "$1" does not explain is a second rule change, or
    a bug: stop and say which.
 
+   To see the golden set on its own at any time: `pnpm grader:version-diff -- --golden`
+   prints every field's agreement, every disagreement, and the gate verdict.
+
 4. **The flip list.** `pnpm grader:version-diff -- --against <previous>` scores
    every stored answer under the new code and prints every row that differs, by
    field, and the golden agreement old against new. Report all of it, verbatim.

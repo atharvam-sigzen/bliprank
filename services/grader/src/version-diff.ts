@@ -6,6 +6,8 @@
  *                                                   written to <data>/version-snapshots/<version>.json
  *   pnpm grader:version-diff -- --against det-2     every stored answer scored by the current code,
  *                                                   against that snapshot: every row that differs, by field
+ *   pnpm grader:version-diff -- --golden            the golden set's full report under the current code:
+ *                                                   every field, every disagreement, the gate verdict
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY. R5 says a rule change bumps the version, and ADR-0012 set the bar for
@@ -31,7 +33,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SCORING_ALGO_VERSION, runGoldenSet, type GoldenCase, type GoldenReport } from '@bliprank/scorer'
+import { GOLDEN_SET_TARGET, SCORING_ALGO_VERSION, runGoldenSet, type GoldenCase, type GoldenReport } from '@bliprank/scorer'
 import { scoreStoredCycle, type ScoredCycle } from './answers.js'
 import { listCycles, storedResults } from './cycles.js'
 
@@ -207,8 +209,19 @@ async function main(): Promise<void> {
   const dataDir = args.get('data') ?? join(here, '..', 'data-live')
   const out = (s: string) => process.stdout.write(s)
 
-  const golden = goldenSummary(runGoldenSet(loadGoldenCases()))
+  const report = runGoldenSet(loadGoldenCases())
+  const golden = goldenSummary(report)
   const goldenLine = (g: GoldenSummary) => `${g.cases} cases · gate ${g.gateStatus}` + (g.gateStatus === 'NOT_RUN' ? ' (agreement is reported, not gated, at this size)' : '')
+
+  if (args.has('golden')) {
+    out(`golden set · ${report.cases} of ${GOLDEN_SET_TARGET} cases · ${SCORING_ALGO_VERSION} · gate ${report.gateStatus}\n  ${report.gateNote}\n`)
+    for (const f of [...report.deterministic, report.citationClass]) {
+      out(`  ${f.field.padEnd(22)} ${String(f.agreed).padStart(3)}/${String(f.total).padEnd(3)} ${pct(f.rate).padStart(6)}\n`)
+      for (const d of f.disagreements) out(`      ${d.caseId}: expected ${JSON.stringify(d.expected)}, got ${JSON.stringify(d.actual)}\n`)
+    }
+    out(`  ${'silent owned'.padEnd(22)} ${report.silentOwned.length}${report.silentOwned.length ? '   ⚠️ a URL a human labelled otherwise came back owned' : ''}\n`)
+    return
+  }
 
   if (args.has('snapshot')) {
     const file = snapshotPath(dataDir, SCORING_ALGO_VERSION)
@@ -226,7 +239,7 @@ async function main(): Promise<void> {
 
   const against = args.get('against')
   if (!against || against === 'true') {
-    process.stderr.write('usage: --snapshot | --against <version> [--data <dir>]\n')
+    process.stderr.write('usage: --snapshot | --against <version> | --golden [--data <dir>]\n')
     process.exit(2)
   }
   const file = snapshotPath(dataDir, against)
