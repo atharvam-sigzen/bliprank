@@ -117,6 +117,28 @@ const REFERENCE: Record<string, string> = {
 /** Government suffixes get `reference` without needing an entry each. */
 const GOV_SUFFIXES = ['.gov', '.gov.uk', '.gov.in', '.gov.au', '.europa.eu']
 
+/**
+ * The tables, read-only, for the version pin in `source-class-pin.test.ts`.
+ * An entry in one of these is a scoring rule: adding a domain changes what an
+ * existing answer scores, so the pin freezes their exact contents under
+ * `SCORING_ALGO_VERSION` (ADR-0012). Exported for that test and nothing else;
+ * the classifier reads the private constants above.
+ */
+export const PLATFORM_TABLES: {
+  readonly video: Readonly<Record<string, string>>
+  readonly community: Readonly<Record<string, string>>
+  readonly review: Readonly<Record<string, string>>
+  readonly reference: Readonly<Record<string, string>>
+  readonly govSuffixes: readonly string[]
+} = Object.freeze({
+  // Frozen COPIES: a consumer cannot reach the tables the classifier reads.
+  video: Object.freeze({ ...VIDEO }),
+  community: Object.freeze({ ...COMMUNITY }),
+  review: Object.freeze({ ...REVIEW }),
+  reference: Object.freeze({ ...REFERENCE }),
+  govSuffixes: Object.freeze([...GOV_SUFFIXES]),
+})
+
 // --- extractors ------------------------------------------------------------
 
 /** Seconds from a YouTube-style `t`/`start` parameter (`90`, `1m30s`, `01:30`). */
