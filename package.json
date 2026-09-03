@@ -19,7 +19,8 @@
     "grader:promote": "tsx services/grader/src/promote.ts",
     "grader:aeo": "tsx services/grader/src/aeo.ts",
     "grader:rescore": "tsx services/grader/src/rescore.ts",
-    "grader:answers": "tsx services/grader/src/answers.ts"
+    "grader:answers": "tsx services/grader/src/answers.ts",
+    "grader:publishers": "tsx services/grader/src/publishers.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
