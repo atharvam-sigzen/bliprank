@@ -5,7 +5,7 @@
 (hosting topology: Fluid Compute + QStash through P3, a worker fleet after)
 · ADR-0003 (cache key and R2 object unit) · ADR-0013 (cycles; "there is no
 scheduler") · ADR-0016 (correctable context, which a cycle now carries) ·
-PHASES 1.1 (the QStash runner, built and never exercised against real QStash)
+PHASES 1.1 and PROGRESS (the QStash runner, built and "never exercised against real QStash")
 
 ## Context
 
@@ -25,7 +25,8 @@ handler that verifies each delivery cryptographically (`qstash-verify.ts`:
 issuer, destination, expiry, not-before, body hash, two keys for rotation)
 and hands the cell to `CollectionOrchestrator`; a status mapping that makes
 non-2xx mean "nothing was spent"; a `CollectionHeartbeat` that alarms on the
-absence of success. All of it tested, none of it ever called by anything:
+absence of success. All of it tested in `qstash.test.ts`, none of it ever
+called by anything:
 "QStash has a handler nothing calls" (PROGRESS). It collects cells; it does
 not score them into a cycle.
 
@@ -60,15 +61,23 @@ record and a bank, no cycle yet today, the prior cycle's prompt count and
 engine set unchanged, room under the per-domain ceiling. It prices the cells
 at the plan's marginal rate, pay-as-you-go when unset.
 
+The list mirrors the gates that are facts about the store. It does not mirror
+the two enable flags, the provider key, the shared burst cap, the provider's
+remaining quota, or the per-visitor throttle (a cron has no visitor); a loop
+must still meet those at run time, and the tick says so. The bill is an upper
+bound on what the store permits, not a promise of what the provider will.
+
 `pnpm grader:tick` prints that list and refuses `--apply`: it is the bill,
 printed before anything is incurred, and a person still starts each due cycle
 from the record. `pnpm grader:track -- --domain x --on --reason "…"` is the
 opt-in: a category record exists for every domain anyone ever previewed, demo
 lookups included, and collecting all of them daily would bill for curiosity.
 Tracking is a file beside the record store, written by a person with a
-reason.
+reason; a corrupt file is an error, never an empty list. Whether a paying
+workspace is switched on automatically when a plan is attached is a billing
+question, and no billing exists, so opt-in by a person is the whole of it.
 
-## The three decisions, which are the owner's
+## The two decisions, which are the owner's
 
 1. **Where the loop runs.** Two honest options, and the store decides between
    them.
@@ -85,23 +94,22 @@ reason.
      built would then take the cells.
    The recommendation is the first now and the second when the store moves,
    with the due list and the tick unchanged between them. That is what a
-   pure due list is for.
+   pure due list is for. A cron meets the route's gates minus the visitor
+   throttle, which has no visitor to key on.
 
 2. **What it may spend, per day and per domain.** The per-domain ceiling
    (ADR-0013) was derived for two cycles a month with retry headroom: 204
    calls at 17 prompts. A daily loop is thirty cycles a month, fifteen times
    that. The ceiling must be re-derived from the cycle count the product
    sells (`CYCLES_PER_MONTH` becomes a daily-loop figure, or the ceiling
-   becomes a per-day figure) and a global daily budget set in the environment
-   (`COLLECTION_BUDGET_USD_DAILY` already exists for the collector). The
-   tick prints the arithmetic: at pay-as-you-go a 17-prompt domain is about
-   $0.58 a cycle, so $17 a month per domain, before retries and before any
+   becomes a per-day figure) and a global daily budget. `COLLECTION_BUDGET_USD_DAILY`
+   is documented in CLAUDE.md §7 and `.env.example` and nothing reads it; the
+   cap the runner actually honours is `GRADER_CAP_USD` per run. Decision 2
+   must name where a daily budget is read and enforced. The tick prints the
+   arithmetic: at pay-as-you-go a 17-prompt domain is $0.578 a cycle, so
+   $17.34 a month per domain at one cycle a day, before retries and before any
    custom prompts. Nothing here can be built without the owner naming the
    figures.
-
-3. **Which domains are on.** Opt-in by a person, per domain, with a reason,
-   as built. Whether a paying workspace is switched on automatically when a
-   plan is attached is a billing question, and no billing exists.
 
 ## What is deliberately not done
 

@@ -344,10 +344,11 @@ Visitors file requests; operators apply. One shared basis definition lives in
 `packages/contracts/src/basis.ts`. Every route is local-demo only; there is
 still no identity.
 **Daily scheduler (ADR-0017, PROPOSED):** the due list and the bill exist
-(`pnpm grader:tick`, `pnpm grader:track`); no loop runs. Three decisions are
+(`pnpm grader:tick`, `pnpm grader:track`); no loop runs. Two decisions are
 the owner's: where it runs (beside the store now, hosted after the P4 store
-move), what it may spend per day and per domain (the ceiling was derived for
-two cycles a month, a daily loop is thirty), and which domains are on.
+move) and what it may spend per day and per domain (the ceiling was derived
+for two cycles a month, a daily loop is thirty; no daily budget is enforced
+anywhere yet). Which domains are on is a person's opt-in, as built.
 **`/score-version` repaired (2026-09-03):** the command now names the real
 constant (`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), the two
 pin tables, and the changelog table in `docs/METHODOLOGY.md`. Its diff is
