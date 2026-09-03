@@ -330,10 +330,14 @@ and is **not wired**: wiring it is det-3 plus a re-score. Measured dry run: it
 moves the reference scan's "other" share from 88.7% to 86.5%; the rest of
 "other" is retailers, redirects, vendors and listicles, which need new classes,
 not a longer list. `pnpm grader:publishers` proposes candidates and never writes.
-**Known gap, not urgent:** `/score-version` does not work as written — it points
-at `services/scorer/version.ts`, which does not exist (the constant is
-`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), and it gates on a
-golden set holding 7 of the 300 cases it needs. Repair it before the first real
-bump (ADR-0012).
+**`/score-version` repaired (2026-09-03):** the command now names the real
+constant (`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), the two
+pin tables, and the changelog table in `docs/METHODOLOGY.md`. Its diff is
+`pnpm grader:version-diff`: `--snapshot` before the rule edit, `--against
+<old>` after, every stored answer, every row field a rule can move, the
+complete flip list (ADR-0012's bar, as a tool; the snapshot is untracked, the
+changelog holds the list). The golden set holds 7 of 300 cases, so its
+agreement is reported beside the flip list and its G2 gate stays NOT RUN; the
+flip list is the gate for a bump.
 
 Update this section at every phase transition. It is the first thing a new session reads.
