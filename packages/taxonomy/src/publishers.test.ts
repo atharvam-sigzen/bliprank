@@ -19,7 +19,6 @@ describe('every publisher entry is well-formed and reasoned', () => {
       expect(seen.has(p.domain), `duplicate ${p.domain}`).toBe(false)
       seen.add(p.domain)
       expect(p.why.length, p.domain).toBeGreaterThan(20)
-      if (p.conflict !== undefined) expect(p.conflict.length, p.domain).toBeGreaterThan(20)
       expect(p.regions.length, p.domain).toBeGreaterThan(0)
       expect(p.addedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }

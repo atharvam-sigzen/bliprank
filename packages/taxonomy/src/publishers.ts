@@ -22,6 +22,11 @@
  *      company that sells in a category the taxonomy tracks. Vendor blogs are
  *      what `competitor` and `other` already hold; a vendor-owned magazine
  *      (opensource.com under Red Hat, say) is left out for the same reason.
+ *      OWNERSHIP COUNTS AT ANY DISTANCE, whatever the title's beat: a masthead
+ *      whose group also owns a tracked vendor (Ziff Davis and Moz) or a refused
+ *      directory operator (TechnologyAdvice and TechRepublic) is out. Decided
+ *      2026-09-03, applied to every entry rather than case by case; the
+ *      refusals below name each one.
  *   3. NOT PRIMARILY AN AFFILIATE DIRECTORY OR LISTICLE OPERATION. Sites whose
  *      product is a ranked list with referral links and a "get quotes" form —
  *      software directories, lead-generation comparison sites, statistics
@@ -60,12 +65,6 @@ export interface Publisher {
   readonly regions: readonly Region[]
   /** True when the outlet also runs affiliate-supported buying guides. Recorded, not hidden. */
   readonly affiliate?: boolean
-  /**
-   * An ownership or business-model fact a reviewer must weigh under criterion
-   * 2 or 3 before approving the entry. Present means the entry is a decision,
-   * not a default; the hostile review of 2026-09-03 found each of these.
-   */
-  readonly conflict?: string
   /** Why it meets the four criteria, in a line a reviewer can check. */
   readonly why: string
   readonly addedOn: string
@@ -77,9 +76,6 @@ const SEED = '2026-09-03'
 export const PUBLISHERS: readonly Publisher[] = [
   // Technology press, global — the outlets that review business software.
   { domain: 'techradar.com', name: 'TechRadar', kind: 'tech-press', regions: ['global', 'uk'], affiliate: true, why: 'Future plc masthead; reviews CRM, hosting, password managers; cited in the reference scan', addedOn: SEED },
-  { domain: 'pcmag.com', name: 'PCMag', kind: 'tech-press', regions: ['global', 'us', 'uk'], affiliate: true, conflict: 'Ziff Davis also owns Moz, a tracked seo-tools vendor; SEO tools are not this title\'s beat', why: 'Ziff Davis masthead and labs; long-running business software reviews; cited in the reference scan', addedOn: SEED },
-  { domain: 'zdnet.com', name: 'ZDNet', kind: 'tech-press', regions: ['global'], affiliate: true, conflict: 'Ziff Davis also owns Moz, a tracked seo-tools vendor; SEO tools are not this title\'s beat', why: 'Ziff Davis masthead; enterprise and SMB software coverage', addedOn: SEED },
-  { domain: 'cnet.com', name: 'CNET', kind: 'consumer-tech', regions: ['global', 'us'], affiliate: true, conflict: 'Ziff Davis also owns Moz, a tracked seo-tools vendor; SEO tools are not this title\'s beat', why: 'Ziff Davis masthead; consumer hardware reviews', addedOn: SEED },
   { domain: 'techcrunch.com', name: 'TechCrunch', kind: 'tech-press', regions: ['global'], why: 'Newsroom with editorial standards; startup and SaaS reporting', addedOn: SEED },
   { domain: 'theverge.com', name: 'The Verge', kind: 'tech-press', regions: ['global'], affiliate: true, why: 'Vox Media masthead; hardware and platform coverage', addedOn: SEED },
   { domain: 'wired.com', name: 'Wired', kind: 'tech-press', regions: ['global', 'uk'], affiliate: true, why: 'Condé Nast masthead; technology reporting and reviews', addedOn: SEED },
@@ -91,7 +87,6 @@ export const PUBLISHERS: readonly Publisher[] = [
   { domain: 'rtings.com', name: 'RTINGS', kind: 'reviews-lab', regions: ['global'], affiliate: true, why: 'Independent test lab with published methodology; keyboards, mice, headsets; cited by two engines in the reference corpus', addedOn: SEED },
   { domain: 'computerworld.com', name: 'Computerworld', kind: 'trade-press', regions: ['global'], why: 'Foundry (IDG) masthead; enterprise software trade press', addedOn: SEED },
   { domain: 'infoworld.com', name: 'InfoWorld', kind: 'trade-press', regions: ['global'], why: 'Foundry (IDG) masthead; enterprise software trade press', addedOn: SEED },
-  { domain: 'techrepublic.com', name: 'TechRepublic', kind: 'trade-press', regions: ['global'], affiliate: true, conflict: 'Owned by TechnologyAdvice, itself refused under criterion 3; the title keeps its own masthead', why: 'TechnologyAdvice-owned but with a standing editorial masthead and corrections policy; SMB software coverage', addedOn: SEED },
   { domain: 'theregister.com', name: 'The Register', kind: 'trade-press', regions: ['global', 'uk'], why: 'Situation Publishing masthead; enterprise technology reporting', addedOn: SEED },
   { domain: 'venturebeat.com', name: 'VentureBeat', kind: 'tech-press', regions: ['global', 'us'], why: 'Editorial masthead; enterprise AI and SaaS reporting', addedOn: SEED },
   { domain: 'searchenginejournal.com', name: 'Search Engine Journal', kind: 'trade-press', regions: ['global'], why: 'Alpha Brand Media masthead; the SEO-tools category', addedOn: SEED },
@@ -117,10 +112,8 @@ export const PUBLISHERS: readonly Publisher[] = [
 
   // UK small-business press — the UK beachhead.
   { domain: 'smallbusiness.co.uk', name: 'SmallBusiness.co.uk', kind: 'trade-press', regions: ['uk'], affiliate: true, why: 'Stubben Edge Group title with a named editorial team; cited twice in the CRM corpus for UK prompts', addedOn: SEED },
-  { domain: 'startups.co.uk', name: 'Startups.co.uk', kind: 'trade-press', regions: ['uk'], affiliate: true, conflict: 'MVF is a lead-generation group and the title runs affiliate buying guides; borderline on criterion 3', why: 'MVF-owned title with a named editorial team and standards page; cited in the CRM corpus', addedOn: SEED },
 
   // India — business and technology press, and the outlets that review gaming hardware there.
-  { domain: 'indiatimes.com', name: 'The Times of India / The Economic Times', kind: 'general-news', regions: ['india'], conflict: 'The registrable domain also covers non-editorial Times Internet subdomains, which would count as earned media', why: 'Times Group mastheads; economictimes.indiatimes.com and timesofindia.indiatimes.com share this registrable domain', addedOn: SEED },
   { domain: 'livemint.com', name: 'Mint', kind: 'business-press', regions: ['india'], why: 'HT Media masthead; business technology', addedOn: SEED },
   { domain: 'business-standard.com', name: 'Business Standard', kind: 'business-press', regions: ['india'], why: 'Business Standard Ltd masthead; technology and enterprise coverage in India', addedOn: SEED },
   { domain: 'moneycontrol.com', name: 'Moneycontrol', kind: 'business-press', regions: ['india'], why: 'Network18 masthead; business and technology news', addedOn: SEED },
@@ -133,7 +126,6 @@ export const PUBLISHERS: readonly Publisher[] = [
   { domain: 'digit.in', name: 'Digit', kind: 'consumer-tech', regions: ['india'], affiliate: true, why: '9.9 Group masthead with a test lab; cited in the gaming-peripherals corpus', addedOn: SEED },
   { domain: 'yourstory.com', name: 'YourStory', kind: 'business-press', regions: ['india'], why: 'Masthead; startup and SaaS coverage', addedOn: SEED },
   { domain: 'inc42.com', name: 'Inc42', kind: 'business-press', regions: ['india'], why: 'Masthead; Indian SaaS reporting', addedOn: SEED },
-  { domain: 'sportskeeda.com', name: 'Sportskeeda', kind: 'consumer-tech', regions: ['india', 'global'], affiliate: true, conflict: 'A sports site; only its esports and gaming desk bears on a tracked category', why: 'Nazara-owned masthead with an esports and gaming desk; cited in the gaming-peripherals corpus', addedOn: SEED },
 
   // GCC — the outlets business software gets covered in.
   { domain: 'gulfnews.com', name: 'Gulf News', kind: 'general-news', regions: ['gcc'], why: 'Al Nisr Publishing masthead; business and technology desk in the UAE', addedOn: SEED },
@@ -153,6 +145,13 @@ export const PUBLISHERS: readonly Publisher[] = [
  * person to propose one of them finds the reason first.
  */
 export const NOT_PUBLISHERS: readonly { readonly domain: string; readonly fails: 1 | 2 | 3 | 4; readonly why: string }[] = [
+  { domain: 'pcmag.com', fails: 2, why: 'Ziff Davis title; Ziff Davis owns Moz, a tracked seo-tools vendor. Ownership counts, whatever the beat (decided 2026-09-03)' },
+  { domain: 'zdnet.com', fails: 2, why: 'Ziff Davis title; Ziff Davis owns Moz, a tracked seo-tools vendor. Ownership counts, whatever the beat (decided 2026-09-03)' },
+  { domain: 'cnet.com', fails: 2, why: 'Ziff Davis title; Ziff Davis owns Moz, a tracked seo-tools vendor. Ownership counts, whatever the beat (decided 2026-09-03)' },
+  { domain: 'techrepublic.com', fails: 3, why: 'owned by TechnologyAdvice, a software directory operator refused under criterion 3; the title inherits the business model of its owner' },
+  { domain: 'startups.co.uk', fails: 3, why: 'owned by MVF, a lead-generation group; the title runs affiliate buying guides for the categories it covers' },
+  { domain: 'indiatimes.com', fails: 1, why: 'the registrable domain covers non-editorial Times Internet properties beside the mastheads; a match cannot tell them apart' },
+  { domain: 'sportskeeda.com', fails: 4, why: 'a sports site; an esports desk is not coverage of a tracked category' },
   { domain: 'searchengineland.com', fails: 2, why: 'Third Door Media, owned by Semrush since 2024; Semrush is a tracked seo-tools vendor and SEO is the beat' },
   { domain: 'martech.org', fails: 2, why: 'Third Door Media, owned by Semrush since 2024; covers the CRM and email-marketing categories Semrush sells beside' },
   { domain: 'medium.com', fails: 1, why: 'a publishing platform, not an editorial organisation; any author, any standard' },

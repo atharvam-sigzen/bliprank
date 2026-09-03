@@ -1,6 +1,6 @@
 # ADR-0015 — The publisher registry: proposed, measured, not wired
 
-**Status:** Proposed · **Date:** 2026-09-03 · **Phase:** P3
+**Status:** Accepted for the list and the criteria (2026-09-03); the registry is NOT wired, and wiring (det-3) is deferred · **Date:** 2026-09-03 · **Phase:** P3
 **Relates to:** R1 (deterministic scoring) · R5 (rows are immutable and
 version-stamped) · ADR-0005 (citation source classification) · ADR-0012 (what
 det-2 covers, and the pin) · ADR-0014 (the citation breakdown on the result
@@ -82,25 +82,30 @@ Review aggregators (G2, Capterra, Trustpilot) stay in the `review` class.
 
 ### Where the initial list comes from
 
-`packages/taxonomy/src/publishers.ts`: 59 entries, each with `kind`, regions,
+`packages/taxonomy/src/publishers.ts`: 52 entries, each with `kind`, regions,
 an `affiliate` flag where it applies, a checkable one-line `why`, and an
-`addedOn` date. Seven carry a `conflict`: an ownership or business-model fact
-the reviewer must weigh (Ziff Davis, owner of PCMag, ZDNet and CNET, also owns
-Moz, a tracked SEO-tools vendor; TechRepublic is owned by TechnologyAdvice,
-refused under criterion 3; Startups.co.uk sits in a lead-generation group;
-Sportskeeda is a sports site with a gaming desk; `indiatimes.com` covers
-non-editorial subdomains). Search Engine Land and MarTech were in the first
-draft and are now refused under criterion 2: Third Door Media has been owned
-by Semrush since 2024, and Semrush is a tracked vendor.
+`addedOn` date. The proposal carried 59: seven entries flagged by the hostile
+review with an ownership or structural conflict (PCMag, ZDNet and CNET under
+Ziff Davis, which owns Moz, a tracked SEO-tools vendor; TechRepublic under
+TechnologyAdvice, a directory operator refused under criterion 3;
+Startups.co.uk under a lead-generation group; `indiatimes.com`, whose
+registrable domain covers non-editorial properties; Sportskeeda, a sports
+site). **The owner decided on 2026-09-03 to exclude all seven**, applying the
+independence rule that had already removed Search Engine Land and MarTech
+(Third Door Media, owned by Semrush since 2024) consistently rather than case
+by case: ownership counts at any distance, whatever the title's beat. The
+criterion text in the file now says so, and each of the nine is named in the
+refusals with the criterion it fails.
 
 The seed comes from the outlets that cover the taxonomy's categories
 in its markets, cross-checked against what the three stored scans actually
-cited. Seventeen domains that were considered and refused are listed in
+cited. Twenty-four domains that were considered and refused are listed in
 `NOT_PUBLISHERS` with the criterion each fails, so nobody proposes them
 twice. `publishers.test.ts` refuses a malformed entry: registrable, lower
 case, unique, a reason a reviewer can check, never a tracked vendor's domain
 in any demo bank, never a domain a platform table already names. The test
-cannot see corporate ownership; that is what `conflict` and the review are for.
+cannot see corporate ownership; that is what the review is for, and why each
+refusal names its reason.
 
 ### How a domain is added later
 
@@ -130,11 +135,14 @@ other with a host, 355 distinct hosts, and 20 classed other with no host
 
 | Subject | Citations | Other before | Other after | Moved to earned media |
 |---|---|---|---|---|
-| pipedrive.com (reference, 2026-08-25) | 282 | 250 (88.7%) | 244 (86.5%) | 6: smallbusiness.co.uk 2, forbes, pcmag, startups.co.uk, techradar |
+| pipedrive.com (reference, 2026-08-25) | 282 | 250 (88.7%) | 246 (87.2%) | 4: smallbusiness.co.uk 2, forbes, techradar |
 | sigzen.com (2026-09-01) | 191 | 167 (87.4%) | 167 (87.4%) | 0 |
-| thecosmicbyte.com (2026-09-01) | 156 | 132 (84.6%) | 126 (80.8%) | 6: rtings 2, digit.in, news18, nytimes, sportskeeda |
+| thecosmicbyte.com (2026-09-01) | 156 | 132 (84.6%) | 127 (81.4%) | 5: rtings 2, digit.in, news18, nytimes |
 
-**The registry moves the reference scan's "other" share from 88.7% to 86.5%.**
+Under the 59-entry proposal the reference figure was 244 (86.5%), with PCMag
+and Startups.co.uk each matching once; the approved 52 give up those two.
+
+**The approved registry moves the reference scan's "other" share from 88.7% to 87.2%.**
 That is the finding. Editorial outlets appear in this corpus as singletons and
 pairs; the bulk of "other" is not press at all. The ten hosts that clear the
 promotion bar are: amazon.in (33 citations), erpresearch.com, zoho.com,
@@ -159,30 +167,31 @@ Reviewed read-only on 2026-09-03. Fixed: the pin could not see the registry
 being wired (both wiring guards above); the identity-over-platform precedence
 and nine extractor paths were unpinned (rows added); `PLATFORM_TABLES` handed
 out the live table objects (frozen copies now); two seed entries failed
-criterion 2 on ownership (refused); five borderline entries carried no record
-of why (`conflict`); the proposer re-declared the promotion bar instead of
+criterion 2 on ownership (refused); five more carried an ownership or
+structural conflict, recorded for the owner and then refused by the owner's
+decision above; the proposer re-declared the promotion bar instead of
 importing it; its main-guard and data-directory derivation broke on Windows
 paths (`fileURLToPath`); hostless redirects vanished from its output (counted
 and printed). Left: `medium.com` in the refusals is unreachable because the
 registrable-domain rule treats it as a private suffix, which is cosmetic.
 
-## Open — the owner decides
+## Decided 2026-09-03, and what stays open
 
-- **Approve, amend or reject the seed list and the four criteria.** Until
-  approved the map is dead code with tests.
-- **Whether to wire it at all, given 2.2 points on the reference scan.** The
-  honest reading is that `earned_media` matters for the category the product
-  sells into (press coverage is what a PR team buys) even when it is rare
-  today; the cost is a det-3 bump and a re-score.
-- **Whether to unwrap provider redirects before classification**, and whether
-  to add retail and vendor classes. Both are rule changes and arrive together
-  with, or after, det-3.
+- **The list and the criteria are approved** as amended above (52 entries, 24
+  refusals). The map is still dead code with tests until wired.
+- **Wiring is deferred.** The owner asked first for `/score-version` to work
+  as documented; that repair landed the same day (`version-diff`, the
+  snapshot-then-diff flip list, and the command rewritten to the files that
+  exist). A det-3 bump waits for a separate go-ahead.
+- **Redirect unwrapping and retail/vendor classes are deferred**, not this
+  round. They remain the change that would actually resolve "other".
 - **Attribution of `www.zoho.com/crm` and Dynamics** stays as ADR-0014 left it.
 
 ## Verification, without spending
 
 - `source-class-pin.test.ts`: 35 tests; three mutations each fail the pin, and
   wiring the registry into `answers.ts` fails the static guard.
+- `pnpm grader:publishers` re-run after the exclusions: the table above.
 - `packages/taxonomy/src/publishers.test.ts`: every entry well-formed and
   reasoned, never a vendor or a platform, refusals disjoint and criterion-named.
 - `services/grader/src/publishers.test.ts`: the tally by hand, the bar and

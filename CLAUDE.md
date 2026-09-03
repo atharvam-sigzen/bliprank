@@ -19,11 +19,11 @@ numbers can be reproduced and reconciled. Everything in this codebase serves tha
 
 Three product pillars:
 
-| Pillar | What it means in code |
-|---|---|
-| **Measurement integrity** | Every metric ships with a Wilson 95% CI, a disclosed sample size `n`, and a versioned scoring algorithm ID. Never a bare point estimate. |
+| Pillar                        | What it means in code                                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Measurement integrity**     | Every metric ships with a Wilson 95% CI, a disclosed sample size `n`, and a versioned scoring algorithm ID. Never a bare point estimate.                 |
 | **Cross-tool reconciliation** | We ingest competitors' exports (Peec, Profound, Semrush, Ahrefs, Otterly, AthenaHQ) and explain *why* their number differs from ours. This is the wedge. |
-| **Causal proof** | Holdout-based experiments with difference-in-differences, not correlation dressed up as causation. |
+| **Causal proof**              | Holdout-based experiments with difference-in-differences, not correlation dressed up as causation.                                                       |
 
 If a change makes a number less reproducible, it is the wrong change — even if it
 is faster, cheaper, or prettier.
@@ -323,13 +323,15 @@ cited (every citation classified by the scan's own rules, shares with
 intervals, most-cited sites) and the gap report (the homepage against the
 cycle's prompts). Both are evidence fetched on request, never written into a
 result; nothing generates or publishes.
-**Publisher registry (ADR-0015, 2026-09-03, PROPOSED):** the citation classifier
-is pinned under det-2 (`source-class-pin.test.ts`). A registry of 59 editorial
-outlets with four admission criteria sits in `packages/taxonomy/src/publishers.ts`
-and is **not wired**: wiring it is det-3 plus a re-score. Measured dry run: it
-moves the reference scan's "other" share from 88.7% to 86.5%; the rest of
-"other" is retailers, redirects, vendors and listicles, which need new classes,
-not a longer list. `pnpm grader:publishers` proposes candidates and never writes.
+**Publisher registry (ADR-0015, list approved 2026-09-03, NOT wired):** the
+citation classifier is pinned under det-2 (`source-class-pin.test.ts`). A
+registry of 52 editorial outlets under four admission criteria (ownership
+counts at any distance) sits in `packages/taxonomy/src/publishers.ts`. Wiring
+it is det-3 plus a re-score and is **deferred pending a separate go-ahead**.
+Measured dry run: it moves the reference scan's "other" share from 88.7% to
+87.2%; the rest of "other" is retailers, redirects, vendors and listicles,
+which need new classes (also deferred), not a longer list.
+`pnpm grader:publishers` proposes candidates and never writes.
 **`/score-version` repaired (2026-09-03):** the command now names the real
 constant (`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), the two
 pin tables, and the changelog table in `docs/METHODOLOGY.md`. Its diff is
