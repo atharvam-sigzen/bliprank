@@ -58,7 +58,7 @@ import { FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { runGrader } from './run.js'
 import { basisOf, cellsFor } from './scan.js'
-import { latestPath, listCycles } from './cycles.js'
+import { latestPath, listCycles, storedResults } from './cycles.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
@@ -86,15 +86,7 @@ export function parseRescoreArgs(argv: readonly string[]): RescoreOptions | { re
 
 const resultsDir = (dataDir: string) => join(dataDir, 'results')
 
-/** Result files, excluding the `.audit.json` rows nothing serves. */
-export function storedResults(dataDir: string): readonly string[] {
-  const dir = resultsDir(dataDir)
-  if (!existsSync(dir)) return []
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.json') && !f.includes('.audit.'))
-    .map((f) => f.slice(0, -'.json'.length))
-    .sort()
-}
+export { storedResults }
 
 /**
  * Where the superseded row goes. Never overwritten: a second re-score under one

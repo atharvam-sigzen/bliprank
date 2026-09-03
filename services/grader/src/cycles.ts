@@ -130,6 +130,16 @@ export function writeCycle(dataDir: string, result: CycleResult): { readonly day
  * does not parse, or that records no day, is left out rather than guessed at;
  * `.audit.json` rows (superseded derivations kept by rescore) are never cycles.
  */
+/** Result files, excluding the `.audit.json` rows nothing serves. */
+export function storedResults(dataDir: string): readonly string[] {
+  const dir = join(dataDir, 'results')
+  if (!existsSync(dir)) return []
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.json') && !f.includes('.audit.'))
+    .map((f) => f.slice(0, -'.json'.length))
+    .sort()
+}
+
 export function listCycles<T extends CycleResult = CycleResult>(dataDir: string, domain: string): readonly StoredCycle<T>[] {
   const byDay = new Map<string, StoredCycle<T>>()
   const dir = cyclesDir(dataDir, domain)

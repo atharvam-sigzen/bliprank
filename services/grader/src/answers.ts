@@ -52,7 +52,7 @@ import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { FileBlobStore } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { latestCycle, readCycle } from './cycles.js'
-import { SCORING_ALGO_VERSION, scoreAnswer } from '@bliprank/scorer'
+import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scorer'
 import type { Citation } from '@bliprank/contracts'
 import { basisOf, cellsFor, leadersOf, subjectFor } from './scan.js'
 
@@ -104,19 +104,31 @@ export interface ScanAnswers {
   readonly answers: readonly StoredAnswer[]
 }
 
+/** One stored run with the full row the scorer gives it. What `version-diff` snapshots. */
+export interface ScoredRun {
+  readonly prompt: string
+  readonly engine: EngineId
+  readonly text: string
+  readonly collectedAt: string
+  readonly row: ScoreRow
+}
+
+export interface ScoredCycle {
+  readonly domain: string
+  readonly category: string
+  readonly day: string
+  readonly comparisonBasis: string
+  readonly runs: readonly ScoredRun[]
+}
+
 /**
- * Read a stored result's answers back out of the blob store.
- *
- * ⚠️ IN `cellsFor` ORDER, WHICH IS `promptRows` ORDER. `runScan` iterates cells
- * and appends each cell's runs, so an answer's index here is the index of the
- * row that describes it. The surface still matches on prompt AND engine rather
- * than on position — an index that quietly drifts is the failure that would put
- * one prompt's answer under another prompt's heading — but the order is what
- * makes that match cheap and total.
- *
- * Reads only. No provider call, no model call, and no path here can collect.
+ * Score one stored cycle's answers again, from the blobs, with the subject and
+ * competitor specs the scan used. The evidence reader below and the version
+ * diff both start here, so they cannot disagree about what a stored answer is.
+ * In `cellsFor` order. Reads only: no provider call, no model call, no path
+ * here can collect.
  */
-export async function readScanAnswers(dataDir: string, domain: string, cycleDay?: string): Promise<ScanAnswers | { readonly refuse: string }> {
+export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay?: string): Promise<ScoredCycle | { readonly refuse: string }> {
   // One cycle's evidence, by day (ADR-0013). The latest when no day is asked
   // for, which is what every reader before cycles existed was reading.
   const cycle = cycleDay ? readCycle(dataDir, domain, cycleDay) : latestCycle(dataDir, domain)
@@ -148,7 +160,7 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
   const competitors = leadersOf(bank).filter((b) => b.id !== subject.id)
 
   const blob = new FileBlobStore(join(dataDir, 'answers'))
-  const answers: StoredAnswer[] = []
+  const runs: ScoredRun[] = []
   for (const c of cells) {
     // Path-qualified exactly as the collector wrote it. An unqualified key would
     // miss every object and report a scan with no evidence at all.
@@ -167,14 +179,7 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
             })
           : []
         const row = scoreAnswer({ answer: { text: run.text, citations: cited }, brand: subject, competitors })
-        answers.push({
-          prompt: c.prompt,
-          engine: c.engine,
-          text: run.text,
-          empty: run.text.trim() === '',
-          collectedAt: typeof run.collectedAt === 'string' ? run.collectedAt : '',
-          citations: row.citations.map((k) => ({ url: k.url, position: k.position, sourceClass: k.sourceClass, domain: k.domain })),
-        })
+        runs.push({ prompt: c.prompt, engine: c.engine, text: run.text, collectedAt: typeof run.collectedAt === 'string' ? run.collectedAt : '', row })
       }
     } catch {
       // A corrupt object costs one answer's evidence, not the report. The
@@ -183,13 +188,45 @@ export async function readScanAnswers(dataDir: string, domain: string, cycleDay?
     }
   }
 
-  return { domain, category: slug, day, comparisonBasis: stored.comparisonBasis ?? '', algoVersion: SCORING_ALGO_VERSION, answers }
+  return { domain, category: slug, day, comparisonBasis: stored.comparisonBasis ?? '', runs }
+}
+
+/**
+ * Read a stored result's answers back out of the blob store.
+ *
+ * ⚠️ IN `cellsFor` ORDER, WHICH IS `promptRows` ORDER. `runScan` iterates cells
+ * and appends each cell's runs, so an answer's index here is the index of the
+ * row that describes it. The surface still matches on prompt AND engine rather
+ * than on position — an index that quietly drifts is the failure that would put
+ * one prompt's answer under another prompt's heading — but the order is what
+ * makes that match cheap and total.
+ *
+ * Reads only. No provider call, no model call, and no path here can collect.
+ */
+export async function readScanAnswers(dataDir: string, domain: string, cycleDay?: string): Promise<ScanAnswers | { readonly refuse: string }> {
+  const got = await scoreStoredCycle(dataDir, domain, cycleDay)
+  if ('refuse' in got) return got
+  return {
+    domain: got.domain,
+    category: got.category,
+    day: got.day,
+    comparisonBasis: got.comparisonBasis,
+    algoVersion: SCORING_ALGO_VERSION,
+    answers: got.runs.map((r) => ({
+      prompt: r.prompt,
+      engine: r.engine,
+      text: r.text,
+      empty: r.text.trim() === '',
+      collectedAt: r.collectedAt,
+      citations: r.row.citations.map((k) => ({ url: k.url, position: k.position, sourceClass: k.sourceClass, domain: k.domain })),
+    })),
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
  * The runner: emit one scan's evidence as a file the public app can ship.
  *
- *   pnpm grader:answers -- --domain pipedrive.com --out apps/public/lib/scan-answers.json
+ *   pnpm grader:answers -- --domain pipedrive.com --out apps/public/public/scan-answers.json
  *
  * Reads disk only. Nothing here spends.
  */
