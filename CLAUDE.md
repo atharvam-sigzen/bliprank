@@ -332,6 +332,22 @@ Measured dry run: it moves the reference scan's "other" share from 88.7% to
 87.2%; the rest of "other" is retailers, redirects, vendors and listicles,
 which need new classes (also deferred), not a longer list.
 `pnpm grader:publishers` proposes candidates and never writes.
+**Correctable context (ADR-0016, 2026-09-03, all five steps landed, closing
+gate green):** a category correction is a new record version by a person's
+choice from the list, never a re-derivation (`pnpm grader:correct`); a
+competitor set is adjusted per domain over the category's set, includes from
+reviewed bank leaders only, and moves the basis (`set=N`,
+`pnpm grader:competitors`); custom prompts are a versioned per-domain set held
+to PROPERTY 2 with the scorer's own matcher, collected as a SECOND measurement
+on its own basis (`custom=K@V`), never the headline (`pnpm grader:prompts`).
+Visitors file requests; operators apply. One shared basis definition lives in
+`packages/contracts/src/basis.ts`. Every route is local-demo only; there is
+still no identity.
+**Daily scheduler (ADR-0017, PROPOSED):** the due list and the bill exist
+(`pnpm grader:tick`, `pnpm grader:track`); no loop runs. Three decisions are
+the owner's: where it runs (beside the store now, hosted after the P4 store
+move), what it may spend per day and per domain (the ceiling was derived for
+two cycles a month, a daily loop is thirty), and which domains are on.
 **`/score-version` repaired (2026-09-03):** the command now names the real
 constant (`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), the two
 pin tables, and the changelog table in `docs/METHODOLOGY.md`. Its diff is
