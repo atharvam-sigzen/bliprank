@@ -9,6 +9,7 @@ import {
   recordVisitorScan,
   type VisitorThrottleConfig,
 } from '../../../../../services/grader/src/visitor-throttle.js'
+import { FALLBACK_SLUG } from '@bliprank/taxonomy'
 import type { CategoryStatus } from '../../../lib/category-request'
 
 /**
@@ -101,7 +102,8 @@ export async function GET(req: Request): Promise<Response> {
       version: record.version,
       corrections: chain.filter((r) => r.correction).map((r) => ({ from: r.correction!.from, to: r.slug, at: r.correction!.at, by: r.correction!.by, reason: r.correction!.reason })),
     },
-    categories: [...names.values()].map((k) => ({ slug: k.slug, name: k.displayName, generated: generatedSlugs.has(k.slug) })).sort((a, b) => a.name.localeCompare(b.name)),
+    // The general bank is what a domain gets when no category fits; it is not a category to choose, and the store refuses it.
+    categories: [...names.values()].filter((k) => k.slug !== FALLBACK_SLUG).map((k) => ({ slug: k.slug, name: k.displayName, generated: generatedSlugs.has(k.slug) })).sort((a, b) => a.name.localeCompare(b.name)),
     pending: pending ? { slug: pending.slug, name: name(pending.slug), requestedAt: pending.requestedAt } : null,
     history: requestsFor(data, domain)
       .filter((r): r is typeof r & { status: 'applied' | 'declined' } => r.status !== 'pending')

@@ -46,6 +46,8 @@ describe('GET: the record, its history, the choices, the consequences', () => {
     const cats = body['categories'] as { slug: string; generated: boolean }[]
     expect(cats.some((c) => c.slug === 'seo-tools')).toBe(true)
     expect(cats.every((c) => c.generated === false)).toBe(true)
+    // Seen in the browser check: the general bank was offered while the store refused it. It is an absence, not a choice.
+    expect(cats.some((c) => c.slug === 'general-business-software')).toBe(false)
     expect(body['pending']).toBeNull()
     expect(body['nextCycle']).toMatchObject({ engines: 5, earlierCycles: 0, plan: 'payg' })
     expect((body['nextCycle'] as { cells: number }).cells).toBeGreaterThan(0)
