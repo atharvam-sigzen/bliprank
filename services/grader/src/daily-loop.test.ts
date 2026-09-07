@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -6,7 +6,7 @@ import { ENGINES } from '@bliprank/contracts'
 import { applyCustomPrompts } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
 import { dailyCapUsd, dailyLedgerFile, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
-import { RETRY_HEADROOM, callsThisMonth, defaultDomainCeilingConfig } from './domain-ceiling.js'
+import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, setTracked } from './due.js'
 import { recordCategory } from './resolve-category.js'
 import type { ScanResult } from './scan.js'
@@ -94,7 +94,8 @@ describe('the loop, with a fake collector', () => {
     expect(ledger).toMatchObject({ capUsd: applied.capUsd, spentUsd: 0.82, calls: 170 })
     expect(Object.keys(ledger.domains)).toEqual(['acme.test', 'beta.test'])
     expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
-    expect(callsThisMonth('acme.test', defaultDomainCeilingConfig(dir, {}, 85), new Date('2026-09-07T00:00:00.000Z'))).toBe(85)
+    // The loop never books the manual per-domain ceiling: that ledger counts hand-started cycles (ADR-0017).
+    expect(existsSync(join(dir, 'domain-ceiling.json'))).toBe(false)
 
     const again = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })
     if ('refuse' in again) throw new Error(again.refuse)
@@ -141,6 +142,40 @@ describe('the loop, with a fake collector', () => {
       ['beta.test', 'scanne'],
     ])
     expect(readDailyLedger(dir)['2026-09-07']!.domains['acme.test']!.spentUsd).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 6)
+  })
+})
+
+describe('the loop’s allowance, live', () => {
+  it('is the cycle’s cells with headroom whenever the cap gate lets a domain start; at the dearest price it would have been truncated; a domain the cap cannot pay for is refused before any allowance', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+    const armed = { GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg', COLLECTION_BUDGET_USD_DAILY: '100' }
+    const run = async (firstFactor: number) => {
+      const allowances: number[] = []
+      const outcome = await runTick(
+        { dataDir: dir, env: armed, day: '2026-09-07', apply: true, mode: 'live', root: dir },
+        {
+          gate: async () => ({ ok: true, used: [], limit: 12, remaining: 12 }) as never,
+          collect: async (d, o) => (allowances.push(o.allowanceCalls), scanned(d.host, o.day, d.host === 'acme.test' ? 17 * PER_PROMPT * firstFactor : 17 * PER_PROMPT, 85)),
+          now: () => new Date('2026-09-07T06:00:00.000Z'),
+        },
+      )
+      if ('refuse' in outcome) throw new Error(outcome.refuse)
+      return { allowances, outcome }
+    }
+    // The first run realises 1.15× its expected cost. What is left, at the mean price per attempt, still pays for the second's full headroom.
+    const a = await run(1.15)
+    expect(a.allowances).toEqual([102, 102])
+    const remaining = a.outcome.capUsd - 17 * PER_PROMPT * 1.15
+    expect(Math.floor(remaining / (PER_PROMPT / 5))).toBeGreaterThanOrEqual(102)
+    // At the dearest engine's price the same remainder would have bought 90 attempts and truncated the second run on its first retries; that is why the mean is used.
+    expect(Math.floor(remaining / 0.008)).toBeLessThan(102)
+    // The cap gate sits at expected × headroom, so whenever a domain starts, what is left pays for its full allowance at the mean price; a domain the cap cannot pay for never starts.
+    rmSync(join(dir, 'daily-spend.json'), { force: true })
+    rmSync(join(dir, 'results'), { recursive: true, force: true })
+    const b = await run(1.35)
+    expect(b.allowances).toEqual([102])
+    expect(b.outcome.refused).toEqual([{ host: 'beta.test', reason: expect.stringContaining('daily cap') }])
   })
 })
 

@@ -163,8 +163,8 @@ describe('a second cycle through the real runner, resolver, orchestrator, scorer
 
     // Every gate and ledger a first scan touches was touched: the ceiling booked
     // the realised calls, the burst cap has the domain, the run lock is released.
-    const ceiling = JSON.parse(readFileSync(join(dir, 'domain-ceiling.json'), 'utf8')) as Record<string, Record<string, number>>
-    expect(Object.values(ceiling)[0]![DOMAIN]).toBe(result.counts.providerCalls)
+    const ceiling = JSON.parse(readFileSync(join(dir, 'domain-ceiling.json'), 'utf8')) as Record<string, Record<string, { cycles: number; calls: number }>>
+    expect(Object.values(ceiling)[0]![DOMAIN]).toEqual({ cycles: 1, calls: result.counts.providerCalls })
     const cap = JSON.parse(readFileSync(join(dir, 'live-cap.json'), 'utf8')) as Record<string, string[]>
     expect(cap[today()]).toContain(DOMAIN)
     expect(() => readFileSync(join(dir, 'run.lock'))).toThrow()

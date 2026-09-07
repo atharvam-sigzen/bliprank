@@ -1,174 +1,126 @@
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ENGINES } from '@bliprank/contracts'
 import {
   CYCLES_PER_MONTH,
   DEFAULT_CELLS_PER_CYCLE,
-  DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH,
   RETRY_HEADROOM,
-  callsThisMonth,
-  ceilingFor,
   checkDomainCeiling,
+  cyclesThisMonth,
   defaultDomainCeilingConfig,
-  recordDomainCalls,
+  recordDomainCycle,
   resetDate,
-  utcMonth,
+  runAllowanceFor,
+  type DomainCeilingConfig,
 } from './domain-ceiling.js'
 
+/**
+ * The per-domain ceiling on HAND-STARTED cycles, denominated in cycles, and
+ * the per-run allowance that bounds each cycle's calls (ADR-0017, 2026-09-07).
+ * ⚠️ HUMAN-OWNED AREA. Synthetic ledgers; nothing spends.
+ */
+
 let dir: string
-let cfg: ReturnType<typeof defaultDomainCeilingConfig>
+let cfg: DomainCeilingConfig
+const SEP = new Date('2026-09-10T12:00:00.000Z')
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-ceiling-'))
-  cfg = { maxCallsPerMonth: 100, ledgerFile: join(dir, 'domain-ceiling.json') }
+  cfg = { maxCyclesPerMonth: 2, ledgerFile: join(dir, 'domain-ceiling.json') }
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
-const SEP = new Date('2026-09-15T12:00:00.000Z')
-const OCT = new Date('2026-10-02T12:00:00.000Z')
-
-describe('the ceiling counts calls, not scans', () => {
-  it('starts at zero and admits a scan that fits', () => {
-    const v = checkDomainCeiling('acme.com', 85, cfg, SEP)
-    expect(v.ok).toBe(true)
-    if (!v.ok) return
-    expect(v.used).toBe(0)
-    expect(v.remaining).toBe(15)
+describe('the ceiling counts hand-started cycles, and records the calls each realised', () => {
+  it('starts at zero, admits a cycle, books the realised calls beside the count', () => {
+    expect(checkDomainCeiling('acme.test', cfg, SEP)).toMatchObject({ ok: true, cycles: 0, calls: 0, limit: 2 })
+    recordDomainCycle('acme.test', 97, cfg, SEP)
+    expect(cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
+    expect(checkDomainCeiling('acme.test', cfg, SEP)).toMatchObject({ ok: true, cycles: 1, calls: 97 })
   })
 
-  it('books the REALISED call count, so retries are visible', () => {
-    // The whole point. A limit denominated in scans cannot tell a clean scan
-    // from one that retried every cell twice, and the retry storm is the
-    // scenario this exists for.
-    recordDomainCalls('acme.com', 85, cfg, SEP)
-    recordDomainCalls('acme.com', 40, cfg, SEP) // a partial, failed, retried run
-    expect(callsThisMonth('acme.com', cfg, SEP)).toBe(125)
-  })
-
-  it('refuses the scan that would cross the line, rather than half-collecting it', () => {
-    recordDomainCalls('acme.com', 90, cfg, SEP)
-    const v = checkDomainCeiling('acme.com', 85, cfg, SEP)
-    expect(v.ok).toBe(false)
+  it('refuses the cycle after the count is reached, naming cycles and the reset date, whatever the cycle size', () => {
+    recordDomainCycle('acme.test', 160, cfg, SEP)
+    recordDomainCycle('acme.test', 160, cfg, SEP)
+    const v = checkDomainCeiling('acme.test', cfg, SEP)
+    expect(v).toMatchObject({ ok: false, reason: 'domain-ceiling', cycles: 2, limit: 2, resetsOn: '2026-10-01' })
     if (v.ok) return
-    expect(v.reason).toBe('domain-ceiling')
-    expect(v.used).toBe(90)
-    // The refusal is actionable: what it is, when it lifts, and what still works.
-    expect(v.message).toContain('per-domain ceiling')
-    expect(v.message).toContain('2026-10-01')
-    expect(v.message).toContain('nothing was charged')
-    expect(v.message).toContain('cache')
+    expect(v.message).toContain('has already started 2 of its 2 hand-started cycles')
+    expect(v.message).toContain('320 provider requests')
+  })
+
+  it('a cycle served entirely from cache made no call and is not a cycle against the count', () => {
+    recordDomainCycle('acme.test', 0, cfg, SEP)
+    expect(cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
   })
 
   it('holds one domain down without touching another', () => {
-    // A shared counter here would make the busiest domain everyone else's
-    // problem, which is the failure being prevented, not the mechanism.
-    recordDomainCalls('acme.com', 100, cfg, SEP)
-    expect(checkDomainCeiling('acme.com', 1, cfg, SEP).ok).toBe(false)
-    expect(checkDomainCeiling('other.com', 85, cfg, SEP).ok).toBe(true)
+    recordDomainCycle('acme.test', 85, cfg, SEP)
+    recordDomainCycle('acme.test', 85, cfg, SEP)
+    expect(checkDomainCeiling('acme.test', cfg, SEP).ok).toBe(false)
+    expect(checkDomainCeiling('beta.test', cfg, SEP).ok).toBe(true)
   })
 })
 
 describe('the month boundary', () => {
-  it('resets on the first of the next UTC month, matching the provider cycle', () => {
-    expect(utcMonth(SEP)).toBe('2026-09')
+  it('resets on the first of the next UTC month; a domain held down in September scans in October; only the current month is kept', () => {
     expect(resetDate(SEP)).toBe('2026-10-01')
-    // December rolls the year, which is the arithmetic most likely to be wrong.
-    expect(resetDate(new Date('2026-12-20T00:00:00.000Z'))).toBe('2027-01-01')
-  })
-
-  it('a domain held down in September scans freely in October', () => {
-    recordDomainCalls('acme.com', 100, cfg, SEP)
-    expect(checkDomainCeiling('acme.com', 85, cfg, SEP).ok).toBe(false)
-    expect(checkDomainCeiling('acme.com', 85, cfg, OCT).ok).toBe(true)
-  })
-
-  it('keeps only the current month, so the ledger cannot grow forever', () => {
-    recordDomainCalls('acme.com', 50, cfg, SEP)
-    recordDomainCalls('acme.com', 10, cfg, OCT)
-    expect(callsThisMonth('acme.com', cfg, OCT)).toBe(10)
-    expect(callsThisMonth('acme.com', cfg, SEP)).toBe(0)
+    recordDomainCycle('acme.test', 85, cfg, SEP)
+    recordDomainCycle('acme.test', 85, cfg, SEP)
+    const OCT = new Date('2026-10-01T00:00:01.000Z')
+    expect(checkDomainCeiling('acme.test', cfg, OCT)).toMatchObject({ ok: true, cycles: 0 })
+    recordDomainCycle('acme.test', 85, cfg, OCT)
+    const file = JSON.parse(readFileSync(cfg.ledgerFile, 'utf8')) as Record<string, unknown>
+    expect(Object.keys(file)).toEqual(['2026-10'])
   })
 })
 
 describe('failure modes', () => {
-  it('a corrupt ledger refuses THIS request without taking the month down', () => {
-    /*
-     * Deliberately different from live-gate's and visitor-throttle's "treat as
-     * full". Those refuse the one allowance they guard; this one is keyed by
-     * domain, so the same reflex would refuse every domain for the rest of the
-     * month over one bad byte.
-     */
-    mkdirSync(dir, { recursive: true })
+  it('a corrupt ledger refuses THIS request without taking the month down for a repair', () => {
+    mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
     writeFileSync(cfg.ledgerFile, '{ not json')
-    expect(callsThisMonth('acme.com', cfg, SEP)).toBe(cfg.maxCallsPerMonth)
-    expect(checkDomainCeiling('acme.com', 1, cfg, SEP).ok).toBe(false)
-    // And a write repairs it rather than compounding the corruption.
-    recordDomainCalls('acme.com', 5, cfg, SEP)
-    expect(callsThisMonth('acme.com', cfg, SEP)).toBe(5)
+    expect(checkDomainCeiling('acme.test', cfg, SEP).ok).toBe(false)
+    recordDomainCycle('acme.test', 85, cfg, SEP)
+    expect(checkDomainCeiling('acme.test', cfg, SEP)).toMatchObject({ ok: true, cycles: 1 })
   })
 
-  it('ignores a nonsense call count rather than writing it', () => {
-    recordDomainCalls('acme.com', 0, cfg, SEP)
-    recordDomainCalls('acme.com', -5, cfg, SEP)
-    recordDomainCalls('acme.com', Number.NaN, cfg, SEP)
-    recordDomainCalls('', 10, cfg, SEP)
-    expect(callsThisMonth('acme.com', cfg, SEP)).toBe(0)
+  it('a bare call count from before the split reads as the nearest number of cycles at the size in force, at least one', () => {
+    mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
+    writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': 97, 'beta.test': 170, 'gamma.test': -4 } }))
+    expect(cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
+    expect(cyclesThisMonth('beta.test', cfg, SEP)).toEqual({ cycles: 2, calls: 170 })
+    expect(cyclesThisMonth('gamma.test', cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
+    expect(checkDomainCeiling('beta.test', cfg, SEP).ok).toBe(false)
+    // Two 10-prompt cycles under the old ledger were 102 calls; at the size in force (50 cells) that is two cycles, not one.
+    const ten: DomainCeilingConfig = { ...cfg, legacyCellsPerCycle: 50 }
+    writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': 102 } }))
+    expect(cyclesThisMonth('acme.test', ten, SEP)).toEqual({ cycles: 2, calls: 102 })
+    expect(defaultDomainCeilingConfig(dir, { GRADER_PROMPTS_PER_SCAN: '10' }).legacyCellsPerCycle).toBe(50)
   })
 
-  it('treats a hand-edited negative or non-numeric entry as zero', () => {
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.com': -400, 'b.com': 'lots' } }))
-    // A negative would otherwise buy an attacker headroom by hand-editing.
-    expect(callsThisMonth('acme.com', cfg, SEP)).toBe(0)
-    expect(callsThisMonth('b.com', cfg, SEP)).toBe(0)
+  it('a nonsense entry reads as zero rather than throwing', () => {
+    mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
+    writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': { cycles: 'two', calls: null } } }))
+    expect(cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
   })
 })
 
-describe('the default is a formula with a stated margin, not a bare number (ADR-0013)', () => {
-  it('is CYCLES_PER_MONTH × cells per cycle × RETRY_HEADROOM, rounded up — 204 at 17 prompts on five engines', () => {
-    expect(DEFAULT_CELLS_PER_CYCLE).toBe(85)
-    expect(DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH).toBe(Math.ceil(CYCLES_PER_MONTH * DEFAULT_CELLS_PER_CYCLE * RETRY_HEADROOM))
-    expect(DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH).toBe(204)
+describe('the two constants and what they bound (ADR-0013, ADR-0017)', () => {
+  it('two hand-started cycles a month; the per-run allowance is the cycle’s cells with headroom, 102 at 17 prompts on five engines', () => {
+    expect(CYCLES_PER_MONTH).toBe(2)
+    expect(DEFAULT_CELLS_PER_CYCLE).toBe(17 * ENGINES.length)
+    expect(runAllowanceFor(DEFAULT_CELLS_PER_CYCLE)).toBe(Math.ceil(85 * RETRY_HEADROOM))
+    expect(runAllowanceFor(DEFAULT_CELLS_PER_CYCLE)).toBe(102)
+    expect(runAllowanceFor(160)).toBe(192)
   })
 
-  it('⚠️ the second cycle survives the first one retrying — the margin the old 170 claimed and did not have', () => {
-    const c = { maxCallsPerMonth: DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH, ledgerFile: join(dir, 'domain-ceiling.json') }
-    // The worst retry ratio observed on a live scan is 1.16 (pipedrive, 22 calls
-    // for 19 cells). Book a first cycle at that ratio, then ask for a second.
-    recordDomainCalls('acme.com', Math.ceil(85 * 1.16), c, SEP)
-    expect(checkDomainCeiling('acme.com', 85, c, SEP).ok).toBe(true)
-    // Both cycles at the headroom ratio still fit exactly.
-    recordDomainCalls('both.com', Math.ceil(85 * RETRY_HEADROOM), c, SEP)
-    expect(checkDomainCeiling('both.com', 85, c, SEP).ok).toBe(true)
-    // Under the old default of 170, one retry in cycle one refused cycle two.
-    const old = { ...c, maxCallsPerMonth: 170 }
-    recordDomainCalls('old.com', 86, old, SEP)
-    expect(checkDomainCeiling('old.com', 85, old, SEP).ok).toBe(false)
-  })
-
-  it('a third full cycle in the month is refused, as the free tier would refuse it anyway', () => {
-    const c = { maxCallsPerMonth: DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH, ledgerFile: join(dir, 'domain-ceiling.json') }
-    recordDomainCalls('acme.com', 170, c, SEP)
-    expect(checkDomainCeiling('acme.com', 85, c, SEP).ok).toBe(false)
-  })
-
-  it('follows the prompt count in force, so the margin holds at 10 prompts and at 20', () => {
-    expect(ceilingFor(10 * 5)).toBe(120)
-    expect(ceilingFor(20 * 5)).toBe(240)
-    expect(defaultDomainCeilingConfig(dir, { GRADER_PROMPTS_PER_SCAN: '20' } as NodeJS.ProcessEnv).maxCallsPerMonth).toBe(240)
-    expect(defaultDomainCeilingConfig(dir, {} as NodeJS.ProcessEnv).maxCallsPerMonth).toBe(204)
-  })
-
-  it('is below what one domain would need to exhaust a free engine tier', () => {
-    // The free tier is 50 requests per engine per month; a full scan draws 17
-    // from each. The property that matters is that no single domain can empty
-    // one engine's allowance on its own.
-    const perEngine = Math.floor(DEFAULT_MAX_CALLS_PER_DOMAIN_PER_MONTH / 5)
-    expect(perEngine).toBeLessThan(50)
-  })
-
-  it('an explicit ceiling in the environment is absolute and wins over the formula', () => {
-    const c = defaultDomainCeilingConfig(dir, { GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH: '9', GRADER_PROMPTS_PER_SCAN: '20' } as NodeJS.ProcessEnv)
-    expect(c.maxCallsPerMonth).toBe(9)
+  it('the count is a count: the environment may override it with an integer of cycles, never calls', () => {
+    expect(defaultDomainCeilingConfig(dir, {}).maxCyclesPerMonth).toBe(2)
+    expect(defaultDomainCeilingConfig(dir, { GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH: '4' }).maxCyclesPerMonth).toBe(4)
+    expect(defaultDomainCeilingConfig(dir, { GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH: '204' }).maxCyclesPerMonth).toBe(204)
+    expect(defaultDomainCeilingConfig(dir, { GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH: '0' }).maxCyclesPerMonth).toBe(2)
+    expect(defaultDomainCeilingConfig(dir, { GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH: 'lots' }).maxCyclesPerMonth).toBe(2)
+    // The pre-split key is an error, not a silence: a person who set 400 calls must not get two cycles with no word said.
+    expect(() => defaultDomainCeilingConfig(dir, { GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH: '400' })).toThrow(/no longer read/)
   })
 })

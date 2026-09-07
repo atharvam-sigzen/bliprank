@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan, utcDay } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
-import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCalls } from '../../../../../services/grader/src/domain-ceiling.js'
+import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCycle, runAllowanceFor } from '../../../../../services/grader/src/domain-ceiling.js'
 import { latestCycle, writeCycle, type CycleResult } from '../../../../../services/grader/src/cycles.js'
 import { readCustomPromptSet } from '../../../../../services/grader/src/custom-prompts.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
@@ -321,12 +321,13 @@ export async function POST(req: Request): Promise<Response> {
         //    than the visitor throttle (one subject, not one browser). A retry
         //    storm on one domain is many scans from many IPs over many hours,
         //    which is invisible to both of its neighbours here.
-        //    The domain's own prompts are cells too (ADR-0016): the ceiling is
-        //    derived from this cycle's actual cell count and checked against it.
+        //    Denominated in hand-started CYCLES (ADR-0017): a change to the
+        //    domain's prompt set changes what a cycle costs, never how many it
+        //    gets. The cycle's cells size the per-run allowance below instead.
         const customCount = readCustomPromptSet(DATA, domain)?.prompts.length ?? 0
         const cellsThisCycle = (cfg.callsPerEngine + customCount) * ENGINES.length
-        const ceilingCfg = defaultDomainCeilingConfig(DATA, env, cellsThisCycle)
-        const ceiling = checkDomainCeiling(domain, cellsThisCycle, ceilingCfg, now)
+        const ceilingCfg = defaultDomainCeilingConfig(DATA, env)
+        const ceiling = checkDomainCeiling(domain, ceilingCfg, now)
         if (!ceiling.ok) {
           send(c, 'error', { kind: ceiling.reason, message: ceiling.message })
           return done(c)
@@ -360,6 +361,10 @@ export async function POST(req: Request): Promise<Response> {
           apiKey: found.key,
           capUsd: Number(env['GRADER_CAP_USD'] ?? DEFAULT_CAP_USD),
           maxPrompts: cfg.callsPerEngine,
+          // The most attempts this run may make, retries included: the cycle's
+          // cells with headroom (ADR-0017). Bounds a retry storm at the
+          // allowance rather than discovering it in a ledger afterwards.
+          runAllowanceCalls: runAllowanceFor(cellsThisCycle),
           // Authoring a category, when the taxonomy has none for this domain.
           // Almost always a no-op by the time a scan runs: the preview step has
           // already resolved and RECORDED the category, so `resolveCategory`
@@ -394,8 +399,10 @@ export async function POST(req: Request): Promise<Response> {
           recordScan(domain, cfg, now)
           recordVisitorScan(visitorIp, visitorCfg, now)
         }
+        //    A cycle that reached the provider is one hand-started cycle
+        //    against the month's count, with the calls it realised beside it.
         if ('counts' in result && result.counts.providerCalls > 0) {
-          recordDomainCalls(domain, result.counts.providerCalls, ceilingCfg, now)
+          recordDomainCycle(domain, result.counts.providerCalls, ceilingCfg, now)
         }
 
         // 6. FILE THE CYCLE. The envelope, not a bare result: what is written

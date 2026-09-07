@@ -51,6 +51,7 @@ import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.
 import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
 import { competitorsFor } from './competitor-overrides.js'
 import { customPromptsAt, readCustomPromptSet } from './custom-prompts.js'
+import { runAllowanceFor } from './domain-ceiling.js'
 import type { CategoryResolution } from './scan.js'
 import { allBanks, allCategories, resolveCategory, readCategoryRecord, type CategoryRecord } from './resolve-category.js'
 import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
@@ -96,6 +97,13 @@ export interface RunnerOptions {
    * fails the run rather than substituting today's.
    */
   readonly customPrompts?: number | null
+  /**
+   * The most provider attempts this run may make, retries included (ADR-0017).
+   * The route and the daily loop derive it from the cycle's cells
+   * (`runAllowanceFor`); the CLI derives it from its bill unless `--allowance`
+   * says otherwise. Absent means unbounded within the ledger's cap.
+   */
+  readonly runAllowanceCalls?: number
 }
 
 export function parseArgs(
@@ -155,6 +163,8 @@ export function parseArgs(
   const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const dataDir = args.get('data') ?? join(here, '..', 'data')
   const maxPromptsArg = args.get('max-prompts')
+  const allowanceArg = args.get('allowance')
+  if (allowanceArg !== undefined && !(Number.isInteger(Number(allowanceArg)) && Number(allowanceArg) >= 0)) return { refuse: `--allowance must be a non-negative integer of attempts, got ${allowanceArg}` }
   const maxRpsArg = args.get('max-rps')
   if (maxRpsArg !== undefined && !(Number(maxRpsArg) > 0)) return { refuse: `--max-rps must be > 0, got ${maxRpsArg}` }
 
@@ -173,6 +183,7 @@ export function parseArgs(
       apiKey,
       dataDir,
       outFile: args.get('out') ?? join(dataDir, 'latest.json'),
+      ...(allowanceArg !== undefined ? { runAllowanceCalls: Number(allowanceArg) } : {}),
       /*
        * The bank author, from the environment and the same repo-root dotenv the
        * provider key comes from. Absent when no key is configured, which
@@ -294,7 +305,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // run breaking live collection while spending nothing. Found by doing
     // exactly that during a lock test.
     const ledgerFile = join(o.dataDir, offline ? `ledger.${o.mode}.json` : 'ledger.json')
-    const budget = new Budget(ledgerFile, o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+    const budget = new Budget(ledgerFile, o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]), () => new Date(), o.runAllowanceCalls)
     // THE LEDGER IS CUMULATIVE FOR THE DATA DIR, THIS RUN IS NOT.
     //
     // `Budget` loads the existing ledger off disk and only ever adds to it, so
@@ -475,17 +486,19 @@ async function main(): Promise<void> {
   // The customer's own prompts are cells too (ADR-0016); a bill that left them out would be a discovery, not a decision.
   const customIfWhole = opts.customPrompts === null ? 0 : (opts.customPrompts === undefined ? readCustomPromptSet(opts.dataDir, opts.domain) : customPromptsAt(opts.dataDir, opts.domain, opts.customPrompts))?.prompts.length ?? 0
   const worst = estimateUsd(opts, promptsIfWhole + customIfWhole)
+  // The per-run allowance (ADR-0017): the cycle's cells with retry headroom, unless the command line named one. Bounds this run's attempts, retries included.
+  const allowance = opts.runAllowanceCalls ?? runAllowanceFor((promptsIfWhole + customIfWhole) * opts.engines.length)
   opts.log(
     `grader scan · ${opts.domain} · mode=${opts.mode} · plan=${opts.plan} · day=${opts.day}\n` +
       `  ${opts.engines.length} engines x up to ${promptsIfWhole} unprompted prompts${customIfWhole ? ` + ${customIfWhole} of the domain's own` : ''} x 1 run\n` +
-      `  worst case (every cell a miss): $${worst.toFixed(4)} against a $${opts.capUsd.toFixed(2)} cap`,
+      `  worst case (every cell a miss): $${worst.toFixed(4)} against a $${opts.capUsd.toFixed(2)} cap · at most ${allowance} attempts this run, retries included`,
   )
   if (preview) {
     opts.log('\n--preview: nothing collected, nothing charged.')
     return
   }
 
-  const result = await runGrader(opts)
+  const result = await runGrader({ ...opts, runAllowanceCalls: allowance })
   opts.log(`\nstatus: ${result.status}`)
   if (result.status === 'scanned') {
     opts.log(`category: ${result.category} · answers scored: ${result.counts.answersScored} · provider calls: ${result.counts.providerCalls}`)

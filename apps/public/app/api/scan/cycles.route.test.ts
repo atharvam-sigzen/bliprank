@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { listCycles, writeCycle } from '../../../../../services/grader/src/cycles.js'
 import { recordCategory } from '../../../../../services/grader/src/resolve-category.js'
-import { recordDomainCalls, defaultDomainCeilingConfig } from '../../../../../services/grader/src/domain-ceiling.js'
+import { recordDomainCycle, defaultDomainCeilingConfig } from '../../../../../services/grader/src/domain-ceiling.js'
 
 /**
  * THE SECOND CYCLE, THROUGH THE REAL ROUTE, WITHOUT SPENDING.
@@ -235,7 +235,7 @@ describe('what refuses a second cycle, before anything could spend', () => {
   it('the per-domain ceiling applies to a second cycle exactly as to a first', async () => {
     writeCycle(dir, firstCycle('2026-09-01'))
     const ceilingCfg = defaultDomainCeilingConfig(dir, process.env)
-    recordDomainCalls(DOMAIN, ceilingCfg.maxCallsPerMonth - 10, ceilingCfg, new Date())
+    for (let i = 0; i < ceilingCfg.maxCyclesPerMonth; i++) recordDomainCycle(DOMAIN, 85, ceilingCfg, new Date())
     const events = await post({ domain: DOMAIN, cycle: 'new' })
     const err = events.find((e) => e.event === 'error')!.data
     expect(err['kind']).toBe('domain-ceiling')
@@ -262,8 +262,8 @@ describe('what refuses a second cycle, before anything could spend', () => {
   it('a second cycle is booked against the ceiling and the burst cap like any scan', async () => {
     writeCycle(dir, firstCycle('2026-09-01'))
     await post({ domain: DOMAIN, cycle: 'new' })
-    const ceiling = JSON.parse(readFileSync(join(dir, 'domain-ceiling.json'), 'utf8')) as Record<string, Record<string, number>>
-    expect(Object.values(ceiling)[0]![DOMAIN]).toBe(85)
+    const ceiling = JSON.parse(readFileSync(join(dir, 'domain-ceiling.json'), 'utf8')) as Record<string, Record<string, { cycles: number; calls: number }>>
+    expect(Object.values(ceiling)[0]![DOMAIN]).toEqual({ cycles: 1, calls: 85 })
     const cap = JSON.parse(readFileSync(join(dir, 'live-cap.json'), 'utf8')) as Record<string, string[]>
     expect(cap[today()]).toContain(DOMAIN)
   })

@@ -20,16 +20,21 @@
  * unknown the expected cost with headroom is booked, because under-booking
  * is the direction that overspends.
  *
- * ⚠️ WHAT THE CAP DOES NOT BOUND, said plainly. It decides which domains
- * START. A run, once started, is bounded by the runner's own lifetime ledger
- * (`ledger.json`, its cap per data dir), not by what is left of the day: a
- * retry storm inside one run can spend up to that ledger's remaining cap and
- * is then booked against a day already closed. Passing a smaller per-run cap
- * would lower `ledger.json`'s cap for good (`Budget` never raises it), so a
- * per-run allowance needs a change in the collector's `Budget`, which is
- * spend control a human owns. Until then the tick refuses to start at all
- * when that ledger is exhausted or holds less than the day's cap, so a loop
- * cannot run daily to zero effect.
+ * ⚠️ THE CAP BOUNDS EACH RUN TOO, since 2026-09-07. Before a domain starts,
+ * the loop hands the runner a per-run allowance of attempts: the cycle's cells
+ * with retry headroom, or fewer when what is left of the day's cap would not
+ * pay for that many at the cycle's mean price per attempt. The collector's
+ * `Budget` refuses the attempt that would exceed it, so a retry storm inside
+ * one run is stopped at the allowance, and the day's realised spend cannot
+ * exceed the cap by more than the retries' price spread (about $0.02 a run
+ * at pay-as-you-go). The tick still refuses to start at
+ * all when the runner's lifetime ledger is exhausted or holds less than the
+ * day's cap, so a loop cannot run daily to zero effect.
+ *
+ * The loop never books the MANUAL per-domain ceiling (`domain-ceiling.ts`):
+ * that ceiling counts hand-started cycles and is sized for occasional manual
+ * use. The loop's bounds are one cycle per UTC day, this cap, and the
+ * allowance. Two usage patterns, two sets of bounds (ADR-0017).
  *
  * ⚠️ FAIL CLOSED, LIKE THE GATES IT REUSES. A ledger that cannot be read is a
  * refusal for the whole tick; an environment that cannot size a scan is a
@@ -55,7 +60,7 @@ import { join } from 'node:path'
 import type { OwnPlan } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { writeCycle, type CycleResult } from './cycles.js'
-import { defaultDomainCeilingConfig, recordDomainCalls, RETRY_HEADROOM } from './domain-ceiling.js'
+import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, type DueDomain, type DueList } from './due.js'
 import { checkGate, defaultGateConfig, recordScan, DEFAULT_CAP_USD, type GateVerdict } from './live-gate.js'
 import { loadApiKey } from './load-key.js'
@@ -108,7 +113,7 @@ export type TickMode = 'live' | 'fixture'
 
 export interface TickDeps {
   /** Collect one due domain. The default runs `runGrader`; a test injects a fake. */
-  readonly collect?: (domain: DueDomain, opts: { readonly day: string; readonly plan: OwnPlan; readonly mode: TickMode; readonly apiKey: string }) => Promise<ScanResult & { readonly run?: { readonly spentUsd?: number } }>
+  readonly collect?: (domain: DueDomain, opts: { readonly day: string; readonly plan: OwnPlan; readonly mode: TickMode; readonly apiKey: string; readonly allowanceCalls: number }) => Promise<ScanResult & { readonly run?: { readonly spentUsd?: number } }>
   /** The provider-quota and burst-cap gate. The default is `checkGate`; skipped offline. */
   readonly gate?: (domain: string, needed: number, apiKey: string, now: Date) => Promise<GateVerdict>
   readonly now?: () => Date
@@ -263,12 +268,24 @@ export async function runTick(
         continue
       }
     }
-    log(`  ${d.host}: collecting ${d.cells} cells, expected $${d.usd.toFixed(3)}, $${remaining.toFixed(3)} of the day's cap left`)
+    // The allowance: the cycle's cells with headroom, or as many attempts as
+    // what is left of the day's cap pays for at the cycle's MEAN price per
+    // attempt, whichever is fewer. Offline the price is zero and the cells
+    // bound alone. Mean, not dearest: at the dearest engine's price the last
+    // domain of a day (whose remaining is about its own expected cost) would
+    // get ~1% headroom instead of 20% and be truncated on its first retry.
+    // What the mean leaves unbounded is the difference between the dearest and
+    // the mean price over the retries, at most (0.008 − 0.0068) × 17 = $0.02 a
+    // run at pay-as-you-go; the day's ledger books the realised figure.
+    const meanPrice = d.cells > 0 ? d.usd / d.cells : 0
+    const affordable = opts.mode === 'live' && meanPrice > 0 ? Math.floor(remaining / meanPrice) : Number.POSITIVE_INFINITY
+    const allowanceCalls = Math.min(runAllowanceFor(d.cells), affordable)
+    log(`  ${d.host}: collecting ${d.cells} cells, expected $${d.usd.toFixed(3)}, $${remaining.toFixed(3)} of the day's cap left, at most ${allowanceCalls} attempts`)
     let status = 'failed'
     let spent = expected
     let calls = 0
     try {
-      const result = await collect(d, { day, plan, mode: opts.mode, apiKey })
+      const result = await collect(d, { day, plan, mode: opts.mode, apiKey, allowanceCalls })
       status = result.status
       // The runner's own ledger figure when it has one; the expected cost with headroom when it does not.
       spent = typeof result.run?.spentUsd === 'number' && Number.isFinite(result.run.spentUsd) ? result.run.spentUsd : expected
@@ -278,7 +295,6 @@ export async function runTick(
         if ('refuse' in filed) log(`  ${d.host}: not filed: ${filed.refuse}`)
       }
       if (result.status === 'scanned' || result.status === 'no-answers') recordScan(d.host, gateCfg, now())
-      if (calls > 0) recordDomainCalls(d.host, calls, defaultDomainCeilingConfig(opts.dataDir, opts.env, d.cells), now())
     } catch (e) {
       const msg = (e as Error).message
       // Refused before any call, provably: the runner's own lock said another scan holds the store. Nothing was spent, so nothing is booked.
@@ -313,6 +329,7 @@ function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.P
       engines: [...ENGINES],
       capUsd: ledgerCap(opts.dataDir),
       maxPrompts: gate.callsPerEngine,
+      runAllowanceCalls: o.allowanceCalls,
       mode: o.mode,
       apiKey: o.apiKey,
       dataDir: opts.dataDir,

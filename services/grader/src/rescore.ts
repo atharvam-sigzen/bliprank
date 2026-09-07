@@ -300,6 +300,8 @@ async function main(): Promise<void> {
       maxPrompts: plan.maxPrompts,
       competitorSet: plan.competitorSet,
       customPrompts: plan.customPrompts,
+      // A verified-free re-derivation may make NO provider attempt: the allowance is zero, so a cell the pre-flight missed is refused before it is bought (ADR-0017).
+      runAllowanceCalls: 0,
       dataDir: o.dataDir,
       outFile: out,
       log: () => {},
@@ -313,10 +315,11 @@ async function main(): Promise<void> {
      * say so loudly and keep the original file — a re-score is never worth
      * discovering a cache-invalidation bug by paying for it.
      */
-    if (result.status !== 'scanned' || result.counts.providerCalls > 0) {
+    // A zero allowance turns a miss into a stop, not a purchase; a stop leaves a PARTIAL result, which is not a re-derivation of the file either.
+    if (result.status !== 'scanned' || result.counts.providerCalls > 0 || result.counts.cacheHits !== result.counts.cellsRequested) {
       process.stdout.write(
         `\n⚠️ ${plan.domain}: expected a free re-derivation and got status=${result.status}, ` +
-          `providerCalls=${'counts' in result ? result.counts.providerCalls : 'n/a'}. The stored result is UNCHANGED.\n`,
+          `providerCalls=${'counts' in result ? result.counts.providerCalls : 'n/a'}, cacheHits=${'counts' in result ? `${result.counts.cacheHits} of ${result.counts.cellsRequested}` : 'n/a'}. The stored result is UNCHANGED.\n`,
       )
       if (existsSync(out)) unlinkSync(out)
       continue

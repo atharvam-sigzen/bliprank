@@ -23,7 +23,7 @@
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ARMED, dailyCapUsd, formulaCapUsd, hardCeilingUsd, runTick } from './daily-loop.js'
-import { RETRY_HEADROOM } from './domain-ceiling.js'
+import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, monthlyEstimate, readTracked, setTracked } from './due.js'
 
 export interface TickOptions {
@@ -91,11 +91,11 @@ export function printDue(dataDir: string, env: NodeJS.ProcessEnv, day?: string):
   line('  This listing collects nothing and touches no ledger. Not checked here, and the loop meets them at --apply: the burst cap and the provider quota.')
   if (list.config) line(`  refusing to size any cycle: ${list.config}`)
   for (const d of list.due) {
-    line(`  due      ${d.host.padEnd(24)} ${d.category.padEnd(26)} ${d.curatedPrompts} curated${d.customPrompts ? ` + ${d.customPrompts} own` : ''} × ${d.cells / (d.curatedPrompts + d.customPrompts)} engines = ${d.cells} cells · $${d.usd.toFixed(3)} · ceiling ${d.ceiling.used}+${d.cells} of ${d.ceiling.limit}`)
+    line(`  due      ${d.host.padEnd(24)} ${d.category.padEnd(26)} ${d.curatedPrompts} curated${d.customPrompts ? ` + ${d.customPrompts} own` : ''} × ${d.cells / (d.curatedPrompts + d.customPrompts)} engines = ${d.cells} cells · $${d.usd.toFixed(3)} · at most ${runAllowanceFor(d.cells)} attempts`)
   }
   for (const n of list.notDue) line(`  not due  ${n.host.padEnd(24)} ${n.reason.padEnd(12)} ${n.detail}`)
   const m = monthlyEstimate(list)
-  if (list.due.length) line(`  at one cycle a day this set costs about $${m.usdPerDay.toFixed(2)}/day, $${m.usdPerMonth.toFixed(2)}/month at ${list.plan}; the per-domain ceiling was derived for ${m.ceilingCyclesPerMonth} cycles a month, so a daily loop needs a ceiling decision too (ADR-0017).`)
+  if (list.due.length) line(`  at one cycle a day this set costs about $${m.usdPerDay.toFixed(2)}/day, $${m.usdPerMonth.toFixed(2)}/month at ${list.plan}. The manual per-domain ceiling does not apply to the loop (ADR-0017).`)
 }
 
 async function main(): Promise<void> {

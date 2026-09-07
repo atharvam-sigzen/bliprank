@@ -26,7 +26,6 @@ import { PRICE_USD_PER_CALL, type OwnPlan } from '@bliprank/collector'
 import { normaliseHost } from '@bliprank/taxonomy'
 import { readCustomPromptSet } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
-import { CYCLES_PER_MONTH, callsThisMonth, defaultDomainCeilingConfig } from './domain-ceiling.js'
 import { defaultGateConfig } from './live-gate.js'
 import { allBanks, readCategoryRecord, withRecordLock } from './resolve-category.js'
 import { basisOf, promptsFor } from './scan.js'
@@ -85,13 +84,11 @@ export interface DueDomain {
   readonly customPrompts: number
   readonly cells: number
   readonly usd: number
-  /** Calls this domain has drawn this month against its ceiling, before this cycle. */
-  readonly ceiling: { readonly used: number; readonly limit: number }
 }
 
 export interface NotDue {
   readonly host: string
-  readonly reason: 'no-record' | 'no-bank' | 'cycle-today' | 'basis-moved' | 'ceiling'
+  readonly reason: 'no-record' | 'no-bank' | 'cycle-today' | 'basis-moved'
   readonly detail: string
 }
 
@@ -118,8 +115,9 @@ export interface DueList {
  * Everything a tick would do today, decided the way `/api/scan` decides a
  * person's click for the gates that are FACTS ABOUT THE STORE: a record and a
  * bank, no cycle yet today, the prior cycle's prompt count and engine set
- * unchanged (or the new cycle could not join the trend), room under the
- * per-domain ceiling, and a prompt count the environment can size.
+ * unchanged (or the new cycle could not join the trend), and a prompt count
+ * the environment can size. The MANUAL per-domain ceiling is not consulted:
+ * it counts hand-started cycles and the loop has its own bounds (ADR-0017).
  *
  * ⚠️ NOT MIRRORED, and a loop must still meet them at run time: the two enable
  * flags, the provider key, the shared burst cap, the provider's own remaining
@@ -175,19 +173,12 @@ export function dueToday(dataDir: string, env: NodeJS.ProcessEnv, day: string = 
     }
     const custom = readCustomPromptSet(dataDir, t.host)?.prompts.length ?? 0
     const cells = (curated + custom) * gate.engines.length
-    const ceilingCfg = defaultDomainCeilingConfig(dataDir, env, cells)
-    const used = callsThisMonth(t.host, ceilingCfg, new Date(`${day}T00:00:00.000Z`))
-    if (used + cells > ceilingCfg.maxCallsPerMonth) {
-      notDue.push({ host: t.host, reason: 'ceiling', detail: `${used} of ${ceilingCfg.maxCallsPerMonth} calls drawn this month; this cycle needs ${cells}` })
-      continue
-    }
-    due.push({ host: t.host, category: record.slug, curatedPrompts: curated, customPrompts: custom, cells, usd: (curated + custom) * perPrompt, ceiling: { used, limit: ceilingCfg.maxCallsPerMonth } })
+    due.push({ host: t.host, category: record.slug, curatedPrompts: curated, customPrompts: custom, cells, usd: (curated + custom) * perPrompt })
   }
   return { day, plan, due, notDue, cells: due.reduce((n, d) => n + d.cells, 0), usd: due.reduce((n, d) => n + d.usd, 0), tracked }
 }
 
-/** The monthly bill a tracked set implies at one cycle a day, for the decision that has to be taken before any tick runs. */
-export function monthlyEstimate(list: DueList, daysPerMonth = 30): { readonly cellsPerDay: number; readonly usdPerDay: number; readonly usdPerMonth: number; readonly ceilingCyclesPerMonth: number } {
-  // The per-domain ceiling was derived for CYCLES_PER_MONTH cycles (ADR-0013); a daily loop is thirty. The two cannot both stand.
-  return { cellsPerDay: list.cells, usdPerDay: list.usd, usdPerMonth: list.usd * daysPerMonth, ceilingCyclesPerMonth: CYCLES_PER_MONTH }
+/** The monthly bill a tracked set implies at one cycle a day. */
+export function monthlyEstimate(list: DueList, daysPerMonth = 30): { readonly cellsPerDay: number; readonly usdPerDay: number; readonly usdPerMonth: number } {
+  return { cellsPerDay: list.cells, usdPerDay: list.usd, usdPerMonth: list.usd * daysPerMonth }
 }

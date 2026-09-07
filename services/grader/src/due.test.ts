@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ENGINES } from '@bliprank/contracts'
 import { applyCustomPrompts } from './custom-prompts.js'
 import { writeCycle } from './cycles.js'
-import { recordDomainCalls, defaultDomainCeilingConfig } from './domain-ceiling.js'
 import { dueToday, readTracked, setTracked } from './due.js'
 import { recordCategory } from './resolve-category.js'
 
@@ -74,7 +73,7 @@ describe('the due list', () => {
     expect(dueToday(dir, {}, '2026-09-03').due[0]).toMatchObject({ customPrompts: 1, cells: 18 * ENGINES.length })
   })
 
-  it('not due: a cycle already today, a prior cycle on another basis, a domain over its ceiling, a domain whose bank is gone', () => {
+  it('not due: a cycle already today, a prior cycle on another basis, a domain whose bank is gone; the manual ceiling is not consulted', () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'nobank.test', true, { by: 'operator', reason: 'r' })
     writeCycle(dir, cycle('acme.test', '2026-09-03') as never)
@@ -89,12 +88,7 @@ describe('the due list', () => {
     writeCycle(dir, cycle('acme.test', '2026-09-04', 10) as never)
     list = dueToday(dir, {}, '2026-09-05')
     expect(list.notDue.find((n) => n.host === 'acme.test')).toMatchObject({ reason: 'basis-moved' })
-    // Under GRADER_PROMPTS_PER_SCAN=10 the basis matches again, and the ceiling is derived from that count.
+    // Under GRADER_PROMPTS_PER_SCAN=10 the basis matches again.
     expect(dueToday(dir, { GRADER_PROMPTS_PER_SCAN: '10' }, '2026-09-05').due[0]).toMatchObject({ host: 'acme.test', curatedPrompts: 10, cells: 50 })
-    // The ceiling: draw the month's allowance and the domain drops off the list, with the arithmetic in the reason.
-    const cfg = defaultDomainCeilingConfig(dir, { GRADER_PROMPTS_PER_SCAN: '10' }, 50)
-    recordDomainCalls('acme.test', cfg.maxCallsPerMonth - 10, cfg, new Date('2026-09-05T00:00:00.000Z'))
-    const over = dueToday(dir, { GRADER_PROMPTS_PER_SCAN: '10' }, '2026-09-05')
-    expect(over.notDue.find((n) => n.host === 'acme.test')).toMatchObject({ reason: 'ceiling', detail: expect.stringContaining('needs 50') })
   })
 })
