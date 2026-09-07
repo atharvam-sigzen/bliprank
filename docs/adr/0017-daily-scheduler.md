@@ -280,16 +280,30 @@ month. A run that burned calls and returned nothing counts as a started
 cycle, which is what the ceiling exists for, and the refusal says "started".
 The loop never books this ledger.
 
-Left as they are, named: an allowance stop leaves the current cell's index
-claim held for its lease (up to thirty minutes), so a re-run inside that
-window reports the cell as claimed elsewhere and the run as `scanned` with
-one cell short (measured 2026-09-07 on a scratch store: 3 of 4 cells, no
-provider call, the counts say so and the status does not); the same is true
-of a lifetime cap stop, the index has no release, and the fix belongs to the
-orchestrator, human-owned. The loop never meets it: its next run is the next
-day's bucket. The scan stream reports an
-allowance stop as `budget-exhausted`, which is the orchestrator's word for
-both. ADR-0013 §"the derived form" is superseded by this section.
+Two things this section first left as they were, fixed later the same day
+(2026-09-07, in the orchestrator, human-owned and flagged for review):
+
+- **The held claim.** An allowance stop, a cap stop, an abort, a dead-lettered
+  run or a throw left the current cell's index claim held for its lease (up to
+  thirty minutes), so a re-run inside that window reported the cell as claimed
+  elsewhere and the run as `scanned` with one cell short (measured on a
+  scratch store: 3 of 4 cells, no provider call, the counts said so and the
+  status did not). The index had no release. It has one now: the claim is
+  released on every exit from the orchestrator, only by its owner, by an
+  atomic compare-and-delete, and the lease is once again only the crash
+  guard it was described as. The same scenario re-run as a test
+  (`ceiling-worked-examples.test.ts`, block D) completes the fourth cell with
+  one call. Completing a partial cell was also found to re-buy the runs
+  already stored; it now buys only the missing ones (`collect-cell.test.ts`,
+  B2).
+- **The stream's word for the stop.** The orchestrator said
+  `budget-exhausted` for both the run's allowance and the ledger's lifetime
+  cap, which are different facts: after the first the store has money and the
+  next run starts clean, after the second it does not. An allowance stop is
+  now its own outcome, `allowance-exhausted`, on the stream and in the
+  counts.
+
+ADR-0013 §"the derived form" is superseded by this section.
 
 *The loop* (`daily-loop.ts`): one cycle per UTC day and the daily cap, as
 built, plus the per-run allowance below. The manual ceiling is not consulted.

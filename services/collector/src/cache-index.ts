@@ -41,6 +41,13 @@ export interface KV {
    * is fine because only the total gates the cap.
    */
   incrManyByFloat(ops: readonly { key: string; delta: number }[], opts?: { ttlSec?: number }): Promise<number[]>
+  /**
+   * Atomic delete-if-equal: remove `key` only while it still holds `expected`.
+   * The lock-release primitive. A claim whose lease lapsed and was re-won by
+   * another worker holds a different value, so a late release leaves it alone.
+   * Returns true when the key was removed.
+   */
+  delIfEquals(key: string, expected: string): Promise<boolean>
 }
 
 export class MemoryKV implements KV {
@@ -79,7 +86,15 @@ export class MemoryKV implements KV {
     for (const op of ops) out.push(await this.incrByFloat(op.key, op.delta, opts))
     return out
   }
+  async delIfEquals(key: string, expected: string): Promise<boolean> {
+    if (this.live(key) !== expected) return false
+    this.m.delete(key)
+    return true
+  }
 }
+
+/** Compare-and-delete as one server-side step; a GET here followed by a DEL could delete a claim re-won in between. */
+const DEL_IF_EQUALS = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end"
 
 /**
  * Upstash Redis over REST. Uses the pipeline endpoint so mget is one round
@@ -141,6 +156,9 @@ export class UpstashKV implements KV {
     if (opts?.ttlSec) for (const o of ops) cmds.push(['EXPIRE', o.key, opts.ttlSec])
     const res = await this.pipeline(cmds)
     return ops.map((_, i) => Number(this.one(res[i])))
+  }
+  async delIfEquals(key: string, expected: string): Promise<boolean> {
+    return this.one((await this.pipeline([['EVAL', DEL_IF_EQUALS, 1, key, expected]]))[0]) === 1
   }
 }
 
@@ -246,5 +264,34 @@ export class AnswerIndex {
    */
   async claim(cell: CacheCell, adapterId: string, owner: string, leaseSec = 1800): Promise<boolean> {
     return this.kv.setnx(`${CLAIM_PREFIX}${cell.key}:${adapterId}`, JSON.stringify({ owner, at: this.now().toISOString() }), { ttlSec: leaseSec })
+  }
+
+  /**
+   * Release the claim `owner` holds on a cell, once its collection has ended.
+   *
+   * The counterpart `claim` lacked until 2026-09-07: a claim ended only when
+   * its lease expired, so every stop short of the cell — budget, allowance,
+   * abort, a dead-lettered run — left it held for up to thirty minutes, and a
+   * re-run inside that window saw `claimed-elsewhere` for a cell nobody was
+   * collecting (ADR-0017, measured). Only THIS owner's claim is removed: the
+   * value `claim` wrote is read back and deleted only while it is still exactly
+   * that value, so a claim that lapsed and was re-won by another worker is
+   * left to its holder. Returns true when a claim was removed.
+   */
+  async release(cell: CacheCell, adapterId: string, owner: string): Promise<boolean> {
+    const key = `${CLAIM_PREFIX}${cell.key}:${adapterId}`
+    // ponytail: two round-trips per release (GET, then EVAL). Fold the owner
+    // check into the script with cjson if Upstash command volume matters at
+    // fleet scale (cost-sentinel 2026-09-07: low, ~$10-80/month at 20M calls).
+    const held = await this.kv.get(key)
+    if (held === null) return false
+    let holder: string | undefined
+    try {
+      holder = (JSON.parse(held) as { owner?: string }).owner
+    } catch {
+      return false // not a claim this code wrote; leave it to its lease
+    }
+    if (holder !== owner) return false
+    return this.kv.delIfEquals(key, held)
   }
 }

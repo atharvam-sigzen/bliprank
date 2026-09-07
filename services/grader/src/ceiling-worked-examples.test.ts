@@ -163,3 +163,39 @@ describe('C · a daily loop for a whole month', () => {
     expect(again.status).toBe('scanned')
   })
 })
+
+describe('D · the held claim after an allowance stop (ADR-0017 "left as they are", fixed 2026-09-07)', () => {
+  it('a re-run on the SAME day, inside the lease window, completes the cell the allowance stop left short: one call, four answers, scanned', async () => {
+    recordCategory(dir, { host: 'pipedrive.com', slug: 'crm-software', source: 'leader-domain', evidence: 'x', decidedAt: '2026-08-01', generated: false })
+    const run = (allowance: number, outcomes: string[]) =>
+      runGrader({
+        domain: 'pipedrive.com',
+        plan: 'payg',
+        day: '2026-09-07',
+        engines: ['chatgpt', 'gemini'],
+        capUsd: 5,
+        maxPrompts: 2,
+        mode: 'fixture',
+        apiKey: '',
+        dataDir: dir,
+        outFile: join(dir, 'latest.json'),
+        log: () => {},
+        runAllowanceCalls: allowance,
+        onProgress: (p) => outcomes.push(p.outcome),
+      })
+    const first: string[] = []
+    const stopped = await run(3, first)
+    if (!('counts' in stopped)) throw new Error(stopped.status)
+    expect(stopped.counts).toMatchObject({ cellsRequested: 4, collected: 3, failed: 1, providerCalls: 3 })
+    // The stream names the bound that refused: the run's allowance, not the ledger's cap.
+    expect(first).toEqual(['collected', 'collected', 'collected', 'allowance-exhausted'])
+    // Measured before the fix, same day, same store: 3 of 4 cells, no provider
+    // call, the fourth cell `claimed-elsewhere`, and the status `scanned`.
+    const again: string[] = []
+    const completed = await run(runAllowanceFor(4), again)
+    if (!('counts' in completed)) throw new Error(completed.status)
+    expect(completed.status).toBe('scanned')
+    expect(completed.counts).toMatchObject({ cellsRequested: 4, cacheHits: 3, collected: 1, failed: 0, providerCalls: 1, answersScored: 4 })
+    expect(again).toEqual(['cache-hit', 'cache-hit', 'cache-hit', 'collected'])
+  })
+})

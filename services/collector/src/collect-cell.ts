@@ -24,7 +24,7 @@
 
 import { AdapterError, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
 import type { BlobStore } from './blob-store.js'
-import { BudgetExceeded } from './budget.js'
+import { BudgetExceeded, RunAllowanceExceeded } from './budget.js'
 import { AnswerIndex, r2KeyFor, type IndexEntry } from './cache-index.js'
 import type { DeadLetter } from './dead-letter.js'
 import type { RateBudget } from './rate-budget.js'
@@ -70,7 +70,16 @@ export type CollectOutcome =
   | { status: 'cache-hit'; entry: IndexEntry; providerCalls: 0 }
   | { status: 'claimed-elsewhere'; providerCalls: 0 }
   | { status: 'collected'; entry: IndexEntry; providerCalls: number; answers: RawAnswer[] }
+  /** The ledger's lifetime cap refused the next attempt; the ledger is marked exhausted. */
   | { status: 'budget-exhausted'; entry: IndexEntry | null; providerCalls: number; answers: RawAnswer[] }
+  /**
+   * THIS RUN's allowance of attempts refused the next one (ADR-0017). Stops
+   * the cell the same way, but it is a different fact: the cap has room and
+   * the ledger is untouched, so the next run starts clean. Until 2026-09-07
+   * both stops wore the word `budget-exhausted`, and a stream reading it could
+   * not tell a run that hit its own bound from a store that has no money left.
+   */
+  | { status: 'allowance-exhausted'; entry: IndexEntry | null; providerCalls: number; answers: RawAnswer[] }
   | { status: 'aborted'; entry: IndexEntry | null; providerCalls: number; answers: RawAnswer[] }
   | { status: 'failed'; providerCalls: number }
 
@@ -97,8 +106,8 @@ export class CollectionOrchestrator {
     }
   }
 
-  /** The runs already stored in an orphaned blob, so they are not re-bought. */
-  private async orphanRuns(r2Key: string): Promise<RawAnswer[]> {
+  /** The runs already stored in a blob (partial or orphaned), so they are not re-bought. */
+  private async storedRuns(r2Key: string): Promise<RawAnswer[]> {
     try {
       const body = await this.d.blob.get(r2Key)
       if (!body) return []
@@ -135,23 +144,60 @@ export class CollectionOrchestrator {
       throw new Error('refusing to collect: COLLECTION_ENABLED is not "true" (rule R3, orchestrator guard). Enable it deliberately for the run.')
     }
 
-    // Dedupe — exactly one worker per (cell, adapter, lease) collects.
+    // Dedupe — exactly one worker per (cell, adapter) collects at a time.
     if (!(await this.d.index.claim(cell, adapterId, this.d.owner, this.d.claimLeaseSec ?? 1800))) {
       return { status: 'claimed-elsewhere', providerCalls: 0 }
     }
+    try {
+      return await this.collectClaimed(req, { engine, adapterId, r2Key, cached, retry, sleep, now })
+    } finally {
+      // THE CLAIM IS HELD FOR THE COLLECTION, NOT FOR THE LEASE. The lease TTL
+      // is the crash guard: a worker that dies mid-cell must not orphan it for
+      // ever. Until 2026-09-07 it was also the only way a claim ever ended, so
+      // every stop — budget, allowance, abort, a dead-lettered run, a throw —
+      // left the cell claimed for up to thirty minutes, and a re-run inside
+      // that window reported it `claimed-elsewhere`, counted it failed, and
+      // called the scan `scanned` with a cell short and no provider call
+      // (ADR-0017, measured). Released on every exit so the next caller
+      // either hits the cache or completes the cell. Only this owner's claim
+      // is removed (AnswerIndex.release), and a release that fails is worth
+      // no more than the lease already guarantees, so it never turns a paid
+      // collection into an error.
+      await this.d.index.release(cell, adapterId, this.d.owner).catch(() => undefined)
+    }
+  }
 
-    // Recover an orphaned blob left by a crash between blob.put and markCollected.
-    // A complete orphan is a hit; a PARTIAL one is carried forward rather than
-    // discarded — those runs were already paid for, and overwriting the blob
-    // with a fresh collection would buy them a second time.
+  /** The collection proper, entered only by the worker holding the claim. */
+  private async collectClaimed(
+    req: CollectCellRequest,
+    c: { engine: EngineId; adapterId: string; r2Key: string; cached: IndexEntry | undefined; retry: RetryConfig; sleep: (ms: number) => Promise<void>; now: () => Date },
+  ): Promise<CollectOutcome> {
+    const { cell, adapter } = req
+    const { engine, adapterId, r2Key, cached, retry, sleep, now } = c
+
+    // Runs already paid for are carried forward, never bought a second time.
+    //
+    // A PARTIAL prior collection (the index says fewer runs than asked) starts
+    // from its stored runs and buys only the rest. Until 2026-09-07 this branch
+    // re-bought the cell from run 0: the lease-expiry re-run paid for it, and
+    // the held claim hid it on a same-day re-run. A pruned or unreadable blob
+    // yields nothing, and the cell is re-collected — the honest fallback.
+    //
+    // An ORPHANED blob (a crash between blob.put and markCollected) is
+    // re-indexed: complete, it is a hit; partial, it is carried forward the
+    // same way rather than overwritten by a fresh collection.
     const answers: RawAnswer[] = []
-    if (!cached && (await this.d.blob.has(r2Key))) {
+    if (cached) {
+      answers.push(...(await this.storedRuns(cached.r2Key)))
+    } else if (await this.d.blob.has(r2Key)) {
       const recovered = await this.recoverOrphan(cell, adapterId, r2Key)
       if (recovered && recovered.runs >= req.runs) return { status: 'cache-hit', entry: recovered, providerCalls: 0 }
-      if (recovered) answers.push(...(await this.orphanRuns(r2Key)))
+      if (recovered) answers.push(...(await this.storedRuns(r2Key)))
     }
     let providerCalls = 0
-    let stopped: 'budget' | 'abort' | null = null
+    // Which bound stopped the cell, when one did. The run's allowance and the
+    // ledger's cap arrive as the same exception class and are different facts.
+    let stopped: 'budget' | 'allowance' | 'abort' | null = null
 
     for (let run = answers.length; run < req.runs && !stopped; run++) {
       let attempt = 0
@@ -161,7 +207,7 @@ export class CollectionOrchestrator {
           await this.d.budget.charge(engine) // R3: charge before the call
         } catch (e) {
           if (e instanceof BudgetExceeded) {
-            stopped = 'budget'
+            stopped = e instanceof RunAllowanceExceeded ? 'allowance' : 'budget'
             break
           }
           throw e
@@ -178,7 +224,7 @@ export class CollectionOrchestrator {
               providerCalls++
             } catch (e) {
               if (e instanceof BudgetExceeded) {
-                stopped = 'budget'
+                stopped = e instanceof RunAllowanceExceeded ? 'allowance' : 'budget'
                 break
               }
               throw e
@@ -206,6 +252,7 @@ export class CollectionOrchestrator {
 
     if (answers.length === 0) {
       if (stopped === 'budget') return { status: 'budget-exhausted', entry: null, providerCalls, answers }
+      if (stopped === 'allowance') return { status: 'allowance-exhausted', entry: null, providerCalls, answers }
       if (stopped === 'abort') return { status: 'aborted', entry: null, providerCalls, answers }
       return { status: 'failed', providerCalls }
     }
@@ -215,6 +262,7 @@ export class CollectionOrchestrator {
     const entry = await this.d.index.markCollected(cell, adapterId, answers.length, r2Key)
 
     if (stopped === 'budget') return { status: 'budget-exhausted', entry, providerCalls, answers }
+    if (stopped === 'allowance') return { status: 'allowance-exhausted', entry, providerCalls, answers }
     if (stopped === 'abort') return { status: 'aborted', entry, providerCalls, answers }
     return { status: 'collected', entry, providerCalls, answers }
   }

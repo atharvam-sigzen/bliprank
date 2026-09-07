@@ -232,7 +232,7 @@ export async function handleCollectJob(req: IncomingRequest, d: HandlerDeps): Pr
       await d.heartbeat.recordCollected(1).catch(() => undefined) // never fail a paid job on telemetry
     }
 
-    const shortfall = outcome.status === 'budget-exhausted' || outcome.status === 'aborted'
+    const shortfall = outcome.status === 'budget-exhausted' || outcome.status === 'allowance-exhausted' || outcome.status === 'aborted'
     if (shortfall) {
       const got = 'answers' in outcome ? outcome.answers.length : 0
       d.deadLetter.record({
@@ -240,7 +240,7 @@ export async function handleCollectJob(req: IncomingRequest, d: HandlerDeps): Pr
         cellKey: job.cell.key,
         prompt: job.prompt,
         run: got,
-        kind: outcome.status === 'budget-exhausted' ? 'rate-limited' : 'timeout',
+        kind: outcome.status === 'aborted' ? 'timeout' : 'rate-limited',
         message: `cell left short: ${got} of ${job.runs} runs (${outcome.status})`,
         attempts: outcome.providerCalls,
         at: (d.now?.() ?? new Date()).toISOString(),

@@ -136,15 +136,18 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     const r1 = await orch.collectCell({ cell, prompt: 'best crm', runs: 10, adapter: a1 })
     expect(r1.status).toBe('budget-exhausted')
     expect(a1.calls).toBe(3)
-    // a later cycle (claim lease expired) with a fresh, ample budget: the under-target
-    // cell must re-collect to complete n, not serve n=3 as a hit forever
-    d._advance(1_801_000) // past the 1800s claim lease
+    // a later cycle with a fresh, ample budget: the under-target cell must
+    // complete n, not serve n=3 as a hit forever
+    d._advance(1_801_000) // past the 1800s claim lease (the release below makes this moot; kept so the case is still the one it was)
     const ledger2 = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
     const orch2 = new CollectionOrchestrator({ ...d, budget: localLedger(new Budget(ledger2, 100, () => 0.002)) })
     const a2 = countingStub('chatgpt')
     const r2 = await orch2.collectCell({ cell, prompt: 'best crm', runs: 10, adapter: a2 })
     expect(r2.status).toBe('collected') // NOT cache-hit
-    expect(a2.calls).toBe(10)
+    // ...and it buys only the seven runs that are missing. This line said 10
+    // until 2026-09-07: the three stored runs were re-bought, and the test had
+    // pinned the waste as if it were the point.
+    expect(a2.calls).toBe(7)
     if (r2.status === 'collected') expect(r2.entry.runs).toBe(10)
   })
 
@@ -246,5 +249,62 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     expect((d.budget as LocalSpendLedger).budget.state.spentUsd).toBeCloseTo(0.006, 9)
     if (r.status === 'budget-exhausted') expect(r.answers).toHaveLength(3) // the 3 that succeeded are kept
     expect((d.blob as MemoryBlobStore).size).toBe(1) // partial cell written
+  })
+})
+
+describe('the claim ends with the collection, not with the lease (ADR-0017 "left as they are", fixed 2026-09-07)', () => {
+  /** The same store, a second worker with its own ledger: what a re-run inside the lease window sees. */
+  const secondWorker = (d: OrchestratorDeps, capUsd: number) => {
+    const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+    return new CollectionOrchestrator({ ...d, owner: 'worker-2', budget: localLedger(new Budget(ledger, capUsd, () => 0.002)) })
+  }
+
+  it('a budget stop releases the claim: a re-run inside the window completes the cell instead of seeing it claimed elsewhere', async () => {
+    const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+    const d = deps({ budget: localLedger(new Budget(ledger, 0.006, () => 0.002)) }) // room for exactly 3 charges
+    const cell = cellOf('best crm')
+    const adapter = countingStub('chatgpt')
+    const first = await new CollectionOrchestrator(d).collectCell({ cell, prompt: 'best crm', runs: 5, adapter })
+    expect(first.status).toBe('budget-exhausted')
+    expect(adapter.calls).toBe(3)
+    d._advance(60_000) // a minute later: inside the thirty-minute lease, where the old code answered 'claimed-elsewhere'
+    const again = await secondWorker(d, 100).collectCell({ cell, prompt: 'best crm', runs: 5, adapter })
+    expect(again.status).toBe('collected')
+    expect(adapter.calls).toBe(5) // exactly the two runs the cap refused; nothing bought twice
+    if (again.status === 'collected') expect(again.entry.runs).toBe(5)
+  })
+
+  it('an allowance stop is its own outcome, leaves the ledger clean, and releases the claim too', async () => {
+    const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+    const budget = new Budget(ledger, 100, () => 0.002, () => new Date(), 2) // this run may make two attempts
+    const d = deps({ budget: localLedger(budget) })
+    const cell = cellOf('best crm')
+    const adapter = countingStub('chatgpt')
+    const r = await new CollectionOrchestrator(d).collectCell({ cell, prompt: 'best crm', runs: 4, adapter })
+    expect(r.status).toBe('allowance-exhausted') // not 'budget-exhausted': the cap has $99.996 left
+    expect(adapter.calls).toBe(2)
+    expect(budget.state.exhaustedAt).toBeUndefined()
+    if (r.status === 'allowance-exhausted') expect(r.answers).toHaveLength(2)
+    const again = await secondWorker(d, 100).collectCell({ cell, prompt: 'best crm', runs: 4, adapter })
+    expect(again.status).toBe('collected')
+    expect(adapter.calls).toBe(4)
+  })
+
+  it('a completed collection releases the claim as well: nothing stays held once the cell is served from cache', async () => {
+    const d = deps()
+    const cell = cellOf('best crm')
+    const adapter = countingStub('chatgpt')
+    expect((await new CollectionOrchestrator(d).collectCell({ cell, prompt: 'best crm', runs: 2, adapter })).status).toBe('collected')
+    expect(await d.index.claim(cell, adapter.id, 'anyone', 10)).toBe(true)
+  })
+
+  it('a throw on the way out releases the claim too', async () => {
+    const ledger = join(mkdtempSync(join(tmpdir(), 'orch-')), 'ledger.json')
+    const d = deps({ budget: localLedger(new Budget(ledger, 100, () => Number.NaN)) }) // a bad price is a RangeError, not a budget stop
+    const cell = cellOf('best crm')
+    const adapter = countingStub('chatgpt')
+    await expect(new CollectionOrchestrator(d).collectCell({ cell, prompt: 'best crm', runs: 1, adapter })).rejects.toThrow(/bad price/)
+    expect(adapter.calls).toBe(0)
+    expect(await d.index.claim(cell, adapter.id, 'anyone', 10)).toBe(true)
   })
 })

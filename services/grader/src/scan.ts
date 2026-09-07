@@ -589,9 +589,10 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
       sink.push(...(await readStoredAnswers(deps.blob, outcome.entry.r2Key)))
     }
     deps.onProgress?.({ done: i + 1, total: cells.length, cell: `${c.engine} ${c.prompt.slice(0, 48)}`, outcome: outcome.status, providerCalls: outcome.providerCalls })
-    // A budget stop is a stop. Continuing would charge every remaining cell
-    // against a ledger that has already refused, one BudgetExceeded at a time.
-    if (outcome.status === 'budget-exhausted' || outcome.status === 'aborted') break
+    // A budget stop is a stop, whichever bound refused. Continuing would charge
+    // every remaining cell against a ledger, or a run allowance, that has
+    // already refused, one exception at a time.
+    if (outcome.status === 'budget-exhausted' || outcome.status === 'allowance-exhausted' || outcome.status === 'aborted') break
   }
 
   // The cycle's counts are the WHOLE cycle, custom cells included: they are what

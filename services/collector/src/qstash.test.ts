@@ -303,3 +303,32 @@ describe('the handler feeds the collection heartbeat', () => {
     expect(res.body.outcome).toBe('collected')
   })
 })
+
+describe('handleCollectJob — an allowance stop is a shortfall of its own name', () => {
+  it('returns 200 (no retry), ok:false, the outcome verbatim, and one dead-letter entry that names it', async () => {
+    const { deps, deadLetter } = handlerDeps()
+    const ledger = join(mkdtempSync(join(tmpdir(), 'qstash-')), 'ledger.json')
+    const budget = new Budget(ledger, 100, () => 0.002, () => NOW, 1) // this run may make ONE attempt
+    const bounded = new CollectionOrchestrator({
+      index: new AnswerIndex(new MemoryKV(), 100 * 86_400, () => NOW),
+      blob: new MemoryBlobStore(),
+      rateBudget: LocalRateBudget.forSingleProcess({ chatgpt: { rps: 1000, burst: 1000 } }, { iUnderstandThisBudgetIsPerProcess: true, reason: 'unit test: one process, no fleet', env: { COLLECTOR_TOPOLOGY: 'single-process' } }),
+      budget: localLedger(budget),
+      deadLetter,
+      owner: 'w',
+      now: () => NOW,
+      collectionEnabled: () => true,
+    })
+    const body = JSON.stringify(jobFor('best crm', 3))
+    const res = await handleCollectJob({ body, signature: signed(body) }, { ...deps, orchestrator: bounded })
+    expect(res.status).toBe(200)
+    expect(res.body.ok).toBe(false)
+    expect(res.body.outcome).toBe('allowance-exhausted')
+    expect(res.body.providerCalls).toBe(1)
+    expect(budget.state.exhaustedAt).toBeUndefined() // the ledger is clean: it was the run's bound, not the cap
+    const entries = deadLetter.list()
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ kind: 'rate-limited', run: 1, attempts: 1 })
+    expect(entries[0]!.message).toContain('1 of 3 runs (allowance-exhausted)')
+  })
+})
