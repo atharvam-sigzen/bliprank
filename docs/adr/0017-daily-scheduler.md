@@ -282,8 +282,12 @@ The loop never books this ledger.
 
 Left as they are, named: an allowance stop leaves the current cell's index
 claim held for its lease (up to thirty minutes), so a re-run inside that
-window reports the cell as claimed elsewhere; the same is true of a lifetime
-cap stop and is the orchestrator's, human-owned. The scan stream reports an
+window reports the cell as claimed elsewhere and the run as `scanned` with
+one cell short (measured 2026-09-07 on a scratch store: 3 of 4 cells, no
+provider call, the counts say so and the status does not); the same is true
+of a lifetime cap stop, the index has no release, and the fix belongs to the
+orchestrator, human-owned. The loop never meets it: its next run is the next
+day's bucket. The scan stream reports an
 allowance stop as `budget-exhausted`, which is the orchestrator's word for
 both. ADR-0013 §"the derived form" is superseded by this section.
 
