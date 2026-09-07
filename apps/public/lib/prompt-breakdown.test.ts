@@ -67,10 +67,14 @@ function scanWith(rows: readonly (Record<string, unknown> | null)[], over: Parti
 
 describe('the refusals — what is NOT drawn, and why', () => {
   it('a file with no promptRows yields null, not an empty table', () => {
-    const scan = scanWith([])
-    const noRows = { ...scan, promptRows: undefined } as ScanResultFile
-    // Absent is absent. An empty grid here would read as "mentioned nowhere",
-    // which is the opposite claim from "this file does not carry the split".
+    // Absent is ABSENT: the key is dropped, not set to `undefined`. A file that
+    // predates the field has no key at all, and `exactOptionalPropertyTypes`
+    // refuses an explicit `undefined` for an optional field, which is what
+    // made the old `{ ...scan, promptRows: undefined } as ScanResultFile` a
+    // type error the suite never saw (vitest does not typecheck).
+    const { promptRows: _absent, ...noRows } = scanWith([])
+    // An empty grid here would read as "mentioned nowhere", which is the
+    // opposite claim from "this file does not carry the split".
     expect(promptBreakdown(noRows)).toBeNull()
     expect(storedPromptRows(noRows)).toEqual([])
   })
