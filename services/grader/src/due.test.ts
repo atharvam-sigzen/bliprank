@@ -68,6 +68,7 @@ describe('the due list', () => {
     const list = dueToday(dir, {}, '2026-09-03')
     expect(list.due).toHaveLength(1)
     expect(list.due[0]).toMatchObject({ host: 'acme.test', category: 'crm-software', curatedPrompts: 17, customPrompts: 0, cells: 17 * ENGINES.length })
+    expect(list.tracked).toEqual([{ host: 'acme.test', cells: 17 * ENGINES.length, usd: list.usd }])
     expect(list.usd).toBeCloseTo((0.007 * 3 + 0.008 + 0.005) * 17, 6)
     applyCustomPrompts(dir, { host: 'acme.test', prompts: ['which crm works offline on a phone'], reason: 'the questions our buyers ask', by: 'operator' })
     expect(dueToday(dir, {}, '2026-09-03').due[0]).toMatchObject({ customPrompts: 1, cells: 18 * ENGINES.length })

@@ -95,6 +95,12 @@ export interface NotDue {
   readonly detail: string
 }
 
+export interface TrackedCost {
+  readonly host: string
+  readonly cells: number
+  readonly usd: number
+}
+
 export interface DueList {
   readonly day: string
   readonly plan: OwnPlan
@@ -102,6 +108,8 @@ export interface DueList {
   readonly notDue: readonly NotDue[]
   readonly cells: number
   readonly usd: number
+  /** Every tracked domain's expected cycle cost, due or not: the daily cap is derived from this (ADR-0017 decision 2). */
+  readonly tracked: readonly TrackedCost[]
   /** Set when the environment cannot size a scan at all; then nothing is due, as the route would refuse. */
   readonly config?: string
 }
@@ -129,9 +137,10 @@ export function dueToday(dataDir: string, env: NodeJS.ProcessEnv, day: string = 
   const perPrompt = gate.engines.reduce((n, e) => n + PRICE_USD_PER_CALL[plan][e], 0)
   const due: DueDomain[] = []
   const notDue: NotDue[] = []
+  const tracked: TrackedCost[] = []
   // The route's own guard (`/api/scan`): a prompt count that is not a positive integer cannot size a scan, and nothing is collected.
   if (!Number.isInteger(gate.callsPerEngine) || gate.callsPerEngine <= 0) {
-    return { day, plan, due, notDue, cells: 0, usd: 0, config: `GRADER_PROMPTS_PER_SCAN is ${JSON.stringify(env['GRADER_PROMPTS_PER_SCAN'])}, which cannot size a scan; nothing is due until it is a positive integer` }
+    return { day, plan, due, notDue, cells: 0, usd: 0, tracked, config: `GRADER_PROMPTS_PER_SCAN is ${JSON.stringify(env['GRADER_PROMPTS_PER_SCAN'])}, which cannot size a scan; nothing is due until it is a positive integer` }
   }
   for (const t of readTracked(dataDir)) {
     const record = readCategoryRecord(dataDir, t.host)
@@ -144,6 +153,10 @@ export function dueToday(dataDir: string, env: NodeJS.ProcessEnv, day: string = 
       notDue.push({ host: t.host, reason: 'no-bank', detail: `no bank for ${record.slug} in this build` })
       continue
     }
+    // Expected cost is a fact about the tracked domain, due today or not: the day's cap is the sum over all of them.
+    const curatedCount = promptsFor(bank, gate.callsPerEngine).length
+    const customCount = readCustomPromptSet(dataDir, t.host)?.prompts.length ?? 0
+    tracked.push({ host: t.host, cells: (curatedCount + customCount) * gate.engines.length, usd: (curatedCount + customCount) * perPrompt })
     const cycles = listCycles(dataDir, t.host)
     const prior = cycles[cycles.length - 1]
     if (prior && prior.day === day) {
@@ -170,7 +183,7 @@ export function dueToday(dataDir: string, env: NodeJS.ProcessEnv, day: string = 
     }
     due.push({ host: t.host, category: record.slug, curatedPrompts: curated, customPrompts: custom, cells, usd: (curated + custom) * perPrompt, ceiling: { used, limit: ceilingCfg.maxCallsPerMonth } })
   }
-  return { day, plan, due, notDue, cells: due.reduce((n, d) => n + d.cells, 0), usd: due.reduce((n, d) => n + d.usd, 0) }
+  return { day, plan, due, notDue, cells: due.reduce((n, d) => n + d.cells, 0), usd: due.reduce((n, d) => n + d.usd, 0), tracked }
 }
 
 /** The monthly bill a tracked set implies at one cycle a day, for the decision that has to be taken before any tick runs. */
