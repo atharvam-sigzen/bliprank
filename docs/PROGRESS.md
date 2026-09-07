@@ -52,14 +52,15 @@ matches the network the collector will deploy into.
 task is registered and no live tick has run. The publisher registry (ADR-0015)
 is proposed and not wired.
 
-**The spend switch, as it actually is.** `.claude/settings.json` injects
-`COLLECTION_ENABLED=true` into every process an agent session spawns. It was
-set deliberately on 2026-08-25 (`ca48704`) so live scans work from a dev
-session, and CLAUDE.md §7 still documents the default as off. Every live path
-sits behind a second flag (`GRADER_LIVE_SCAN`), a key, a plan and the runner's
-ledger, and the suite is offline by construction, but the documented default
-and the configured one disagree. Which of them changes is the owner's call; it
-is recorded here rather than made.
+**The spend switch, decided.** `.claude/settings.json` injects
+`COLLECTION_ENABLED=true` into every process an agent session spawns. Set
+deliberately on 2026-08-25 (`ca48704`) so live scans work from a dev session,
+and reaffirmed by the owner on 2026-09-07 when the closure sweep found
+CLAUDE.md §7 still documenting the default as off. §7 now documents the real
+state and the reason. Every live path still sits behind `GRADER_LIVE_SCAN`, a
+key, a plan and the runner's ledger; the daily loop additionally behind
+`GRADER_DAILY_LOOP=armed` and the hard daily ceiling; the suite is offline by
+construction.
 
 ---
 
@@ -1381,11 +1382,6 @@ is created then, from `apps/public`'s components, not before.
 **(h) Free-tier R2 and Upstash credentials,** so the two transports are
 verified against a real service. Both are still pinned only by
 self-consistency and both fail closed.
-
-**Two configuration facts to settle, both the owner's:** the spend switch
-injected by `.claude/settings.json` against CLAUDE.md §7's documented default
-(§1), and the two review bundles sitting untracked at the repo root
-(`bliprank-review-2026-09-01.zip`, `project-context-20260827.zip`).
 
 **Still true:** nothing past G0 counts as validated progress until G0 has a
 real pass/fail result. Real answers exist now; the unit economics have not been

@@ -263,7 +263,7 @@ R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET=
 UPSTASH_REDIS_REST_URL= UPSTASH_REDIS_REST_TOKEN=
 STRIPE_SECRET_KEY= RAZORPAY_KEY_ID= RAZORPAY_KEY_SECRET=
 COLLECTION_BUDGET_USD_DAILY=      # hard daily ceiling, read by the daily loop (ADR-0017); a live tick refuses without it
-COLLECTION_ENABLED=false          # default OFF in dev
+COLLECTION_ENABLED=                # see below: ON in agent sessions by decision, OFF everywhere else
 ```
 
 **The prompt-bank author** (ADR-0009 Amendment 1). Optional: with no key it is
@@ -285,8 +285,18 @@ BANK_AUTHOR_TIMEOUT_MS=           # default 25000, per attempt
 constructed in our code, and a stored bank that has acquired leaders is dropped
 on read. A model that names rivals is not an error, it is a field nothing reads.
 
-`COLLECTION_ENABLED` defaults to `false`. Turning it on in a dev session is a
-deliberate, logged act.
+**`COLLECTION_ENABLED` is ON in every agent session, by decision.**
+`.claude/settings.json` injects `COLLECTION_ENABLED=true` into every process a
+Claude Code session spawns. That is deliberate, not an oversight: set by the
+owner in `ca48704` (2026-08-25) so live Grader scans work from a dev session,
+and reaffirmed on 2026-09-07 after the closure sweep raised it. Outside an
+agent session (a plain shell, CI, a deploy) the variable is unset, which the
+code reads as off. The flag alone spends nothing: every live path also needs
+`GRADER_LIVE_SCAN=true`, a provider key, an explicit plan, and room in the
+runner's ledger, and a live tick of the daily loop needs `GRADER_DAILY_LOOP=armed`
+and `COLLECTION_BUDGET_USD_DAILY` on top. The whole test suite is offline by
+construction and passes with the flag on. What the injection removes is one
+of the two deliberate acts; the second stays.
 
 ---
 
