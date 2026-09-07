@@ -37,7 +37,7 @@
 import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
-import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
+import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, PUBLISHER_REGISTRY, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
 import type { BlobStore, CollectionOrchestrator } from '@bliprank/collector'
 
 /** The two groups that name no brand. See property 2 above. */
@@ -670,7 +670,16 @@ function scoreBlock(answers: readonly RawAnswer[], scored: readonly BrandSpec[],
       // Scored once per brand rather than reading the competitor sub-shape:
       // `mentioned` is all this needs, the pass is pure string matching, and
       // making each brand its own subject keeps the numerator unambiguous.
-      const row = scoreAnswer({ answer: { text: a.text, citations: a.citations }, brand: spec, competitors })
+      const row = scoreAnswer({
+        answer: { text: a.text, citations: a.citations },
+        brand: spec,
+        competitors,
+        // ADR-0015 / det-3: the approved 52-entry publisher registry. It sits
+        // at step 3 of `classifyCitation`, AFTER owned, competitor, community,
+        // review and reference, so it can only move a citation from `other` to
+        // `earned_media` and can never override a more specific class.
+        publishers: PUBLISHER_REGISTRY,
+      })
       if (row.mentioned) mentions += 1
       if (row.cited) citations += 1
       if (spec.id === subject.id) {

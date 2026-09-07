@@ -15,7 +15,7 @@
   },
   "subjectSource": "leader",
   "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
-  "algoVersion": "det-2",
+  "algoVersion": "det-3",
   "collectedAt": "2026-08-25T06:18:56.874Z",
   "counts": {
     "cellsRequested": 85,
@@ -37,7 +37,7 @@
         "ci_low": 0.3459365569169934,
         "ci_high": 0.552759388428024,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -53,7 +53,7 @@
         "ci_low": 0.6265804034631292,
         "ci_high": 0.8124038333751294,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -69,7 +69,7 @@
         "ci_low": 0.3349577742719609,
         "ci_high": 0.5412261589275047,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -85,7 +85,7 @@
         "ci_low": 0.3240354231287895,
         "ci_high": 0.5296364979251242,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -101,7 +101,7 @@
         "ci_low": 0.11932143444884925,
         "ci_high": 0.28411024369402993,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -117,7 +117,7 @@
         "ci_low": 0.040463723499160636,
         "ci_high": 0.16035984533375297,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -133,7 +133,7 @@
         "ci_low": 0.0253851600334125,
         "ci_high": 0.13041438450839765,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -149,7 +149,7 @@
         "ci_low": 0,
         "ci_high": 0.04323948381405151,
         "n": 85,
-        "algo_version": "det-2",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -1251,6 +1251,6 @@
     "capUsd": 5,
     "at": "2026-08-25T06:19:05.858Z"
   },
-  "rescoredAt": "2026-09-02T06:15:56.980Z",
-  "rescoredFrom": "det-1"
+  "rescoredAt": "2026-09-07T07:18:26.874Z",
+  "rescoredFrom": "det-2"
 }

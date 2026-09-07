@@ -49,6 +49,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { AnswerIndex, r2KeyFor } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
+import { PUBLISHER_REGISTRY } from '@bliprank/taxonomy'
 import { FileBlobStore, FileKV } from './local-store.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { latestCycle, readCycle } from './cycles.js'
@@ -203,7 +204,16 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
               return typeof u.url === 'string' && u.url ? [{ url: u.url, position: typeof u.position === 'number' ? u.position : i }] : []
             })
           : []
-        const row = scoreAnswer({ answer: { text: run.text, citations: cited }, brand: subject, competitors })
+        const row = scoreAnswer({
+          answer: { text: run.text, citations: cited },
+          brand: subject,
+          competitors,
+          // ADR-0015 / det-3: the approved 52-entry publisher registry. It sits
+          // at step 3 of `classifyCitation`, AFTER owned, competitor, community,
+          // review and reference, so it can only move a citation from `other` to
+          // `earned_media` and can never override a more specific class.
+          publishers: PUBLISHER_REGISTRY,
+        })
         runs.push({ prompt: c.prompt, engine: c.engine, text: run.text, collectedAt: typeof run.collectedAt === 'string' ? run.collectedAt : '', row, ...(c.custom ? { custom: true as const } : {}) })
       }
     } catch {

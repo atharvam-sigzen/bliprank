@@ -28,8 +28,16 @@ import { domainBrandForms, SCORING_ALGO_VERSION } from './score.js'
 type Forms = ReturnType<typeof domainBrandForms>
 type Pin = { readonly host: string; readonly title?: string; readonly forms: Forms; readonly why: string }
 
-const PINNED: Readonly<Record<string, readonly Pin[]>> = {
-  'det-2': [
+/**
+ * ⚠️ det-3 DERIVES ALIASES EXACTLY AS det-2 DID.
+ *
+ * det-3 wires the approved publisher registry into citation scoring (ADR-0015).
+ * It touches no alias rule, so this table is the same object under both keys
+ * rather than a copy — a copy could silently diverge and then this file would
+ * be asserting that a rule changed when it did not. The full-corpus diff bears
+ * this out: 8 rows flipped and every one of them was the `citations` field.
+ */
+const DET_2_ALIASES: readonly Pin[] = [
     // The differing case: four-character remainder, title names it. 12408cc gave
     // {name:'getlago', aliases:['getlago'], squashedAliases:['getlago']}. det-2 as
     // DEFINED (ADR-0012) admits `lago` on the title's evidence.
@@ -43,8 +51,9 @@ const PINNED: Readonly<Record<string, readonly Pin[]>> = {
     { host: 'mybank.com', title: 'Bank of Somewhere', why: 'second four-letter case: `my` + `bank`, corroborated', forms: { name: 'Bank', aliases: ['mybank', 'Bank'], squashedAliases: ['mybank', 'bank'] } },
     // The two real domain-label subjects in the store, with their RECORDED titles.
     { host: 'sigzen.com', title: 'Sigzen', why: 'stored subject; no prefix, so no remainder', forms: { name: 'Sigzen', aliases: ['sigzen', 'Sigzen'], squashedAliases: ['sigzen'] } },
-  ],
-}
+]
+
+const PINNED: Readonly<Record<string, readonly Pin[]>> = { 'det-2': DET_2_ALIASES, 'det-3': DET_2_ALIASES }
 
 describe(`alias derivation is pinned to SCORING_ALGO_VERSION (${SCORING_ALGO_VERSION})`, () => {
   it('the current version has a pinned table — a bump must bring a new one', () => {

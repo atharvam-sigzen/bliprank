@@ -150,7 +150,17 @@ describe('a second cycle through the real runner, resolver, orchestrator, scorer
     expect(result.promptRows).toHaveLength(10)
     const subject = result.brands.find((b) => b.isSubject)!
     expect(subject.metric.n).toBe(10)
-    expect(subject.metric.algo_version).toBe('det-2')
+    /*
+     * SELF-CONSISTENT, not a restated literal. This asserted 'det-2' and tripped
+     * on the det-3 bump — the assertion protecting itself rather than the
+     * behaviour. `apps/public` does not depend on `@bliprank/scorer`, so the
+     * constant is not importable here; the stronger claim is available without
+     * it. What matters is that a freshly collected cycle stamps ONE version
+     * across the envelope and every brand in it, whatever that version is: a
+     * result carrying two stamps is a result `compare()` cannot reason about.
+     */
+    expect(result.algoVersion).toMatch(/^det-\d+$/)
+    for (const b of result.brands) expect([b.name, b.metric.algo_version]).toEqual([b.name, result.algoVersion])
 
     // Filed beside the earlier day; the latest follows; the earlier bytes hold.
     const cycles = listCycles(dir, DOMAIN)

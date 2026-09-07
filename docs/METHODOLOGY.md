@@ -5,7 +5,7 @@
 > no evidence and only 6 publish a checkable method. This page is why we are in the
 > second group.
 
-*Scoring algorithm version: `det-2` · Last updated: 2026-09-02*
+*Scoring algorithm version: `det-3` · Last updated: 2026-09-07*
 
 ---
 
@@ -126,6 +126,39 @@ was never stamped on anything; the stamped identifier is the one that counts.
 |---|---|---|---|
 | det-1 | 2026-08-22 | Deterministic scorer: mention, citation, prominence, competitor detection, citation source class | n/a |
 | det-2 | 2026-09-01 | Brand forms are also derived from a domain that runs its words together, with the site title as corroboration; a compound-named brand had scored zero. Includes, from a second commit the same day, a narrower rule: a four-character remainder is admitted only when the site title names it (see the note below) | A brand's rate can differ between versions; `compare()` refuses to compare rows stamped differently, and a result re-derived from stored answers keeps its det-1 row as an audit file |
+| det-3 | 2026-09-07 | The publisher registry is wired into citation classification. A citation to one of 52 named editorial outlets is now classed `earned_media` rather than `other`. No other rule changed: mention, position, competitor detection and every other citation class behave exactly as under det-2 | Only the citation source mix moves, and only in one direction — `other` down, `earned_media` up. No brand's mention rate changes. `compare()` refuses to put a det-2 number beside a det-3 one, and a re-derived result keeps its det-2 row as an audit file |
+
+**What det-3 moved, measured before the bump.** The full-corpus diff
+(`pnpm grader:version-diff -- --against det-2`, against a snapshot taken
+2026-09-03 before the edit) compared all 185 stored rows across 3 cycles:
+
+| | |
+|---|---|
+| Rows flipped | **8**, every one of them the `citations` field |
+| Citations reclassified | **9** of 629 — the count is identical before and after, because the registry reclassifies and never adds or drops |
+| `other` | 549 → 540 (87.3% → 85.9% across the corpus; 88.7% → 87.2% on the reference scan alone, which is the figure ADR-0015 predicted) |
+| `earned_media` | 0 → 9 (0% → 1.4%) |
+| Every other class | unchanged, to the citation |
+| Golden-set agreement | unchanged, 100% on every field, 0 silently bucketed as `owned` |
+
+The nine are TechRadar, Forbes, NYTimes/Wirecutter, RTINGS (×2),
+smallbusiness.co.uk (×2), News18 and Digit. Every one of the seven registry
+domains the corpus cites was reclassified, and all eighteen of ADR-0015's
+recorded refusals that the corpus cites stayed `other` — including PCMag
+(criterion 2, common ownership with a tracked vendor) and TechnologyAdvice
+(criterion 3, a directory operator).
+
+⚠️ **Two things this bump does not do.** It does not change any mention rate, so
+no headline number moves. And it leaves most of `other` where it is: 86% of
+citations are still unrecognised, and ADR-0015 is explicit that the remainder is
+retailers, redirects, vendor blogs and listicles that need new classes rather
+than a longer publisher list.
+
+⚠️ **The golden set does not yet exercise the registry.** Its one citation to a
+registry domain (TechCrunch, in `g004-source-mix`) is unlabelled, so the harness
+skips it and citation-class agreement would not detect a registry error. The set
+holds 7 of its 300-case target and its G2 gate reads NOT RUN; the flip list
+above is what gated this bump.
 
 **A lapse in det-2, recorded rather than hidden.** The four-character rule in
 the det-2 row shipped twenty-seven minutes after the det-2 stamp was introduced,

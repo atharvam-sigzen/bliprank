@@ -3,7 +3,7 @@
   "category": "crm-software",
   "day": "2026-08-25",
   "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
-  "algoVersion": "det-2",
+  "algoVersion": "det-3",
   "answers": [
     {
       "prompt": "What is the best CRM for a solo founder just starting out?",
@@ -184,7 +184,7 @@
         {
           "url": "https://www.techradar.com/reviews/pipedrive-crm-review?utm_source=chatgpt.com",
           "position": 3,
-          "sourceClass": "other",
+          "sourceClass": "earned_media",
           "domain": "techradar.com"
         },
         {
@@ -725,7 +725,7 @@
         {
           "url": "https://smallbusiness.co.uk/top-crm-software-providers-for-uk-small-businesses-2552988/",
           "position": 9,
-          "sourceClass": "other",
+          "sourceClass": "earned_media",
           "domain": "smallbusiness.co.uk"
         },
         {
@@ -772,7 +772,7 @@
         {
           "url": "https://smallbusiness.co.uk/top-crm-software-providers-for-uk-small-businesses-2552988/",
           "position": 3,
-          "sourceClass": "other",
+          "sourceClass": "earned_media",
           "domain": "smallbusiness.co.uk"
         }
       ]
@@ -1293,7 +1293,7 @@
         {
           "url": "https://www.forbes.com/advisor/business/software/best-simple-crm/",
           "position": 3,
-          "sourceClass": "other",
+          "sourceClass": "earned_media",
           "domain": "forbes.com"
         },
         {

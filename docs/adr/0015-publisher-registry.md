@@ -199,3 +199,83 @@ registrable-domain rule treats it as a private suffix, which is cosmetic.
 - `pnpm grader:publishers`: disk only, produced the table above.
 - Full suite 84 files, all passing; root typecheck clean. No provider call,
   no model call, no write to the store.
+
+
+---
+
+# Amendment 1 — wired at det-3, and what the full corpus did
+
+**Status:** Accepted · **Date:** 2026-09-07 · **Phase:** P3
+
+The list of 52 was approved on 2026-09-03 and left unwired pending a separate
+go-ahead. That go-ahead was given on 2026-09-07. This records what wiring it
+actually did, measured before the bump rather than after.
+
+## The diff
+
+A det-2 snapshot taken 2026-09-03, **before** any rule edit, held all 185 rows
+across 3 cycles. A control run first — current rules against that snapshot, same
+version both sides — returned **0 flips**, which is what proves the tool and the
+baseline rather than the change. The registry was then wired and the diff re-run:
+
+| | |
+|---|---|
+| Rows flipped | **8**, every one the `citations` field |
+| Citations reclassified | **9** of 629; the count is identical before and after |
+| `other` | 549 → 540 · corpus 87.3% → 85.9% · reference scan 88.7% → 87.2% |
+| `earned_media` | 0 → 9 · 0% → 1.4% |
+| video / competitor / review / community / owned | unchanged, to the citation |
+| Golden set | 100% on every field before and after; 0 silently bucketed as `owned` |
+| Mention rate, position, `cited` | **unmoved on every row** |
+
+**The reference-scan figure reproduces this ADR's own prediction exactly**
+(88.7% → 87.2%). The corpus figure differs only because it counts all three
+domains.
+
+## What the corpus says about the list
+
+Seven of the 52 are cited by the stored corpus, and **all seven** reclassified:
+TechRadar, Forbes, NYTimes/Wirecutter, RTINGS (×2), smallbusiness.co.uk (×2),
+News18, Digit. None was missed, which is the check that the domain matching and
+the subdomain handling actually work on real URLs rather than on invented ones.
+
+Eighteen of the recorded refusals are also cited, and **all eighteen stayed
+`other`** — PCMag (criterion 2, common ownership with a tracked vendor),
+TechnologyAdvice and SoftwareSuggest and Research.com (criterion 3, directory
+operations), opensource.com (criterion 2, Red Hat), LinkedIn and Facebook and
+GitHub and Medium (criterion 1, no masthead). The four criteria are a boundary
+the data now exercises, not a paragraph.
+
+**sigzen.com moved by nothing at all** (87.4% → 87.4%): the ERP corpus cites
+none of the 52. That is criterion 4 working as designed — the list is seeded for
+the categories that exist — and it is also the honest limit of the list's
+current reach.
+
+## Consequences
+
+- **No customer-visible number moved.** Only the citation source mix changed,
+  and only `other` → `earned_media`. The publisher check sits at step 3 of
+  `classifyCitation`, after owned, competitor, community, review and reference,
+  so it can never override a more specific class.
+- **`other` is still 86%.** This ADR already said the remainder is retailers,
+  redirects, vendor blogs and listicles needing new classes rather than a longer
+  list, and the diff confirms it: `amazon.in`, `worldmetrics.org`, `zipdo.co`
+  and a long tail of vendor blogs are the bulk of what is left.
+- **Two production call sites, and they must never disagree.** `scan.ts` writes
+  the stored numbers and `answers.ts` re-scores them for the evidence view *and
+  for `grader:version-diff` itself* — wire one and not the other and every
+  future flip list is silently wrong. `publisher-wiring.test.ts` asserts both,
+  and was mutation-checked by unwiring one and watching it name the file.
+- **The scorer keeps no default.** `scoreAnswer` still returns `other` for a
+  registry domain when no caller passes a map. The registry is data the grader
+  owns; the scorer stays a pure function of its inputs, and the golden harness
+  keeps using each case's own declared map.
+
+## ⚠️ Open, and a human's
+
+**The golden set does not exercise the registry.** Its only citation to a
+registry domain — TechCrunch, in `g004-source-mix` — is unlabelled, so the
+harness skips it and citation-class agreement would not detect a registry error.
+Adding a labelled `earned_media` case is a labelling act, and labels are human
+ground truth. The flip list gated this bump; the golden set did not, and could
+not have.

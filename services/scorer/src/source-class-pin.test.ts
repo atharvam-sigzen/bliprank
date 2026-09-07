@@ -43,8 +43,21 @@ interface Pin {
   readonly meta?: Record<string, unknown>
 }
 
-const PINNED: Readonly<Record<string, readonly Pin[]>> = {
-  'det-2': [
+/**
+ * ⚠️ det-3 CLASSIFIES A CITATION EXACTLY AS det-2 DID, and that is the point.
+ *
+ * Every case below passes its OWN `REGISTRY`, which already names a publisher.
+ * So `classifyCitation` is unchanged by det-3: the rule that moved is not in
+ * the classifier, it is in WHO SUPPLIES THE REGISTRY. det-2 scored every stored
+ * answer with the map empty; det-3 passes the approved 52-entry registry from
+ * `scan.ts` and `answers.ts`.
+ *
+ * Keyed to the same table rather than copied, deliberately. A copy would let
+ * the two drift and then this file would assert a classifier change that never
+ * happened. What det-3 actually changed is asserted by the two wiring guards
+ * below, which is where the bump's whole content lives.
+ */
+const DET_2_CASES: readonly Pin[] = [
     // Identity beats platform, and a subdomain is on the domain.
     { url: 'https://app.pipedrive.com/settings', why: 'owned, on a subdomain', sourceClass: 'owned', domain: 'pipedrive.com', detail: {} },
     { url: 'https://pipedrive.io/x', why: 'owned, second owned domain', sourceClass: 'owned', domain: 'pipedrive.io', detail: {} },
@@ -81,12 +94,12 @@ const PINNED: Readonly<Record<string, readonly Pin[]>> = {
     { url: 'https://www.nist.gov/publications', why: 'a named government table entry carries the platform; the suffix alone would not', sourceClass: 'reference', domain: 'nist.gov', detail: { platform: 'government', referenceType: 'government' } },
     // --- what the provider may say, and may not decide ---
     { url: 'https://www.example-news.com/story', why: 'a provider-supplied publisher name is recorded and does NOT promote the class', sourceClass: 'other', domain: 'example-news.com', detail: { publisher: 'Example News' }, meta: { publisher: 'Example News' } },
-  ],
-}
+]
+
+const PINNED: Readonly<Record<string, readonly Pin[]>> = { 'det-2': DET_2_CASES, 'det-3': DET_2_CASES }
 
 /** The tables as they stand under this version. A domain moved or added is a rule change and fails here. */
-const PINNED_TABLES: Readonly<Record<string, typeof PLATFORM_TABLES>> = {
-  'det-2': {
+const PINNED_TABLES_DET_2: typeof PLATFORM_TABLES = {
     video: { 'youtube.com': 'youtube', 'youtu.be': 'youtube', 'vimeo.com': 'vimeo', 'dailymotion.com': 'dailymotion', 'tiktok.com': 'tiktok', 'twitch.tv': 'twitch' },
     community: {
       'reddit.com': 'reddit',
@@ -120,8 +133,10 @@ const PINNED_TABLES: Readonly<Record<string, typeof PLATFORM_TABLES>> = {
       'nist.gov': 'government',
     },
     govSuffixes: ['.gov', '.gov.uk', '.gov.in', '.gov.au', '.europa.eu'],
-  },
 }
+
+// The platform tables are det-2's, unchanged: det-3 adds no domain to any of them.
+const PINNED_TABLES: Readonly<Record<string, typeof PLATFORM_TABLES>> = { 'det-2': PINNED_TABLES_DET_2, 'det-3': PINNED_TABLES_DET_2 }
 
 describe(`citation classification is pinned to SCORING_ALGO_VERSION (${SCORING_ALGO_VERSION})`, () => {
   it('the current version has a pinned table of cases — a bump must bring a new one', () => {
@@ -141,9 +156,20 @@ describe(`citation classification is pinned to SCORING_ALGO_VERSION (${SCORING_A
   }
 
 
-  it('⚠️ the wiring guard: scored the way the grader scores, a registry publisher is still other under this version', () => {
-    // answers.ts and scan.ts call scoreAnswer without `publishers`. The day one of them passes a map,
-    // this row changes under the same stamp — which is exactly the R5 breach the pin exists to refuse.
+  it('⚠️ the scorer itself still defaults to no registry — the caller supplies it', () => {
+    /*
+     * INVERTED AT det-3, AND ONLY HALFWAY. Under det-2 this asserted that a
+     * registry publisher came back `other` when scored the way the grader
+     * scores, because no caller passed a map. det-3 makes the CALLERS pass one;
+     * it does not give `scoreAnswer` a default.
+     *
+     * That distinction is worth a test of its own. A default inside the scorer
+     * would mean a caller could get `earned_media` without asking for it, and
+     * the golden harness — which passes each case's own declared map — would
+     * silently start classifying against the product registry instead of the
+     * case's. The scorer stays a pure function of its inputs; the wiring is the
+     * grader's, and the guard below is what proves the grader does it.
+     */
     const row = scoreAnswer({
       answer: { text: 'Pipedrive is a CRM.', citations: [{ url: 'https://www.techradar.com/reviews/pipedrive-crm-review', position: 0 }] },
       brand: { id: 'pipedrive', name: 'Pipedrive', aliases: ['Pipedrive'], domains: ['pipedrive.com'] },
@@ -152,22 +178,19 @@ describe(`citation classification is pinned to SCORING_ALGO_VERSION (${SCORING_A
     expect(row.citations.map((c) => c.sourceClass)).toEqual(['other'])
   })
 
-  it('⚠️ the wiring guard, statically: no production module reads the proposed registry', () => {
-    // PUBLISHER_REGISTRY may be read by its own file, the proposer CLI and tests. A third reader is the registry being wired.
-    const root = join(__dirname, '..', '..', '..')
-    const allowed = new Set(['packages/taxonomy/src/publishers.ts', 'services/grader/src/publishers.ts'])
-    const readers: string[] = []
-    const walk = (dir: string): void => {
-      for (const name of readdirSync(dir)) {
-        if (name === 'node_modules' || name === '.next' || name === 'dist' || name.startsWith('.')) continue
-        const p = join(dir, name)
-        if (statSync(p).isDirectory()) walk(p)
-        else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) && readFileSync(p, 'utf8').includes('PUBLISHER_REGISTRY')) readers.push(p.slice(root.length + 1).replace(/\\/g, '/'))
-      }
-    }
-    for (const top of ['apps', 'packages', 'services']) walk(join(root, top))
-    expect(readers.filter((r) => !allowed.has(r))).toEqual([])
-  })
+  /*
+   * ⚠️ THE WIRING GUARD LIVES WITH THE GRADER, NOT HERE — moved at det-3.
+   *
+   * It asserts that `scan.ts` and `answers.ts` pass the approved registry, and
+   * to check that it must read `@bliprank/taxonomy`, which `services/scorer`
+   * does not depend on and should not: the scorer is a pure function over the
+   * inputs it is handed, and the registry is data about the world that the
+   * grader owns. Adding the dependency to make a test compile would have
+   * inverted a layer for the convenience of an assertion.
+   *
+   * `services/grader/src/publisher-wiring.test.ts` holds it, where both are
+   * already dependencies and where the thing being asserted actually lives.
+   */
 
   it('the platform tables are exactly what this version says they are', () => {
     expect(PLATFORM_TABLES).toEqual(PINNED_TABLES[SCORING_ALGO_VERSION])
