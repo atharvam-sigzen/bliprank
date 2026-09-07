@@ -320,6 +320,12 @@ from the ledger once more cycles have run, not a constant to trust.
 If a plain number is preferred, 200 has the same properties at 17 prompts and
 none of them at 20.
 
+**Superseded 2026-09-07 by ADR-0017's split:** the ceiling now counts
+hand-started cycles (`CYCLES_PER_MONTH`, override
+`GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH`), each run bounded in attempts by
+`runAllowanceFor(cells)`; `ceilingFor` and the call-denominated override are
+gone, and the daily loop has its own bounds. The paragraph below is history.
+
 **Decided 2026-09-02, by the owner: the derived form.** `domain-ceiling.ts`
 now exports `CYCLES_PER_MONTH = 2`, `RETRY_HEADROOM = 1.2` and
 `ceilingFor(cellsPerCycle)`, and the default is `ceilingFor(17 × 5) = 204`.

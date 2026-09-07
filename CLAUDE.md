@@ -351,11 +351,16 @@ before each domain and booked in `daily-spend.json`. A live tick refuses
 unless `GRADER_DAILY_LOOP=armed`, both collection flags, a key, a plan and
 the hard ceiling are set, the runner's ledger has room, and `--live` is on
 the command line. **No task is registered and no live tick has run; the
-first needs the owner's separate go-ahead.** Open, spend control, human
-decision: the monthly per-domain ceiling is denominated in calls at two
-cycles a month and breaks under both customer-edited prompt sets and a daily
-loop (worked example in ADR-0017), and the runner's `Budget` has no per-run
-allowance.
+first needs the owner's separate go-ahead.**
+**The ceiling split (decided and built 2026-09-07):** the per-domain monthly
+ceiling counts HAND-STARTED cycles (`CYCLES_PER_MONTH = 2`, override
+`GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH`), never calls, and the loop never
+books it; the loop's bounds are one cycle a day, the daily cap, and the
+per-run allowance `Budget.runAllowanceCalls = ceil(cells × 1.2)` that the
+collector enforces before every attempt, so a loop run's realised spend is
+bounded by the day's cap and a hand-started run's by its cells with headroom.
+The three failure scenarios are re-run as tests in
+`ceiling-worked-examples.test.ts`.
 **`/score-version` repaired (2026-09-03):** the command now names the real
 constant (`SCORING_ALGO_VERSION` in `services/scorer/src/score.ts`), the two
 pin tables, and the changelog table in `docs/METHODOLOGY.md`. Its diff is

@@ -260,6 +260,75 @@ tracked domains, which is one rule stated twice: a domain gets its cycles,
 each bounded in calls, and the money is the daily cap's. This is spend
 control (CLAUDE.md §4) and is not built until decided.
 
+**Decided 2026-09-07, by the owner: the split, as recommended. Built.**
+
+*Hand-started scans* (`domain-ceiling.ts`): the per-domain ceiling is
+re-denominated from calls to cycles. It was always call-denominated (170,
+then the derived 204); what is restored is the intent ADR-0013 sized it by,
+two occasional manual cycles a month, now enforced as a count.
+`CYCLES_PER_MONTH` hand-started cycles a month; a cycle that reached the
+provider counts one, with the calls it realised recorded beside it; a cycle
+served entirely from cache counts none. A change to the domain's prompt set
+changes what a cycle costs and never how many it gets. The environment
+override is `GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH`, an integer of cycles;
+the old call-denominated override, `GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH`,
+is an error when set rather than a silence, naming the new key. A ledger
+written before the split, a bare call count per domain, is read as the
+nearest whole number of cycles at the prompt count in force, at least one,
+so a domain mid-month keeps its history; the mapping is transitional, one
+month. A run that burned calls and returned nothing counts as a started
+cycle, which is what the ceiling exists for, and the refusal says "started".
+The loop never books this ledger.
+
+Left as they are, named: an allowance stop leaves the current cell's index
+claim held for its lease (up to thirty minutes), so a re-run inside that
+window reports the cell as claimed elsewhere; the same is true of a lifetime
+cap stop and is the orchestrator's, human-owned. The scan stream reports an
+allowance stop as `budget-exhausted`, which is the orchestrator's word for
+both. ADR-0013 §"the derived form" is superseded by this section.
+
+*The loop* (`daily-loop.ts`): one cycle per UTC day and the daily cap, as
+built, plus the per-run allowance below. The manual ceiling is not consulted.
+
+*The per-run allowance* (`Budget.runAllowanceCalls`, in the collector): the
+most attempts one run may make, retries included. Checked before every
+attempt and before the lifetime cap, so a refusal is about the run and never
+marks the ledger exhausted; the orchestrator stops the run the way it stops
+on the lifetime cap. `runAllowanceFor(cells) = ceil(cells × RETRY_HEADROOM)`:
+102 at 17 prompts on five engines, 192 at 32. The route passes it for a
+hand-started cycle; the loop passes the smaller of it and what is left of the
+day's cap divided by the cycle's mean price per attempt, so a single run's
+realised spend, retries included, is bounded by the daily cap to within the
+retries' price spread (about $0.02 a run at pay-as-you-go: the dearest
+engine's price less the mean, over the headroom). The mean and not the
+dearest, because at the dearest price the last domain of a day, whose
+remaining cap is about its own expected cost with headroom, would get 90
+attempts for 85 cells instead of 102 and be truncated on its first retries.
+Since the cap gate itself sits at expected cost × headroom, a domain that
+starts always has its full allowance paid for at the mean price; the
+division is a belt under that brace, tested both ways. The CLI
+derives its allowance from its bill unless `--allowance` names one; a
+re-derivation passes zero and discards a partial result, so a cell the
+pre-flight missed is refused before it is bought.
+
+*The three scenarios, re-run under the split* (`ceiling-worked-examples.test.ts`,
+same numbers as above, scratch ledgers, the real `Budget`, the real runner
+offline):
+
+| Scenario | Under the old ceiling | Under the split |
+|---|---|---|
+| A, set shrinks after two cycles | third cycle refused because the set change moved the limit: `320 + 85 > 204` | third cycle refused on the count: `2 of its 2 hand-started cycles`, the same refusal at any set size; October clears it |
+| B, set grows after two cycles | a third cycle admitted: `170 + 160 ≤ 384`, 330 calls, $2.24 | the third cycle refused on the count at 85 cells and again at 160; the month is 170 calls, $1.16, as designed |
+| B, one big cycle | nothing bounded a run | a 160-cell run that retried every cell is stopped by `Budget` at attempt 192 |
+| C, thirty daily ticks | `not due: ceiling` from day 3 | thirty cycles filed, each under that day's cap, each handed an allowance of 102 (offline; live, the last domain of a day is bounded by what the cap has left, tested); the manual ledger never written, the file absent; a hand-started cycle that month still has both of its own |
+| C, a storm in one run | discovered in the ledger afterwards | the real runner, offline, given an allowance of 3 for a 4-cell cycle, made 3 attempts and stopped; the next run started clean |
+
+⚠️ HUMAN REVIEW REQUIRED: spend control. `Budget.runAllowanceCalls` is a
+change inside the collector's budget class; `domain-ceiling.ts` changed its
+denomination; the route and the loop pass allowances derived from
+`RETRY_HEADROOM`. Nothing about arming, the hard ceiling's value, or the
+scheduled task was touched.
+
 ## What is deliberately not done
 
 - No timer in the process, no self-registration with any scheduler, and no
