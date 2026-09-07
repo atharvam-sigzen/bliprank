@@ -22,9 +22,8 @@
 import { chromium } from 'playwright'
 
 const PUB = 'http://localhost:3001'
-const WEB = 'http://localhost:3000'
 
-/** Every route both servers actually serve. The target set. */
+/** Every route the server actually serves. The target set. */
 const SERVED = [
   `${PUB}/`,
   `${PUB}/dashboard`,
@@ -43,7 +42,6 @@ const SERVED = [
   `${PUB}/agency/pricing`,
   `${PUB}/agency/lifecycle`,
   `${PUB}/pricing`,
-  `${WEB}/`,
 ]
 
 const PERSONAS = {
@@ -55,7 +53,7 @@ const PERSONAS = {
 const normalise = (u) => {
   try {
     const url = new URL(u)
-    if (!/localhost:300[01]/.test(url.host)) return null
+    if (url.host !== 'localhost:3001') return null
     url.hash = ''
     url.search = ''
     let p = url.pathname.replace(/\/$/, '')

@@ -8,13 +8,11 @@ import { formatFrequency, formatInterval, formatValue, type Metric } from '@blip
  * question a brand owner arrived with; this is the answer, and it is a sentence
  * rather than a figure because a figure is what the rail already is.
  *
- * BYTE-IDENTICAL IN apps/public AND apps/web, pinned by headline.test.ts the way
- * theme.tsx is pinned. The two apps are separate deploys (ADR-0002) and cannot
- * share an import, and this is the one sentence a customer reads on both — two
- * copies free to drift would be two products describing one measurement
- * differently. That is why the props are PRIMITIVES rather than a scan: the
- * Grader has a `ScanResultFile`, the dashboard has fixtures, and a component
- * that took either could not be the same file in both trees.
+ * THE ONLY COPY. Until 2026-09-07 a byte-identical twin lived in apps/web (the
+ * fixture-only worked example, since retired) because the two deploys could not
+ * share an import (ADR-0002). That is why the props are PRIMITIVES rather than
+ * a scan: the Grader has a `ScanResultFile`, the workspace record has cycles,
+ * and a component that took either could not serve both callers.
  *
  * IT IS NOT MARKED `.detail`, AND THAT IS THE DESIGN. The obvious construction
  * — sentence at simple depth, rail at detailed — needs a rule that hides things

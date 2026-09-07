@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { BUNDLED_SCANS, normaliseTyped } from '@/lib/scan-result'
-import { ProductBar, THEME_BOOT, withTheme, workspaceGroups } from './chrome'
+import { ProductBar, THEME_BOOT, workspaceGroups } from './chrome'
 
 /**
  * THE FIRST PAINT IS THE ONE UNDER TEST.
@@ -206,33 +206,6 @@ describe('workspaceGroups', () => {
       expect(reference).not.toContain(bundled)
     } finally {
       delete g.localStorage
-    }
-  })
-})
-
-describe('withTheme', () => {
-  it('returns the url unchanged on the server: no window, no crash', () => {
-    expect(withTheme('http://localhost:3000/dashboard')).toBe('http://localhost:3000/dashboard')
-  })
-
-  it('appends the stored choice, with ? or & as the url requires', () => {
-    const g = globalThis as { window?: unknown }
-    g.window = { localStorage: { getItem: () => 'dark' } }
-    try {
-      expect(withTheme('http://localhost:3000/')).toBe('http://localhost:3000/?theme=dark')
-      expect(withTheme('http://localhost:3000/?x=1')).toBe('http://localhost:3000/?x=1&theme=dark')
-    } finally {
-      delete g.window
-    }
-  })
-
-  it('appends nothing when the choice is system (nothing stored)', () => {
-    const g = globalThis as { window?: unknown }
-    g.window = { localStorage: { getItem: () => null } }
-    try {
-      expect(withTheme('http://localhost:3000/')).toBe('http://localhost:3000/')
-    } finally {
-      delete g.window
     }
   })
 })

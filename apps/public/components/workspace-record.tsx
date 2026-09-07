@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
 import { ActionLink } from '@/components/action-link'
-import { themedUrl, useDepth, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { CitedSources } from '@/components/cited-sources'
 import { GapReport } from '@/components/gap-report'
@@ -25,9 +24,6 @@ import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } fro
 // relying on confidenceGrade to throw would mean discovering the block in front
 // of a customer rather than at build time. This fails `next build` instead.
 assertProvisionalAllowed('The workspace record')
-
-/** The worked-example app's origin; localhost in dev, the deploy URL in prod. */
-const DASHBOARD_URL = process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000'
 
 /**
  * Which side of the plan the surrounding page sells. It changes the copy that
@@ -291,7 +287,6 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
               ) : null}
               . A line through a single point would be drawing movement that has not been measured.
             </p>
-            <WorkedExample />
           </>
         )}
       </section>
@@ -393,11 +388,6 @@ function Preflight({ workspace, context }: { workspace: Workspace; context: Work
       ) : null}
 
       {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
-
-      <section className="section">
-        <h2>A worked example</h2>
-        <WorkedExample />
-      </section>
     </>
   )
 }
@@ -511,38 +501,12 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
 }
 
 /**
- * The link to `apps/web`. Labelled as illustrative every time it appears: that
- * app is a design surface running on made-up cycles, and a reader who lands on
- * it from here must not mistake its charts for their own measurements.
- */
-export function WorkedExample() {
-  const theme = useTheme()
-  const depth = useDepth()
-  return (
-    <div style={{ marginTop: 'var(--space-3)' }}>
-      {/* themedUrl: the worked example is a different origin, so neither the
-          theme nor the depth chosen here can reach its localStorage. The query
-          parameters are how both choices cross; `system` sends no theme and the
-          media query decides there as it does here, and a reader who has never
-          set a depth sends none, so the route default applies on arrival. */}
-      <ActionLink href={themedUrl(DASHBOARD_URL, theme, depth)} external>
-        Worked example
-      </ActionLink>
-      <p className="prose">
-        A demonstration of the multi-cycle view. The figures there are illustrative, not collected, they belong to no real brand, and the run of
-        cycles they are drawn on was never collected on a schedule.
-      </p>
-    </div>
-  )
-}
-
-/**
  * MENTION RATE OVER CYCLES — real data, on the real record.
  *
- * Until 2026-09-02 a trend existed only in apps/web, over fixture cycles that
- * were never collected. This one is drawn from `cyclesFor`, which holds only
- * scans that were actually bought, one per UTC day, and it uses the SAME chart
- * component the worked example uses, pinned byte-identical across the two apps.
+ * Until 2026-09-02 a trend existed only in the fixture-only apps/web app (a
+ * "worked example" over cycles that were never collected; retired 2026-09-07).
+ * This one is drawn from `cyclesFor`, which holds only scans that were actually
+ * bought, one per UTC day.
  *
  * The verdict beside it is `compare()`'s between the two newest cycles: no
  * arrow, no colour and no emphasis unless the intervals separate, and "not

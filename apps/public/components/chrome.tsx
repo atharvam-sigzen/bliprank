@@ -8,13 +8,11 @@ import { readActiveDomain, readAgencyDomains, writeActiveDomain, writeRole } fro
 /**
  * Shared chrome: the product bar and the theme toggle.
  *
- * WHY THIS EXISTS. `apps/web` and `apps/public` are separate deploys, for
- * hosting reasons rather than product ones (ADR-0002): the Grader sits on
- * acquisition traffic nobody can forecast, so it goes to Cloudflare Pages where
- * static requests are free and unmetered, while the dashboard is low-volume and
- * latency-sensitive and goes to Vercel. That is an infrastructure fact, and a
- * reader should never have to infer it from two pages that look unrelated. One
- * bar, one mark, and each surface names the other.
+ * WHY THIS EXISTS. The Grader and the dashboard are one product, and a reader
+ * should never have to infer that from pages that look unrelated. One bar, one
+ * mark, and each surface names the other. (ADR-0002 plans the paid product as
+ * a separate Vercel deploy, `apps/web`; the fixture-only app of that name was
+ * retired 2026-09-07 and this file is the only chrome now.)
  *
  * THE ROUTE DECIDES THE CHROME. There are three chromes and the surface picks
  * one: / and both pricing pages are NEUTRAL (the fork lives there as two
@@ -395,11 +393,3 @@ export function ProductBar({ current }: { current: Surface }) {
 }
 
 export { THEME_BOOT, ThemeToggle, DepthToggle, themedUrl, useTheme, useDepth, applyTheme, applyDepth, readTheme, readDepth, defaultDepthFor, type ThemeChoice, type Depth }
-
-/**
- * Backward compatibility wrapper. In new code, prefer `themedUrl(url, useTheme())`
- * so the link stays reactive to live theme changes.
- */
-export function withTheme(url: string): string {
-  return themedUrl(url, readTheme())
-}

@@ -12,7 +12,7 @@ import { Headline } from './headline'
  * exists because one of them was NOT read, and shipped: at n=750 the dashboard
  * said "in about 1 in 3 answers. Could be as few as 1 in 4, or as many as 1 in
  * 3" — a closing clause that says nothing. It was found by rendering the page,
- * which is coverage apps/web only just acquired.
+ * which the source-scanning suites could never have done.
  */
 
 const metric = (k: number, n: number): Metric => {

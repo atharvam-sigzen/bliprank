@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
-import { WorkedExample, WorkspaceRecord } from '@/components/workspace-record'
+import { WorkspaceRecord } from '@/components/workspace-record'
 import { ACTIVE_STORAGE_KEY, readActiveDomain, workspaceFor, type Workspace } from '@/lib/workspace'
 
 // Module scope, exactly as the Grader does it. The record this page mounts
@@ -95,7 +95,6 @@ function NoWorkspace() {
         {/* No sample dashboard is rendered in its place. A placeholder screen
             teaches the reader that the numbers here are decorative. */}
         <p className="prose">Nothing is shown below because nothing has been measured.</p>
-        <WorkedExample />
       </section>
       <aside className="note">
         <span className="note__cap">Storage</span>

@@ -5,17 +5,14 @@ import { ActionLink } from './action-link'
 import { BackLink } from './back-link'
 
 const publicCss = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
-const webCss = readFileSync(new URL('../../web/app/globals.css', import.meta.url), 'utf8')
 
 describe('Measurement Record link styling system', () => {
   it('global stylesheet styles bare <a> tags with primary color and full-strength underline', () => {
-    for (const css of [publicCss, webCss]) {
-      expect(css).toMatch(/a\s*\{[^}]*color:\s*var\(--color-primary\)/)
-      expect(css).toMatch(/a\s*\{[^}]*text-decoration:\s*underline/)
-      expect(css).toMatch(/a\s*\{[^}]*text-decoration-thickness:\s*1\.5px/)
-      expect(css).toMatch(/a\s*\{[^}]*text-decoration-color:\s*currentColor/)
-      expect(css).toMatch(/a:hover\s*\{[^}]*text-decoration-thickness:\s*2\.5px/)
-    }
+    expect(publicCss).toMatch(/a\s*\{[^}]*color:\s*var\(--color-primary\)/)
+    expect(publicCss).toMatch(/a\s*\{[^}]*text-decoration:\s*underline/)
+    expect(publicCss).toMatch(/a\s*\{[^}]*text-decoration-thickness:\s*1\.5px/)
+    expect(publicCss).toMatch(/a\s*\{[^}]*text-decoration-color:\s*currentColor/)
+    expect(publicCss).toMatch(/a:hover\s*\{[^}]*text-decoration-thickness:\s*2\.5px/)
   })
 
   it('ActionLink renders forward action pattern with inline SVG arrow and accessible label', () => {
@@ -30,12 +27,12 @@ describe('Measurement Record link styling system', () => {
 
   it('ActionLink supports external links with rel="noreferrer"', () => {
     const html = renderToStaticMarkup(
-      <ActionLink href="http://localhost:3000" external>
-        Worked example
+      <ActionLink href="https://example.com/methodology" external>
+        Methodology
       </ActionLink>,
     )
     expect(html).toContain('class="actionlink"')
-    expect(html).toContain('href="http://localhost:3000"')
+    expect(html).toContain('href="https://example.com/methodology"')
     expect(html).toContain('rel="noreferrer"')
   })
 

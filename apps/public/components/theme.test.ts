@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   THEME_BOOT,
@@ -10,82 +9,6 @@ import {
   themedUrl,
   type ThemeChoice,
 } from './theme'
-
-const publicSrc = readFileSync(new URL('./theme.tsx', import.meta.url), 'utf8')
-const webSrc = readFileSync(new URL('../../web/components/theme.tsx', import.meta.url), 'utf8')
-
-describe('Theme single source of truth across deploy boundary', () => {
-  it('apps/public and apps/web theme.tsx files are byte-identical', () => {
-    expect(publicSrc).toBe(webSrc)
-  })
-})
-
-describe('every component duplicated across the boundary is pinned', () => {
-  /*
-   * ⚠️ THE DRIFT THIS EXISTS TO STOP ALREADY HAPPENED, AND SHIPPED.
-   *
-   * ADR-0002 puts the two apps on separate deploys, so a shared component is a
-   * copy rather than an import, and only theme.tsx was ever pinned. range-rail
-   * drifted: apps/public fixed its bounds row — each bound printed under the
-   * band edge it describes, because on a fixed 0-100 track a bound sitting at
-   * the corner reads as the SCALE'S endpoint, a mislabelled axis rather than a
-   * measurement — and the fix never crossed. apps/web kept drawing the old row
-   * on all three metric cards of the paid product for as long as both existed.
-   *
-   * Nothing caught it because nothing looked. A copy with no pin is a copy that
-   * will differ; the only question is when somebody notices.
-   */
-  const PINNED = ['theme.tsx', 'headline.tsx', 'range-rail.tsx', 'ci-trend-chart.tsx']
-
-  /**
-   * Same basename on both sides, DIFFERENT ON PURPOSE — so the rule below
-   * forces a decision rather than forcing identity.
-   *
-   * `chrome.tsx` is the only one: apps/public carries three chromes (neutral,
-   * brand, agency) and a workspace switcher because it owns the role fork,
-   * while apps/web is one bar with a static slot and nothing to switch between.
-   * Making those byte-identical would mean shipping the agency navigation to a
-   * deploy that has no agency routes.
-   */
-  const INTENTIONALLY_DIFFERENT = ['chrome.tsx']
-
-  it.each(PINNED)('%s is byte-identical in apps/public and apps/web', (file) => {
-    const a = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8')
-    const b = readFileSync(new URL(`../../web/components/${file}`, import.meta.url), 'utf8')
-    expect(a).toBe(b)
-  })
-
-  it('the pinned list is not stale — every named file exists on both sides', () => {
-    for (const file of PINNED) {
-      expect([file, existsSync(new URL(`./${file}`, import.meta.url))]).toEqual([file, true])
-      expect([file, existsSync(new URL(`../../web/components/${file}`, import.meta.url))]).toEqual([file, true])
-    }
-  })
-
-  it('THE CHECK BITES: a component in both trees and on NEITHER list is flagged', () => {
-    /*
-     * The lists are the thing that rots — someone adds a fourth shared component
-     * and does not think to classify it, which is exactly how range-rail
-     * drifted for as long as it did. So they are derived-checked rather than
-     * trusted: every basename present in BOTH components/ directories must be
-     * declared either pinned or deliberately divergent. Neither is a default.
-     */
-    const inBoth = readdirSync(new URL('.', import.meta.url))
-      .filter((f) => f.endsWith('.tsx') && !f.includes('.test.'))
-      .filter((f) => existsSync(new URL(`../../web/components/${f}`, import.meta.url)))
-    expect([...inBoth].sort()).toEqual([...PINNED, ...INTENTIONALLY_DIFFERENT].sort())
-  })
-
-  it('and a file declared divergent really does diverge', () => {
-    // Otherwise the escape hatch becomes the place things go to stop being
-    // checked: a file that is actually identical belongs on PINNED.
-    for (const file of INTENTIONALLY_DIFFERENT) {
-      const a = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8')
-      const b = readFileSync(new URL(`../../web/components/${file}`, import.meta.url), 'utf8')
-      expect([file, a === b]).toEqual([file, false])
-    }
-  })
-})
 
 describe('readTheme', () => {
   const ORIGINAL = Object.getOwnPropertyDescriptor(globalThis, 'window')
@@ -191,19 +114,19 @@ describe('applyTheme', () => {
 
 describe('themedUrl', () => {
   it('returns url unchanged when choice is null (never chose)', () => {
-    expect(themedUrl('http://localhost:3000', null)).toBe('http://localhost:3000')
-    expect(themedUrl('http://localhost:3000/?foo=bar', null)).toBe('http://localhost:3000/?foo=bar')
+    expect(themedUrl('https://example.com', null)).toBe('https://example.com')
+    expect(themedUrl('https://example.com/?foo=bar', null)).toBe('https://example.com/?foo=bar')
   })
 
   it('appends theme choice to url with ? or & as appropriate', () => {
-    expect(themedUrl('http://localhost:3000', 'dark')).toBe('http://localhost:3000?theme=dark')
-    expect(themedUrl('http://localhost:3000/', 'light')).toBe('http://localhost:3000/?theme=light')
-    expect(themedUrl('http://localhost:3000/?x=1', 'system')).toBe('http://localhost:3000/?x=1&theme=system')
+    expect(themedUrl('https://example.com', 'dark')).toBe('https://example.com?theme=dark')
+    expect(themedUrl('https://example.com/', 'light')).toBe('https://example.com/?theme=light')
+    expect(themedUrl('https://example.com/?x=1', 'system')).toBe('https://example.com/?x=1&theme=system')
   })
 
   it('preserves hash fragments after the query param', () => {
-    expect(themedUrl('http://localhost:3000/#section', 'dark')).toBe('http://localhost:3000/?theme=dark#section')
-    expect(themedUrl('http://localhost:3000/?x=1#section', 'light')).toBe('http://localhost:3000/?x=1&theme=light#section')
+    expect(themedUrl('https://example.com/#section', 'dark')).toBe('https://example.com/?theme=dark#section')
+    expect(themedUrl('https://example.com/?x=1#section', 'light')).toBe('https://example.com/?x=1&theme=light#section')
   })
 })
 

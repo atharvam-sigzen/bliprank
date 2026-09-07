@@ -11,11 +11,10 @@
  * refuses from everyone else.) Two surfaces need this marker today and they
  * must not word the gap two ways, so the wording lives here.
  *
- * apps/web cannot import from this file: separate app, separate deploy, no
- * workspace dependency between them. `apps/web/lib/planned.tsx` is a duplicate
- * of this module and THIS FILE IS THE SOURCE OF TRUTH. `planned.test.ts` asserts
- * the two agree character for character, so drift fails the suite rather than
- * shipping two descriptions of one gap.
+ * THIS FILE IS THE ONLY COPY. Until 2026-09-07 apps/web (the fixture-only
+ * worked example, since retired) carried a duplicate that `planned.test.ts`
+ * held character-for-character to this one, because the two deploys could not
+ * share an import. Any future surface states the gap by importing from here.
  */
 
 /** The label a planned surface prints beside its heading. One source, one wording. */

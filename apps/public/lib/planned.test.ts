@@ -2,10 +2,6 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import * as planned from './planned'
-// The duplicate in the other app. Imported by relative path because there is no
-// workspace dependency between the two apps - which is the whole reason the file
-// is duplicated, and the whole reason this test exists.
-import * as webCopy from '../../web/lib/planned'
 
 describe('the planned marker', () => {
   it('says the capability is missing, not that the method is unsettled', () => {
@@ -29,12 +25,6 @@ describe('the planned marker', () => {
     expect(planned.SCHEDULE_FACT.toLowerCase()).toContain('nothing schedules')
   })
 
-  it('keeps apps/web in step with the source of truth', () => {
-    expect(webCopy.PLANNED_CAPTION).toBe(planned.PLANNED_CAPTION)
-    expect(webCopy.NO_SCHEDULER_NOTE).toBe(planned.NO_SCHEDULER_NOTE)
-    expect(webCopy.SCHEDULE_FACT).toBe(planned.SCHEDULE_FACT)
-  })
-
   it('uses no em-dash in copy that reaches the screen', () => {
     for (const s of [planned.PLANNED_CAPTION, planned.NO_SCHEDULER_NOTE, planned.SCHEDULE_FACT]) {
       expect(s).not.toContain('—')
@@ -49,10 +39,8 @@ describe('the planned marker', () => {
  * marker went on one chart while the two loudest surfaces in the product went on
  * asserting the schedule: the pricing page - the most public, indexable thing
  * here - stated recurring daily collection in the present tense five times and
- * caveated only that you cannot buy it; the worked example marked its trend
- * chart and left the masthead's two dated cycles, three delta badges and a "vs
- * previous cycle" column unmarked, which teaches a reader that the comparison
- * capability is real and only the chart is aspirational.
+ * caveated only that you cannot buy it. (The fixture-only worked example in
+ * apps/web, which once did the same on its masthead, was retired 2026-09-07.)
  */
 describe('no surface asserts a cadence that nothing runs', () => {
   const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8')
@@ -81,49 +69,5 @@ describe('no surface asserts a cadence that nothing runs', () => {
     const description = /description: '([^']+)'/.exec(read('../app/pricing/page.tsx'))?.[1] ?? ''
     expect(description).not.toMatch(/re-checked daily/i)
     expect(description.toLowerCase()).toContain('once collection is scheduled')
-  })
-
-  it('the worked example marks the timer claim above everything that makes it', () => {
-    const src = read('../../web/app/page.tsx')
-    const at = (needle: string) => {
-      const i = src.indexOf(needle)
-      expect([needle, i > -1]).toEqual([needle, true])
-      return i
-    }
-    /*
-     * Two dated cycles a fortnight apart is the timer claim in one sentence, so
-     * the marker has to be inside that sentence.
-     *
-     * ANCHORED ON THE ELEMENT, NOT ON THE DATE. This read `at('Cycle
-     * 2026-08-15')` and a fixed 240-character window, which broke the moment
-     * the dates stopped being literals — they are read from the fixture now, so
-     * the masthead cannot drift from the denominators the way it had. The
-     * property was never about the string: it is that <Planned /> sits within
-     * the same element as the cycle dates, so the slice runs to that element's
-     * end rather than to an arbitrary offset.
-     */
-    const cycle = at('className="cycle"')
-    const cycleEnd = src.indexOf('</p>', cycle)
-    expect(cycleEnd).toBeGreaterThan(cycle)
-    expect(src.slice(cycle, cycleEnd)).toContain('<Planned />')
-    expect(src.slice(cycle, cycleEnd)).toContain('CYCLE_DATES.current')
-    expect(src.slice(cycle, cycleEnd)).toContain('CYCLE_DATES.previous')
-    // The notice is above the delta badges and above the by-engine table, not
-    // buried beside the chart. `{NO_SCHEDULER_NOTE}` is the use, not the import.
-    const notice = at('{NO_SCHEDULER_NOTE}')
-    expect(notice).toBeLessThan(at('previous={HEADLINE.mentionRate.previous}'))
-    const column = at('vs previous cycle')
-    expect(notice).toBeLessThan(column)
-    // ...and the one column that exists only if a second cycle was collected.
-    expect(src.slice(column, column + 80)).toContain('<Planned />')
-  })
-
-  it('the gap is worded once, from the shared constant, on every surface that states it', () => {
-    // Two hand-written descriptions of one gap is how they drift apart.
-    for (const rel of ['../../web/app/page.tsx']) {
-      const src = read(rel)
-      expect([rel, src.includes('{NO_SCHEDULER_NOTE}')]).toEqual([rel, true])
-      expect([rel, src.includes('no scheduler exists;')]).toEqual([rel, false])
-    }
   })
 })

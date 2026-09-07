@@ -25,12 +25,9 @@ import { describe, expect, it } from 'vitest'
 
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 
-const SHEETS = [
-  { name: 'apps/public', css: read('../app/globals.css') },
-  { name: 'apps/web', css: read('../../web/app/globals.css') },
-]
+const SHEETS = [{ name: 'apps/public', css: read('../app/globals.css') }]
 
-/** Every .tsx under both apps, so a new surface cannot opt out by being new. */
+/** Every .tsx under apps/public, so a new surface cannot opt out by being new. */
 function sources(): { path: string; src: string }[] {
   const out: { path: string; src: string }[] = []
   const walk = (dir: URL) => {
@@ -42,7 +39,6 @@ function sources(): { path: string; src: string }[] {
     }
   }
   walk(new URL('../../public/', import.meta.url))
-  walk(new URL('../../web/', import.meta.url))
   return out
 }
 
@@ -58,7 +54,7 @@ const SOURCES = sources()
  */
 const marked = (cls: string) => cls.split(/\s+/).includes('detail')
 
-/** Every className string in either app that carries `detail`. */
+/** Every className string in the app that carries `detail`. */
 const MARKED = SOURCES.flatMap(({ path, src }) =>
   [...src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)]
     .map((m) => ({ path, cls: m[1] ?? m[2] ?? '' }))
@@ -74,21 +70,22 @@ describe('the scan is not vacuous', () => {
    * checking nothing at all. That failure mode is worse than no suite, because
    * it reports safety.
    */
-  it('finds both apps and a realistic number of components', () => {
+  it('finds the app and a realistic number of components', () => {
     // A floor near the real count, not a token one: at 20 the walker could have
     // dropped half the tree — including every bracket route, which is where the
-    // agency surfaces live — and still passed.
-    expect(SOURCES.length).toBeGreaterThanOrEqual(38)
+    // agency surfaces live — and still passed. Derived 2026-09-07, when apps/web
+    // was retired and the walk became apps/public only: the walker then saw 39
+    // non-test .tsx files, so 35 leaves room for a small tidy-up and none for a
+    // dropped directory.
+    expect(SOURCES.length).toBeGreaterThanOrEqual(35)
     expect(SOURCES.some((s) => s.path.includes('[domain]'))).toBe(true)
     expect(SOURCES.some((s) => s.path.includes('/public/app/page.tsx'))).toBe(true)
-    expect(SOURCES.some((s) => s.path.includes('/web/app/page.tsx'))).toBe(true)
     expect(SOURCES.some((s) => s.path.includes('head-to-head-section'))).toBe(true)
   })
 
-  it('finds real .detail markings on both surfaces', () => {
+  it('finds real .detail markings', () => {
     expect(MARKED.length).toBeGreaterThanOrEqual(5)
     expect(MARKED.some((m) => m.path.includes('/public/'))).toBe(true)
-    expect(MARKED.some((m) => m.path.includes('/web/'))).toBe(true)
   })
 })
 
@@ -134,22 +131,20 @@ describe('no simple-depth rule targets a class the app never renders', () => {
   /*
    * ⚠️ WRITTEN BECAUSE I DID EXACTLY THIS, AND SHIPPED IT.
    *
-   * The first depth pass appended one shared block to BOTH stylesheets. Three of
-   * the four rules it put in apps/web were dead on arrival: that app renders
-   * `.prose`, `.prose--flag` and `.annotated` precisely nowhere — its body copy
-   * is `.stamp__body`, `.notice` and `.metric__interval`, none of them set in
-   * the display serif. So the typographic half of the fix corrected nothing
-   * there, while the sheet read as though the dashboard had had the same pass
-   * the Grader had.
+   * The first depth pass appended one shared block to BOTH stylesheets, back
+   * when apps/web (retired 2026-09-07) still existed. Three of the four rules
+   * it put there were dead on arrival: that app rendered `.prose`,
+   * `.prose--flag` and `.annotated` precisely nowhere — its body copy was
+   * `.stamp__body`, `.notice` and `.metric__interval`, none of them set in the
+   * display serif. So the typographic half of the fix corrected nothing there,
+   * while the sheet read as though the dashboard had had the same pass the
+   * Grader had.
    *
-   * That is the specific danger of a shared design system across two deploys:
-   * copying the RULES is not doing the WORK, and a rule that targets nothing is
-   * indistinguishable from a rule that is working until someone greps.
+   * Copying the RULES is not doing the WORK, and a rule that targets nothing is
+   * indistinguishable from a rule that is working until someone greps. One app
+   * now, but the sheet still outlives any one component.
    */
-  const APPS = [
-    { sheet: 'apps/public', dir: '/public/' },
-    { sheet: 'apps/web', dir: '/web/' },
-  ]
+  const APPS = [{ sheet: 'apps/public', dir: '/public/' }]
 
   const rendered = (dir: string) => {
     const classes = new Set<string>()
@@ -175,12 +170,12 @@ describe('no simple-depth rule targets a class the app never renders', () => {
   })
 
   it('the check bites — it would score a rule for an unrendered class as dead', () => {
-    const used = rendered('/web/')
-    // A class apps/web genuinely does not render, asserted so the rule above is
-    // not passing because `rendered` returns everything.
+    const used = rendered('/public/')
+    // A class the sheet declares (`.metric__value`, globals.css) and the app
+    // genuinely never renders — verified by grep on 2026-09-07 — asserted so the
+    // rule above is not passing because `rendered` returns everything.
     expect(used.has('detail')).toBe(true)
-    expect(used.has('annotated')).toBe(false)
-    expect(used.has('prose')).toBe(false)
+    expect(used.has('metric__value')).toBe(false)
   })
 })
 
@@ -235,7 +230,7 @@ describe('the sample size survives at simple depth', () => {
     expect(/className="[^"]*detail[^"]*"[^>]*>\s*n = /.test(rail)).toBe(false)
   })
 
-  it('nothing in either app marks a rail, a value or a bound as detail', () => {
+  it('nothing in the app marks a rail, a value or a bound as detail', () => {
     const PROTECTED = ['rail__n', 'rail__value', 'rail__bound', 'rail__track', 'record__domain']
     for (const { path, src } of SOURCES) {
       for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {

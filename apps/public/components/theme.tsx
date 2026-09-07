@@ -12,11 +12,9 @@ import { useSyncExternalStore } from 'react'
  * param-stripping regex — three places for the same class of bug to reappear.
  *
  * THEME is a tri-state (light / dark / system). Everything about it lives here,
- * and this file is byte-identical in apps/public and apps/web — pinned by
- * theme.test.ts the way planned.tsx is pinned, because the two apps cannot
- * share an import across their deploy boundary (ADR-0002). Edit both copies or
- * the test fails the build. Upgrade path: a shared package when a third
- * consumer appears.
+ * and this is the only copy: apps/web, which carried a byte-identical twin
+ * because the two deploys could not share an import (ADR-0002), was retired
+ * 2026-09-07. Upgrade path: a shared package when a second consumer appears.
  *
  * WHY THIS FILE EXISTS. The first implementation scattered the theme across
  * two drifted copies of three pieces — a toggle holding component state, a
