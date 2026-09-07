@@ -21,6 +21,7 @@
     "grader:answers": "tsx services/grader/src/answers.ts",
     "grader:publishers": "tsx services/grader/src/publishers.ts",
     "grader:version-diff": "tsx services/grader/src/version-diff.ts",
+    "grader:label": "tsx services/grader/src/label-run.ts",
     "grader:correct": "tsx services/grader/src/correct.ts",
     "grader:competitors": "tsx services/grader/src/competitors.ts",
     "grader:prompts": "tsx services/grader/src/prompts.ts",
