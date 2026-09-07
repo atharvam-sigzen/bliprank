@@ -37,6 +37,47 @@ export const USAGE_URL = 'https://api.openwebninja.com/usage'
 export const DEFAULT_CAP_USD = 5
 
 /**
+ * The per-run cap to open `Budget` with, for a store that may already have one.
+ *
+ * ⚠️ THE LEDGER'S OWN CAP WINS, ALWAYS, AND THAT IS THE WHOLE POINT.
+ *
+ * `Budget` lowers its cap whenever it is opened with a smaller one, and
+ * persists that on the first CHARGED call — not on construction, which is why
+ * the failure looks like nothing until money moves. So a caller that passes a
+ * fixed default silently rewrites a deliberately raised ledger back down to it.
+ *
+ * That is not hypothetical. `/api/scan` passed `GRADER_CAP_USD ?? 5`, so after
+ * the lifetime cap was raised $5 → $300 on 2026-09-07, ONE hand-started cycle
+ * from the workspace record — on a server where nobody had set the env var —
+ * would have written the cap back to $5, leaving $2.85 of a $300 budget and
+ * saying nothing. `daily-loop.ts` already avoided this by reading the cap back
+ * out of the file; this is that fix, made once, where both callers can reach it.
+ *
+ * ⚠️ AND `GRADER_CAP_USD` STILL MEANS SOMETHING — it just cannot LOWER an
+ * existing ledger any more. Deleting it outright would have been simpler and
+ * would have quietly changed what a documented `.env.example` variable does: a
+ * reader setting it to 1 would get 300 and no explanation. It now names the cap
+ * a NEW ledger is created with, which is the only reading that is both useful
+ * and safe. Changing an existing cap is what editing the ledger file is for,
+ * and `Budget` enforces that by throwing on any raise passed in code.
+ */
+export function ledgerCapUsd(dataDir: string, env: NodeJS.ProcessEnv = process.env): number {
+  const file = join(dataDir, 'ledger.json')
+  if (existsSync(file)) {
+    try {
+      const cap = (JSON.parse(readFileSync(file, 'utf8')) as { capUsd?: unknown }).capUsd
+      if (typeof cap === 'number' && Number.isFinite(cap) && cap > 0) return cap
+    } catch {
+      // Unreadable. Fall through to the bootstrap value rather than guessing a
+      // number: `Budget` will fail on the corrupt file itself and say so, which
+      // is a better error than a cap invented here.
+    }
+  }
+  const named = Number(env['GRADER_CAP_USD'])
+  return Number.isFinite(named) && named > 0 ? named : DEFAULT_CAP_USD
+}
+
+/**
  * Prompts one scan sends to EVERY engine, when `GRADER_PROMPTS_PER_SCAN` is not
  * set. Named because the per-domain ceiling derives its default from it: a
  * cycle is this many prompts times the engine count, and a ceiling that did not

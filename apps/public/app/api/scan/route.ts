@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
-import { DEFAULT_CAP_USD, checkGate, defaultGateConfig, recordScan, utcDay } from '../../../../../services/grader/src/live-gate.js'
+import { checkGate, defaultGateConfig, ledgerCapUsd, recordScan, utcDay } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCycle, runAllowanceFor } from '../../../../../services/grader/src/domain-ceiling.js'
 import { latestCycle, writeCycle, type CycleResult } from '../../../../../services/grader/src/cycles.js'
@@ -359,7 +359,10 @@ export async function POST(req: Request): Promise<Response> {
           plan: (env['OPENWEBNINJA_PLAN'] as 'payg' | 'pro' | 'ultra' | 'mega') ?? 'payg',
           mode: 'live',
           apiKey: found.key,
-          capUsd: Number(env['GRADER_CAP_USD'] ?? DEFAULT_CAP_USD),
+          // The store's own lifetime cap, never a default. Passing a smaller
+          // number here lowers the ledger permanently on the first charge —
+          // see `ledgerCapUsd`, which is where that reasoning lives.
+          capUsd: ledgerCapUsd(DATA, env),
           maxPrompts: cfg.callsPerEngine,
           // The most attempts this run may make, retries included: the cycle's
           // cells with headroom (ADR-0017). Bounds a retry storm at the

@@ -388,26 +388,46 @@ The reasoning is runway, not appetite: at pay-as-you-go worst case, 5 tracked
 domains on 17-prompt daily cycles is `$2.890/day`, so `$297.860` is about
 **103 days — 3.4 months**. Real runway, and still bounded.
 
-## ⚠️ A raise can be silently undone, and one caller does it
+## A raise could be silently undone. Fixed the same day.
 
 `Budget` lowers its cap whenever it is opened with a smaller one, and persists
-that on the first charged call. Measured on a copy of the real ledger:
-constructing at `$5` leaves the file at `$300`, and the first `charge()` writes
-`$5`, leaving `$2.853`.
+that on the first **charged** call — not on construction, which is why a first
+probe of this looked clean and why the failure would have been invisible until
+money moved. Measured on a copy of the real ledger: opened at `$5` the file
+stayed `$300`, and the first `charge()` wrote `$5`, leaving `$2.853`.
 
-| caller | cap passed | effect |
+Two callers open the ledger, and they disagreed:
+
+| caller | cap passed, before | |
 |---|---|---|
-| the daily loop (`daily-loop.ts:330`) | `ledgerCap(dataDir)` | **safe** — it reads the file's own cap back, commented "so the runner never lowers it" |
-| `/api/scan` (`route.ts:362`) | `GRADER_CAP_USD ?? DEFAULT_CAP_USD` = `5` | **rewrites the ledger cap to `$5`** on its first charged call |
+| the daily loop | `ledgerCap(dataDir)`, a private helper | safe — it read the file's own cap back |
+| `/api/scan` | `GRADER_CAP_USD ?? DEFAULT_CAP_USD` = `5` | **rewrote the cap to `$5`** on its first charged call |
 
-So one hand-started cycle from the workspace record, on a server without
-`GRADER_CAP_USD`, undoes the raise and says nothing. The operational mitigation
-is `GRADER_CAP_USD=300` in that server's environment, verified to hold.
+One hand-started cycle from the workspace record, on a server where nobody had
+exported the variable, undid the `$300` raise and said nothing.
 
-⚠️ **HUMAN REVIEW: spend-control logic.** The two callers disagree and the daily
-loop already carries the fix. Giving `/api/scan` the same `ledgerCap` treatment
-is a one-line change to spend control, which is human-owned, so it is reported
-here rather than made.
+**The root cause was one rule with two implementations, only one of which
+protected the ledger** — and the private one was the correct one, so the route
+had no way to inherit it. `ledgerCap` moved into `live-gate.ts` as the exported
+`ledgerCapUsd(dataDir, env)`, the daily loop's copy was deleted, and the route
+now calls the same function. The failure mode is gone by construction rather
+than by anyone remembering an environment variable.
+
+`GRADER_CAP_USD` was kept rather than deleted, and narrowed: it names the cap a
+**new** ledger is created with, and can no longer lower an existing one.
+Deleting it would have been simpler and would have quietly changed what a
+documented `.env.example` setting does — a reader setting it to `1` would get
+`300` with no explanation.
+
+Pinned by `apps/public/app/api/scan/ledger-cap.integration.test.ts`, which runs
+a real scan through the route with the variable unset and asserts the charge
+happened **before** asserting the cap survived it — because "the cap is
+unchanged" is trivially true of a run that never spent anything, which is
+exactly the mistake the first probe of this defect made. Reverting the route to
+the old rule makes it fail with `expected 5 to be 300`.
+
+⚠️ **HUMAN REVIEW: spend-control logic.** The change is small and the tests are
+above, but this is the layer that decides what may be charged.
 
 ## ⚠️ Open, for later — the lifetime model is a testing shape, not an operating budget
 

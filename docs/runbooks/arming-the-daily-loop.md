@@ -109,28 +109,34 @@ ceiling in this section is the constraint that matters.
 
 ⚠️ **But see §2.5 — that raise can be silently undone.**
 
-### 2.5 ⚠️ `GRADER_CAP_USD` must be set wherever the dev server runs
+### 2.5 The raise used to be undoable by forgetting an env var. It is not any more.
 
 `Budget` lowers a cap whenever it is opened with a smaller one, and persists
-that on the first charged call. Two callers open it:
+that on the first **charged** call — not on construction, which is why the
+failure was invisible until money moved. `/api/scan` passed
+`GRADER_CAP_USD ?? 5`, so one hand-started cycle from the workspace record, on a
+server where nobody had exported that variable, would have written the cap back
+to `$5` — leaving `$2.853` of a `$300` budget and saying nothing.
 
-| caller | cap it passes | effect |
-|---|---|---|
-| the daily loop (`daily-loop.ts:330`) | `ledgerCap(dataDir)` — the file's own | safe by construction; it reads the cap back so it can never lower it |
-| `/api/scan` (`route.ts:362`) | `GRADER_CAP_USD ?? DEFAULT_CAP_USD` = **5** | **silently rewrites the ledger cap to $5 on its first charged call** |
+**Fixed 2026-09-07.** Both callers now read the cap out of the ledger file
+itself, through one shared `ledgerCapUsd` in `live-gate.ts`:
 
-Measured on a copy of the real ledger: constructing the Budget at 5 leaves the
-file at 300, and the first `charge()` writes 5 — leaving $2.853. So one
-hand-started cycle from the workspace record, on a server without
-`GRADER_CAP_USD`, undoes the raise and nobody is told.
+| caller | cap it passes |
+|---|---|
+| the daily loop (`daily-loop.ts`) | `ledgerCapUsd(dataDir, env)` |
+| `/api/scan` (`route.ts`) | `ledgerCapUsd(DATA, env)` |
 
-**Set `GRADER_CAP_USD=300` in the environment of whatever runs
-`pnpm demo:grader`.** Verified: opened at 300, the cap holds through a charge.
+`GRADER_CAP_USD` still means something — it names the cap a **new** ledger is
+created with — but it can no longer lower an existing one. Changing an existing
+cap is what editing the ledger file is for, and `Budget` enforces that by
+throwing on any raise passed in code.
 
-⚠️ HUMAN REVIEW: the two callers disagree, and the daily loop already carries
-the fix (`ledgerCap`, commented "read back so the runner never lowers it").
-Giving `/api/scan` the same treatment is a change to spend-control logic, which
-is human-owned, so it is reported rather than made.
+**So there is nothing to set.** `apps/public` has no env files and the variable
+is unset on this machine; that is now the correct and safe state rather than a
+gap. `ledger-cap.integration.test.ts` pins it: a real scan through the route,
+with `GRADER_CAP_USD` unset, charges the ledger and leaves a raised cap at
+`$300`. Reverting the route to the old rule makes that test fail with
+`expected 5 to be 300`.
 
 ### Recommendation
 

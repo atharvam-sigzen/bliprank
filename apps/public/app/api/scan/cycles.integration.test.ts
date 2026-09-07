@@ -134,7 +134,11 @@ describe('a second cycle through the real runner, resolver, orchestrator, scorer
       comparisonBasis: string
       counts: { cellsRequested: number; collected: number; answersScored: number; providerCalls: number; failed: number }
       run: { day: string; mode: string }
-      brands: { isSubject: boolean; metric: { n: number; algo_version: string } }[]
+      // `algoVersion` and each brand's `name` are read by the one-stamp
+      // assertion below; the cast has to declare them or the app's typecheck
+      // fails while vitest, which does not typecheck, goes green.
+      algoVersion: string
+      brands: { name: string; isSubject: boolean; metric: { n: number; algo_version: string } }[]
       promptRows: unknown[]
     }
     expect(result.status).toBe('scanned')

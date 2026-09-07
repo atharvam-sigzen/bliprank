@@ -62,7 +62,7 @@ import { ENGINES } from '@bliprank/contracts'
 import { writeCycle, type CycleResult } from './cycles.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, type DueDomain, type DueList } from './due.js'
-import { checkGate, defaultGateConfig, recordScan, DEFAULT_CAP_USD, type GateVerdict } from './live-gate.js'
+import { checkGate, defaultGateConfig, ledgerCapUsd, recordScan, type GateVerdict } from './live-gate.js'
 import { loadApiKey } from './load-key.js'
 import { runGrader, type RunnerOptions } from './run.js'
 import type { ScanResult } from './scan.js'
@@ -327,7 +327,7 @@ function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.P
       plan: o.plan,
       day: o.day,
       engines: [...ENGINES],
-      capUsd: ledgerCap(opts.dataDir),
+      capUsd: ledgerCapUsd(opts.dataDir, opts.env),
       maxPrompts: gate.callsPerEngine,
       runAllowanceCalls: o.allowanceCalls,
       mode: o.mode,
@@ -340,14 +340,7 @@ function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.P
   }
 }
 
-/** The store's own per-run cap, read back so the runner never lowers it (a smaller cap passed once lowers the ledger for good). */
-function ledgerCap(dataDir: string): number {
-  const f = join(dataDir, 'ledger.json')
-  if (!existsSync(f)) return DEFAULT_CAP_USD
-  try {
-    const cap = (JSON.parse(readFileSync(f, 'utf8')) as { capUsd?: unknown }).capUsd
-    return typeof cap === 'number' && cap > 0 ? cap : DEFAULT_CAP_USD
-  } catch {
-    return DEFAULT_CAP_USD
-  }
-}
+// The store's own per-run cap now lives in `live-gate.ts` as `ledgerCapUsd`,
+// shared with `/api/scan`. It was private here, which is exactly why the route
+// grew its own answer and got it wrong: one rule, two implementations, and only
+// one of them protected the ledger.
