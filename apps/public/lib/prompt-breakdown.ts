@@ -56,6 +56,16 @@ export interface StoredPromptRow {
   readonly brandsDetected: number
   readonly cited: boolean
   readonly competitorsMentioned: readonly string[]
+  /**
+   * The bank's classification of the question: `discovery` or `problem-led`.
+   *
+   * ⚠️ ABSENT IS NOT A CATEGORY. It means either a custom prompt, which nobody
+   * classified, or a result written before 2026-09-07. A by-type view must
+   * report what it could not classify rather than bucketing it — `undefined` is
+   * not a third intent, and a chart with an "other" slice built from it would
+   * be showing the age of a file as if it were a property of the market.
+   */
+  readonly intent?: string
 }
 
 /** One answer, in the cell of the grid where its prompt row meets its engine column. */
@@ -63,6 +73,14 @@ export interface BreakdownCell extends StoredPromptRow {}
 
 export interface BreakdownLine {
   readonly prompt: string
+  /**
+   * The bank's classification for this question, when the file records one.
+   *
+   * Taken from the first row that carries it: every answer to one prompt comes
+   * from one bank entry, so they agree by construction. Absent when the file
+   * predates the field or the prompt is the customer's own.
+   */
+  readonly intent?: string
   /** One per answer to this prompt, in engine order. May be shorter than the engine list. */
   readonly cells: readonly BreakdownCell[]
   readonly answers: number
@@ -104,6 +122,8 @@ function isStoredPromptRow(r: unknown): r is StoredPromptRow {
     (x.position === null || Number.isFinite(x.position)) &&
     Number.isFinite(x.brandsDetected) &&
     typeof x.cited === 'boolean' &&
+    // Optional, so absent passes; present-and-not-a-string does not.
+    (x.intent === undefined || typeof x.intent === 'string') &&
     Array.isArray(x.competitorsMentioned) &&
     x.competitorsMentioned.every((c) => typeof c === 'string')
   )
@@ -152,6 +172,7 @@ export function promptBreakdown(scan: ScanResultFile): PromptBreakdown | null {
   const engineOrder = [...engines].sort()
   const prompts: BreakdownLine[] = [...byPrompt.entries()].map(([prompt, cells]) => ({
     prompt,
+    ...(cells.find((c) => c.intent)?.intent ? { intent: cells.find((c) => c.intent)!.intent! } : {}),
     cells: [...cells].sort((a, b) => engineOrder.indexOf(a.engine) - engineOrder.indexOf(b.engine)),
     answers: cells.length,
     mentionedIn: cells.filter((c) => c.mentioned).length,

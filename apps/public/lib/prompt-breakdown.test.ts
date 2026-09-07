@@ -182,3 +182,47 @@ describe('the counting — every number is a count of rows', () => {
     ])
   })
 })
+
+describe('intent reaches the aggregation layer a by-type view would use', () => {
+  const withIntent = (intent: string | undefined, over: Record<string, unknown> = {}) =>
+    row({ ...(intent ? { intent } : {}), ...over })
+
+  it('carries the bank’s classification onto the prompt line', () => {
+    const b = promptBreakdown(
+      scanWith([
+        withIntent('discovery', { prompt: 'q1', engine: 'chatgpt' }),
+        withIntent('discovery', { prompt: 'q1', engine: 'gemini' }),
+        withIntent('problem-led', { prompt: 'q2', engine: 'chatgpt' }),
+      ]),
+    )!
+    expect(b.prompts.map((p) => [p.prompt, p.intent])).toEqual([
+      ['q1', 'discovery'],
+      ['q2', 'problem-led'],
+    ])
+  })
+
+  it('⚠️ a file with no intents leaves the line’s intent ABSENT, not bucketed', () => {
+    // Every result written before 2026-09-07 is such a file, and so is every
+    // custom prompt. A by-type chart must report what it could not classify
+    // rather than inventing a third slice out of the age of a file.
+    const b = promptBreakdown(scanWith([row({ prompt: 'q1' }), row({ prompt: 'q2' })]))!
+    for (const line of b.prompts) {
+      expect(line.intent).toBeUndefined()
+      expect(Object.hasOwn(line, 'intent')).toBe(false)
+    }
+  })
+
+  it('a row whose intent is not a string is dropped, like any other malformed row', () => {
+    // The shape guard runs before reconciliation, so a dropped row shows up as
+    // a refusal rather than as a quietly shorter table.
+    expect(storedPromptRows(scanWith([row({ intent: 7 }), withIntent('discovery')]))).toHaveLength(1)
+  })
+
+  it('an intent the taxonomy does not use is carried, not silently corrected', () => {
+    // The lib types it as `string`, not a union: a surface that meets an
+    // unfamiliar value should show it and let a person notice, rather than map
+    // it onto the nearest known one.
+    const b = promptBreakdown(scanWith([withIntent('comparison', { prompt: 'q1' })]))!
+    expect(b.prompts[0]!.intent).toBe('comparison')
+  })
+})

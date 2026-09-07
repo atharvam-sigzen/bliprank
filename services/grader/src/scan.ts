@@ -37,7 +37,7 @@
 import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
-import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, PUBLISHER_REGISTRY, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
+import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, PUBLISHER_REGISTRY, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type Intent, type PromptBank } from '@bliprank/taxonomy'
 import type { BlobStore, CollectionOrchestrator } from '@bliprank/collector'
 
 /** The two groups that name no brand. See property 2 above. */
@@ -182,6 +182,28 @@ export interface PromptRow {
   readonly cited: boolean
   /** TRACKED competitors named in this answer. Empty for a bank with no leaders. */
   readonly competitorsMentioned: readonly string[]
+  /**
+   * The bank's own classification of the question — `discovery` or
+   * `problem-led`. Sourced from the bank, never inferred from the text.
+   *
+   * ⚠️ OPTIONAL, AND ABSENT MEANS "NOBODY CLASSIFIED THIS", NOT "UNKNOWN TYPE".
+   * Two ways it is absent, and they are different facts a surface must not
+   * merge:
+   *
+   *   - a CUSTOM prompt (ADR-0016). The customer wrote it. It is held to
+   *     PROPERTY 2 by the scorer's own matcher, but nobody assigned it a buyer
+   *     intent, and putting `'custom'` here would file a provenance fact in an
+   *     intent field. The custom rows live in their own block, so a reader
+   *     already knows where they came from.
+   *   - a result written before 2026-09-07, when this field did not exist.
+   *
+   * ⚠️ ONLY `discovery` AND `problem-led` CAN REACH A ROW, because PROPERTY 2
+   * sends nothing else. The type is the bank's full `Intent` rather than those
+   * two: narrowing it here would be a second statement of PROPERTY 2 that could
+   * disagree with the filter in `promptsFor`, and the filter is the one that
+   * decides what is collected.
+   */
+  readonly intent?: Intent
 }
 
 export interface ScanCounts {
@@ -615,7 +637,14 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   // PROPERTY 3. One basis for every brand, because every brand is scored over
   // the same answers from the same scan.
   const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell, competitorSet?.version)
-  const { brands, promptRows } = scoreBlock(answers, scored, subject, competitors, comparisonBasis)
+  /*
+   * The bank's classification, keyed by the prompt TEXT the cells were built
+   * from — `prompts`, not `bank.prompts`. Those differ whenever `maxPrompts`
+   * slices the set, and keying off the full bank would attach an intent to a
+   * prompt this cycle never sent.
+   */
+  const intentOf = new Map<string, Intent>(prompts.map((p) => [p.text, p.intent]))
+  const { brands, promptRows } = scoreBlock(answers, scored, subject, competitors, comparisonBasis, intentOf)
 
   // THE SECOND MEASUREMENT, over its own answers, on its own basis. Present
   // whenever custom cells were asked, even if none answered, so the record can
@@ -623,6 +652,8 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   const customPrompts: CustomPromptsBlock | undefined = req.customPrompts?.prompts.length
     ? (() => {
         const basis = comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { count: req.customPrompts.prompts.length, version: req.customPrompts.version })
+        // No map: the customer wrote these and nobody classified them. See
+        // `PromptRow.intent` for why that is an absent field, not a 'custom' one.
         const block = customAnswers.length ? scoreBlock(customAnswers, scored, subject, competitors, basis) : { brands: [], promptRows: [] }
         return { version: req.customPrompts.version, prompts: req.customPrompts.prompts, comparisonBasis: basis, counts: { cellsRequested: customCells.length, answersScored: customAnswers.length }, ...block }
       })()
@@ -655,7 +686,20 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
  * per-answer rows harvested from the same pass. One function, two callers (the
  * headline sample and the custom block), so the two cannot score differently.
  */
-function scoreBlock(answers: readonly RawAnswer[], scored: readonly BrandSpec[], subject: BrandSpec, competitors: readonly BrandSpec[], comparisonBasis: string): { brands: BrandResult[]; promptRows: PromptRow[] } {
+/**
+ * @param intentOf the bank's classification per prompt TEXT, for the block being
+ *   scored. Empty for the custom block, whose prompts nobody classified. Built
+ *   from the same list the cells came from, so it cannot name a prompt the scan
+ *   did not send or miss one it did.
+ */
+function scoreBlock(
+  answers: readonly RawAnswer[],
+  scored: readonly BrandSpec[],
+  subject: BrandSpec,
+  competitors: readonly BrandSpec[],
+  comparisonBasis: string,
+  intentOf: ReadonlyMap<string, Intent> = new Map(),
+): { brands: BrandResult[]; promptRows: PromptRow[] } {
   const n = answers.length
   /*
    * The subject's per-answer rows, harvested from the pass that was already
@@ -689,6 +733,10 @@ function scoreBlock(answers: readonly RawAnswer[], scored: readonly BrandSpec[],
           // question we did not ask.
           prompt: a.prompt || a.cell.normalisedPrompt,
           engine: a.cell.engine,
+          // Spread, not `intent,`: `exactOptionalPropertyTypes` refuses an
+          // explicit undefined, and a custom row should carry no key at all
+          // rather than a key whose value is nothing.
+          ...(intentOf.get(a.prompt || a.cell.normalisedPrompt) ? { intent: intentOf.get(a.prompt || a.cell.normalisedPrompt)! } : {}),
           mentioned: row.mentioned,
           mentionCount: row.mentionCount,
           position: row.position,

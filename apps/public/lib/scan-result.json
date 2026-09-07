@@ -159,6 +159,7 @@
     {
       "prompt": "What is the best CRM for a solo founder just starting out?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -171,6 +172,7 @@
     {
       "prompt": "What is the best CRM for a solo founder just starting out?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 2,
@@ -184,6 +186,7 @@
     {
       "prompt": "What is the best CRM for a solo founder just starting out?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -196,6 +199,7 @@
     {
       "prompt": "What is the best CRM for a solo founder just starting out?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -208,6 +212,7 @@
     {
       "prompt": "What is the best CRM for a solo founder just starting out?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -220,6 +225,7 @@
     {
       "prompt": "Which CRM works best for a 10-person B2B sales team?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 7,
       "position": 2,
@@ -234,6 +240,7 @@
     {
       "prompt": "Which CRM works best for a 10-person B2B sales team?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 2,
@@ -248,6 +255,7 @@
     {
       "prompt": "Which CRM works best for a 10-person B2B sales team?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 1,
@@ -261,6 +269,7 @@
     {
       "prompt": "Which CRM works best for a 10-person B2B sales team?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 1,
@@ -274,6 +283,7 @@
     {
       "prompt": "Which CRM works best for a 10-person B2B sales team?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 1,
@@ -286,6 +296,7 @@
     {
       "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -300,6 +311,7 @@
     {
       "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 4,
       "position": 4,
@@ -315,6 +327,7 @@
     {
       "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 4,
@@ -329,6 +342,7 @@
     {
       "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 2,
@@ -343,6 +357,7 @@
     {
       "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -353,6 +368,7 @@
     {
       "prompt": "What CRM should a marketing agency use to manage client pipelines?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 2,
@@ -367,6 +383,7 @@
     {
       "prompt": "What CRM should a marketing agency use to manage client pipelines?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -382,6 +399,7 @@
     {
       "prompt": "What CRM should a marketing agency use to manage client pipelines?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 4,
       "position": 1,
@@ -395,6 +413,7 @@
     {
       "prompt": "What CRM should a marketing agency use to manage client pipelines?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -407,6 +426,7 @@
     {
       "prompt": "What CRM should a marketing agency use to manage client pipelines?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -417,6 +437,7 @@
     {
       "prompt": "Which CRM is best for a small business in the UK?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 2,
@@ -429,6 +450,7 @@
     {
       "prompt": "Which CRM is best for a small business in the UK?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -443,6 +465,7 @@
     {
       "prompt": "Which CRM is best for a small business in the UK?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 2,
@@ -457,6 +480,7 @@
     {
       "prompt": "Which CRM is best for a small business in the UK?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 2,
@@ -471,6 +495,7 @@
     {
       "prompt": "Which CRM is best for a small business in the UK?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 1,
@@ -481,6 +506,7 @@
     {
       "prompt": "Best CRM for a startup in India with a small sales team",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -495,6 +521,7 @@
     {
       "prompt": "Best CRM for a startup in India with a small sales team",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -509,6 +536,7 @@
     {
       "prompt": "Best CRM for a startup in India with a small sales team",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -523,6 +551,7 @@
     {
       "prompt": "Best CRM for a startup in India with a small sales team",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -537,6 +566,7 @@
     {
       "prompt": "Best CRM for a startup in India with a small sales team",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 2,
@@ -549,6 +579,7 @@
     {
       "prompt": "Which CRM do large enterprise sales organisations typically use?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -562,6 +593,7 @@
     {
       "prompt": "Which CRM do large enterprise sales organisations typically use?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -577,6 +609,7 @@
     {
       "prompt": "Which CRM do large enterprise sales organisations typically use?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -591,6 +624,7 @@
     {
       "prompt": "Which CRM do large enterprise sales organisations typically use?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -605,6 +639,7 @@
     {
       "prompt": "Which CRM do large enterprise sales organisations typically use?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -617,6 +652,7 @@
     {
       "prompt": "Which CRMs have a free plan, and what are the limits on it?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -631,6 +667,7 @@
     {
       "prompt": "Which CRMs have a free plan, and what are the limits on it?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -645,6 +682,7 @@
     {
       "prompt": "Which CRMs have a free plan, and what are the limits on it?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -659,6 +697,7 @@
     {
       "prompt": "Which CRMs have a free plan, and what are the limits on it?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -673,6 +712,7 @@
     {
       "prompt": "Which CRMs have a free plan, and what are the limits on it?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -687,6 +727,7 @@
     {
       "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 2,
       "position": 1,
@@ -702,6 +743,7 @@
     {
       "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -716,6 +758,7 @@
     {
       "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 7,
       "position": 1,
@@ -729,6 +772,7 @@
     {
       "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 1,
@@ -743,6 +787,7 @@
     {
       "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -753,6 +798,7 @@
     {
       "prompt": "Best CRM for a field sales team in the UAE",
       "engine": "chatgpt",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 1,
       "position": 4,
@@ -767,6 +813,7 @@
     {
       "prompt": "Best CRM for a field sales team in the UAE",
       "engine": "copilot",
+      "intent": "discovery",
       "mentioned": true,
       "mentionCount": 3,
       "position": 3,
@@ -783,6 +830,7 @@
     {
       "prompt": "Best CRM for a field sales team in the UAE",
       "engine": "gemini",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -797,6 +845,7 @@
     {
       "prompt": "Best CRM for a field sales team in the UAE",
       "engine": "google-ai-mode",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -812,6 +861,7 @@
     {
       "prompt": "Best CRM for a field sales team in the UAE",
       "engine": "google-ai-overviews",
+      "intent": "discovery",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -824,6 +874,7 @@
     {
       "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -834,6 +885,7 @@
     {
       "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -847,6 +899,7 @@
     {
       "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -860,6 +913,7 @@
     {
       "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -870,6 +924,7 @@
     {
       "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -880,6 +935,7 @@
     {
       "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -890,6 +946,7 @@
     {
       "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -902,6 +959,7 @@
     {
       "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 4,
@@ -916,6 +974,7 @@
     {
       "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -928,6 +987,7 @@
     {
       "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -941,6 +1001,7 @@
     {
       "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -954,6 +1015,7 @@
     {
       "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -964,6 +1026,7 @@
     {
       "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -977,6 +1040,7 @@
     {
       "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -987,6 +1051,7 @@
     {
       "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -997,6 +1062,7 @@
     {
       "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1010,6 +1076,7 @@
     {
       "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1023,6 +1090,7 @@
     {
       "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1036,6 +1104,7 @@
     {
       "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -1049,6 +1118,7 @@
     {
       "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1059,6 +1129,7 @@
     {
       "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 4,
@@ -1073,6 +1144,7 @@
     {
       "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1086,6 +1158,7 @@
     {
       "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -1099,6 +1172,7 @@
     {
       "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -1112,6 +1186,7 @@
     {
       "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1122,6 +1197,7 @@
     {
       "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1132,6 +1208,7 @@
     {
       "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -1145,6 +1222,7 @@
     {
       "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1155,6 +1233,7 @@
     {
       "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1165,6 +1244,7 @@
     {
       "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1175,6 +1255,7 @@
     {
       "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
       "engine": "chatgpt",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 2,
       "position": 4,
@@ -1189,6 +1270,7 @@
     {
       "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
       "engine": "copilot",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 4,
@@ -1203,6 +1285,7 @@
     {
       "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
       "engine": "gemini",
+      "intent": "problem-led",
       "mentioned": true,
       "mentionCount": 1,
       "position": 3,
@@ -1216,6 +1299,7 @@
     {
       "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
       "engine": "google-ai-mode",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1229,6 +1313,7 @@
     {
       "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
       "engine": "google-ai-overviews",
+      "intent": "problem-led",
       "mentioned": false,
       "mentionCount": 0,
       "position": null,
@@ -1251,6 +1336,6 @@
     "capUsd": 5,
     "at": "2026-08-25T06:19:05.858Z"
   },
-  "rescoredAt": "2026-09-07T07:18:26.874Z",
-  "rescoredFrom": "det-2"
+  "rescoredAt": "2026-09-07T11:30:07.025Z",
+  "rescoredFrom": "det-3"
 }

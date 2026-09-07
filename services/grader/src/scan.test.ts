@@ -15,7 +15,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { UNPROMPTED_INTENTS, comparisonBasisFor, runScan, subjectFor } from './scan.js'
+import { UNPROMPTED_INTENTS, comparisonBasisFor, promptsFor, runScan, subjectFor } from './scan.js'
 
 /**
  * A controllable offline adapter. The pilot's fixture adapter mentions brands
@@ -553,5 +553,73 @@ describe('the customer’s own prompts are a second measurement, never the headl
     // The cycle's counts are the whole cycle; the block's are its share.
     expect(withCustom.counts.cellsRequested).toBe(plain.counts.cellsRequested + c.counts.cellsRequested)
     expect(withCustom.counts.answersScored).toBe(plain.counts.answersScored + c.counts.answersScored)
+  })
+})
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * INTENT ON A ROW — the bank's classification, carried to the payload.
+ *
+ * The bank has always classified every prompt as discovery, problem-led,
+ * comparison or brand-verification, and PROPERTY 2 sends only the first two.
+ * That classification never reached the stored result, so a by-prompt-type view
+ * was not buildable from a scan file: the reader could see which questions the
+ * brand appeared in, and not which KIND of question.
+ *
+ * Nothing here is scored, inferred or measured. The intent is copied off the
+ * bank entry the cell was built from, which is why the map is keyed on the
+ * prompt list the cells came from rather than on the whole bank.
+ */
+describe('promptRows carry the bank’s intent', () => {
+  it('every row names the intent the bank gave that prompt', async () => {
+    const d = deps(() => 'Pipedrive is a good pick.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 4 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const byText = new Map(bank.prompts.map((p) => [p.text, p.intent]))
+    expect(r.promptRows.length).toBeGreaterThan(0)
+    for (const row of r.promptRows) {
+      expect([row.prompt, row.intent]).toEqual([row.prompt, byText.get(row.prompt)])
+    }
+  })
+
+  it('⚠️ only the two unprompted intents can appear, because PROPERTY 2 sends nothing else', () => {
+    // Asserted over the whole taxonomy rather than one scan: if a bank ever
+    // gained a comparison prompt that `promptsFor` let through, a row would
+    // carry `comparison` and the headline would be measuring our own phrasing.
+    for (const bank of DEMO_BANKS) {
+      for (const p of promptsFor(bank)) expect([p.text, p.intent]).toEqual([p.text, expect.stringMatching(/^(discovery|problem-led)$/)])
+    }
+  })
+
+  it('the map is keyed on the prompts SENT, so a sliced cycle attaches nothing extra', async () => {
+    // `maxPrompts` slices the set. Keying off the full bank would still find an
+    // intent for a prompt this cycle never asked, which is harmless here and
+    // exactly the kind of near-miss that becomes wrong when a bank is edited.
+    const d = deps(() => 'nothing')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+    const sent = new Set(promptsFor(DEMO_BANKS.find((b) => b.category === 'crm-software')!, 2).map((p) => p.text))
+    expect(new Set(r.promptRows.map((x) => x.prompt))).toEqual(sent)
+    expect(r.promptRows.every((x) => x.intent !== undefined)).toBe(true)
+  })
+
+  it('⚠️ a CUSTOM prompt carries no intent — nobody classified it', async () => {
+    // ADR-0016: the customer wrote it. It is held to PROPERTY 2 by the scorer's
+    // own matcher, but it has no buyer intent, and `'custom'` here would file a
+    // provenance fact in an intent field. The key is absent, not undefined.
+    const d = deps(() => 'Pipedrive is a good pick.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 1, customPrompts: { version: 1, prompts: ['how do we shorten our sales cycle'] } }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    expect(r.promptRows.every((x) => x.intent !== undefined)).toBe(true)
+    const custom = r.customPrompts
+    expect(custom, 'the custom block should exist').toBeDefined()
+    expect(custom!.promptRows.length).toBeGreaterThan(0)
+    for (const row of custom!.promptRows) {
+      expect(row.intent).toBeUndefined()
+      expect(Object.hasOwn(row, 'intent'), 'absent, not an explicit undefined').toBe(false)
+    }
   })
 })
