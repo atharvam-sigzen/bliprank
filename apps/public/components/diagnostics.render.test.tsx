@@ -113,6 +113,77 @@ describe('the gap report', () => {
     expect(html).toContain('cycle of 2026-08-25')
   })
 
+  /* ────────────────────────────────────────────────────────────────────────
+     THE COVERAGE STRIP — a count drawn as a count.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  it('draws one division per term and fills the covered ones', () => {
+    const html = renderToStaticMarkup(<GapReportBody report={parseGapReport(base)!} />)
+    const strips = [...html.matchAll(/<span class="cov__strip"[^>]*>([\s\S]*?)<\/span><span class="cov__count/g)]
+    expect(strips.length).toBe(parseGapReport(base)!.coverage.length)
+    // Worst first: 1 of 2, then 2 of 2.
+    const counts = strips.map((m) => ({
+      total: (m[1]!.match(/class="cov__seg/g) ?? []).length,
+      filled: (m[1]!.match(/cov__seg cov__seg--on/g) ?? []).length,
+    }))
+    expect(counts).toEqual([
+      { total: 2, filled: 1 },
+      { total: 2, filled: 2 },
+    ])
+  })
+
+  it('prints the count in words, so nothing rests on seeing the empty divisions', () => {
+    /*
+     * WCAG 1.4.11 in the shape this component needs it. The filled ink and the
+     * mean rule clear 3:1 and carry meaning; the EMPTY divisions are allowed to
+     * be quiet only because the denominator is also stated as text. Remove the
+     * count and the granularity would live in a mark at 1.1:1, which is the
+     * same defect as a bar nobody can see.
+     */
+    const html = renderToStaticMarkup(<GapReportBody report={parseGapReport(base)!} />)
+    expect(html).toContain('1 of 2')
+    expect(html).toContain('2 of 2')
+  })
+
+  it('puts the mean rule at the mean, on every row', () => {
+    const html = renderToStaticMarkup(<GapReportBody report={parseGapReport(base)!} />)
+    const means = [...html.matchAll(/class="cov__mean" style="left:([^"]+)"/g)].map((m) => m[1]!.trim())
+    expect(means.length).toBe(parseGapReport(base)!.coverage.length)
+    // One position, every row: read down the column it is a single upright.
+    expect(new Set(means).size).toBe(1)
+    expect(means[0]).toContain(String(Math.round(parseGapReport(base)!.meanCoverage * 100)))
+  })
+
+  it('THE HONESTY CONSTRAINT: coverage never borrows the measurement rail language', () => {
+    /*
+     * Coverage is a word check over ONE document. It has no sample, so it has no
+     * interval, and R8 does not apply because there is no estimate to carry one.
+     * The rail means the opposite — "a measurement, and here is how much it does
+     * not know" — so the two must not share a vocabulary. Asserted rather than
+     * remembered, because the cheapest way to make this look richer later is to
+     * reach for the component that is already there.
+     */
+    const html = renderToStaticMarkup(<GapReportBody report={parseGapReport(base)!} />)
+    const cells = [...html.matchAll(/<span class="cov">([\s\S]*?)<\/span><\/td>/g)].map((m) => m[1]!)
+    expect(cells.length).toBeGreaterThan(0)
+    for (const cell of cells) {
+      for (const borrowed of ['rail__', 'range__', 'ci_low', '95%']) {
+        expect([borrowed, cell.includes(borrowed)]).toEqual([borrowed, false])
+      }
+    }
+    // ...and no interval is printed anywhere in the coverage section.
+    expect(html).not.toMatch(/coverage[\s\S]{0,400}95% interval/i)
+  })
+
+  it('a question with no content terms says so rather than drawing an empty box', () => {
+    // aeo-audit gives a prompt with no scoreable terms ratio 0. A single empty
+    // division would read as "none of one term", which is a different claim.
+    const empty = { ...parseGapReport(base)!, coverage: [{ prompt: 'CRM?', covered: [], missing: [], ratio: 0 }] }
+    const html = renderToStaticMarkup(<GapReportBody report={empty} />)
+    expect(html).toContain('no terms')
+    expect(html).not.toContain('cov__strip')
+  })
+
   it('a truncated page changes what a gap means, in the words', () => {
     const html = renderToStaticMarkup(<GapReportBody report={parseGapReport({ ...base, truncated: true })!} />)
     expect(html).toContain('not in the part of the page we read')

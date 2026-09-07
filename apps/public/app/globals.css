@@ -3491,3 +3491,65 @@ h3.record__title,
 .finding__why {
   margin: 4px 0 0;
 }
+
+/* ==========================================================================
+   TERM COVERAGE — a count, drawn as a count
+   ==========================================================================
+   Discrete divisions, never a continuous bar: each row is split into that
+   question's own term count, so a row of sixths cannot be mistaken for a row of
+   ninths at the same fill. See the note above CoverageStrip.
+
+   NOT THE RAIL'S LANGUAGE. No Prussian band, no needle, no bounds. The rail
+   means "a measurement and its interval"; this is a word check over one
+   document, with no sample and no uncertainty to draw.
+   ========================================================================== */
+
+.cov {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 11rem;
+}
+
+.cov__strip {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-width: 5.5rem;
+  height: 10px;
+}
+
+.cov__seg {
+  flex: 1;
+  border-radius: 1px;
+  /* The empty divisions are deliberately quiet: the count beside the strip
+     states the denominator in words, so nothing meaningful depends on seeing
+     them (WCAG 1.4.11). They show granularity, not a value. */
+  background: var(--color-muted);
+}
+
+/* Neutral ink, not the data colour. --color-primary is spent on measurements,
+   and this is a fact about a document. 5.85:1 on the card, well past the 3:1 a
+   non-text mark owes. */
+.cov__seg--on {
+  background: var(--color-neutral-ink);
+}
+
+/* The mean across all questions, at the same x on every row: read down the
+   column it is a dashed upright. --color-field-border is the token that clears
+   3:1 on the card, the paper and the muted surface, which this mark owes
+   because it carries meaning. */
+.cov__mean {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--color-field-border);
+}
+
+.cov__count {
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+}

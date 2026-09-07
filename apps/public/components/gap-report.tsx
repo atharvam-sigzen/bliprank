@@ -133,8 +133,9 @@ export function GapReportBody({ report }: { report: Report }) {
       <h3 style={{ marginTop: 'var(--space-5)' }}>Does the page address the questions being asked about it?</h3>
       <p className="prose">
         Mean term coverage <span className="num">{Math.round(report.meanCoverage * 100)}%</span> across <span className="num">{report.coverage.length}</span>{' '}
-        questions. A word check, not a relevance score: these are the terms in the questions we send the engines, and whether the page&apos;s own
-        text uses them anywhere.
+        questions, least covered first. A word check, not a relevance score: these are the terms in the questions we send the engines, and whether
+        the page&apos;s own text uses them anywhere. Each row is divided into that question&apos;s own terms, filled for the ones the page uses;
+        the upright rule marks the mean.
       </p>
       {report.truncated ? (
         <p className="prose prose--flag">
@@ -146,7 +147,7 @@ export function GapReportBody({ report }: { report: Report }) {
           <caption className="visually-hidden">Term coverage per question, least covered first</caption>
           <thead>
             <tr>
-              <th scope="col">Covered</th>
+              <th scope="col">Terms covered</th>
               <th scope="col">Question</th>
               <th scope="col">Terms {absent}</th>
             </tr>
@@ -154,7 +155,9 @@ export function GapReportBody({ report }: { report: Report }) {
           <tbody>
             {worst.map((c) => (
               <tr key={c.prompt}>
-                <td className="num">{Math.round(c.ratio * 100)}%</td>
+                <td>
+                  <CoverageStrip covered={c.covered.length} missing={c.missing.length} mean={report.meanCoverage} />
+                </td>
                 <td>{c.prompt}</td>
                 <td className="num">{c.missing.length ? c.missing.join(', ') : '—'}</td>
               </tr>
@@ -169,5 +172,57 @@ export function GapReportBody({ report }: { report: Report }) {
         things that work. Nothing here writes or publishes anything.
       </p>
     </>
+  )
+}
+
+/**
+ * COVERAGE AS SEGMENTS, NOT AS A BAR — and the difference is the honesty.
+ *
+ * THE SHAPE OF THE DATA DECIDED THIS. Rendered, the seventeen rows read 17, 43,
+ * 43, 50, 67 ×5, 71, 75, 80, 83, 86, 88, 89, 100 — one real outlier and a heavy
+ * cluster the ordered table buries. That is the case for drawing it. But every
+ * one of those figures is a ratio of SMALL INTEGERS WITH DIFFERENT
+ * DENOMINATORS: 1/6, 3/7, 1/2, 2/3, 5/7, 3/4, 4/5, 5/6, 6/7, 7/8, 8/9, 1/1,
+ * because a question carries five to nine content terms. A continuous bar
+ * invites a reader to compare lengths across rows whose granularity differs by
+ * half, which is a precision the number does not have.
+ *
+ * So each row is divided into ITS OWN term count and filled for the terms the
+ * page uses. The fill fraction is the ratio, the number of divisions is the
+ * denominator, and a row of sixths visibly cannot say what a row of ninths can.
+ *
+ * ⚠️ NOT THE RAIL'S LANGUAGE, DELIBERATELY. The rail is a continuous Prussian
+ * band with a needle and printed bounds, and it means "a measurement, and here
+ * is how much it does not know". This is neither measured nor uncertain: it is
+ * a word check over one document, with no sample and therefore no interval. It
+ * gets discrete ticks in the neutral ink, no needle and no bounds, so the two
+ * cannot be read as the same kind of claim. R8 does not apply because there is
+ * no estimate here to carry one — and inventing an interval for a word count
+ * would be the exact error in the opposite direction.
+ *
+ * THE COUNT IS PRINTED, so nothing meaningful rests on seeing the empty
+ * segments (WCAG 1.4.11). The filled ink and the mean rule both clear 3:1; the
+ * empty divisions are allowed to be quiet because the text beside them says the
+ * same thing.
+ */
+function CoverageStrip({ covered, missing, mean }: { covered: number; missing: number; mean: number }) {
+  const total = covered + missing
+  // A prompt with no content terms at all: aeo-audit gives it ratio 0 and there
+  // is nothing to divide, so the strip is omitted rather than drawn as a single
+  // empty box that would read as "none of one term".
+  if (total === 0) return <span className="cov__count num">no terms</span>
+
+  return (
+    <span className="cov">
+      <span className="cov__strip" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <span className={i < covered ? 'cov__seg cov__seg--on' : 'cov__seg'} key={i} />
+        ))}
+        <span className="cov__mean" style={{ left: `${mean * 100}%` }} />
+      </span>
+      <span className="cov__count num">
+        {covered} of {total}
+      </span>
+    </span>
   )
 }
