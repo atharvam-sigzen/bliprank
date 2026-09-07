@@ -61,9 +61,9 @@ attached. Getting this mental model right prevents the two expensive mistakes.
               ┌────────────────┴────────────────┐
               ▼                                 ▼
    ┌────────────────────┐          ┌──────────────────────────┐
-   │ apps/web (Next.js) │          │ apps/public (Grader)     │
-   │ dashboards, recon, │          │ free tool, indexable,     │
-   │ agency workspaces  │          │ cache-served, <90s        │
+   │ apps/web (Next.js) │          │ apps/public (Grader +    │
+   │ NOT CREATED YET;P4 │          │ workspace record)        │
+   │ dashboards, recon  │          │ free tool, cache-served  │
    └────────────────────┘          └──────────────────────────┘
 ```
 
@@ -72,8 +72,8 @@ Full detail: `docs/ARCHITECTURE.md`. Read it when touching anything structural.
 ### Repository map
 
 ```
-apps/web              Next.js 15 App Router — the paid product
-apps/public           Grader + satellite free tools (separate deploy)
+apps/web              (not created yet; P4) Next.js paid product per ADR-0002
+apps/public           Grader + workspace record + free tools (separate deploy)
 services/collector    Worker fleet, Engine Adapters, rate-limit budget
 services/scorer       Deterministic pass + sampled LLM, versioned registry
 services/reconcile    Competitor export parsers, variance decomposition
@@ -312,6 +312,17 @@ homepages, not from that sample. Building the labelled 100 is what closes it.
 the classifier thresholds (see ADR-0009 "Open, and blocking G3"), and whether the
 SSRF blocked-range table in `services/grader/src/fetch-site.ts` matches the
 network the collector will actually deploy into.
+**Real answers exist** (since 2026-09-01, local `data-live`, gitignored);
+`docs/PROGRESS.md` §1 has the figures. G0 is still unrun.
+**`apps/web` retired (2026-09-07):** the fixture-only dashboard is gone; the
+workspace record in `apps/public/dashboard` is the dashboard. ADR-0002 still
+places the paid product on Vercel as `apps/web` when P4 builds it. Tag
+`apps-web-fixture-final` is the last commit with it.
+**The claim is released (2026-09-07):** the orchestrator's index claim ends
+with the collection, not with its lease; an allowance stop is
+`allowance-exhausted`, distinct from `budget-exhausted`; completing a partial
+cell buys only the missing runs. ⚠️ HUMAN REVIEW: spend-control logic.
+**`pnpm typecheck` covers the apps** as well as packages and services.
 **Cycles (ADR-0013, 2026-09-02):** a domain can be collected again on a later
 UTC day, every cycle is kept (`results/cycles/<domain>/<day>.json`), and the
 workspace record draws a real trend once two exist. A person starts each cycle
