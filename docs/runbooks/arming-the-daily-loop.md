@@ -1,6 +1,8 @@
 # Runbook — arming the daily loop
 
-**Status:** PREPARATION ONLY. Nothing in this file has been executed.
+**Status:** PREPARATION ONLY, with one exception recorded in §8 — the runner
+ledger's cap was raised from `$5.00` to `$300.00` on 2026-09-07 at the owner's
+instruction. Nothing else here has been executed.
 **Written:** 2026-09-07 · **For:** the owner, to run personally
 **Relates to:** ADR-0017 (daily scheduler) · ADR-0013 (cycles) · R3 (spend control)
 
@@ -19,7 +21,7 @@ Checked on 2026-09-07, read-only:
 | `GRADER_DAILY_LOOP` | **not set** — not in the shell, not in `.env`, not in `.env.local` |
 | Scheduled task `BlipRank daily tick` | **does not exist** (`schtasks /Query` → not found) |
 | Tracked domains | **0** — there is no `tracked.json`, so the formula cap is `$0.000` and a tick collects nothing even if armed |
-| Runner ledger | `$5.00` cap, `$2.140` spent, **`$2.860` left** |
+| Runner ledger | `$300.00` cap, `$2.140` spent, **`$297.860` left** — raised from `$5.00` on 2026-09-07, see §2 |
 | `COLLECTION_BUDGET_USD_DAILY` in `.env` | `25` — **and it is not in force.** See §1. |
 | `OPENWEBNINJA_PLAN` in `.env` | `payg` — also not in force, same reason |
 
@@ -91,19 +93,44 @@ At 17 prompts on payg, the formula cap and what it costs over 30 days:
 **The plan is a 3.8× lever on all of it.** The same ceiling that covers 3 domains
 on payg covers 13 on mega. If the plan changes, revisit this number.
 
-### ⚠️ A second ceiling you will hit first
+### The second ceiling, and why it no longer binds
 
-The runner's lifetime ledger for `data-live` has **$2.860 left of $5.00**, and
-the loop refuses outright when today's cap exceeds that headroom
-(`daily-loop.ts:237`). So today, before anything else:
+The loop refuses outright when today's cap exceeds what the runner's lifetime
+ledger has left (`daily-loop.ts:237`). That ledger was `$5.00` with `$2.860`
+left, which capped the loop at **4 tracked domains** before the fifth made every
+tick refuse.
 
-- **4 tracked domains** at 17 prompts payg → cap $2.776 → fits
-- **5 tracked domains** → cap $3.468 → **the tick refuses every day**, with a
-  message naming the ledger
+**Raised to `$300.00` on 2026-09-07** by a deliberate edit to
+`services/grader/data-live/ledger.json` — the only way, since `Budget` throws on
+any raise passed in code. `$297.860` remains, which at 17 prompts on payg is
+about **3.4 months of 5 domains collecting daily** ($2.890/day). The ledger gate
+now binds only above roughly 429 tracked domains, so in practice the hard daily
+ceiling in this section is the constraint that matters.
 
-Raising that is a deliberate edit to `services/grader/data-live/ledger.json`,
-and `Budget` refuses to raise a cap any other way. Decide it separately; do not
-discover it at 06:15.
+⚠️ **But see §2.5 — that raise can be silently undone.**
+
+### 2.5 ⚠️ `GRADER_CAP_USD` must be set wherever the dev server runs
+
+`Budget` lowers a cap whenever it is opened with a smaller one, and persists
+that on the first charged call. Two callers open it:
+
+| caller | cap it passes | effect |
+|---|---|---|
+| the daily loop (`daily-loop.ts:330`) | `ledgerCap(dataDir)` — the file's own | safe by construction; it reads the cap back so it can never lower it |
+| `/api/scan` (`route.ts:362`) | `GRADER_CAP_USD ?? DEFAULT_CAP_USD` = **5** | **silently rewrites the ledger cap to $5 on its first charged call** |
+
+Measured on a copy of the real ledger: constructing the Budget at 5 leaves the
+file at 300, and the first `charge()` writes 5 — leaving $2.853. So one
+hand-started cycle from the workspace record, on a server without
+`GRADER_CAP_USD`, undoes the raise and nobody is told.
+
+**Set `GRADER_CAP_USD=300` in the environment of whatever runs
+`pnpm demo:grader`.** Verified: opened at 300, the cap holds through a charge.
+
+⚠️ HUMAN REVIEW: the two callers disagree, and the daily loop already carries
+the fix (`ledgerCap`, commented "read back so the runner never lowers it").
+Giving `/api/scan` the same treatment is a change to spend-control logic, which
+is human-owned, so it is reported rather than made.
 
 ### Recommendation
 
@@ -114,8 +141,8 @@ Why that figure:
 
 - it is **above** the formula for 2 domains ($1.387), so it does not bind and
   does not silently under-collect;
-- it is **below** the ledger headroom ($2.860), so the ledger gate cannot
-  surprise you on day one;
+- it sits far below the ledger headroom ($297.860), so the ledger gate cannot
+  surprise you on day one — see §2.5 for the one way that headroom can vanish;
 - the worst month it permits is **$60**, which is a number you would notice on a
   statement and not a number that hurts;
 - and if the tracked list is fat-fingered to 20 domains, the cap holds at $2.00
@@ -249,7 +276,10 @@ Stated explicitly, because this file could be mistaken for a record of actions:
   and is not read by the tick regardless
 - ❌ No domain tracked — `tracked.json` does not exist
 - ❌ No live tick run, with or without `--apply`
-- ❌ The runner ledger's `$5.00` cap not changed
+- ✅ **The runner ledger's cap WAS raised**, `$5.00` → `$300.00`, on 2026-09-07
+  at the owner's instruction. Only `capUsd` changed; `spentUsd`
+  (`2.1399999999999895`), `calls` (399), `byEngine` and `updatedAt` are
+  byte-identical. This is the one action in this file that has been taken.
 
 The only commands run while writing this were `pnpm grader:tick` with no flags
 (which prints the bill and collects nothing) and read-only `schtasks /Query`.

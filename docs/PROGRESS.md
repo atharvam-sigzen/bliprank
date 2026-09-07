@@ -1383,6 +1383,20 @@ is created then, from `apps/public`'s components, not before.
 verified against a real service. Both are still pinned only by
 self-consistency and both fail closed.
 
+**(i) The spend ledger becomes a recurring budget, not a lifetime total.**
+`Budget` is a lifetime figure for a data directory that never refills; the cap
+was raised $5 → $300 on 2026-09-07 and that buys about 3.4 months at 5 domains
+collecting daily. The model is right for testing and wrong for paying
+customers: a counter that only decreases has to be raised by hand on a cadence
+nobody scheduled, means nothing to anyone doing accounts, and stops collection
+for everyone at once, mid-month, when a total that started in August finally
+lands. The likely shape is a monthly reset with the lifetime cap kept
+underneath as the runaway guard — `daily-spend.json` is the working precedent.
+**Not a task**: it is a billing question (what period, per-store or
+per-workspace, what happens to an in-flight cycle at the boundary, who is told
+when it binds) and none of it is answerable before there is a plan and a
+customer. Reasoning in ADR-0017 Amendment 1.
+
 **Still true:** nothing past G0 counts as validated progress until G0 has a
 real pass/fail result. Real answers exist now; the unit economics have not been
 measured, and measuring them is what G0 is for.

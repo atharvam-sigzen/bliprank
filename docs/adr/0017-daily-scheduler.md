@@ -365,3 +365,81 @@ with its cells and cost, a custom set adds to them; not due for a cycle
 today, for a prior cycle on another basis, for a domain over its ceiling,
 for a domain whose bank is gone. `pnpm grader:track` and `pnpm grader:tick`
 run on a scratch store; `--apply` refused. The live store was not written.
+
+
+---
+
+# Amendment 1 — the ledger raised, and the lifetime model flagged for later
+
+**Status:** Accepted · **Date:** 2026-09-07
+
+## The raise
+
+The runner's lifetime ledger for `data-live` went from **`$5.00` to `$300.00`**
+at the owner's instruction, by editing
+`services/grader/data-live/ledger.json` — which is the only mechanism, because
+`Budget`'s constructor throws on any raise passed in code ("raise it deliberately
+by editing the ledger"). Only `capUsd` changed; `spentUsd`
+(`2.1399999999999895`), `calls` (399), `byEngine` and `updatedAt` are
+byte-identical, and `remainingUsd()` read back through `Budget` itself is
+**`$297.860`**.
+
+The reasoning is runway, not appetite: at pay-as-you-go worst case, 5 tracked
+domains on 17-prompt daily cycles is `$2.890/day`, so `$297.860` is about
+**103 days — 3.4 months**. Real runway, and still bounded.
+
+## ⚠️ A raise can be silently undone, and one caller does it
+
+`Budget` lowers its cap whenever it is opened with a smaller one, and persists
+that on the first charged call. Measured on a copy of the real ledger:
+constructing at `$5` leaves the file at `$300`, and the first `charge()` writes
+`$5`, leaving `$2.853`.
+
+| caller | cap passed | effect |
+|---|---|---|
+| the daily loop (`daily-loop.ts:330`) | `ledgerCap(dataDir)` | **safe** — it reads the file's own cap back, commented "so the runner never lowers it" |
+| `/api/scan` (`route.ts:362`) | `GRADER_CAP_USD ?? DEFAULT_CAP_USD` = `5` | **rewrites the ledger cap to `$5`** on its first charged call |
+
+So one hand-started cycle from the workspace record, on a server without
+`GRADER_CAP_USD`, undoes the raise and says nothing. The operational mitigation
+is `GRADER_CAP_USD=300` in that server's environment, verified to hold.
+
+⚠️ **HUMAN REVIEW: spend-control logic.** The two callers disagree and the daily
+loop already carries the fix. Giving `/api/scan` the same `ledgerCap` treatment
+is a one-line change to spend control, which is human-owned, so it is reported
+here rather than made.
+
+## ⚠️ Open, for later — the lifetime model is a testing shape, not an operating budget
+
+`Budget` is a **lifetime total for a data directory that never refills**. Every
+call ever made counts against one number until a person edits the file. That is
+exactly right for what it has been protecting: a pre-revenue store where the
+worst outcome is a retry bug and the best defence is a hard stop that a human
+must consciously lift.
+
+It does not survive contact with paying customers. A budget that only ever
+decreases means:
+
+- the cap has to be raised by hand on a cadence nobody scheduled, and the raise
+  is a file edit rather than an accounting event;
+- the number stops meaning anything a finance person recognises — it is neither
+  a monthly spend, a per-customer cost, nor a rate;
+- there is no natural point at which "we spent X in September" can be read off,
+  because September is not a boundary the ledger knows about;
+- and the failure mode is the worst kind of quiet: collection stops for everyone
+  at once, mid-month, because a counter that started in August finally reached
+  its number.
+
+The likely shape is a **recurring budget with a reset boundary** — monthly is
+the obvious one because it matches how the provider bills and how a customer
+plan is priced — with the lifetime cap kept underneath it as the runaway guard
+it is good at being. `daily-spend.json` (ADR-0017) already does this per day and
+is the working precedent: a keyed record with a per-period cap, plus the
+lifetime ledger behind it. The per-period budget would sit between them.
+
+**Not a task, and deliberately not built now.** It is a billing question before
+it is a code question: what the period is, whether it is per-store or
+per-workspace, what happens to an in-flight cycle at the boundary, and who is
+told when it binds. None of those can be answered before there is a customer and
+a plan. Flagged here so the lifetime model is a recorded decision with a known
+expiry rather than an assumption nobody revisits.
