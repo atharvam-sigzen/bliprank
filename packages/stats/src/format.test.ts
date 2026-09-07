@@ -66,8 +66,11 @@ describe('formatting always carries the interval (R8)', () => {
     const all = fromWilson(10, 10)
     expect(zero.value).toBe(0)
     expect(all.value).toBe(1)
-    expect(formatMetric(zero)).toBe(`0.0% (0–${(zero.ci_high * 100).toFixed(1)}%, n=10)`)
+    // An exact zero bound carries the same decimals as the estimate beside it:
+    // `0.0–…` under `0.0%`, never a bare `0` in a column of 1dp figures.
+    expect(formatMetric(zero)).toBe(`0.0% (0.0–${(zero.ci_high * 100).toFixed(1)}%, n=10)`)
     expect(formatMetric(all)).toBe(`100.0% (${(all.ci_low * 100).toFixed(1)}–100.0%, n=10)`)
+    expect(formatInterval(zero, 0)).toBe(`0–${(zero.ci_high * 100).toFixed(0)}%`)
     // and the two are mirror images, as Wilson requires
     expect(zero.ci_high).toBeCloseTo(1 - all.ci_low, 12)
   })

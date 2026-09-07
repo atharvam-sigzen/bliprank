@@ -120,9 +120,15 @@ export function formatValue(m: Metric, dp = 1): string {
  * `17.0–31.2%` — the interval. The unit is written once, on the upper bound:
  * two per-cent signs in a range read as two separate numbers rather than one
  * span, which is the opposite of the point.
+ *
+ * Both bounds carry the same `dp` as the estimate, an exact zero included:
+ * `0.0–4.3%` beside `0.0%`, not `0–4.3%`. The special case that printed a bare
+ * `0` was the one row in a tabular-figures column whose decimals did not line
+ * up, and it made the lower bound look like a different kind of number from
+ * the estimate it belongs to (removed 2026-09-07).
  */
 export function formatInterval(m: Metric, dp = 1): string {
-  return `${m.ci_low === 0 ? '0' : (m.ci_low * 100).toFixed(dp)}–${pct(m.ci_high, dp)}`
+  return `${(m.ci_low * 100).toFixed(dp)}–${pct(m.ci_high, dp)}`
 }
 
 /**

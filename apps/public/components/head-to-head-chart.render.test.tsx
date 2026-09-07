@@ -81,12 +81,11 @@ describe('the chart renders every verdict it can produce', () => {
   it('a brand measured at 0% still shows its real number and its bound', () => {
     // Never blanked, never rounded away: the refusal is about the COMPARISON.
     expect(html).toContain('0.0%')
-    // ⚠️ Note the asymmetry: the estimate prints '0.0%' and the bound prints
-    // '0', not '0.0'. Every other interval on this table carries 1dp on both
-    // bounds, so an exact zero is the one row whose decimals do not line up in a
-    // tabular-figures column. `formatInterval` lives in format.ts, which is
-    // HUMAN-OWNED, so this asserts what ships rather than changing it.
-    expect(html).toContain('0–4.3%')
+    // The bound carries the same decimals as the estimate: '0.0–4.3%' under
+    // '0.0%'. Until 2026-09-07 `formatInterval` printed an exact zero as a bare
+    // '0', the one row on this table whose decimals did not line up in a
+    // tabular-figures column; this pins the fix.
+    expect(html).toContain('0.0–4.3%')
   })
 
   it('no mark escapes the plot, at either end of the scale', () => {
