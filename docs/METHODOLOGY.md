@@ -154,11 +154,25 @@ citations are still unrecognised, and ADR-0015 is explicit that the remainder is
 retailers, redirects, vendor blogs and listicles that need new classes rather
 than a longer publisher list.
 
-⚠️ **The golden set does not yet exercise the registry.** Its one citation to a
-registry domain (TechCrunch, in `g004-source-mix`) is unlabelled, so the harness
-skips it and citation-class agreement would not detect a registry error. The set
-holds 7 of its 300-case target and its G2 gate reads NOT RUN; the flip list
-above is what gated this bump.
+⚠️ **What the golden set can and cannot check here.** `g004-source-mix` labels
+a TechCrunch citation `earned_media` and the harness counts it — citation-class
+agreement is 11 of 11, all labelled. What that case declares is its OWN
+two-entry publisher map, so the set exercises the classifier's earned-media
+lookup and never the contents of the 52-entry registry. It would catch a
+regression in the code path; it could not catch a wrong, missing or mistyped
+outlet in the list. The list itself rests on ADR-0015's four criteria and a
+person reading the nine domains named above.
+
+**An earlier version of this note said that citation was unlabelled and
+skipped. That was wrong** — the golden validator refuses an unlabelled citation
+outright, so the state it described cannot exist. Corrected 2026-09-07 after
+review.
+
+The set holds 7 of its 300-case target and its G2 gate reads NOT RUN; the flip
+list above is what gated this bump. That is defensible for a bump whose blast
+radius is one non-headline field, because the flip list is a census over all 185
+stored rows rather than a sample. It would not be defensible for a bump touching
+mention detection.
 
 **A lapse in det-2, recorded rather than hidden.** The four-character rule in
 the det-2 row shipped twenty-seven minutes after the det-2 stamp was introduced,

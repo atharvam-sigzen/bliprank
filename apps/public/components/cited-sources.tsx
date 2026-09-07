@@ -147,9 +147,10 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
           </div>
           <p className="metric__interval">
             Shares of <span className="num">{mix.total}</span> citations, not of answers. A class is assigned by rule from the URL alone
-            (ADR-0005): a review site is a review site whatever it says. &ldquo;Other sites&rdquo; means a site none of our tables name: not
-            yours, not a tracked rival&apos;s, not a video, community, review or reference platform we know, and this build holds no publisher
-            registry, so no site is ever called earned media.
+            (ADR-0005): a review site is a review site whatever it says. &ldquo;Earned media&rdquo; means one of 52 named editorial outlets,
+            admitted only if it has a masthead, is independent of the vendors it covers, is not primarily an affiliate directory, and covers a
+            market we track (ADR-0015). &ldquo;Other sites&rdquo; means a site none of our tables name: not yours, not a tracked rival&apos;s,
+            not a video, community, review or reference platform we know, and not on that list.
           </p>
 
           <h3 style={{ marginTop: 'var(--space-4)' }}>Most cited sites</h3>

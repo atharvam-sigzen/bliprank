@@ -1,15 +1,20 @@
 /**
  * THE PUBLISHER REGISTRY — which sites are editorial outlets. ADR-0015.
  *
- * ⚠️ PROPOSED, NOT WIRED. Nothing in scoring reads this yet. `classifyCitation`
- * accepts a `publishers` map and assigns `earned_media` to a domain in it;
- * every stored scan has been classified with that map empty, which is why
- * 89% of the reference scan's citations read as "other". Passing this map into
- * scoring changes what existing answers score, so it is a scoring rule change:
- * a version bump, a re-score of every stored cycle, a changelog row and a new
- * pin table, all under R5, and all after the owner has approved the list.
- * The `grader:publishers` tool reports what the list WOULD change, without
- * changing anything.
+ * ⚠️ WIRED SINCE det-3 (2026-09-07). This IS a scoring rule now: `scan.ts` and
+ * `answers.ts` pass this map to `scoreAnswer`, and a domain in it is classed
+ * `earned_media` instead of `other`. Wiring it flipped 8 rows across the stored
+ * corpus and moved 9 of 629 citations; see ADR-0015 Amendment 1.
+ *
+ * ⚠️ SO ADDING OR REMOVING AN ENTRY IS A VERSION BUMP. One added domain changes
+ * what an existing answer scores, and two cycles either side of that edit would
+ * both stamp the same version with `compare()` unable to tell them apart.
+ * `services/grader/src/publisher-registry-pin.test.ts` freezes the exact domain
+ * set under `SCORING_ALGO_VERSION` and fails on any edit; the fix when it fails
+ * is `/score-version`, not a new hash.
+ *
+ * `pnpm grader:publishers` proposes candidates from the corpus and never writes
+ * to this file.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHAT COUNTS AS A PUBLISHER HERE. A domain is in this file only if all four hold:

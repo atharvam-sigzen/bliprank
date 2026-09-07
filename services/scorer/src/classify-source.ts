@@ -60,9 +60,15 @@ export interface ClassifierRegistry {
   readonly competitorDomains?: Readonly<Record<string, readonly string[]>>
   /**
    * Publisher authority registry: domain → publisher name. ADR-0005 flags this
-   * as a maintained asset that will drift without ownership; it is data, not
-   * code, so it can be updated without a scoring version bump ONLY because the
-   * class is stored per row at scoring time (R5).
+   * as a maintained asset that will drift without ownership.
+   *
+   * ⚠️ IT CANNOT BE UPDATED WITHOUT A VERSION BUMP — corrected at det-3. This
+   * said it could, "ONLY because the class is stored per row at scoring time
+   * (R5)". Storing the class per row protects HISTORY: an old row keeps the
+   * class it was given. It does not protect COMPARABILITY between two cycles
+   * scored either side of a registry edit under the same stamp, which is what
+   * `compare()` relies on. The grader wires a real registry now, so adding a
+   * domain is a scoring rule change like any other.
    */
   readonly publishers?: Readonly<Record<string, string>>
 }

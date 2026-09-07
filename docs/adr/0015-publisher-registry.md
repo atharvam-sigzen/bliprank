@@ -273,9 +273,26 @@ current reach.
 
 ## ⚠️ Open, and a human's
 
-**The golden set does not exercise the registry.** Its only citation to a
-registry domain — TechCrunch, in `g004-source-mix` — is unlabelled, so the
-harness skips it and citation-class agreement would not detect a registry error.
-Adding a labelled `earned_media` case is a labelling act, and labels are human
-ground truth. The flip list gated this bump; the golden set did not, and could
-not have.
+**What the golden set checks, corrected after review.** An earlier draft of this
+amendment said `g004-source-mix`'s TechCrunch citation was unlabelled and
+skipped. It is labelled `earned_media` and counted — agreement is 11 of 11 — and
+`validateGoldenCase` refuses an unlabelled citation, so the state described was
+unreachable. The claim was wrong and is corrected here rather than quietly
+edited out.
+
+The real limit is narrower. That case declares its own two-entry publisher map,
+so the set exercises `classifyCitation`'s earned-media lookup and never the
+CONTENTS of the 52. It would catch a regression in the code path; it could not
+catch a wrong, missing or mistyped outlet. What guards the contents is
+`publisher-registry-pin.test.ts`, which freezes the exact domain set under
+`SCORING_ALGO_VERSION` — added at the same review, because until then adding a
+53rd outlet would have changed what a stored answer scores with both cycles
+stamped `det-3` and `compare()` unable to see it.
+
+**Gating on the flip list is defensible for this bump and should not become a
+precedent.** The flip list is a census over all 185 stored rows, not a sample —
+a stronger instrument than 7 hand-labelled cases for "did anything besides
+`citations` move". What it cannot establish is that the 9 reclassifications are
+CORRECT; that rests on the four criteria and a person reading the nine named
+domains. Acceptable when the blast radius is one non-headline field. Not
+acceptable for a bump touching mention detection.

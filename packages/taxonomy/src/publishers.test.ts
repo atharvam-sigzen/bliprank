@@ -6,9 +6,13 @@ import { NOT_PUBLISHERS, PUBLISHERS, PUBLISHER_REGISTRY } from './publishers.js'
 
 /**
  * The registry is a list of claims; these are the checks a claim has to pass
- * before it can be one. None of this is the scoring rule — wiring the map into
- * scoring is a version bump (ADR-0015) — but a malformed entry would be a
- * wrong rule the day it is wired, so it is refused now.
+ * before it can be one.
+ *
+ * ⚠️ CORRECTED AT det-3 (2026-09-07): the map IS wired, so this IS the scoring
+ * rule now, and these checks are only its well-formedness. What freezes its
+ * CONTENTS against a version — so adding a 53rd outlet cannot change what a
+ * stored answer scores under an unchanged stamp — is
+ * `services/grader/src/publisher-registry-pin.test.ts`.
  */
 describe('every publisher entry is well-formed and reasoned', () => {
   it('domains are registrable, lower-case, unique, and never a www or a path', () => {
