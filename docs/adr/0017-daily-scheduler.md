@@ -1,6 +1,6 @@
 # ADR-0017 — The daily scheduler: what exists, what is missing, and the three decisions before a loop runs
 
-**Status:** Proposed · **Date:** 2026-09-03 · **Phase:** P3 closing, looking at P4
+**Status:** Accepted for decisions 1 and 2 on 2026-09-07 (the loop and the cap are built and verified offline; the first live tick waits for a separate, explicit go-ahead); the ceiling question below is open · **Date:** 2026-09-03, amended 2026-09-07 · **Phase:** P3 closing, looking at P4
 **Relates to:** R3 (nothing spends outside the scheduler) · R5 · ADR-0002
 (hosting topology: Fluid Compute + QStash through P3, a worker fleet after)
 · ADR-0003 (cache key and R2 object unit) · ADR-0013 (cycles; "there is no
@@ -111,10 +111,164 @@ question, and no billing exists, so opt-in by a person is the whole of it.
    custom prompts. Nothing here can be built without the owner naming the
    figures.
 
+## Amendment, 2026-09-07 — decisions 1 and 2 confirmed and built
+
+The owner confirmed: the loop runs local-first, beside the store, invoked by
+the OS scheduler; the daily cap is a formula over the tracked set's real
+expected cost with retry headroom, recomputed live, enforced fail-closed; the
+hosted path stays a documented migration; and the first live tick needs a
+separate, explicit go-ahead. `services/grader/src/daily-loop.ts` is that.
+
+**What one tick does.** The due list; the day's cap; then, only with
+`--apply`, each due domain in order through `runGrader` (the record, the
+override, the custom set, the budgeted orchestrator, the scorer, the cycle
+file), booking realised spend and calls into `daily-spend.json` after each
+domain, writing the burst-cap and ceiling ledgers as `/api/scan` does. A
+second tick the same day runs nothing: every domain is `cycle-today`.
+
+**The cap, exactly.**
+`min( Σ_tracked (curated + custom) × Σ_engines price[plan] × RETRY_HEADROOM ,
+COLLECTION_BUDGET_USD_DAILY )`. The formula is the bill the tracked set
+implies; the hard ceiling is the owner's figure, and it is the variable
+CLAUDE.md §7 documented as "enforced by the collector" while nothing read it.
+Now something does: a live tick refuses when it is unset or not a positive
+number. Before each domain the loop refuses a cycle whose expected cost with
+headroom does not fit in what is left; the check is against the cap
+recomputed on this tick, so tracking a domain raises the cap by exactly its
+cost and untracking lowers it. Realised spend is the runner's own ledger
+delta; a run that reports no figure is booked at the expected cost with
+headroom; a run the runner refused before any call (its `run.lock` held) is
+booked at zero.
+
+**What the cap does not bound, said plainly.** It gates which domains
+start. A run, once started, is bounded by the runner's lifetime ledger
+(`ledger.json`, capped per data dir), because passing a smaller per-run cap
+lowers that ledger's cap for good and the collector's `Budget` is spend
+control a human owns. A retry storm inside one run can therefore spend up to
+that ledger's remaining cap and is then booked against a day already closed.
+So the tick also refuses to start when that ledger is exhausted or holds
+less than the day's cap, which is what stops a loop ticking daily to zero
+effect after the eighth pay-as-you-go cycle. A per-run allowance in `Budget`
+is the next step, and it is ⚠️ HUMAN REVIEW REQUIRED: spend control.
+
+**Every refusal of a live tick, in order:** the loop not armed
+(`GRADER_DAILY_LOOP=armed`), either collection flag off, no provider key, no
+plan, no hard ceiling, a `--day` that is not today (a named day would buy
+cells under another date bucket and a fresh cap), the runner's ledger
+exhausted or short, another tick's lock, and, per domain, the burst cap and
+the provider's quota. `--apply` alone is refused: `--fixture` (offline) or
+`--live` (spends) must be named on the command line, so an environment that
+happens to be armed cannot make a hand-typed apply spend.
+
+**Registering the task, when the go-ahead comes.** Not done by this code
+and not done in this session. On this machine:
+
+```
+schtasks /Create /SC DAILY /ST 06:15 /TN "BlipRank daily tick" /TR "cmd /c cd /d D:\bliprank && pnpm grader:tick -- --apply --live >> services\grader\data-live\tick.log 2>&1"
+```
+
+with `GRADER_DAILY_LOOP=armed`, `COLLECTION_ENABLED=true`,
+`GRADER_LIVE_SCAN=true`, `OPENWEBNINJA_PLAN` and
+`COLLECTION_BUDGET_USD_DAILY` set in that task's environment and nowhere
+else. Unregistering the task, or unsetting `GRADER_DAILY_LOOP`, stops it.
+
+**Verified offline.** `daily-loop.test.ts`: the cap moves with tracking and
+custom sets; the hard ceiling bounds it; the loop books realised spend and
+calls, files the cycle, and runs nothing on a second tick; the cap refuses a
+domain that does not fit after a storm; a missing spend figure books
+expected; a thrown collector books expected and the loop continues; a
+`run.lock` refusal books zero; the corrupt ledger, the tick lock and every
+live gate refuse in order; and the real runner in fixture mode collects a
+tracked domain, files it, and honours one cycle per day. `pnpm grader:tick`
+run as typed: dry, `--apply` refused, `--apply --live` refused as not armed,
+`--apply --fixture` filing two cycles on a scratch store. The live store was
+not written.
+
+## The ceiling tension, worked with real numbers
+
+Computed with the real functions (`ceilingFor`, `checkDomainCeiling`,
+`recordDomainCalls`) against scratch ledgers on 2026-09-07. Pay-as-you-go:
+$0.0068 per call averaged over five engines; 17 prompts = 85 cells = $0.58 a
+cycle; 32 prompts = 160 cells = $1.09. The ceiling today is
+`ceil(2 × cells-this-cycle × 1.2)`, recomputed from the domain's current
+prompt count on every request, while the month's ledger of calls is not.
+
+**A. The set shrinks mid-month: an unfair refusal.**
+
+| Day | Cycle | Ceiling | Verdict |
+|---|---|---|---|
+| Sep 1 | 17 curated + 15 own, 160 calls | 384 | allowed, used 0 + 160 |
+| Sep 8 | same, 160 calls | 384 | allowed, used 160 + 160 |
+| Sep 15 | customer clears the set; 85 calls | 204 | **refused**, used 320 + 85 > 204 |
+| Sep 22 | 85 calls | 204 | **refused**, used 320 + 85 > 204 |
+
+The domain did exactly the two cycles the ceiling was designed to allow and
+is locked out for the rest of the month by its own change of mind.
+
+**B. The set grows mid-month: an over-collection nobody decided.**
+
+| Day | Cycle | Ceiling | Verdict |
+|---|---|---|---|
+| Sep 1 | 17 curated, 85 calls | 204 | allowed, used 0 + 85 |
+| Sep 8 | 85 calls | 204 | allowed, used 85 + 85 |
+| Sep 12 | 85 calls | 204 | **refused**, used 170 + 85 > 204: the designed two are spent |
+| Sep 15 | customer adds 15 own; 160 calls | 384 | **allowed**, used 170 + 160 ≤ 384 |
+| Sep 22 | 160 calls | 384 | refused, used 330 + 160 > 384 |
+
+Designed month at 17 prompts: 2 cycles, 170 calls, $1.16. What B allows:
+3 cycles, 330 calls, $2.24, 94% over the designed spend, triggered by a
+customer's edit rather than by anyone's budget decision. The daily cap now
+bounds the money; the ceiling's *cycle count* is what moves.
+
+**C. A daily loop against the same ceiling, 17 prompts, nothing changed.**
+
+| Day | Verdict |
+|---|---|
+| Sep 1 | allowed, 0 + 85 ≤ 204 |
+| Sep 2 | allowed, 85 + 85 ≤ 204 |
+| Sep 3 | **refused**, 170 + 85 > 204 |
+| Sep 4 | refused |
+
+A daily loop needs 2,550 calls a month at 17 prompts ($17.34); the ceiling
+admits 204. With the loop, every tracked domain is `not due: ceiling` from
+the third day of every month.
+
+**The shape of the problem.** The ceiling is a monthly call budget derived
+from a cycle count of two, denominated in calls, with a limit that follows
+the cycle size and a ledger that does not. Under ADR-0016 the cycle size
+became customer-editable, and under this ADR the cycle count became thirty.
+Both of its inputs moved and it kept its 2026-09-02 shape.
+
+**Options, for the decision.**
+
+1. *Denominate the ceiling in cycles, not calls.* Count cycles per domain
+   per month; allow `CYCLES_PER_MONTH` of them; bound each cycle's realised
+   calls at `cells × RETRY_HEADROOM`. A set change alters the cost per cycle
+   (the daily cap's business) and never the number of cycles. A and B both
+   resolve; C needs `CYCLES_PER_MONTH` raised to 31 for tracked domains.
+2. *Retire the monthly ceiling under the loop and keep the two bounds that
+   remain true:* one cycle per UTC day (already enforced) and the daily cap
+   (now enforced), plus a per-cycle realised-call bound of
+   `cells × RETRY_HEADROOM`. Simplest; loses the "one domain cannot use up
+   everyone's quota" story for a domain a visitor scans by hand, which the
+   per-visitor throttle and the burst cap still cover.
+3. *Freeze the ceiling at the month's first cycle size.* Fixes A, not B, and
+   not C.
+
+Recommendation: option 1 for hand-started scans and option 2's bounds for
+tracked domains, which is one rule stated twice: a domain gets its cycles,
+each bounded in calls, and the money is the daily cap's. This is spend
+control (CLAUDE.md §4) and is not built until decided.
+
 ## What is deliberately not done
 
-- No loop, no timer, no `--apply`. A tick that collects is the decision.
-- No change to `SCHEDULE_FACT`. It is still true.
+- No timer in the process, no self-registration with any scheduler, and no
+  live tick in this session. The task above is a person's act after the
+  go-ahead.
+- No change to `SCHEDULE_FACT` until the task is registered and a live tick
+  has filed a cycle. It is still true.
+- No per-run allowance in `Budget`, and no change to the monthly ceiling.
+  Both are the open decisions above.
 - No move of the store. That is P4.
 
 ## Verification, without spending
