@@ -3227,6 +3227,30 @@ h3.record__title,
   font-weight: 600;
 }
 
+/*
+ * RANK AS WEIGHT. The cell used to set every named answer in one bold ink,
+ * which said "named" and nothing about how well — while the figure beside it
+ * read backwards (see the note above rankLabel). The ranking is now carried by
+ * the mark, so the grid's pattern is legible before any number is parsed.
+ *
+ * Weight and ink only. Colour is spent on data on this sheet, and a rank
+ * encoded in hue is a rank a colour-blind reader and a greyscale print both
+ * lose. Every step stays at or above the 4.5:1 this text owes: --color-
+ * foreground is 18.5:1 on the card and --color-neutral-ink 5.85:1.
+ */
+.mark--rank1 {
+  font-weight: 700;
+}
+
+.mark--rank2 {
+  font-weight: 550;
+}
+
+.mark--rank3 {
+  font-weight: 450;
+  color: var(--color-neutral-ink);
+}
+
 /* ==========================================================================
    DEPTH — the simple reading
    ==========================================================================
@@ -3552,4 +3576,96 @@ h3.record__title,
   white-space: nowrap;
   font-size: 0.6875rem;
   color: var(--color-muted-foreground);
+}
+
+/* ==========================================================================
+   PER-ENGINE INTERVALS
+   ==========================================================================
+   The rail's vocabulary at small scale, and legitimately so: an engine's rate
+   is a proportion of a sample, so it has an interval to draw. The coverage
+   strip in the gap report deliberately does NOT look like this, because a word
+   check over one document has no sample and no uncertainty.
+
+   Same fixed 0-100 track as everywhere else on this sheet. Same band colour
+   (4.44:1 on the card) and the same haloed needle, so a reader who has learnt
+   the rail reads this without being taught twice.
+   ========================================================================== */
+
+.estrip {
+  margin-top: var(--space-5);
+}
+
+.estrip__rows {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.estrip__row {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.estrip__name {
+  font-size: 0.8125rem;
+  color: var(--color-foreground);
+}
+
+.estrip__track {
+  position: relative;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-muted);
+}
+
+.estrip__band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  background: var(--color-secondary);
+}
+
+/* The needle is haloed for the same reason the rail's is: a mark drawn ON a
+   mark needs to clear the thing beneath it, not just the page. */
+.estrip__needle {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 3px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-card);
+}
+
+/* The rate across all engines. A reference, never a threshold: nothing on this
+   strip is tested against it, because the overall rate contains each engine's
+   own answers and the two are not independent. */
+.estrip__ref {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--color-field-border);
+}
+
+.estrip__count {
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /* The name takes its own line rather than squeezing the track to nothing. */
+  .estrip__row {
+    grid-template-columns: minmax(0, 1fr) 4.5rem;
+  }
+
+  .estrip__name {
+    grid-column: 1 / -1;
+  }
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { answerKey, indexAnswers, loadAnswers, type AnswerIndex, type StoredAnswer, type StoredCitation } from '@/lib/answers'
 import { shortFor } from '@/lib/citations'
+import { wilson } from '@bliprank/stats'
 import { byEngine, promptBreakdown, type BreakdownLine } from '@/lib/prompt-breakdown'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
@@ -59,6 +60,21 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
   }
 
   const engines = byEngine(breakdown)
+
+  /*
+   * LEAST COVERED FIRST, and the rows were in no order at all before this.
+   *
+   * `promptBreakdown` builds them from a Map's insertion order, so on the
+   * shipped scan the "Named in" column ran 4,5,3,4,5,2,0,0,4,2,0,1,0,1,3,1,3 —
+   * the questions a brand is absent from scattered through the middle of the
+   * grid. The pattern a reader comes here for was present in the data and
+   * invisible in the arrangement, which no amount of cell styling fixes.
+   *
+   * Worst first, matching the gap report's coverage table: the questions you do
+   * not appear in are the ones the section exists to surface. `sort` is stable,
+   * so ties keep the bank's own order.
+   */
+  const rows = [...breakdown.prompts].sort((a, b) => a.mentionedIn - b.mentionedIn)
   const subject = subjectOf(scan)
 
   /*
@@ -134,7 +150,7 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
       */}
       <div className="detail">
         <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-          The same numerator and the same denominator as the rate above, listed out rather than summarised.{' '}
+          The same numerator and the same denominator as the rate above, listed out rather than summarised, least covered first.{' '}
           {breakdown.prompts.length} questions, each asked on {breakdown.engines.length}{' '}
           {breakdown.engines.length === 1 ? 'surface' : 'surfaces'}. Every cell below is one answer that was actually collected and scored.
         </p>
@@ -156,7 +172,7 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
             </tr>
           </thead>
           <tbody>
-            {breakdown.prompts.map((line) => (
+            {rows.map((line) => (
               <tr key={line.prompt}>
                 {/* The prompt verbatim and unwrapped-in-full: this is the question
                     that was asked, and a truncated one is a different question. */}
@@ -179,14 +195,14 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
                   return (
                     <td className="num" key={engine}>
                       <span
-                        className={cell.mentioned ? 'mark mark--hit' : 'mark'}
+                        className={cell.mentioned ? `mark mark--hit ${rankClass(cell.position)}` : 'mark'}
                         title={
                           cell.mentioned
                             ? `named ${cell.mentionCount}x, ${cell.position} of ${cell.brandsDetected} brands in this answer${cell.cited ? ', and cited' : ''}`
                             : `not named; ${cell.brandsDetected} other ${cell.brandsDetected === 1 ? 'brand was' : 'brands were'} named in this answer`
                         }
                       >
-                        {cell.mentioned ? `${cell.position}/${cell.brandsDetected}` : '—'}
+                        {cell.mentioned ? rankLabel(cell.position, cell.brandsDetected) : '—'}
                         {cell.cited ? <span title="one of your own pages was cited"> ¶</span> : null}
                       </span>
                     </td>
@@ -217,26 +233,24 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
       </div>
 
       <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-        A cell reads <span className="num">2/6</span> when {subject.name} was the second of six brands the answer named, counted by where each
-        first appears. <span className="num">—</span> means the answer named other brands and not this one, <span className="num">·</span> means
-        no answer was collected for that cell, and <span className="num">¶</span> marks an answer that cited one of this domain&apos;s own
-        pages.
+        A cell reads <span className="num">#2 of 6</span> when {subject.name} was the second of six brands the answer named, counted by where
+        each first appears. <strong>Lower is better</strong>: <span className="num">#1</span> is the first brand the engine reached for. The mark
+        is heaviest at <span className="num">#1</span> and lightens as the rank falls, so the pattern reads without doing the arithmetic.{' '}
+        <span className="num">—</span> means the answer named other brands and not this one, <span className="num">·</span> means no answer was
+        collected for that cell, and <span className="num">¶</span> marks an answer that cited one of this domain&apos;s own pages. The last
+        column is a plain fraction, not a rank: <span className="num">4/5</span> there means named in four of five answers.
       </p>
 
       {/*
-        THE PER-ENGINE FOOTER IS NOT A PER-ENGINE RATE, and the difference is
-        worth a sentence. Ten answers per engine is a Wilson interval roughly
-        three times wider than the fifty-answer one above, so a gap between two
-        engines here is almost never a finding at this sample size. The counts
-        are shown because they are facts; a per-engine percentage with a green
-        arrow on it would not be (R8).
+        THE CAVEAT, DRAWN INSTEAD OF ASSERTED.
+
+        This was a sentence saying an interval around any one engine "would be
+        wide enough to overlap all the others". True, and a reader had to take
+        it on trust while looking at a row of bare counts that invited exactly
+        the comparison it was warning against. The intervals are now drawn, so
+        the overlap is the thing you see rather than the thing you are told.
       */}
-      <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-        The engine columns are counts, not rates, and carry no interval. Each holds{' '}
-        <span className="num">{engines[0]?.answers ?? 0}</span> answers against the headline&apos;s{' '}
-        <span className="num">{breakdown.answers}</span>, so an interval around any one of them would be wide enough to overlap all the others.
-        A difference between two columns at this sample size is not yet a difference between two engines.
-      </p>
+      <EngineIntervals engines={engines} overall={breakdown.mentionedIn / breakdown.answers} subjectName={subject.name} />
 
       {breakdown.competitors.length > 0 ? (
         <>
@@ -446,5 +460,131 @@ function Cites({ citations }: { citations: readonly StoredCitation[] }) {
       ))}
       {citations.length > shown.length ? <li className="cites--none">and {citations.length - shown.length} more</li> : null}
     </ul>
+  )
+}
+
+/* ==========================================================================
+   A RANK IS NOT A FRACTION — the defect this pair of helpers fixes
+   ==========================================================================
+
+   ⚠️ THIS SHIPPED, AND IT READ BACKWARDS. The cell printed
+   `position/brandsDetected`, so "4/4" meant FOURTH OF FOUR — the worst
+   available result — and "1/5" meant first of five, the best. Every reader
+   convention says 4/4 is full marks and 1/5 is nearly nothing, so a reader
+   scanning the grid for strong cells found precisely the weak ones. `.mark--hit`
+   compounded it by setting every named cell in the same bold ink, so the
+   typography agreed with the misreading.
+
+   It was invisible in review for the same reason the mislabelled axis was: the
+   code is correct, the arithmetic is correct, and only the rendered grid says
+   what a reader will take from it.
+
+   Two fixes, because either alone is thin. The `#` and the spelled "of" make
+   the notation state a rank rather than imply a proportion; the weight makes
+   the ranking legible without reading the number at all, which is what a matrix
+   is for. Weight and ink only — never colour, which this sheet spends on data
+   and which a colour-blind or greyscale reader would lose.
+   ========================================================================== */
+
+/** `#1 of 5`. Null position: named, but the pass recorded no rank for it. */
+function rankLabel(position: number | null, brands: number): string {
+  if (position === null || position <= 0) return 'named'
+  return `#${position} of ${brands}`
+}
+
+/**
+ * Three steps, not a gradient. The distinction a reader needs is "first",
+ * "near the front" and "also mentioned"; grading every rank separately would
+ * imply the sample can tell #4 from #5, which at these cell counts it cannot.
+ */
+function rankClass(position: number | null): string {
+  if (position === null || position <= 0) return 'mark--rank3'
+  if (position === 1) return 'mark--rank1'
+  if (position === 2) return 'mark--rank2'
+  return 'mark--rank3'
+}
+
+/* ==========================================================================
+   PER-ENGINE INTERVALS — the caveat as a picture
+   ==========================================================================
+
+   THIS ONE MAY USE THE RAIL'S LANGUAGE, and the coverage strip next door may
+   not. The difference is not taste: an engine's rate is a proportion of a
+   SAMPLE — seventeen answers it actually returned — so it has sampling
+   uncertainty and a Wilson interval is the honest way to draw it. Term coverage
+   is a word check over one document with no sample at all, which is why that
+   strip gets discrete ticks and no interval. Same sheet, opposite treatment,
+   because they are different kinds of claim.
+
+   FIXED 0-100, NEVER FITTED, like every other interval on this sheet. Fitting
+   the axis to five engines that all sit between 15% and 60% would draw
+   near-identical rates as dramatically separated bars, which is the chart lying
+   by omission.
+
+   ⚠️ NO VERDICT, AND THAT IS DELIBERATE. Two things could be tested here and
+   only one of them honestly:
+
+     - engine against engine is a legitimate comparison (their answers are
+       disjoint, so the samples are independent) — but `compare()` keys on
+       `comparison_basis`, and two engines have different bases BY DESIGN, so it
+       would refuse a comparison that is actually valid. Resolving that is a
+       methodology decision, not a rendering one (CLAUDE.md §4);
+     - engine against the cycle-wide rate is NOT legitimate at all: the overall
+       rate contains this engine's answers, so the two are not independent.
+
+   So the overall rate is drawn as a REFERENCE, unlabelled by any verdict, and
+   nothing here says "higher" or "lower" about anything. The reader sees five
+   intervals that overlap each other and straddle the line, which is the finding.
+   ========================================================================== */
+
+function EngineIntervals({
+  engines,
+  overall,
+  subjectName,
+}: {
+  engines: readonly { readonly engine: string; readonly answers: number; readonly mentionedIn: number }[]
+  overall: number
+  subjectName: string
+}) {
+  if (engines.length === 0) return null
+  const rows = engines.map((e) => ({ ...e, w: wilson(e.mentionedIn, e.answers) }))
+
+  return (
+    <section className="estrip" aria-labelledby="estrip-heading">
+      <h3 id="estrip-heading">Engine by engine, with what each one can actually tell you</h3>
+
+      <ol className="estrip__rows">
+        {rows.map((r) => (
+          <li className="estrip__row" key={r.engine}>
+            <span className="estrip__name">{r.engine}</span>
+            {/* aria-hidden: the bar is a picture of the numbers printed beside
+                it, and announcing the geometry as well would be the same fact
+                twice. */}
+            <span className="estrip__track" aria-hidden="true">
+              <span
+                className="estrip__band"
+                style={{ left: `${r.w.ci_low * 100}%`, width: `${(r.w.ci_high - r.w.ci_low) * 100}%` }}
+              />
+              <span className="estrip__needle" style={{ left: `calc((100% - 3px) * ${r.w.value})` }} />
+              <span className="estrip__ref" style={{ left: `${overall * 100}%` }} />
+            </span>
+            <span className="estrip__count num">
+              {r.mentionedIn} of {r.answers}
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
+        Each bar is one engine&apos;s own answers — <span className="num">{rows[0]?.answers ?? 0}</span> of them, against the{' '}
+        <span className="num">{rows.reduce((t, r) => t + r.answers, 0)}</span> the headline is drawn from — so every one is a much smaller sample and
+        every interval is correspondingly wider. The upright marks the rate across all engines together.
+      </p>
+      <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
+        Where these bars overlap each other, the difference between those two engines is not something this cycle can show, whatever the counts
+        beside them say. No engine is ranked against another here and none is called better: on a sample this size that would be a claim about
+        {' '}{subjectName} the evidence does not support.
+      </p>
+    </section>
   )
 }
