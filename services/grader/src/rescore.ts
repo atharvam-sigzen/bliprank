@@ -3,6 +3,7 @@
  *
  *   pnpm grader:rescore -- --domain pipedrive.com
  *   pnpm grader:rescore -- --all --apply
+ *   pnpm grader:rescore -- --all --apply --same-version   re-derive results ALREADY at the current version (ADR-0012 additive change only; refused otherwise)
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY THIS EXISTS, AND WHY IT IS NOT A SCRIPT SOMEBODY RUNS ONCE.
@@ -52,6 +53,7 @@ import { copyFileSync, existsSync, readFileSync, readdirSync, unlinkSync, writeF
 import { join } from 'node:path'
 import { AnswerIndex, type OwnPlan } from '@bliprank/collector'
 import { ENGINES, parseBasis, type EngineId } from '@bliprank/contracts'
+import { SCORING_ALGO_VERSION } from '@bliprank/scorer'
 import { DEFAULT_CAP_USD, defaultGateConfig } from './live-gate.js'
 import { loadApiKey } from './load-key.js'
 import { FileKV } from './local-store.js'
@@ -69,6 +71,25 @@ export interface RescoreOptions {
   readonly all: boolean
   readonly dataDir: string
   readonly apply: boolean
+  /** Re-derive a result already stamped with the current version. See `sameVersionRefusal`. */
+  readonly sameVersion: boolean
+}
+
+/**
+ * ⚠️ A RE-SCORE UNDER THE VERSION A RESULT ALREADY CARRIES IS REFUSED BY DEFAULT.
+ *
+ * R5 says a changed rule ships as a new version; a re-derivation that leaves
+ * the stamp alone therefore has nothing to change, and a run that DID change
+ * something would be a silent rebase wearing the old version's name. The one
+ * legitimate case is ADR-0012's: a rule change proven to flip zero rows ships
+ * under the current version, and stored rows are re-derived only to gain
+ * fields (sigzen.com's det-3 → det-3 rewrite on 2026-09-07 was that). That
+ * case is named on the command line with `--same-version`, so it is a
+ * deliberate act with the ADR behind it and never a default.
+ */
+export function sameVersionRefusal(storedVersion: string, sameVersion: boolean): string | null {
+  if (sameVersion || storedVersion !== SCORING_ALGO_VERSION) return null
+  return `already derived under ${SCORING_ALGO_VERSION}; a same-version re-score is refused (R5). Pass --same-version only for an ADR-0012 additive change.`
 }
 
 export function parseRescoreArgs(argv: readonly string[]): RescoreOptions | { readonly refuse: string } {
@@ -83,7 +104,7 @@ export function parseRescoreArgs(argv: readonly string[]): RescoreOptions | { re
   const all = args.has('all')
   const domains = (args.get('domain') ?? '').split(',').map((d) => d.trim()).filter(Boolean)
   if (!all && domains.length === 0) return { refuse: 'pass --domain <host> or --all' }
-  return { domains, all, dataDir: args.get('data') ?? join(here, '..', 'data-live'), apply: args.has('apply') }
+  return { domains, all, dataDir: args.get('data') ?? join(here, '..', 'data-live'), apply: args.has('apply'), sameVersion: args.has('same-version') }
 }
 
 const resultsDir = (dataDir: string) => join(dataDir, 'results')
@@ -246,6 +267,11 @@ async function main(): Promise<void> {
       const plan = await planRescore(o.dataDir, domain, gate.callsPerEngine, file)
       if ('refuse' in plan) {
         process.stdout.write(`  SKIP  ${domain.padEnd(22)} ${plan.refuse}\n`)
+        continue
+      }
+      const same = sameVersionRefusal(plan.algoVersion, o.sameVersion)
+      if (same) {
+        process.stdout.write(`  SKIP  ${domain.padEnd(22)} ${same}\n`)
         continue
       }
       const state = plan.missing.length === 0 ? 'free' : `${plan.missing.length} MISSING`

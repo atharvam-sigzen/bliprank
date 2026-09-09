@@ -25,7 +25,8 @@ import { AnswerIndex } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { DEMO_BANKS } from '@bliprank/taxonomy'
 import { FileKV } from './local-store.js'
-import { auditPathFor, planRescore, storedResults } from './rescore.js'
+import { SCORING_ALGO_VERSION } from '@bliprank/scorer'
+import { auditPathFor, parseRescoreArgs, planRescore, sameVersionRefusal, storedResults } from './rescore.js'
 import { cyclePath, cyclesDir, writeCycle } from './cycles.js'
 import { recordCategory } from './resolve-category.js'
 import { basisOf, cellsFor } from './scan.js'
@@ -248,5 +249,25 @@ describe('a re-derivation under another competitor set is a different measuremen
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('a same-version re-score is refused unless named (R5, ADR-0012)', () => {
+  it('a result already at the current version is skipped by default', () => {
+    expect(sameVersionRefusal(SCORING_ALGO_VERSION, false)).toMatch(/refused \(R5\)/)
+    expect(sameVersionRefusal(SCORING_ALGO_VERSION, false)).toContain('--same-version')
+  })
+
+  it('an older stamp is exactly what a re-score is for', () => {
+    expect(sameVersionRefusal('det-1', false)).toBeNull()
+    expect(sameVersionRefusal('', false)).toBeNull()
+  })
+
+  it('--same-version names the ADR-0012 case and lifts the refusal', () => {
+    expect(sameVersionRefusal(SCORING_ALGO_VERSION, true)).toBeNull()
+    const parsed = parseRescoreArgs(['--all', '--apply', '--same-version'])
+    expect('refuse' in parsed).toBe(false)
+    expect((parsed as { sameVersion: boolean }).sameVersion).toBe(true)
+    expect((parseRescoreArgs(['--all']) as { sameVersion: boolean }).sameVersion).toBe(false)
   })
 })
