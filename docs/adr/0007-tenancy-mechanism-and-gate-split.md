@@ -1,6 +1,14 @@
 # ADR-0007 — The tenancy mechanism ships; the deploy gate is redesigned, not patched
 
-**Status:** Accepted · **Date:** 2026-08-24 · **Phase:** P1 (binds every phase gate)
+**Status:** Accepted · **CLOSED 2026-09-09** · **Date:** 2026-08-24 · **Phase:** P1 (binds every phase gate)
+
+> **THE GATE IS CLOSED.** `fix/tenancy-deploy-gate` merged on 2026-09-09:
+> migration 0003, `deploy-check.test.ts`, and all three assertions this ADR
+> listed as absent — the exposure manifest, `assert_role_powers()` and
+> `auth_key_health()` — now execute rather than being described in a comment.
+> 168/168 in `packages/db`. The two open findings in §4 are answered and
+> measured; see the closing note at the foot of this file. Everything below is
+> preserved as written, because the reasoning is why the redesign was right.
 **Relates to:** R7 (tenancy is verified mechanically) · PHASES.md standing suite item 3
 
 ## Context
@@ -173,3 +181,75 @@ nothing and blocks four other workstreams.
 
 **Defer the gate to "before launch".** Explicitly rejected by the decision above.
 It is the phrasing under which this would never be closed.
+
+
+---
+
+# Closing note — 2026-09-09
+
+Merged as `integrate/tenancy-deploy-gate`. **168/168 in `packages/db`.**
+
+## §4's two open findings, answered
+
+This ADR left two, and the branch's last two commits were *titled* as if they
+answered them. Titles are not evidence. Each now has a passing failing-case:
+
+| §4 finding | Test that proves it |
+|---|---|
+| key declaration and obligation to the same object | `audit 7 › a same-named parent in another schema does not shed the obligation` |
+| treat ownership as a principal | `audit 7 › the gate passes with the tables owned by a NON-superuser` + `› but an owner that can log in, or that a tenant can reach, is refused` |
+
+`audit 6` additionally delivers declaration propagation down partition trees,
+`LIKE INCLUDING ALL`, legacy `INHERITS` and multi-parent inheritance.
+`assert_role_powers()` refuses `REPLICATION` logins, `pg_maintain` and
+`pg_signal_backend` — none of which appears in any table ACL, which was the point.
+
+## What the merge nearly lost, and what the run then proved
+
+The branch **dropped** `master`'s `app_rw`/`set_workspace(uuid)` EXECUTE
+assertion. It was re-added at the merge on the principle that a merge is the
+easiest place to lose an assertion, and that "the manifest probably covers it" is
+not the standard for deleting one from a security gate.
+
+The test run then settled it. The unsafe database is refused — by the **manifest**,
+first, reporting `[definer-function-exposed] set_workspace(uuid) is executable by
+app_rw`. So the manifest *does* subsume it, and this ADR's central claim is
+demonstrated rather than argued: the manifest **derived** a fault nobody had
+enumerated. The re-added assertion is now known-redundant rather than
+assumed-redundant, and is kept as the second line for the case where a
+declaration lies.
+
+The same happened to `master`'s hand-written `pg_class` RLS sweep, which is gone:
+`[scoped-without-forced-rls] public.score_rows INHERITS a scoped declaration but
+does not FORCE row level security`. The manifest knows *why* the relation is
+scoped; the sweep only knew RLS was off.
+
+Both tests had pinned the old message text. Retargeted to the property — a test
+that pins a string is a test of the string.
+
+## Two suites, neither a superset
+
+`check-deploy.test.ts` (21) was **not** superseded by `deploy-check.test.ts` (78).
+Five of its cases are absent from the newer file, including the failing case for
+the assertion above. Both survive. The older one needed 0003 added to its
+migration list, because the gate it exercises now calls functions 0003 defines.
+
+## One thing the merge added that neither side had
+
+`tenant-isolation.test.ts` derived scoped relations from `pg_policies` on
+`master` and from the manifest on the branch. Each catches what the other cannot
+— an undeclared scoped relation, and a declaration the catalog does not support.
+Both derivations are kept, plus a third test asserting they **agree**. If the
+manifest and the catalog disagree about what is scoped, one of them is wrong, and
+finding that out from a test beats finding it out from a tenant.
+
+## The process failure, which outlived the technical one
+
+This sat 16 days. The deadline was "before G1" precisely because *"'before
+launch' has no date attached and would let this slip indefinitely; G1 does."*
+That reasoning assumed gates fire. **No gate has ever been run** — G0 unrun, G1
+never attempted, G2 NOT RUN, G3 blocked — so the deadline never came due, and
+work continued two phases past P1 on top of an open security gate.
+
+A deadline pinned to an event that never happens is not a deadline. If a future
+item needs forcing, pin it to a date.
