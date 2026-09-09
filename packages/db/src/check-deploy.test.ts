@@ -21,7 +21,9 @@
  * no failing case is indistinguishable from one that does nothing. That rule was
  * violated three times, and each time the untested assertion was the broken one.
  *
- * SCOPE. `check-deploy.sql` is deliberately PARTIAL — see ADR-0007. This file
+ * SCOPE. `check-deploy.sql` WAS deliberately partial (ADR-0007); the gate
+ * closed on 2026-09-09 when migration 0003 and `deploy-check.test.ts` merged.
+ * This file
  * covers only what it currently asserts. The exposure manifest,
  * `assert_role_powers()` and signing-key health are on `fix/tenancy-deploy-gate`
  * together with the 78 failing cases that exercise them; that work is required
@@ -63,6 +65,22 @@ async function db(opts: { legacyKey?: 'short' | 'long' } = {}): Promise<PGlite> 
     await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
   }
   await d.exec(migration('0002_tenancy_context.sql'))
+  /*
+   * 0003 ADDED AT THE MERGE, 2026-09-09, and it is not optional here.
+   *
+   * This file exercises `check-deploy.sql`, and that file now calls
+   * `assert_role_powers()` and `auth_key_health()` — both defined in
+   * `0003_tenancy_exposure_manifest.sql`. A database migrated only to 0002 makes
+   * every assertion in this suite fail with "function does not exist", which
+   * says nothing about the database being tested and everything about the
+   * harness.
+   *
+   * This file and `deploy-check.test.ts` both survive the merge and neither
+   * supersedes the other: five cases here are absent there, including the
+   * failing case for the app_rw setter assertion, and 57 cases there are absent
+   * here. Same subject, different angles.
+   */
+  await d.exec(migration('0003_tenancy_exposure_manifest.sql'))
   // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
   // assertion correctly refuses. A harness artifact, not a production shape —
   // managed Postgres gives you a privileged non-superuser. Named in the
@@ -221,14 +239,41 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     // The assertion this exercises certified a proxy and is kept with a
     // correction, not deleted — revoking that EXECUTE is still correct, it just
     // never was what closed the hole.
+    //
+    // >>> MEASURED AT THE MERGE, 2026-09-09 <<<
+    //
+    // This is now caught by the EXPOSURE MANIFEST, which runs before the
+    // hand-written assertion and reports
+    // `[definer-function-exposed] set_workspace(uuid) is executable by app_rw`.
+    // That is ADR-0007's whole thesis demonstrated: the manifest DERIVED the
+    // fault from the catalog without anyone having enumerated this arrangement.
+    //
+    // The expectation is therefore on the PROPERTY — the database is refused and
+    // the refusal names the function — not on which layer worded it. Pinning the
+    // old string made this test a test of the message.
     await d.exec(`GRANT EXECUTE ON FUNCTION set_workspace(uuid) TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/app_rw has EXECUTE on set_workspace/)
+    await expect(check(d)).rejects.toThrow(/set_workspace/)
   })
 
   it('a table that loses FORCE RLS is caught', async () => {
     const d = await healthy()
+    /*
+     * >>> MEASURED AT THE MERGE, 2026-09-09 <<<
+     *
+     * master swept pg_class by hand and raised `RLS is not forced on: %`. That
+     * sweep is GONE from the merged gate — the manifest replaced it, and reports
+     * `[scoped-without-forced-rls] public.score_rows inherits a scoped
+     * declaration but does not FORCE row level security` instead.
+     *
+     * Note what the manifest adds beyond the old message: INHERITS. It knows
+     * score_rows is scoped because the declaration propagated down the partition
+     * tree, which is the audit-6 finding. The old sweep only knew the table had
+     * RLS off.
+     *
+     * The unsafe database is refused either way, which is what this test is for.
+     */
     await d.exec(`ALTER TABLE score_rows NO FORCE ROW LEVEL SECURITY`)
-    await expect(check(d)).rejects.toThrow(/RLS is not forced on: .*score_rows/)
+    await expect(check(d)).rejects.toThrow(/score_rows/)
   })
 
   it('a context reader that stops being SECURITY DEFINER is caught, and so is a missing one', async () => {
