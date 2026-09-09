@@ -321,6 +321,10 @@ of the two deliberate acts; the second stays.
 ## 9. Current state
 
 **Phase:** _P3 — Grader & public surface_ (P0's G0 pilot is still unrun; see below)
+**MVP plan (2026-09-09):** `docs/MVP_PLAN.md` is the staged work list against
+`docs/PRODUCT_GOAL.md`; Stage A (the audit's seven confirmed defects) landed on
+branch `mvp/stage-a`. The next session takes Stage B (foundation: Vercel for
+`apps/public`, Supabase Auth, state into Postgres/R2) from that file.
 **Gate:** G3 — activation. **Open on the classifier criterion**: ≥95% of 100
 random real domains classified correctly. ADR-0009 built the site-content signal
 and made the taxonomy grow on demand, but its thresholds were set from six real
