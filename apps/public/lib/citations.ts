@@ -52,7 +52,35 @@ export const shortFor = (sourceClass: string): string => SOURCE_SHORT[sourceClas
 export interface ClassShare {
   readonly sourceClass: string
   readonly label: string
+  /** Citations of this class. A raw count, and the long tail lives here. */
   readonly count: number
+  /**
+   * ANSWERS in which this class was cited at least once — the class's REACH.
+   *
+   * ⚠️ THIS, NOT `count`, IS WHAT THE SURFACE PLOTS, for three reasons that
+   * happen to agree.
+   *
+   *   1. It is the reader's question. "In 12% of answers about you an engine
+   *      pointed at a rival" is actionable; "rival sites were 4.6% of all
+   *      citations" is a fact about volume nobody acts on. On the shipped scan
+   *      the two disagree sharply: 246 "other" citations come from only 41
+   *      answers — a long tail of many sites inside the same answers.
+   *   2. Its denominator is the page's own: the answers behind the headline,
+   *      the same n as the mention rate, instead of a second denominator
+   *      (citations) that appears nowhere else on the record.
+   *   3. ⚠️ CITATIONS ARE CLUSTERED WITHIN ANSWERS AND ANSWERS ARE NOT. An
+   *      answer carrying twenty citations contributes twenty CORRELATED
+   *      observations, so a Wilson interval over `total` citations is narrower
+   *      than the evidence supports — the design-effect problem G0 exists to
+   *      measure, on a shipped surface. Reach is a proportion of independent
+   *      answers, so its interval is honest with no correction.
+   *
+   * Reaches do NOT sum to one: an answer can cite several classes. Anything
+   * drawn from them must be independent bars, never a stacked composition.
+   */
+  readonly answers: number
+  /** Reach as a proportion of the headline's answers, with its interval. */
+  readonly reach: Metric
   /** Share of all citations, with its 95% interval; n is the citation count. */
   readonly metric: Metric
 }
@@ -69,6 +97,8 @@ export interface CitedHost {
 export interface CitationMix {
   /** Every citation across every answer. The denominator of every share. */
   readonly total: number
+  /** Answers behind the headline: the denominator every reach shares. */
+  readonly answersInSample: number
   readonly answersWithAny: number
   readonly answersWithout: number
   /** Engines that returned no citation on any answer — a fact about the engine, stated rather than read as zero. */
@@ -104,6 +134,14 @@ export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
 
   const counts = new Map<string, number>()
   for (const c of all) counts.set(c.sourceClass, (counts.get(c.sourceClass) ?? 0) + 1)
+
+  // Reach: distinct ANSWERS touching each class. A class is counted once per
+  // answer however many times it is cited in it, which is the whole difference
+  // between reach and volume.
+  const reached = new Map<string, number>()
+  for (const a of answers.answers) {
+    for (const cls of new Set(a.citations.map((c) => c.sourceClass))) reached.set(cls, (reached.get(cls) ?? 0) + 1)
+  }
   const order = (k: string) => {
     const i = (SOURCE_ORDER as readonly string[]).indexOf(k)
     return i === -1 ? SOURCE_ORDER.length : i
@@ -117,7 +155,16 @@ export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
           .sort((a, b) => order(a[0]) - order(b[0]) || a[0].localeCompare(b[0]))
           .map(([sourceClass, count]) => {
             const w = wilson(count, total)
-            return { sourceClass, label: labelFor(sourceClass), count, metric: { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, ...provenance(answers) } }
+            const seen = reached.get(sourceClass) ?? 0
+            const r = wilson(seen, answers.answers.length)
+            return {
+              sourceClass,
+              label: labelFor(sourceClass),
+              count,
+              answers: seen,
+              reach: { value: r.value, ci_low: r.ci_low, ci_high: r.ci_high, n: r.n, ...provenance(answers) },
+              metric: { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, ...provenance(answers) },
+            }
           })
 
   const unresolvable = all.filter((c) => !c.domain).length
@@ -136,5 +183,5 @@ export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
     .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain))
     .slice(0, topHosts)
 
-  return { total, answersWithAny, answersWithout, enginesWithNone, unresolvable, classes, hosts }
+  return { total, answersInSample: answers.answers.length, answersWithAny, answersWithout, enginesWithNone, unresolvable, classes, hosts }
 }

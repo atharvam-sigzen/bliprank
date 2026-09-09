@@ -34,17 +34,81 @@ describe('cited sources', () => {
     expect(idle).not.toMatch(/\d+(\.\d+)?%/)
   })
 
-  it('every share carries its interval and its n, the subject’s own site is flagged, and the caveat is printed', () => {
+  it('the classes are named, the subject’s own site is flagged, and the caveat is printed', () => {
     const html = renderToStaticMarkup(<CitedSourcesBody mix={citationMix(evidence)} answers={evidence} subjectName="Pipedrive" scan={SCAN} />)
     expect(html).toContain('gemini returned no sources on any answer')
     expect(html).toContain('Your own site')
     expect(html).toContain('A competitor’s site')
-    expect(html).toContain('95% interval')
-    expect(html).toContain('Shares of <span class="num">3</span> citations, not of answers')
     expect(html).toContain('<span class="flag">yours</span>')
     expect(html).toContain('made <span class="num">3</span> citations')
     expect(html).toContain('not a measured cause of being named')
     expect(html).toContain('algo det-2')
+  })
+
+  /* ──────────────────────────────────────────────────────────────────────
+     REACH, NOT VOLUME — why this chart changed statistic.
+     ────────────────────────────────────────────────────────────────────── */
+
+  it('the bars are REACH, drawn from the answers denominator', () => {
+    /*
+     * The first version plotted share of citations, which on the shipped scan
+     * ran 0.4% to 87.2% — a 218:1 range that drew six of seven classes as
+     * slivers under eight pixels while one class ate the axis. No scale fixes
+     * that honestly, so the statistic changed instead.
+     */
+    const mix = citationMix(evidence)
+    const html = renderToStaticMarkup(<CitedSourcesBody mix={mix} answers={evidence} subjectName="Pipedrive" scan={SCAN} />)
+    const spans = [...html.matchAll(/class="range__span" style="left:([\d.]+)%;width:([\d.]+)%"/g)]
+    expect(spans.length).toBe(mix.classes.length)
+    spans.forEach((m, i) => {
+      const r = mix.classes[i]!.reach
+      expect(Number(m[1])).toBeCloseTo(r.ci_low * 100, 4)
+      expect(Number(m[2])).toBeCloseTo((r.ci_high - r.ci_low) * 100, 4)
+    })
+  })
+
+  it('reach counts ANSWERS, so a class cited twice in one answer counts once', () => {
+    // The whole difference between reach and volume, asserted on the numbers
+    // rather than on the wording.
+    const mix = citationMix(evidence)
+    for (const c of mix.classes) {
+      expect([c.label, c.answers]).toEqual([c.label, expect.any(Number)])
+      expect([c.label, c.answers <= c.count]).toEqual([c.label, true])
+      expect([c.label, c.answers <= mix.answersInSample]).toEqual([c.label, true])
+      expect([c.label, c.reach.n]).toEqual([c.label, mix.answersInSample])
+    }
+  })
+
+  it('reaches do NOT sum to one, so the bars must never be stacked', () => {
+    // One answer can cite several classes. A stacked composition would be a
+    // different and false claim; independent bars are the only honest form.
+    const mix = citationMix(evidence)
+    const html = renderToStaticMarkup(<CitedSourcesBody mix={mix} answers={evidence} subjectName="Pipedrive" scan={SCAN} />)
+    expect(html).toContain('do not sum to 100%')
+    // Each bar starts from its own interval, not from a running offset.
+    const lefts = [...html.matchAll(/class="range__span" style="left:([\d.]+)%/g)].map((m) => Number(m[1]))
+    mix.classes.forEach((c, i) => expect(lefts[i]).toBeCloseTo(c.reach.ci_low * 100, 4))
+  })
+
+  it('⚠️ SHARE OF CITATIONS KEEPS ITS COUNT AND LOSES ITS INTERVAL', () => {
+    /*
+     * Citations cluster inside answers: twenty citations in one answer are
+     * twenty CORRELATED observations, so a Wilson interval over the citation
+     * total is narrower than the evidence supports — the design effect G0
+     * exists to measure, on a shipped surface. The counts are facts and stay.
+     * The interval that overstated them does not.
+     */
+    const mix = citationMix(evidence)
+    const html = renderToStaticMarkup(<CitedSourcesBody mix={mix} answers={evidence} subjectName="Pipedrive" scan={SCAN} />)
+    const table = /<table>[\s\S]*?<\/table>/.exec(html)?.[0] ?? ''
+    expect(table.length).toBeGreaterThan(200)
+    // No citation-share interval is rendered anywhere in the class table...
+    for (const c of mix.classes) {
+      const interval = `${(c.metric.ci_low * 100).toFixed(0)}–${(c.metric.ci_high * 100).toFixed(0)}%`
+      expect([c.label, table.includes(interval)]).toEqual([c.label, false])
+    }
+    // ...and the reason is stated where a reader meets it.
+    expect(html).toMatch(/citations cluster inside answers/)
   })
 
   it('a redirect link naming no site is counted, named, and never linked or listed', () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
+import { formatProvenance, formatValue } from '@bliprank/stats'
 import { loadAnswers, type ScanAnswers } from '@/lib/answers'
 import { citationMix, type CitationMix } from '@/lib/citations'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
@@ -14,9 +14,20 @@ import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
  * own domain. The rest was summed away. This section reads the same evidence
  * file the per-question table reads and shows where the engines actually sent
  * readers: how much of it was the subject's own site, a rival's, a review
- * site, a thread — with a Wilson interval on every share, because a share of
- * citations is a proportion of a sample like any other (R8) — and which sites
- * were cited most.
+ * site, a thread — and which sites were cited most.
+ *
+ * ⚠️ IT PLOTS REACH, NOT VOLUME, and the first version plotted volume. Share of
+ * citations ran 0.4% to 87.2% on the shipped scan — a 218:1 range — so six of
+ * seven classes drew as slivers two to eight pixels wide and the chart spent its
+ * whole width on the one class nobody acts on. No scale fixes that honestly: a
+ * log axis on a proportion makes 1% look like a third of 87%, and this sheet's
+ * rule is that a scale is fixed, never fitted.
+ *
+ * So the STATISTIC changed rather than the scale. Reach — the answers in which a
+ * class was cited at all — spans 1.2% to 48.2% instead, is the question a reader
+ * actually has, shares the record's own denominator, and carries an honest
+ * interval where share-of-citations does not. The reasoning is on
+ * ClassShare.answers, where the data is.
  *
  * ⚠️ WHAT THIS DOES NOT CLAIM. A citation is where an engine pointed a reader,
  * not where it got its facts, and being cited is not a measured cause of being
@@ -110,16 +121,18 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
         <>
           <div className="table-wrap">
             <table>
-              <caption className="visually-hidden">Share of citations by source class, with 95% intervals</caption>
+              <caption className="visually-hidden">
+                How many answers each source class was cited in, with 95% intervals, and its share of all citations
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Source class</th>
+                  <th scope="col">Answers reached</th>
+                  <th scope="col" style={{ width: '32%' }}>
+                    <span className="visually-hidden">Reach with its 95% interval</span>
+                  </th>
                   <th scope="col">Citations</th>
                   <th scope="col">Share</th>
-                  <th scope="col">95% interval</th>
-                  <th scope="col" style={{ width: '32%' }}>
-                    <span className="visually-hidden">Proportional bar</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -128,25 +141,40 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
                     <th scope="row" style={{ fontWeight: c.sourceClass === 'owned' ? 600 : 400 }}>
                       {c.label}
                     </th>
-                    <td className="num">{c.count}</td>
-                    <td className="num">{formatValue(c.metric, 0)}</td>
-                    <td className="num">{formatInterval(c.metric, 0)}</td>
+                    <td className="num">
+                      {c.answers} of {mix.answersInSample}
+                    </td>
                     <td>
                       {/* The bar shows the interval as well as the estimate; a solid
                           bar alone would reassert the precision the number beside
-                          it just disclaimed. Same device as the worked example. */}
+                          it just disclaimed. Same device as the rail.
+
+                          INDEPENDENT BARS, NEVER STACKED: reaches do not sum to
+                          one, because one answer can cite several classes. */}
                       <div aria-hidden="true" className="range">
-                        <div className="range__span" style={{ left: `${c.metric.ci_low * 100}%`, width: `${(c.metric.ci_high - c.metric.ci_low) * 100}%` }} />
-                        <div className="range__tick" style={{ left: `${c.metric.value * 100}%` }} />
+                        <div className="range__span" style={{ left: `${c.reach.ci_low * 100}%`, width: `${(c.reach.ci_high - c.reach.ci_low) * 100}%` }} />
+                        <div className="range__tick" style={{ left: `${c.reach.value * 100}%` }} />
                       </div>
                     </td>
+                    {/* Volume, as text and WITHOUT an interval. See the note on
+                        ClassShare.answers: citations cluster within answers, so a
+                        Wilson interval over the citation total is narrower than
+                        the evidence supports. The counts are facts and stay; the
+                        interval that overstated them does not. */}
+                    <td className="num">{c.count}</td>
+                    <td className="num">{formatValue(c.metric, 0)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <p className="metric__interval">
-            Shares of <span className="num">{mix.total}</span> citations, not of answers. A class is assigned by rule from the URL alone
+            The bars are ANSWERS REACHED, out of the <span className="num">{mix.answersInSample}</span> behind the headline: how often an
+            engine pointed anywhere in that class while answering about {subjectName}. They do not sum to 100%, because one answer can cite
+            several classes. The two columns after them are volume — how many citations, and their share of all{' '}
+            <span className="num">{mix.total}</span> — and they carry no interval on purpose: citations cluster inside answers, so twenty
+            citations in one answer are twenty correlated observations and a Wilson interval over the citation total would be narrower than
+            the evidence supports. A class is assigned by rule from the URL alone
             (ADR-0005): a review site is a review site whatever it says. &ldquo;Earned media&rdquo; means one of 52 named editorial outlets,
             admitted only if it has a masthead, is independent of the vendors it covers, is not primarily an affiliate directory, and covers a
             market we track (ADR-0015). &ldquo;Other sites&rdquo; means a site none of our tables name: not yours, not a tracked rival&apos;s,
