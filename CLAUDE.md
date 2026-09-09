@@ -80,7 +80,7 @@ services/reconcile    Competitor export parsers, variance decomposition
 packages/stats        Wilson, DiD, sampling. Pure functions. HUMAN-OWNED.
 packages/db           Drizzle schema, migrations, RLS policies, partitions
 packages/contracts    Shared types + the Engine Adapter interface
-docs/                 ARCHITECTURE.md, PHASES.md, METHODOLOGY.md, adr/
+docs/                 ARCHITECTURE.md, PHASES.md, METHODOLOGY.md, adr/, runbooks/
 ```
 
 ---
@@ -304,6 +304,14 @@ homepages, not from that sample. Building the labelled 100 is what closes it.
 the classifier thresholds (see ADR-0009 "Open, and blocking G3"), and whether the
 SSRF blocked-range table in `services/grader/src/fetch-site.ts` matches the
 network the collector will actually deploy into.
+
+**⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
+allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS
+assertion — the one assertion no policy can substitute for, because a role with
+BYPASSRLS reads every tenant's rows and appears in no table ACL. It exists for
+the test harness (PGlite's session user is a superuser). The gate prints its
+contents on every run; `(none)` is the expected output. Standing operational
+item with no completion date: `docs/runbooks/deploying-the-database.md` §1.
 
 **Tenancy deploy gate CLOSED (2026-09-09), ADR-0007.** Its hard prerequisite for
 G1, stalled 16 days on a branch that was never even pushed. Migration 0003, the

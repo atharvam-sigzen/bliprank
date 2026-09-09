@@ -166,6 +166,14 @@ END $$;
 
 -- Say what was waived. A deliberate decision that leaves no trace in the
 -- artefact recording it is not a deliberate decision.
+-- READ THIS LINE IN THE DEPLOY LOG. `(none)` is the expected output in
+-- production. Anything else is a role that reads every tenant's rows, and is
+-- either a decision recorded under docs/runbooks/deploying-the-database.md §1
+-- or a decision nobody made. There is no third case.
+--
+-- The exception this allowlist silences offers naming a role as one of its two
+-- remedies, and at 2am that is much easier than removing the attribute. The
+-- runbook exists for that moment.
 \echo 'RLS-bypass roles excused by bliprank.rls_bypass_allowed:'
 SELECT coalesce(nullif(coalesce(current_setting('bliprank.rls_bypass_allowed', true), ''), ''), '(none)') AS excused;
 
