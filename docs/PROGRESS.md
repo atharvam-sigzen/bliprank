@@ -1397,6 +1397,34 @@ per-workspace, what happens to an in-flight cycle at the boundary, who is told
 when it binds) and none of it is answerable before there is a plan and a
 customer. Reasoning in ADR-0017 Amendment 1.
 
+**(j) Two review findings held against a pending redesign.** `stats-reviewer`
+raised three MINOR items on the det-3 bump. The first — the CI band spanning a
+version boundary the line broke at — is **fixed** (2026-09-09,
+`ci-trend-chart.render.test.tsx`). The other two are deliberately not fixed
+separately, because the design session's citation-class chart change (switching
+the statistic and dropping the interval from share-of-citations) is expected to
+resolve both structurally:
+
+- **F5 · the share metric's `comparison_basis` does not identify its
+  denominator.** `citations.ts` stamps the ANSWER basis on a metric whose `n` is
+  the citation count; two scans on an identical basis can cite very different
+  numbers of URLs. No consumer compares source mixes today — `citationMix` has
+  one caller, which renders it — so it is a latent trap rather than a live
+  fault, and it fires the day anyone compares mixes across cycles.
+- **F6 · citations are treated as independent when they cluster.** Measured on
+  the reference scan: 282 citations from 85 answers, but only 44 answers cited
+  anything, mean cluster 6.41, max 11. At an ICC of 0.2 the design effect is
+  ~2.08, so n_eff ≈ 135 rather than 282 and the published interval is about √2
+  too narrow. This is the caveat already written into `wilson.ts` and deferred
+  to G0, which is where ρ̂ and DEFF get measured rather than assumed.
+
+⚠️ **The check that must actually happen:** once the redesign lands, confirm
+whether a `Metric` with a citation denominator still exists anywhere. If it does
+not, close F5 as resolved-by-the-redesign and confirm F6's denominator is
+genuinely independent. If it does, both are still open and F5 needs the
+denominator in the basis. As of 2026-09-09 the redesign has **not** landed:
+`citations.ts` and `cited-sources.tsx` were last touched by `34f3e90`.
+
 **Still true:** nothing past G0 counts as validated progress until G0 has a
 real pass/fail result. Real answers exist now; the unit economics have not been
 measured, and measuring them is what G0 is for.

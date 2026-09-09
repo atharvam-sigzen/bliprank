@@ -40,22 +40,58 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
   const x = (i: number) => PAD.left + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW)
   const y = (v: number) => PAD.top + (1 - v) * plotH
 
-  // R5: charts show a version boundary. compare() refuses across a scoring bump
-  // or a changed measurement basis, so drawing those same points as one
-  // continuous line would reassert on the chart exactly the comparison the
-  // number below it declines to make. The path breaks instead.
+  /*
+   * R5: charts show a version boundary. `compare()` refuses across a scoring
+   * bump or a changed measurement basis, so drawing those points as one
+   * continuous shape would reassert on the chart exactly the comparison the
+   * number below it declines to make.
+   *
+   * ⚠️ THE BAND USED TO SPAN A BOUNDARY THE LINE BROKE AT. The line was
+   * segmented on `continuous` and the band was one polygon over every point,
+   * so after a version bump the ribbon joined two measurements the line, the
+   * verdict and `compare()` all refused to join — and the ribbon is the part
+   * that carries the uncertainty, which is the part a reader uses to decide
+   * whether movement is real. Found in review on 2026-09-07 while it was still
+   * unreachable (every domain had one cycle) and fixed before the daily loop
+   * makes second cycles routine.
+   *
+   * The fix is one segmentation, computed once, consumed by both marks. Two
+   * derivations of "may these points be joined" is what let them disagree in
+   * the first place, and a second copy would drift again.
+   */
   const continuous = (a: TrendPoint, b: TrendPoint) =>
     a.metric.algo_version === b.metric.algo_version &&
     a.metric.collection_path === b.metric.collection_path &&
     a.metric.comparison_basis === b.metric.comparison_basis
-  const line = points
-    .map((p, i) => `${i === 0 || !continuous(points[i - 1]!, p) ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.metric.value).toFixed(1)}`)
+
+  /** Contiguous runs of comparable points, as indices into `points`. */
+  const runs: number[][] = []
+  points.forEach((p, i) => {
+    if (i === 0 || !continuous(points[i - 1]!, p)) runs.push([i])
+    else runs[runs.length - 1]!.push(i)
+  })
+
+  const line = runs
+    .map((run) => run.map((i, k) => `${k === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(points[i]!.metric.value).toFixed(1)}`).join(' '))
     .join(' ')
-  const band = [
-    ...points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.metric.ci_high).toFixed(1)}`),
-    ...[...points].reverse().map((p, i) => `L${x(points.length - 1 - i).toFixed(1)},${y(p.metric.ci_low).toFixed(1)}`),
-    'Z',
-  ].join(' ')
+
+  /*
+   * One closed sub-path per run. A run of a single point collapses to a
+   * vertical segment from `ci_high` to `ci_low`, which `.chart__band`'s stroke
+   * draws as an error bar — so the cycle that opens a new version still shows
+   * its interval instead of losing the band the moment it is alone. That case
+   * is the common one right after a bump, and it is exactly the reader who most
+   * needs the uncertainty in front of them.
+   */
+  const band = runs
+    .map((run) =>
+      [
+        ...run.map((i, k) => `${k === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(points[i]!.metric.ci_high).toFixed(1)}`),
+        ...[...run].reverse().map((i) => `L${x(i).toFixed(1)},${y(points[i]!.metric.ci_low).toFixed(1)}`),
+        'Z',
+      ].join(' '),
+    )
+    .join(' ')
 
   const ticks = [0, 0.25, 0.5, 0.75, 1]
   const describe = points.map((p) => `${p.cycle}: ${formatValue(p.metric)}, interval ${formatInterval(p.metric)}, n=${p.metric.n}`).join('. ')
