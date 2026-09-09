@@ -305,4 +305,24 @@ the classifier thresholds (see ADR-0009 "Open, and blocking G3"), and whether th
 SSRF blocked-range table in `services/grader/src/fetch-site.ts` matches the
 network the collector will actually deploy into.
 
+**Tenancy deploy gate CLOSED (2026-09-09), ADR-0007.** Its hard prerequisite for
+G1, stalled 16 days on a branch that was never even pushed. Migration 0003, the
+exposure manifest, `assert_role_powers()` and `auth_key_health()` all execute
+now; `check-deploy.sql` no longer ends with "PARTIAL GATE". 168/168 in
+`packages/db`. Two suites are kept — `check-deploy.test.ts` (21) and
+`deploy-check.test.ts` (78) — because neither is a superset of the other.
+⚠️ HUMAN REVIEW: the tenancy model in `packages/db`.
+
+**A deadline pinned to a gate is not a deadline here.** ADR-0007 chose "before
+G1" over "before launch" because G1 has a date and launch does not. No gate has
+ever been run — G0 unrun, G1 never attempted, G2 NOT RUN, G3 blocked — so it
+never came due, and two phases of work landed on top of an open security gate.
+Anything given a deadline from now on gets a date, not a milestone.
+
+**Four tests fail on `main` and are NOT from this work** (`scan-result.test.ts`,
+the `data-live:sigzen.com*` cases). The bundled `apps/public/lib/scan-sigzen.json`
+records 85 answers; every `data-live` sigzen result records 50, and the test
+compares one against the other through `scanFor`, which prefers the bundled file.
+Reproduced on bare `main` with no tenancy merge present. Undiagnosed beyond that.
+
 Update this section at every phase transition. It is the first thing a new session reads.
