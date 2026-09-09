@@ -1,3 +1,4 @@
+import { normaliseHost } from '@bliprank/taxonomy'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
@@ -52,17 +53,14 @@ const domainCfg = (data: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig 
   ledgerFile: join(data, 'prompt-request-domain-cap.json'),
 })
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
-const isHost = (d: string): boolean => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 export async function GET(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
-  const domain = normalise(new URL(req.url).searchParams.get('domain') ?? '')
-  if (!domain || !isHost(domain)) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
+  const domain = normaliseHost(new URL(req.url).searchParams.get('domain') ?? '')
+  if (!domain) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
   const record = readCategoryRecord(data, domain)
   if (!record) return json({ kind: 'no-record', message: `${domain} has no category on record on this machine, so there is no cycle for its prompts to join. A first scan decides one.` }, 404)
   const names = new Map(allCategories(data).map((c) => [c.slug, c.displayName]))
@@ -87,8 +85,8 @@ export async function POST(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
   const raw = (await req.json().catch(() => ({}))) as { domain?: unknown; prompts?: unknown; reason?: unknown }
-  const domain = normalise(String(raw.domain ?? ''))
-  if (!domain || !isHost(domain)) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
+  const domain = normaliseHost(String(raw.domain ?? ''))
+  if (!domain) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
   if (!Array.isArray(raw.prompts) || !raw.prompts.every((p) => typeof p === 'string')) return json({ kind: 'input', message: 'Prompts are a list of sentences.' }, 400)
   const reason = typeof raw.reason === 'string' ? raw.reason : ''
   if (!readCategoryRecord(data, domain)) return json({ kind: 'no-record', message: `${domain} has no category on record on this machine, so there is no cycle for its prompts to join yet.` }, 404)

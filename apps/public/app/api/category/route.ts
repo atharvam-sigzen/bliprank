@@ -1,3 +1,4 @@
+import { normaliseHost } from '@bliprank/taxonomy'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { allPending, consequencesOf, fileCategoryRequest, pendingRequest, requestsFor } from '../../../../../services/grader/src/category-requests.js'
@@ -67,9 +68,6 @@ const domainCfg = (data: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig 
   ledgerFile: join(data, 'category-request-domain-cap.json'),
 })
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
-const isHost = (d: string): boolean => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
@@ -77,8 +75,8 @@ const json = (body: unknown, status = 200): Response =>
 export async function GET(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
-  const domain = normalise(new URL(req.url).searchParams.get('domain') ?? '')
-  if (!domain || !isHost(domain)) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
+  const domain = normaliseHost(new URL(req.url).searchParams.get('domain') ?? '')
+  if (!domain) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
 
   // Bounded to recorded domains BEFORE the ledger: an unknown name costs nobody a slot.
   const record = readCategoryRecord(data, domain)
@@ -117,8 +115,8 @@ export async function POST(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
   const raw = (await req.json().catch(() => ({}))) as { domain?: unknown; slug?: unknown; reason?: unknown }
-  const domain = normalise(String(raw.domain ?? ''))
-  if (!domain || !isHost(domain)) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
+  const domain = normaliseHost(String(raw.domain ?? ''))
+  if (!domain) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
   const slug = String(raw.slug ?? '').trim()
   const reason = typeof raw.reason === 'string' ? raw.reason : ''
   if (!slug) return json({ kind: 'input', message: 'Choose the category you think is right.' }, 400)

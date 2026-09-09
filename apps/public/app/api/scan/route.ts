@@ -1,3 +1,5 @@
+import { normaliseHost } from '@bliprank/taxonomy'
+import { SCAN_FAILED } from '@/lib/route-errors'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
@@ -63,6 +65,7 @@ import {
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+
 const resolveRoot = (): string => {
   let curr = process.cwd()
   while (curr && curr !== dirname(curr)) {
@@ -103,8 +106,6 @@ const resolveFlags = (env: NodeJS.ProcessEnv) => {
   }
 }
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
 /**
  * A finished scan for this domain, if one was ever produced AND it still
@@ -151,7 +152,7 @@ export async function POST(req: Request): Promise<Response> {
   const DATA = dataDir(env)
   const visitorIp = extractClientIp(req, env)
   const body = (await req.json().catch(() => ({}))) as { domain?: string; cycle?: string }
-  const domain = normalise(String(body.domain ?? ''))
+  const domain = normaliseHost(String(body.domain ?? ''))
   const wantsNewCycle = body.cycle === 'new'
 
   // A browser that closes the tab mid-scan closes the stream, and every
@@ -428,8 +429,11 @@ export async function POST(req: Request): Promise<Response> {
         send(c, 'result', result)
         done(c)
       } catch (e) {
-        // Never a blank screen and never a substituted number: say what broke.
-        send(c, 'error', { kind: 'failed', message: `The scan stopped: ${(e as Error).message}` })
+        // Never a blank screen and never a substituted number, and never the
+        // raw error either: a provider body, a ledger path or a stack detail is
+        // the server's to log, not the visitor's to read (2026-09-09 audit).
+        console.error('[scan] failed', domain, e)
+        send(c, 'error', { kind: 'failed', message: SCAN_FAILED })
         done(c)
       }
     },

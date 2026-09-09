@@ -1,3 +1,4 @@
+import { normaliseHost } from '@bliprank/taxonomy'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import {
@@ -56,17 +57,14 @@ const domainCfg = (data: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig 
   ledgerFile: join(data, 'competitor-request-domain-cap.json'),
 })
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
-const isHost = (d: string): boolean => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 export async function GET(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
-  const domain = normalise(new URL(req.url).searchParams.get('domain') ?? '')
-  if (!domain || !isHost(domain)) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
+  const domain = normaliseHost(new URL(req.url).searchParams.get('domain') ?? '')
+  if (!domain) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
   const record = readCategoryRecord(data, domain)
   if (!record) return json({ kind: 'no-record', message: `${domain} has no category on record on this machine, so it has no competitor set yet. A first scan decides one.` }, 404)
   const bank = allBanks(data).find((b) => b.category === record.slug)
@@ -103,8 +101,8 @@ export async function POST(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
   const raw = (await req.json().catch(() => ({}))) as { domain?: unknown; exclude?: unknown; include?: unknown; reason?: unknown }
-  const domain = normalise(String(raw.domain ?? ''))
-  if (!domain || !isHost(domain)) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
+  const domain = normaliseHost(String(raw.domain ?? ''))
+  if (!domain) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
   const strs = (v: unknown): string[] | null => (Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : null)
   const exclude = strs(raw.exclude ?? [])
   const include = strs(raw.include ?? [])

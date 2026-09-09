@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
-import { classifyDomain } from '@bliprank/taxonomy'
+import { classifyDomain, normaliseHost } from '@bliprank/taxonomy'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
@@ -9,6 +9,7 @@ import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/s
 import { allBanks, allCategories, readCategoryRecord, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
 import { competitorsFor } from '../../../../../services/grader/src/competitor-overrides.js'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
+import { PREVIEW_FAILED } from '@/lib/route-errors'
 import {
   DEFAULT_VISITOR_WINDOW_MS,
   checkVisitorThrottle,
@@ -86,6 +87,7 @@ let inFlight = 0
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+
 const resolveRoot = (): string => {
   let curr = process.cwd()
   while (curr && curr !== dirname(curr)) {
@@ -98,8 +100,6 @@ const ROOT = resolveRoot()
 /** Per request, so a test can point the route at a scratch directory through `GRADER_DATA_DIR`. */
 const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(ROOT, 'services', 'grader', 'data-live')
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
 const previewThrottleConfig = (DATA: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_PREVIEWS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_PREVIEWS_PER_HOUR),
@@ -133,7 +133,7 @@ export async function POST(req: Request): Promise<Response> {
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
   const { domain: raw } = (await req.json().catch(() => ({}))) as { domain?: string }
-  const domain = normalise(String(raw ?? ''))
+  const domain = normaliseHost(String(raw ?? ''))
   if (!domain) return json({ kind: 'input', message: 'Enter a domain, for example pipedrive.com' }, 400)
 
   const DATA = dataDir(env)
@@ -239,8 +239,10 @@ export async function POST(req: Request): Promise<Response> {
     }
     return json(body)
   } catch (e) {
-    // Never a blank screen and never an invented category: say what broke.
-    return json({ kind: 'failed', message: `The preview could not be built: ${(e as Error).message}` }, 500)
+    // Never a blank screen and never an invented category, and never the raw
+    // error: the cause is logged server-side, the visitor gets a fixed line.
+    console.error('[preview] failed', domain, e)
+    return json({ kind: 'failed', message: PREVIEW_FAILED }, 500)
   } finally {
     if (costs) inFlight -= 1
   }

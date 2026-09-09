@@ -1,3 +1,4 @@
+import { normaliseHost } from '@bliprank/taxonomy'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { listCycles } from '../../../../../services/grader/src/cycles.js'
@@ -34,15 +35,13 @@ const resolveRoot = (): string => {
 }
 const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(resolveRoot(), 'services', 'grader', 'data-live')
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
 export async function GET(req: Request): Promise<Response> {
   const json = (body: unknown, status = 200): Response =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
-  const domain = normalise(new URL(req.url).searchParams.get('domain') ?? '')
-  if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return json({ message: 'Pass ?domain=example.com' }, 400)
+  const domain = normaliseHost(new URL(req.url).searchParams.get('domain') ?? '')
+  if (!domain) return json({ message: 'Pass ?domain=example.com' }, 400)
 
   const cycles = listCycles(dataDir(process.env), domain)
   if (cycles.length === 0) return json({ message: `this machine holds no cycle of ${domain}` }, 404)

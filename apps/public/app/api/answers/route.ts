@@ -1,3 +1,4 @@
+import { normaliseHost } from '@bliprank/taxonomy'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { readScanAnswers } from '../../../../../services/grader/src/answers.js'
@@ -46,17 +47,15 @@ const resolveRoot = (): string => {
 const DATA = join(resolveRoot(), 'services', 'grader', 'data-live')
 
 /** The same normalisation /api/scan and /api/preview apply, so one typed domain resolves once. */
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
 export async function GET(req: Request): Promise<Response> {
   const json = (body: unknown, status = 200): Response =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
-  const domain = normalise(new URL(req.url).searchParams.get('domain') ?? '')
+  const domain = normaliseHost(new URL(req.url).searchParams.get('domain') ?? '')
   // Host shape, checked here rather than inferred downstream. Nothing else in
   // the request reaches a path.
-  if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return json({ message: 'Pass ?domain=example.com' }, 400)
+  if (!domain) return json({ message: 'Pass ?domain=example.com' }, 400)
 
   // A specific cycle, when the client names one. Day-shaped or nothing: the
   // value reaches a file name inside `readCycle`, which refuses anything else.

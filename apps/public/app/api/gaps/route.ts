@@ -1,3 +1,4 @@
+import { normaliseHost } from '@bliprank/taxonomy'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { latestCycle, readCycle } from '../../../../../services/grader/src/cycles.js'
@@ -70,8 +71,6 @@ const domainCapConfig = (data: string, env: NodeJS.ProcessEnv): VisitorThrottleC
   ledgerFile: join(data, 'gaps-domain-cap.json'),
 })
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
 export async function GET(req: Request): Promise<Response> {
   const json = (body: unknown, status = 200): Response =>
@@ -80,8 +79,8 @@ export async function GET(req: Request): Promise<Response> {
   const env = process.env
   const data = dataDir(env)
   const url = new URL(req.url)
-  const domain = normalise(url.searchParams.get('domain') ?? '')
-  if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return json({ message: 'Pass ?domain=example.com' }, 400)
+  const domain = normaliseHost(url.searchParams.get('domain') ?? '')
+  if (!domain) return json({ message: 'Pass ?domain=example.com' }, 400)
   const dayParam = url.searchParams.get('day') ?? ''
   const day = /^\d{4}-\d{2}-\d{2}$/.test(dayParam) ? dayParam : undefined
 
