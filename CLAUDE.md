@@ -1,3 +1,5 @@
+> **First, read `docs/PRODUCT_GOAL.md`.** It is the canonical eleven-point product goal every session measures its work against. Do not restate it; cite it by point number.
+
 # BlipRank — CLAUDE.md
 
 > **Read this fully before your first tool call in a new session.**
