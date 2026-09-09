@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS SEPARATELY FROM THE CATALOG CHECKS.
  *
- * The deploy-time gate asserts things ABOUT the
+ * `check-deploy.sql` and `tenancy_exposure_faults()` assert things ABOUT the
  * configuration: that a relation is declared, that RLS is forced, that a policy
  * mentions `current_workspace_id`. Every one of those is a proxy for the thing
  * customers actually pay for, which is that tenant A's rows never appear in
@@ -23,10 +23,10 @@
  * turns one into the other — which is why this file drives data rather than
  * reading pg_policies.
  *
- * THE RULE: every relation whose policy consults the tenant context gets a case
- * here that establishes two real tenant contexts and asserts the visible row
- * sets do not intersect. The subject is derived from `pg_policies`, so a new
- * scoped relation fails the first test below until a case is written for it.
+ * THE RULE: every relation the manifest declares `scoped` gets a case here that
+ * establishes two real tenant contexts and asserts the visible row sets do not
+ * intersect. When a scoped relation is added to the manifest, add it here in the
+ * same commit; the first test below fails if you do not.
  */
 
 import { createHmac } from 'node:crypto'
@@ -75,7 +75,7 @@ const visible = async (ws: string, sub: string, relation: string, col: string) =
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql']) {
+  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_tenancy_exposure_manifest.sql']) {
     await db.exec(migration(m))
   }
   await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
@@ -124,30 +124,85 @@ const CASES: readonly (readonly [string, string])[] = [
   ['score_aggregates', 'brand_id'],
 ]
 
-describe('every tenant-scoped relation has a disjointness case here', () => {
-  it('nothing whose visibility depends on tenant context is left unexercised', async () => {
+/**
+ * Scoped relations as the CATALOG sees them: anything app_rw can read whose
+ * policy consults the tenant context. Shared by the two tests below so the
+ * derivation cannot drift between them.
+ */
+async function catalogScoped(): Promise<string[]> {
+  const rows = (
+    await db.query(`
+      SELECT DISTINCT p.tablename FROM pg_policies p
+       WHERE p.schemaname = 'public'
+         AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
+         AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
+       ORDER BY p.tablename`)
+  ).rows as { tablename: string }[]
+  return rows.map((r) => r.tablename)
+}
+
+describe('every scoped relation has a disjointness case here', () => {
+  /*
+   * TWO DERIVATIONS, AND THE MERGE IS WHY THERE ARE TWO.
+   *
+   * `master` derived the subject from `pg_policies`: anything app_rw can read
+   * whose policy consults the tenant context belongs here, declared or not. This
+   * branch derived it from `tenancy_exposure_manifest`: anything DECLARED scoped
+   * belongs here. Each catches something the other cannot.
+   *
+   *   pg_policies    sees a scoped relation nobody declared. The manifest cannot;
+   *                  it only knows what is in it. (tenancy_exposure_faults() does
+   *                  catch the undeclared case at deploy time — but that is a
+   *                  different runner, and this file is the behavioural half.)
+   *
+   *   the manifest   sees a relation declared scoped whose policy does not
+   *                  actually mention current_workspace_id — a declaration that
+   *                  is a lie. pg_policies cannot; it would simply not find it.
+   *
+   * Keeping both also makes the SEAM between them testable, which is the third
+   * test below and the one most likely to earn its keep: if the manifest and the
+   * catalog disagree about what is scoped, one of them is wrong, and finding out
+   * from a test beats finding out from a tenant.
+   */
+  it('the manifest declares nothing scoped that this file does not exercise', async () => {
     const COVERED = new Set(CASES.map(([r]) => r))
-    // DERIVED FROM pg_policies, not from a declaration. The manifest in
-    // migration 0003 is the deploy gate's own list and does not merge with this
-    // file (see ADR-0007); deriving the subject from the catalog is in any case
-    // the property we want — anything app_rw can read whose policy consults the
-    // tenant context belongs here by construction, declared or not.
-    const scoped = (
-      (
-        await db.query(`
-          SELECT DISTINCT p.tablename FROM pg_policies p
-           WHERE p.schemaname = 'public'
-             AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
-             AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
-           ORDER BY p.tablename`)
-      ).rows as { tablename: string }[]
-    ).map((r) => r.tablename)
-    // If the derivation comes back short, the sweep below is asserting nothing.
-    expect(scoped.length).toBeGreaterThanOrEqual(CASES.length)
+    const declared = (
+      (await db.query(`SELECT DISTINCT relation FROM tenancy_exposure_manifest WHERE disposition = 'scoped' ORDER BY 1`))
+        .rows as { relation: string }[]
+    ).map((r) => r.relation)
     // Partitions are exercised through their parent; everything else must have
     // its own case. A new scoped relation fails here until one is written.
+    const missing = declared.filter((r) => !COVERED.has(r) && !r.startsWith('score_rows_'))
+    expect(missing).toEqual([])
+  })
+
+  it('the CATALOG names nothing scoped that this file does not exercise — declared or not', async () => {
+    // master's derivation, kept at the merge. A relation can acquire a
+    // tenant-consulting policy without anyone remembering to declare it, and
+    // that relation is exactly the one nobody has written a case for.
+    const COVERED = new Set(CASES.map(([r]) => r))
+    const scoped = await catalogScoped()
+    // If the derivation comes back short, the sweep is asserting nothing.
+    expect(scoped.length).toBeGreaterThanOrEqual(CASES.length)
     const missing = scoped.filter((r) => !COVERED.has(r) && !r.startsWith('score_rows_'))
     expect(missing).toEqual([])
+  })
+
+  it('the manifest and the catalog agree about what is scoped', async () => {
+    // The seam. A declaration the catalog does not support, or a policy the
+    // manifest does not know about, means one of the two systems is describing a
+    // database that does not exist.
+    const declared = new Set(
+      (
+        (await db.query(`SELECT DISTINCT relation FROM tenancy_exposure_manifest WHERE disposition = 'scoped' ORDER BY 1`))
+          .rows as { relation: string }[]
+      ).map((r) => r.relation),
+    )
+    const catalog = new Set(await catalogScoped())
+    // Partitions are declared through their parent in the manifest but appear
+    // individually in pg_policies, so they are compared through the parent.
+    const norm = (s: Set<string>) => [...new Set([...s].map((r) => (r.startsWith('score_rows_') ? 'score_rows' : r)))].sort()
+    expect(norm(catalog)).toEqual(norm(declared))
   })
 })
 
@@ -249,8 +304,16 @@ describe('the shared relation is genuinely shared, and stays that way', () => {
     expect(one.length).toBeGreaterThan(0)
   })
 
-  // The case asserting that prompt_banks stops being shared the moment it gains
-  // a workspace column lives with the deploy gate, on fix/tenancy-deploy-gate:
-  // `shared-columns-changed` is a fault kind of tenancy_exposure_faults(), which
-  // does not merge here (ADR-0007).
+  it('it stops being shared the moment it can carry a tenant identity — with or without a foreign key', async () => {
+    // The FK test alone was evaded by exactly the mistake its own comment named:
+    // `workspace_id uuid` with no REFERENCES clause, holding two tenants'
+    // private banks, passing every assertion.
+    await db.exec(`ALTER TABLE prompt_banks ADD COLUMN workspace_id uuid`)
+    try {
+      const faults = (await db.query(`SELECT kind, detail FROM tenancy_exposure_faults()`)).rows as { kind: string }[]
+      expect(faults.map((f) => f.kind)).toContain('shared-columns-changed')
+    } finally {
+      await db.exec(`ALTER TABLE prompt_banks DROP COLUMN workspace_id`)
+    }
+  })
 })

@@ -3,75 +3,69 @@
 --
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/db/scripts/check-deploy.sql
 --
--- or `pnpm --filter @bliprank/db db:check`. Any assertion below raises, psql
--- exits non-zero, and the deploy fails.
+-- or `pnpm --filter @bliprank/db db:check`. Any assertion raises, psql exits
+-- non-zero, and the deploy fails.
 --
--- WHY THIS EXISTS. Migration 0000 asserted role exclusivity in the test suite,
--- which proves it about a fixture database and nothing whatsoever about the
--- database customers are on. Login roles are created at deploy time, outside
--- any migration, so this cannot be a constraint — it has to be a check that
--- runs where the roles actually are. A bad GRANT should fail the deploy, not
--- sit undetected until it is a breach.
+-- THE DEPLOY ROLE MUST BE A MEMBER OF `deploy_check`:
 --
--- ===========================================================================
--- THIS FILE IS INCOMPLETE, DELIBERATELY, AND IS TRACKED. See ADR-0007.
--- ===========================================================================
+--   GRANT deploy_check TO <the role that runs this>;
 --
--- Four independent audits found four BLOCKERs in the expanded version of this
--- file, and three were the same bug: an assertion that names an ARRANGEMENT — a
--- proxy, a role list, `pg_has_role` USAGE, `rolcanlogin`, a function-name list,
--- a relkind list, a grantee name, the schema, the policy command. Each round
--- enumerated more shapes and each audit found a shape not enumerated. Proving
--- "no unsafe configuration exists" by listing unsafe configurations is unbounded
--- by construction, and rounds 5, 6 and 7 each found that the previous round's
--- fix had opened the next hole.
+-- and it must NOT need to be a superuser, a member of auth_verifier, or hold
+-- BYPASSRLS. That was the previous contradiction: the gate read
+-- auth_signing_keys directly, which FORCEs RLS, so the only posture in which it
+-- passed was one that waived its own most important assertion.
 --
--- The replacement — derive every RLS-relevant object from pg_class, pg_inherits,
--- pg_policies and real ownership, and require each one found to prove coverage —
--- is REQUIRED WORK WITH A DEADLINE: it must be closed before gate G1, because
--- PHASES.md's standing suite item 3 runs the RLS suite at every gate. The
--- existing attempt lives on `fix/tenancy-deploy-gate` (migration 0003 plus
--- deploy-check.test.ts) and is NOT merged. Do not treat its absence as a
--- finished gate, and do not re-expand this file by hand in the meantime.
+-- WHY THIS FILE IS NOW SHORT.
 --
--- WHAT REMAINS BELOW is the part that holds without that derivation: role
--- exclusivity, the RLS sweep over pg_class, and the context mechanism itself.
+-- Four independent audits found four BLOCKERs here, and three of them were the
+-- same bug: an assertion that names an ARRANGEMENT — a proxy, a role list,
+-- pg_has_role USAGE, rolcanlogin, a function-name list, a relkind list, a
+-- grantee name, the schema (nine times), the policy command. Each round
+-- enumerated more shapes; each audit found a shape not enumerated. Proving "no
+-- unsafe configuration exists" by listing unsafe configurations is unbounded by
+-- construction.
 --
--- The other half of the guarantee is behavioural and DOES ship, in
+-- The enumeration therefore moved into `tenancy_exposure_faults()` (migration
+-- 0003), which inverts it: everything a non-trusted role can reach — every
+-- schema, every relkind, every privilege, every SECURITY DEFINER function — must
+-- be DECLARED in `tenancy_exposure_manifest`. Reachable-and-undeclared is the
+-- failure condition, so a new schema, object kind, verb or grantee fails by
+-- default instead of needing to be predicted.
+--
+-- What remains below is the part that genuinely is about specific named things:
+-- role attributes, the context mechanism itself, and the signing keys.
+--
+-- The other half of the guarantee is behavioural, and lives in
 -- `packages/db/src/tenant-isolation.test.ts`: two seeded tenants, real reads and
 -- writes across every scoped relation, asserting the row sets are disjoint. A
--- policy that merely MENTIONS current_workspace_id passes any catalog check and
+-- policy that merely MENTIONS current_workspace_id passes a catalog check and
 -- fails that one — `USING (current_workspace_id() IS NOT NULL)` returned both
--- tenants' rows while passing every static assertion ever written here.
+-- tenants' rows while passing every static assertion here.
 
 \echo 'checking role exclusivity, RLS-bypassing roles, and superusers...'
 SELECT assert_role_exclusivity();
 
--- Every table in public must have RLS enabled AND forced. ENABLE alone does not
--- bind the table owner, and migrations run as the owner.
-\echo 'checking FORCE ROW LEVEL SECURITY on every table...'
-DO $do$
-DECLARE bad text;
-BEGIN
-  SELECT string_agg(c.relname, ', ' ORDER BY c.relname) INTO bad
-    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
-     AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity);
-  IF bad IS NOT NULL THEN
-    RAISE EXCEPTION 'RLS is not forced on: %', bad;
-  END IF;
-END $do$;
+-- Membership in a predefined role confers power that never appears in a table
+-- ACL, so no amount of privilege derivation can see it. pg_execute_server_program
+-- is arbitrary command execution as the database OS user.
+\echo 'checking no role holds server-level powers...'
+SELECT assert_role_powers();
 
--- The context mechanism. These name specific objects because they ARE the
--- objects the assertion is about, which the rule above permits.
---
--- THIS RUNS BEFORE THE SETTER CHECK BELOW, deliberately: has_function_privilege()
--- on a signature that does not exist RAISES, so a dropped context reader used to
--- report `function "set_workspace(uuid)" does not exist` rather than the
--- assertion's own message. The deploy failed either way and the operator got the
--- wrong reason. Existence is established here first.
+\echo 'checking every reachable object is declared in the exposure manifest...'
+DO $$
+DECLARE faults text;
+BEGIN
+  SELECT string_agg(format('[%s] %s', kind, detail), E'\n  ' ORDER BY kind, detail)
+    INTO faults FROM tenancy_exposure_faults();
+  IF faults IS NOT NULL THEN
+    RAISE EXCEPTION E'tenancy exposure faults:\n  %', faults;
+  END IF;
+END $$;
+
+-- The context mechanism itself. These name specific objects because they ARE
+-- the objects the assertion is about, which the rule permits.
 \echo 'checking the context readers exist and are definer-owned...'
-DO $do$
+DO $$
 DECLARE bad text;
 BEGIN
   SELECT coalesce(string_agg(sig, ', ' ORDER BY sig), '') INTO bad
@@ -85,20 +79,27 @@ BEGIN
   IF bad <> '' THEN
     RAISE EXCEPTION 'these must exist and be SECURITY DEFINER owned by auth_verifier: %', bad;
   END IF;
-END $do$;
+END $$;
 
--- >>> CORRECTION, 2026-08-24 <<<
+-- ---------------------------------------------------------------------------
+-- RE-ADDED AT THE MERGE, 2026-09-09. This assertion is on `master` and was NOT
+-- on this branch, and a merge is the easiest place in the world to lose one.
 --
--- The paragraph that stood here said the tenant role "cannot name a workspace
--- directly", and that re-granting this EXECUTE was how the DB-level identity
--- model gets bypassed. The first half was false and the second was not the
--- shortest path. Until migration 0002, tenant context was carried in a
--- customised GUC, and customised GUCs are USERSET: `SET LOCAL app.workspace_id
--- = '<any uuid>'` established a context for ANY role, needing no grant of any
--- kind. This assertion was true, and it certified something it did not prove.
+-- The exposure manifest in 0003 very likely subsumes it: a grant of EXECUTE on
+-- set_workspace(uuid) to app_rw is an ARRANGEMENT, which is precisely the class
+-- the manifest derives rather than enumerates, and 0003 does inspect pg_proc
+-- ACLs. "Very likely" is not the standard for deleting an assertion from a
+-- security gate, so it is kept. A redundant check costs one catalog lookup at
+-- deploy time; a silently dropped one costs whatever it was guarding.
 --
--- It is kept because revoking that EXECUTE is still correct. The assertion that
--- actually closes the hole is the bare-GUC one further down.
+-- master's own note on it, preserved because it is the useful half: this
+-- assertion was TRUE and certified something it did not prove. Until 0002,
+-- tenant context lived in a customised GUC, and customised GUCs are USERSET —
+-- `SET LOCAL app.workspace_id = '<any uuid>'` established a context for ANY
+-- role, needing no grant at all. The assertion that actually closes that hole
+-- is the bare-GUC one below. This one is kept because revoking that EXECUTE is
+-- still correct, not because it is sufficient.
+-- ---------------------------------------------------------------------------
 \echo 'checking the tenant role cannot call the unverified setter...'
 DO $do$
 BEGIN
@@ -107,12 +108,10 @@ BEGIN
   END IF;
 END $do$;
 
--- No GUC may establish a context. The regression assertion for the BLOCKER the
--- correction above describes, run against the real database rather than a
--- fixture. Migration 0002 moved the context into a definer-owned table keyed
--- (backend_pid, xid8) that no application role can write.
+-- No GUC may establish a context. The regression test for the audit-1 BLOCKER,
+-- run against the real database rather than a fixture.
 \echo 'checking a bare GUC cannot establish a tenant context...'
-DO $do$
+DO $$
 DECLARE got uuid;
 BEGIN
   PERFORM set_config('app.workspace_id', '00000000-0000-4000-8000-000000000001', true);
@@ -126,7 +125,30 @@ BEGIN
   IF got IS NOT NULL THEN
     RAISE EXCEPTION 'current_account_id() honoured a GUC';
   END IF;
-END $do$;
+END $$;
+
+-- Signing keys, read through a definer helper that returns counts.
+--
+-- Reading the table directly was a contradiction: it FORCEs RLS with a single
+-- TO auth_verifier policy — the point of the design — so a non-superuser
+-- deployer saw zero rows and the gate failed with "no live row", which is the
+-- opposite of what was wrong. The only way to make it pass was to deploy with
+-- BYPASSRLS and excuse that role, waiving the most important assertion here.
+\echo 'checking every live signing key is fully configured...'
+DO $$
+DECLARE h record;
+BEGIN
+  SELECT * INTO h FROM auth_key_health();
+  IF NOT h.constraint_present THEN
+    RAISE EXCEPTION 'the auth_signing_keys_live_is_configured constraint has been dropped; live keys are unconstrained';
+  END IF;
+  IF h.misconfigured > 0 THEN
+    RAISE EXCEPTION '% live signing key(s) are not fully configured and will verify tokens. Retire or rotate them.', h.misconfigured;
+  END IF;
+  IF h.live_keys = 0 THEN
+    RAISE EXCEPTION 'no live row in auth_signing_keys: no tenant can establish a session. A key carried over from before migration 0002 needs issuer, audience and a >=32 char secret — rotate it.';
+  END IF;
+END $$;
 
 -- pgcrypto must resolve from the search_path the definer functions pin. On
 -- Supabase it conventionally lives in `extensions`, and `CREATE EXTENSION IF NOT
@@ -134,30 +156,17 @@ END $do$;
 -- hmac()/digest() at call time, which fails closed but only once nobody can log
 -- in. Better to find out here.
 \echo 'checking pgcrypto resolves from schema public...'
-DO $do$
+DO $$
 BEGIN
   PERFORM public.digest('probe', 'sha256');
   PERFORM public.hmac('probe', 'key', 'sha256');
 EXCEPTION WHEN undefined_function OR undefined_table THEN
   RAISE EXCEPTION 'pgcrypto is not resolvable as public.digest/public.hmac; set_workspace_jwt() pins search_path=public,pg_temp and would fail at call time';
-END $do$;
+END $$;
 
--- DELIBERATELY ABSENT, and moving with the gate rather than being reimplemented
--- here (ADR-0007):
---
---   * the exposure manifest — every reachable object must be declared, so a new
---     schema, relkind, verb or grantee fails by default instead of needing to
---     have been predicted;
---   * assert_role_powers() — predefined-role membership (pg_execute_server_program,
---     pg_read_all_data, pg_maintain, pg_signal_backend) and REPLICATION, none of
---     which appears in any table ACL;
---   * live signing key health. The 0001-era version of this read
---     auth_signing_keys directly, which after 0002 FORCEs RLS with a single
---     TO auth_verifier policy — so a non-superuser deployer saw zero rows and the
---     gate failed with "no live row", the opposite of what was wrong. The only
---     way to make it pass was to deploy with BYPASSRLS and excuse that role,
---     waiving this file's most important assertion. It needs auth_key_health(),
---     which is in migration 0003. Until that merges, a deploy with no live key
---     fails at the first login attempt rather than here.
+-- Say what was waived. A deliberate decision that leaves no trace in the
+-- artefact recording it is not a deliberate decision.
+\echo 'RLS-bypass roles excused by bliprank.rls_bypass_allowed:'
+SELECT coalesce(nullif(coalesce(current_setting('bliprank.rls_bypass_allowed', true), ''), ''), '(none)') AS excused;
 
-\echo 'deploy checks passed (PARTIAL GATE — see ADR-0007; must be closed before G1).'
+\echo 'deploy checks passed.'
