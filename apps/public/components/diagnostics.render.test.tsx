@@ -36,7 +36,9 @@ describe('cited sources', () => {
 
   it('the classes are named, the subject’s own site is flagged, and the caveat is printed', () => {
     const html = renderToStaticMarkup(<CitedSourcesBody mix={citationMix(evidence)} answers={evidence} subjectName="Pipedrive" scan={SCAN} />)
-    expect(html).toContain('gemini returned no sources on any answer')
+    // The display map at work: the evidence carries the slug, the reader sees the name.
+    expect(html).toContain('Gemini returned no sources on any answer')
+    expect(html).not.toContain('gemini returned')
     expect(html).toContain('Your own site')
     expect(html).toContain('A competitor’s site')
     expect(html).toContain('<span class="flag">yours</span>')
@@ -102,11 +104,19 @@ describe('cited sources', () => {
     const html = renderToStaticMarkup(<CitedSourcesBody mix={mix} answers={evidence} subjectName="Pipedrive" scan={SCAN} />)
     const table = /<table>[\s\S]*?<\/table>/.exec(html)?.[0] ?? ''
     expect(table.length).toBeGreaterThan(200)
-    // No citation-share interval is rendered anywhere in the class table...
+    /*
+     * The share has no interval to render because it is no longer a `Metric` at
+     * all — see the note on ClassShare.share. Two denominators (282 citations,
+     * 85 answers) wearing one comparison_basis is exactly what compare() trusts
+     * to decide two numbers may be compared, so the shape itself went.
+     */
     for (const c of mix.classes) {
-      const interval = `${(c.metric.ci_low * 100).toFixed(0)}–${(c.metric.ci_high * 100).toFixed(0)}%`
-      expect([c.label, table.includes(interval)]).toEqual([c.label, false])
+      expect([c.label, (c as unknown as { metric?: unknown }).metric]).toEqual([c.label, undefined])
+      expect([c.label, typeof c.share]).toEqual([c.label, 'number'])
     }
+    // No range of any kind is printed in the class table: the only interval on
+    // this section is the reach bar, and that is drawn, not written.
+    expect(table).not.toMatch(/\d+–\d+%/)
     // ...and the reason is stated where a reader meets it.
     expect(html).toMatch(/citations cluster inside answers/)
   })

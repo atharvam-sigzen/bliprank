@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { answerKey, indexAnswers, loadAnswers, type AnswerIndex, type StoredAnswer, type StoredCitation } from '@/lib/answers'
 import { shortFor } from '@/lib/citations'
 import { wilson } from '@bliprank/stats'
+import { engineName } from '@/lib/engines'
 import { byEngine, promptBreakdown, type BreakdownLine } from '@/lib/prompt-breakdown'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
@@ -165,7 +166,7 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
               <th scope="col">Question</th>
               {breakdown.engines.map((engine) => (
                 <th scope="col" key={engine}>
-                  {engine}
+                  {engineName(engine)}
                 </th>
               ))}
               <th scope="col">Named in</th>
@@ -392,7 +393,7 @@ function Evidence({ scan, lines, subjectName }: { scan: ScanResultFile; lines: r
             return (
               <article className="evidence__a" key={`${cell.engine}-${i}`}>
                 <p className="evidence__head">
-                  <span className="evidence__engine">{cell.engine}</span>
+                  <span className="evidence__engine">{engineName(cell.engine)}</span>
                   <span className="num">
                     {cell.mentioned ? `${subjectName} named — ${cell.position} of ${cell.brandsDetected} brands` : `${subjectName} not named`}
                     {cell.brandsDetected > 0 && !cell.mentioned ? ` · ${cell.brandsDetected} other named` : ''}
@@ -416,7 +417,7 @@ function Evidence({ scan, lines, subjectName }: { scan: ScanResultFile; lines: r
                   /* tabIndex: the block scrolls, and a scrollable region that cannot be
                      reached by keyboard is unreachable for anyone not using a mouse
                      (WCAG 2.1.1). aria-label because "pre" announces nothing. */
-                  <pre className="evidence__text" tabIndex={0} aria-label={`${cell.engine} answer, verbatim`}>
+                  <pre className="evidence__text" tabIndex={0} aria-label={`${engineName(cell.engine)} answer, verbatim`}>
                     {answer.text}
                   </pre>
                 )}
@@ -556,7 +557,7 @@ function EngineIntervals({
       <ol className="estrip__rows">
         {rows.map((r) => (
           <li className="estrip__row" key={r.engine}>
-            <span className="estrip__name">{r.engine}</span>
+            <span className="estrip__name">{engineName(r.engine)}</span>
             {/* aria-hidden: the bar is a picture of the numbers printed beside
                 it, and announcing the geometry as well would be the same fact
                 twice. */}

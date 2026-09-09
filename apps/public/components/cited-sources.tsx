@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { formatProvenance, formatValue } from '@bliprank/stats'
 import { loadAnswers, type ScanAnswers } from '@/lib/answers'
 import { citationMix, type CitationMix } from '@/lib/citations'
+import { engineName } from '@/lib/engines'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 /**
@@ -101,7 +101,8 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
         {mix.enginesWithNone.length > 0 ? (
           <>
             {' '}
-            {mix.enginesWithNone.join(', ')} returned no sources on any answer, which is a fact about that engine&apos;s output and not about{' '}
+            {mix.enginesWithNone.map(engineName).join(', ')} returned no sources on any answer, which is a fact about that engine&apos;s output and
+            not about{' '}
             {subjectName}.
           </>
         ) : null}
@@ -162,7 +163,13 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
                         the evidence supports. The counts are facts and stay; the
                         interval that overstated them does not. */}
                     <td className="num">{c.count}</td>
-                    <td className="num">{formatValue(c.metric, 0)}</td>
+                    {/* A plain share, formatted here rather than through
+                        packages/stats/format. That helper takes a `Metric` and
+                        exists so an estimate can never be printed without its
+                        interval; this number has none to print, and dressing it
+                        as a Metric to reach the formatter is what created the
+                        trap this change removes. */}
+                    <td className="num">{Math.round(c.share * 100)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -216,9 +223,9 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
         here has been through a holdout. Treat it as a map of who the engines point at in {scan.categoryName.toLowerCase()}, not as a list of
         things that work.
       </p>
-      {mix.classes[0] ? (
+      {mix.total > 0 ? (
         <p className="metric__provenance detail">
-          {formatProvenance(mix.classes[0].metric)} · classes by the scan&apos;s own rules · shares of {mix.total} citations
+          {mix.provenance} · classes by the scan&apos;s own rules · reach out of {mix.answersInSample} answers, shares out of {mix.total} citations
         </p>
       ) : null}
     </>

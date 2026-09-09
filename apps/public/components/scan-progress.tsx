@@ -13,6 +13,8 @@
  * month that is information they should have rather than a detail hidden in a
  * log.
  */
+import { namedCell } from '@/lib/engines'
+
 export function ScanProgress({ stage, done, total, engines, prompts, lastCell }: { stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
@@ -42,7 +44,10 @@ export function ScanProgress({ stage, done, total, engines, prompts, lastCell }:
           <span>{total > 0 ? `${total} answers` : ''}</span>
         </p>
 
-        <p className="record__status">{lastCell ? <>Last: {lastCell}</> : <>{stage || 'Starting'}…</>}</p>
+        {/* The runner bakes the engine into this line as `<id> <prompt>`, so the
+          id is replaced by its first token rather than read from a field. An
+          unknown head renders the line unchanged — see namedCell. */}
+        <p className="record__status">{lastCell ? <>Last: {namedCell(lastCell)}</> : <>{stage || 'Starting'}…</>}</p>
       </section>
 
       {/* The spend disclosure moves to the margin with every other piece of

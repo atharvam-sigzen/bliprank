@@ -28,12 +28,14 @@ describe('the citation mix', () => {
       ['community', 1],
     ])
     for (const c of mix.classes) {
-      expect(c.metric.n).toBe(5)
-      expect(c.metric.value).toBeCloseTo(c.count / 5)
-      expect(c.metric.ci_low).toBeLessThanOrEqual(c.metric.value)
-      expect(c.metric.ci_high).toBeGreaterThanOrEqual(c.metric.value)
-      expect(c.metric.algo_version).toBe('det-2')
-      expect(c.metric.comparison_basis).toBe('b')
+      // Share is a plain number now: no interval, no n, no basis. It used to be
+      // a Metric carrying n = the CITATION total while `reach` beside it carries
+      // n = the answers, both stamped with the same comparison_basis — two
+      // denominators wearing one basis, which is the thing compare() trusts.
+      expect(c.share).toBeCloseTo(c.count / 5)
+      expect((c as unknown as { metric?: unknown }).metric).toBeUndefined()
+      // ...and the provenance that used to be duplicated per class sits once.
+      expect(mix.provenance).toContain('det-2')
     }
   })
 

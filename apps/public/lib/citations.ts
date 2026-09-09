@@ -16,7 +16,7 @@
  * a reader, not where it got its facts; the surface says so.
  */
 
-import { wilson, type Metric } from '@bliprank/stats'
+import { formatProvenance, wilson, type Metric } from '@bliprank/stats'
 import { headlineAnswers, type ScanAnswers, type StoredCitation } from './answers'
 
 export const SOURCE_ORDER = ['owned', 'competitor', 'review', 'community', 'video', 'earned_media', 'reference', 'other'] as const
@@ -81,8 +81,25 @@ export interface ClassShare {
   readonly answers: number
   /** Reach as a proportion of the headline's answers, with its interval. */
   readonly reach: Metric
+  /**
+   * Share of all citations, 0–1. A PLAIN NUMBER, not a `Metric`, deliberately.
+   *
+   * ⚠️ IT WAS A FULL METRIC AND THAT WAS A TRAP. It carried `n` = the citation
+   * total (282 on the shipped scan) while `reach` beside it carries `n` = the
+   * answers (85) — and both were stamped with the SAME `comparison_basis`. Two
+   * different denominators wearing one basis is precisely what `compare()`
+   * trusts to decide that two numbers may be compared, so anything that ever
+   * passed these to it would have got a confident verdict across incompatible
+   * samples. Nothing did; the shape simply invited it.
+   *
+   * It also could not honestly carry an interval anyway: citations cluster
+   * inside answers, so a Wilson interval over the citation total is narrower
+   * than the evidence supports. Dropping the Metric removes the interval that
+   * overstated and the trap that invited a bad comparison, in one change. The
+   * count and the share are volume facts and stay, as text.
+   */
+  readonly share: number
   /** Share of all citations, with its 95% interval; n is the citation count. */
-  readonly metric: Metric
 }
 
 export interface CitedHost {
@@ -97,6 +114,12 @@ export interface CitedHost {
 export interface CitationMix {
   /** Every citation across every answer. The denominator of every share. */
   readonly total: number
+  /**
+   * The record's provenance line, ONCE. It used to be read off
+   * `classes[0].metric`, which meant every class carried a duplicate copy of
+   * the same four fields purely so one footer could print them.
+   */
+  readonly provenance: string
   /** Answers behind the headline: the denominator every reach shares. */
   readonly answersInSample: number
   readonly answersWithAny: number
@@ -154,7 +177,6 @@ export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
       : [...counts.entries()]
           .sort((a, b) => order(a[0]) - order(b[0]) || a[0].localeCompare(b[0]))
           .map(([sourceClass, count]) => {
-            const w = wilson(count, total)
             const seen = reached.get(sourceClass) ?? 0
             const r = wilson(seen, answers.answers.length)
             return {
@@ -163,7 +185,7 @@ export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
               count,
               answers: seen,
               reach: { value: r.value, ci_low: r.ci_low, ci_high: r.ci_high, n: r.n, ...provenance(answers) },
-              metric: { value: w.value, ci_low: w.ci_low, ci_high: w.ci_high, n: w.n, ...provenance(answers) },
+              share: count / total,
             }
           })
 
@@ -183,5 +205,8 @@ export function citationMix(evidence: ScanAnswers, topHosts = 12): CitationMix {
     .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain))
     .slice(0, topHosts)
 
-  return { total, answersInSample: answers.answers.length, answersWithAny, answersWithout, enginesWithNone, unresolvable, classes, hosts }
+  // One provenance for the section, taken from the reach denominator — the one
+  // every bar on this table is actually drawn against.
+  const reachProvenance = formatProvenance({ value: 0, ci_low: 0, ci_high: 0, n: answers.answers.length, ...provenance(answers) })
+  return { total, provenance: reachProvenance, answersInSample: answers.answers.length, answersWithAny, answersWithout, enginesWithNone, unresolvable, classes, hosts }
 }
