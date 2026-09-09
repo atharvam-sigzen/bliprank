@@ -44,6 +44,14 @@ const BLOCKED = [
   // A free segment does not launder a spending one on the same line.
   'pnpm grader:scan -- --fixture && pnpm grader:scan -- --domain acme.com',
   'pnpm test; pnpm grader:tick -- --apply --live',
+  // The three bypasses the cost-sentinel review ran against the first version
+  // (2026-09-09): a shell character right after the name, and a relative path.
+  'X=$(pnpm grader:diagnose)',
+  'pnpm grader:diagnose>out.txt',
+  'bash -c "pnpm grader:diagnose"',
+  'cd services/grader && tsx src/diagnose.ts',
+  'pnpm --filter @bliprank/grader exec tsx src/run.ts --domain acme.com',
+  'echo `pnpm grader:scan`',
 ]
 
 const ALLOWED = [
@@ -59,6 +67,9 @@ const ALLOWED = [
   'git log --oneline -5',
   'cat services/grader/src/diagnose.ts',
   'grep -n budget services/grader/src/run.ts',
+  'cat services/grader/src/run.ts',
+  'pnpm grader:scan-report',
+  'pnpm grader:diagnose-docs',
 ]
 
 describe.skipIf(!available)('the pre-spend hook, with COLLECTION_ENABLED=true in the environment', () => {

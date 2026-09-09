@@ -99,7 +99,8 @@ describe('the model and provider come from the environment, not from code', () =
     expect(c.fallbackModel).toBeUndefined()
     // Naming one explicitly still works — nothing is inferred, only defaulted.
     const named = bankAuthorConfig(
-      { BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_FALLBACK_MODEL: 'claude-haiku-4-5' } as NodeJS.ProcessEnv,
+      // A paid fallback needs a price too, or the config is refused (R3).
+      { BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_FALLBACK_MODEL: 'claude-haiku-4-5', BANK_AUTHOR_USD_PER_CALL: '0.001' } as NodeJS.ProcessEnv,
       () => 'ant',
       DIR,
     )!
@@ -363,6 +364,15 @@ describe('⚠️ EVERY ATTEMPT IS CHARGED TO A DOLLAR LEDGER BEFORE IT IS MADE (
     const d = bankAuthorConfig({} as NodeJS.ProcessEnv, () => 'k', DIR)!
     expect(d.ledger.usdPerCall).toBe(0)
     expect(d.ledger.capUsd).toBe(5)
+  })
+
+  it('⚠️ a paid model with no price is refused at configuration, never metered at $0', () => {
+    expect(() => bankAuthorConfig({ BANK_AUTHOR_MODEL: 'openai/gpt-4o' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/BANK_AUTHOR_USD_PER_CALL/)
+    expect(() => bankAuthorConfig({ BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_MODEL: 'claude-haiku-4-5' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/R3/)
+    expect(() => bankAuthorConfig({ BANK_AUTHOR_FALLBACK_MODEL: 'openai/gpt-4o-mini' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/gpt-4o-mini/)
+    expect(bankAuthorConfig({ BANK_AUTHOR_MODEL: 'openai/gpt-4o', BANK_AUTHOR_USD_PER_CALL: '0.02' } as NodeJS.ProcessEnv, () => 'k', DIR)!.ledger.usdPerCall).toBe(0.02)
+    // A free slug is exactly the case $0 is for.
+    expect(bankAuthorConfig({} as NodeJS.ProcessEnv, () => 'k', DIR)!.ledger.usdPerCall).toBe(0)
   })
 
   it('counts an attempt per model tried, at the configured price, in the file', async () => {

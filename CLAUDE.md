@@ -284,7 +284,7 @@ BANK_AUTHOR_PROVIDER=             # openai-compatible (default) | anthropic
 BANK_AUTHOR_BASE_URL=             # default https://openrouter.ai/api/v1
 BANK_AUTHOR_TIMEOUT_MS=           # default 25000, per attempt
 BANK_AUTHOR_CAP_USD=              # default 5. Every model attempt is charged to <data>/bank-author-ledger.json BEFORE it is made (R3)
-BANK_AUTHOR_USD_PER_CALL=         # default 0 (the default models are free tiers; the ledger still counts attempts). Set it when the model is paid.
+BANK_AUTHOR_USD_PER_CALL=         # default 0 for :free slugs (the ledger still counts attempts). A model or fallback that is not :free is REFUSED at configuration until this is set (R3).
 ```
 
 **⚠️ Whichever model answers, the competitor rule holds.** It is not the schema:

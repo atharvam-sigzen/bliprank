@@ -224,9 +224,25 @@ export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string)
   const baseUrl = env['BANK_AUTHOR_BASE_URL']
   const isDefaultSetup = provider !== 'anthropic' && (baseUrl === undefined || baseUrl.replace(/\/+$/, '') === DEFAULT_BANK_AUTHOR_BASE_URL)
   const fallback = env['BANK_AUTHOR_FALLBACK_MODEL'] ?? (isDefaultSetup ? DEFAULT_BANK_AUTHOR_FALLBACK_MODEL : '')
+  const model = env['BANK_AUTHOR_MODEL'] ?? DEFAULT_BANK_AUTHOR_MODEL
+  const usdPerCall = Number(env['BANK_AUTHOR_USD_PER_CALL'] ?? DEFAULT_BANK_AUTHOR_USD_PER_CALL)
+  /*
+   * ⚠️ A PAID MODEL WITHOUT A PRICE IS REFUSED, NOT METERED AT ZERO. At $0 a
+   * call the cap can never be reached, so the "dollar ledger" would count
+   * attempts and stop nothing. That is right for a `:free` slug and wrong for
+   * everything else: an operator who swaps in a paid model and forgets the
+   * price would get unmetered spend bounded only by the preview route's hourly
+   * cap (cost-sentinel, 2026-09-09). Refusing here surfaces the omission on
+   * the first request rather than on the invoice.
+   */
+  for (const m of [model, fallback.trim()]) {
+    if (m && !/:free$/.test(m) && !(usdPerCall > 0)) {
+      throw new RangeError(`${m} is not a :free slug, so BANK_AUTHOR_USD_PER_CALL must be set to the price per call (R3)`)
+    }
+  }
   return {
     provider: provider === 'anthropic' ? 'anthropic' : 'openai-compatible',
-    model: env['BANK_AUTHOR_MODEL'] ?? DEFAULT_BANK_AUTHOR_MODEL,
+    model,
     // An explicitly empty value disables the second attempt, which is the only
     // way to say "use one model and tell me when it breaks".
     ...(fallback.trim() ? { fallbackModel: fallback.trim() } : {}),
@@ -236,7 +252,7 @@ export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string)
     ledger: {
       file: authorLedgerFile(dataDir),
       capUsd: Number(env['BANK_AUTHOR_CAP_USD'] ?? DEFAULT_BANK_AUTHOR_CAP_USD),
-      usdPerCall: Number(env['BANK_AUTHOR_USD_PER_CALL'] ?? DEFAULT_BANK_AUTHOR_USD_PER_CALL),
+      usdPerCall,
     },
   }
 }
