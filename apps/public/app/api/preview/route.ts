@@ -188,7 +188,7 @@ export async function POST(req: Request): Promise<Response> {
       // `loadApiKey` is passed as the reader so the author's key comes out of the
       // same repo-root `.env.local` as every other secret, with the same
       // precedence and the same CRLF handling.
-      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key) ?? undefined,
+      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA) ?? undefined,
       /*
        * TO THE SERVER CONSOLE, NOT SWALLOWED.
        *

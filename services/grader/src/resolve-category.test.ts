@@ -44,6 +44,8 @@ const AUTHOR = {
   baseUrl: 'https://openrouter.ai/api/v1',
   apiKey: 'test-key',
   timeoutMs: 1_000,
+  // Every attempt is charged (R3); a free model at a scratch ledger.
+  ledger: { file: join(mkdtempSync(join(tmpdir(), 'resolve-author-')), 'bank-author-ledger.json'), capUsd: 5, usdPerCall: 0 },
 } as const
 
 const goodBank = (name = 'Gaming peripherals'): GeneratedBank => ({

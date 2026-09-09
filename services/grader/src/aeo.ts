@@ -136,7 +136,7 @@ async function main(): Promise<void> {
   }
   const root = join(here, '..', '..', '..')
   const env = process.env
-  const author = bankAuthorConfig(env, (n) => loadApiKey(root, env, n)?.key) ?? undefined
+  const author = bankAuthorConfig(env, (n) => loadApiKey(root, env, n)?.key, o.dataDir) ?? undefined
 
   /*
    * THE CATEGORY, RESOLVED EXACTLY AS A SCAN RESOLVES IT.

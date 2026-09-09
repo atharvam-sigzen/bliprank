@@ -147,7 +147,6 @@ export function parseArgs(
   const apiKey = found?.key ?? ''
   if (!offline && !apiKey) return { refuse: `OPENWEBNINJA_API_KEY not found in the environment, .env.local or .env` }
   if (!offline) keySource = found?.from ?? 'unknown'
-  const author = bankAuthorConfig(env, (n) => loadApiKey(repoRoot, env, n)?.key) ?? undefined
   if (!offline && env['COLLECTION_ENABLED'] !== 'true') {
     return { refuse: 'COLLECTION_ENABLED is not "true" (rule R3). Enable it deliberately for this run, or pass --fixture.' }
   }
@@ -162,6 +161,8 @@ export function parseArgs(
 
   const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const dataDir = args.get('data') ?? join(here, '..', 'data')
+  // After the data dir: the author's ledger lives beside the collector's.
+  const author = bankAuthorConfig(env, (n) => loadApiKey(repoRoot, env, n)?.key, dataDir) ?? undefined
   const maxPromptsArg = args.get('max-prompts')
   const allowanceArg = args.get('allowance')
   if (allowanceArg !== undefined && !(Number.isInteger(Number(allowanceArg)) && Number(allowanceArg) >= 0)) return { refuse: `--allowance must be a non-negative integer of attempts, got ${allowanceArg}` }

@@ -66,7 +66,10 @@
  * error; it is a field nothing reads.
  */
 
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import Anthropic from '@anthropic-ai/sdk'
+import { Budget } from '@bliprank/collector'
 
 /** Change this alone to swap models. */
 export const DEFAULT_BANK_AUTHOR_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'
@@ -112,6 +115,48 @@ export const DEFAULT_BANK_AUTHOR_TIMEOUT_MS = 25_000
 export const GENERATED_DISCOVERY = 10
 export const GENERATED_PROBLEM_LED = 7
 
+/**
+ * The author's own dollar ledger — `bank-author-ledger.json` in the data dir.
+ *
+ * ⚠️ EVERY MODEL ATTEMPT IS CHARGED BEFORE IT IS MADE, whichever provider
+ * answers, through the same `Budget` the collector uses (R3). The 2026-09-09
+ * audit found this path reachable from the public preview route with a request
+ * cap but no dollar ledger. The default models are free tiers, so the default
+ * price is $0 and the ledger still COUNTS every attempt; point
+ * `BANK_AUTHOR_MODEL` at a paid model and `BANK_AUTHOR_USD_PER_CALL` is the
+ * price that makes the cap mean something. A cap that is reached is a failure
+ * like any other here: the bank is null and the domain falls back to the
+ * general bucket — authoring degrades, a scan never breaks.
+ */
+export interface AuthorLedger {
+  readonly file: string
+  readonly capUsd: number
+  readonly usdPerCall: number
+}
+export const DEFAULT_BANK_AUTHOR_CAP_USD = 5
+export const DEFAULT_BANK_AUTHOR_USD_PER_CALL = 0
+export const authorLedgerFile = (dataDir: string): string => join(dataDir, 'bank-author-ledger.json')
+
+/**
+ * Charge one attempt on `model`. Throws `BudgetExceeded` before any request.
+ *
+ * The file's own cap wins over the configured one, exactly as `ledgerCapUsd`
+ * does for the collector's ledger: `Budget` refuses to RAISE a cap from code,
+ * so a ledger a person raised by hand is not written back down by a default.
+ */
+function chargeAttempt(ledger: AuthorLedger, model: string): void {
+  let capUsd = ledger.capUsd
+  if (existsSync(ledger.file)) {
+    try {
+      const stored = (JSON.parse(readFileSync(ledger.file, 'utf8')) as { capUsd?: unknown }).capUsd
+      if (typeof stored === 'number' && Number.isFinite(stored) && stored > 0) capUsd = stored
+    } catch {
+      // Unreadable: `Budget` will throw on it below, which is the right outcome.
+    }
+  }
+  new Budget(ledger.file, capUsd, () => ledger.usdPerCall).charge(model)
+}
+
 export type BankAuthorProvider = 'openai-compatible' | 'anthropic'
 
 export interface BankAuthorConfig {
@@ -122,6 +167,8 @@ export interface BankAuthorConfig {
   readonly baseUrl: string
   readonly apiKey: string
   readonly timeoutMs: number
+  /** Where every attempt is charged. Required: there is no unmetered config. */
+  readonly ledger: AuthorLedger
 }
 
 export interface GenerateInput {
@@ -152,7 +199,7 @@ export interface GeneratedBank {
  * `readKey` is passed in rather than imported so this stays free of the dotenv
  * loader's file IO and can be exercised without one.
  */
-export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string) => string | undefined): BankAuthorConfig | null {
+export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string) => string | undefined, dataDir: string): BankAuthorConfig | null {
   const provider = (env['BANK_AUTHOR_PROVIDER'] ?? 'openai-compatible') as BankAuthorProvider
   // Explicit key first, then the conventional name for whichever provider is
   // selected. Two names rather than one because a machine may legitimately hold
@@ -186,6 +233,11 @@ export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string)
     baseUrl: (baseUrl ?? DEFAULT_BANK_AUTHOR_BASE_URL).replace(/\/+$/, ''),
     apiKey,
     timeoutMs: Number(env['BANK_AUTHOR_TIMEOUT_MS'] ?? DEFAULT_BANK_AUTHOR_TIMEOUT_MS),
+    ledger: {
+      file: authorLedgerFile(dataDir),
+      capUsd: Number(env['BANK_AUTHOR_CAP_USD'] ?? DEFAULT_BANK_AUTHOR_CAP_USD),
+      usdPerCall: Number(env['BANK_AUTHOR_USD_PER_CALL'] ?? DEFAULT_BANK_AUTHOR_USD_PER_CALL),
+    },
   }
 }
 
@@ -351,6 +403,8 @@ export async function askText(
   opts: { readonly maxTokens?: number; readonly fetchImpl?: typeof fetch } = {},
 ): Promise<string> {
   const doFetch = opts.fetchImpl ?? fetch
+  // Charged first. A refusal here is a thrown BudgetExceeded, and no request follows it.
+  chargeAttempt(config.ledger, model)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), config.timeoutMs)
   try {
@@ -416,6 +470,8 @@ const askOpenAiCompatible = (input: GenerateInput, model: string): Promise<strin
  * `parseCandidate`, so neither gets a weaker check than the other.
  */
 async function askAnthropic(input: GenerateInput, model: string): Promise<string> {
+  // The same ledger as the OpenAI-compatible path: no provider is unmetered.
+  chargeAttempt(input.config.ledger, model)
   const client = new Anthropic({ apiKey: input.config.apiKey, timeout: input.config.timeoutMs })
   const response = await client.messages.create({
     model,

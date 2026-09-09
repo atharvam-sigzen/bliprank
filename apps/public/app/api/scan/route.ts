@@ -376,7 +376,7 @@ export async function POST(req: Request): Promise<Response> {
           // silently get a worse classification than one that did not. For a
           // new cycle it is a no-op by construction: the record exists, or the
           // request was refused above.
-          author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key) ?? undefined,
+          author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA) ?? undefined,
           dataDir: DATA,
           outFile: join(DATA, 'latest.json'),
           // Progress is streamed to the client through `onProgress` below, so a
