@@ -98,8 +98,11 @@ function BoundsRow({ metric, dp }: { metric: Metric; dp: number }) {
   // interval prints once, as the range it is.
   const narrow = hi - lo < 10
   const at = (x: number) => `${Math.min(97, Math.max(3, x))}%`
-  const leftmost = narrow ? (lo + hi) / 2 : lo
-  const rightmost = narrow ? (lo + hi) / 2 : hi
+  // The scale's quiet endpoints yield to whatever label reaches their corner.
+  // A merged label is centred on the midpoint but spans about lo..hi, so it
+  // is judged by its extent, not its centre (stats review, 2026-09-09).
+  const leftmost = lo
+  const rightmost = hi
   const bounds = formatBounds(metric, dp)
 
   return (
