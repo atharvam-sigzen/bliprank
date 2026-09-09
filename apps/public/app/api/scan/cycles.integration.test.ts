@@ -70,6 +70,7 @@ beforeEach(() => {
   process.env['GRADER_LIVE_SCAN'] = 'true'
   process.env['OPENWEBNINJA_API_KEY'] = 'not-a-real-key'
   process.env['OPENWEBNINJA_PLAN'] = 'payg'
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   // Two prompts × five engines = ten cells, so the real rate budget paces the
   // run in seconds rather than minutes. The ceiling default follows this too.
   process.env['GRADER_PROMPTS_PER_SCAN'] = '2'

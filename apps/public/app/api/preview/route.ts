@@ -54,13 +54,13 @@ import {
  * one shared counter would make looking at your prompts cost you a scan.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * ⚠️ THE VISITOR THROTTLE TRUSTS A HEADER THE CALLER WRITES, so it is not the
- * bound. `extractClientIp` reads `cf-connecting-ip` / `x-forwarded-for`, which
- * a real edge sets and strips, and which on the local demo — or any deployment
- * without a proxy in front — are whatever the request says they are. A loop
- * that changes the header per request is as many "visitors" as it likes, and
- * the throttle above sees each of them once. Found by the ADR-0014 review on
- * `/api/gaps` and fixed there first; this is the same fix.
+ * ⚠️ THE VISITOR THROTTLE IS ONLY AS GOOD AS `TRUSTED_PROXY`. `extractClientIp`
+ * reads one header, and only the one the named edge sets; with no proxy named
+ * (the local demo, or a deployment nobody configured) every caller is one
+ * bucket, which refuses early rather than never. A loop that changes headers
+ * per request is therefore one visitor, not many — but the global bound below
+ * is still the one that does not depend on configuration at all. Found by the
+ * ADR-0014 review on `/api/gaps` and fixed there first; this is the same fix.
  *
  * What a caller could make the machine do, unbounded: read one homepage per
  * distinct domain named (a fetch proxy for arbitrary hosts, one GET each) and
@@ -139,7 +139,8 @@ export async function POST(req: Request): Promise<Response> {
   const DATA = dataDir(env)
   const now = new Date()
   const cfg = previewThrottleConfig(DATA, env)
-  const verdict = checkVisitorThrottle(extractClientIp(req), cfg, now)
+  const visitorIp = extractClientIp(req, env)
+  const verdict = checkVisitorThrottle(visitorIp, cfg, now)
   if (!verdict.ok) {
     return json(
       {
@@ -176,7 +177,7 @@ export async function POST(req: Request): Promise<Response> {
   // afterwards would let a burst of concurrent requests all pass the check and
   // then all spend. The scan route counts after for the opposite and equally
   // correct reason: there, a refusal genuinely spends nothing.
-  recordVisitorScan(extractClientIp(req), cfg, now)
+  recordVisitorScan(visitorIp, cfg, now)
   if (costs) recordVisitorScan(GLOBAL_KEY, global, now)
 
   if (costs) inFlight += 1

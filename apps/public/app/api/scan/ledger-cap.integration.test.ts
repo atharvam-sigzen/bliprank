@@ -78,6 +78,7 @@ beforeEach(() => {
   process.env['OPENWEBNINJA_API_KEY'] = 'not-a-real-key'
   process.env['OPENWEBNINJA_PLAN'] = 'payg'
   process.env['GRADER_PROMPTS_PER_SCAN'] = '2'
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   // ⚠️ THE SCENARIO: nobody set it. This is the whole point of the test.
   delete process.env['GRADER_CAP_USD']
   delete process.env['OPENROUTER_API_KEY']

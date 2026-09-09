@@ -20,6 +20,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { isIP } from 'node:net'
 import { dirname, join } from 'node:path'
 
 export const DEFAULT_MAX_SCANS_PER_VISITOR_PER_HOUR = 3
@@ -58,28 +59,46 @@ const readLedger = (f: string): VisitorLedger => {
   }
 }
 
+/** The visitor key when no proxy is trusted, or the trusted header is missing or malformed. */
+export const DIRECT = 'direct'
+
 /**
- * Resolves the client IP address from standard and platform-specific proxy headers.
- * - Cloudflare Pages / Workers: `cf-connecting-ip` (ADR-0002 deployment target)
- * - Vercel: `x-vercel-forwarded-for`, `x-real-ip`
- * - Standard reverse proxies: `x-forwarded-for` (client is the first entry)
+ * The one header each edge sets from the connection and strips or overwrites
+ * from the client, checked against the provider's own documentation on
+ * 2026-09-09:
+ *
+ *   cloudflare  `cf-connecting-ip` "provides the client IP address connecting to
+ *               Cloudflare"; `X-Forwarded-For` is APPENDED to when the client
+ *               already sent one, which is why Cloudflare recommends this header
+ *               over it. (developers.cloudflare.com/fundamentals/reference/http-headers)
+ *   vercel      Vercel overwrites `x-forwarded-for` and "do[es] not forward
+ *               external IPs"; `x-vercel-forwarded-for` is the same value and
+ *               survives a proxy placed on top of Vercel.
+ *               (vercel.com/docs/headers/request-headers, last updated 2025-12-13)
  */
-export function extractClientIp(headersOrReq: Headers | Request): string {
+const TRUSTED_HEADER = { cloudflare: 'cf-connecting-ip', vercel: 'x-vercel-forwarded-for' } as const
+
+/**
+ * The visitor key for the throttle.
+ *
+ * ⚠️ A HEADER IS ONLY READ WHEN THE DEPLOYMENT NAMES THE PROXY THAT SETS IT.
+ * `TRUSTED_PROXY=cloudflare|vercel` in the environment says which edge this
+ * process sits behind, and only that edge's header is read. Anything else —
+ * unset, misspelt, a local demo with no proxy — reads NO header and returns
+ * `direct`, so every caller shares one bucket. That is fail-closed: a caller
+ * who could choose their own header could be as many visitors as they liked
+ * (the 2026-09-09 audit's top defect), whereas one shared bucket only ever
+ * refuses too early. The preview route's global cap carries the real bound
+ * either way.
+ *
+ * A trusted header whose value is not an IP address is treated as absent.
+ */
+export function extractClientIp(headersOrReq: Headers | Request, env: NodeJS.ProcessEnv = process.env): string {
   const headers = headersOrReq instanceof Request ? headersOrReq.headers : headersOrReq
-
-  const cf = headers.get('cf-connecting-ip')
-  if (cf?.trim()) return cf.trim()
-
-  const vercel = headers.get('x-vercel-forwarded-for')
-  if (vercel?.trim()) return vercel.split(',')[0]!.trim()
-
-  const realIp = headers.get('x-real-ip')
-  if (realIp?.trim()) return realIp.trim()
-
-  const xff = headers.get('x-forwarded-for')
-  if (xff?.trim()) return xff.split(',')[0]!.trim()
-
-  return '127.0.0.1'
+  const proxy = env['TRUSTED_PROXY']
+  if (proxy !== 'cloudflare' && proxy !== 'vercel') return DIRECT
+  const value = headers.get(TRUSTED_HEADER[proxy])?.split(',')[0]?.trim() ?? ''
+  return isIP(value) ? value : DIRECT
 }
 
 /** Timestamps of live scans within the rolling window for this visitor IP. */

@@ -75,6 +75,8 @@ describe('POST /api/scan per-visitor throttling', () => {
     process.env['GRADER_LIVE_SCAN'] = 'true'
     process.env['OPENWEBNINJA_API_KEY'] = 'test-key-mock'
     process.env['GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR'] = '2'
+    // The per-visitor throttle reads a header only behind a named proxy; the requests below write cf-connecting-ip.
+    process.env['TRUSTED_PROXY'] = 'cloudflare'
 
     const req = new Request('http://localhost:3001/api/scan', {
       method: 'POST',

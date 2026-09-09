@@ -266,6 +266,7 @@ UPSTASH_REDIS_REST_URL= UPSTASH_REDIS_REST_TOKEN=
 STRIPE_SECRET_KEY= RAZORPAY_KEY_ID= RAZORPAY_KEY_SECRET=
 COLLECTION_BUDGET_USD_DAILY=      # hard daily ceiling, read by the daily loop (ADR-0017); a live tick refuses without it
 COLLECTION_ENABLED=                # see below: ON in agent sessions by decision, OFF everywhere else
+TRUSTED_PROXY=                     # cloudflare | vercel. Names the edge whose client-IP header the visitor throttle may read; unset = no header is trusted, every caller is one bucket
 ```
 
 **The prompt-bank author** (ADR-0009 Amendment 1). Optional: with no key it is

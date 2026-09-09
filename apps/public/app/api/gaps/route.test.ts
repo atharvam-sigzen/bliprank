@@ -32,6 +32,7 @@ const originalEnv = { ...process.env }
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-gaps-api-'))
   process.env['GRADER_DATA_DIR'] = dir
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   fetches.length = 0
 })
 afterEach(() => {

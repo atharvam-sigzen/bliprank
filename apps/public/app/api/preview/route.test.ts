@@ -46,11 +46,12 @@ const post = (body: unknown, headers: Record<string, string> = {}) =>
 
 /**
  * A fresh IP per test, so tests cannot throttle each other. The route reads
- * `x-forwarded-for` through `extractClientIp`, which is the same resolution the
- * scan route uses.
+ * `cf-connecting-ip` through `extractClientIp` once `TRUSTED_PROXY` names
+ * Cloudflare, which is the same resolution the scan route uses.
  */
+process.env['TRUSTED_PROXY'] = 'cloudflare'
 let seq = 0
-const freshIp = () => ({ 'x-forwarded-for': `203.0.113.${(seq += 1) % 250}` })
+const freshIp = () => ({ 'cf-connecting-ip': `203.0.113.${(seq += 1) % 250}` })
 
 /** What the ledger and records looked like before, restored afterwards. */
 let ledgerBefore: string | null = null

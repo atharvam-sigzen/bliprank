@@ -74,6 +74,7 @@ beforeEach(() => {
   process.env['COLLECTION_ENABLED'] = 'true'
   process.env['GRADER_LIVE_SCAN'] = 'true'
   process.env['OPENWEBNINJA_API_KEY'] = 'test-key-never-used'
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   // The RECORDED category, decided once. Rung 0 of the resolver reads this and
   // nothing else on every later scan.
   recordCategory(dir, { host: DOMAIN, slug: 'crm-software', source: 'leader-domain', evidence: DOMAIN, decidedAt: '2026-09-01T00:00:00.000Z', generated: false })

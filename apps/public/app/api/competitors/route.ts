@@ -116,7 +116,7 @@ export async function POST(req: Request): Promise<Response> {
   const perDomain = domainCfg(data, env)
   if (!checkVisitorThrottle(domain, perDomain, now).ok) return json({ kind: 'rate-limit', message: `Requests about ${domain}'s competitors have been filed ${perDomain.maxScansPerHour} times in the last hour. The pending one stands; try again later.` }, 429)
   const cfg = fileCfg(data, env)
-  const ip = extractClientIp(req)
+  const ip = extractClientIp(req, env)
   const verdict = checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 

@@ -16,6 +16,7 @@ const originalEnv = { ...process.env }
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-category-api-'))
   process.env['GRADER_DATA_DIR'] = dir
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   recordCategory(dir, { host: 'acme.test', slug: 'crm-software', source: 'site-content', evidence: 'pipeline', decidedAt: '2026-08-01T00:00:00.000Z', generated: false })
 })
 afterEach(() => {
@@ -23,7 +24,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-const headers = () => ({ 'x-forwarded-for': `10.0.0.${++ip % 250}` })
+const headers = () => ({ 'cf-connecting-ip': `10.0.0.${++ip % 250}` })
 const get = (q: string) => GET(new Request(`http://local/api/category${q}`, { headers: headers() }))
 const post = (body: unknown, h: Record<string, string> = headers()) =>
   POST(new Request('http://local/api/category', { method: 'POST', headers: { 'Content-Type': 'application/json', ...h }, body: JSON.stringify(body) }))
@@ -102,7 +103,7 @@ describe('POST: files a request and nothing else', () => {
   })
 
   it('the per-visitor allowance is on its own ledger', async () => {
-    const same = { 'x-forwarded-for': '10.9.9.9' }
+    const same = { 'cf-connecting-ip': '10.9.9.9' }
     for (let i = 0; i < 5; i++) expect((await post({ domain: 'acme.test', slug: 'accounting-software', reason: `${REASON} ${i}` }, same)).status).toBe(200)
     expect((await post({ domain: 'acme.test', slug: 'accounting-software', reason: REASON }, same)).status).toBe(429)
     // Reads are unaffected by filings.

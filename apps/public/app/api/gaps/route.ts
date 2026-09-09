@@ -24,10 +24,10 @@ import {
  *   - only a domain with a STORED CYCLE is fetched. Anything else is a 404
  *     before any request leaves, so this is not a proxy for arbitrary hosts;
  *   - a per-DOMAIN rolling-window cap, shared by every visitor. The visitor
- *     throttle keys on `cf-connecting-ip` / `x-forwarded-for`, and on the local
- *     demo those are headers the caller writes, so a loop can be as many
- *     "visitors" as it likes; it cannot be more than this many reads of one
- *     homepage an hour, whatever it calls itself. Found by the ADR-0014 review;
+ *     throttle keys on the one header `TRUSTED_PROXY` names, and on a
+ *     deployment that names none every caller is one visitor; either way a
+ *     loop cannot be more than this many reads of one homepage an hour,
+ *     whatever it calls itself. Found by the ADR-0014 review;
  *     `/api/preview` shares the weaker bound and is noted there;
  *   - at most a couple of reads in flight at once, so a slow homepage cannot
  *     be used to pile up sockets;
@@ -103,7 +103,7 @@ export async function GET(req: Request): Promise<Response> {
     return json({ message: `${domain}'s homepage has already been read ${perDomain.maxScansPerHour} times in the last hour for gap reports, and a page does not change that often. Try again later; nothing was fetched.` }, 429)
   }
   const cfg = throttleConfig(data, env)
-  const ip = extractClientIp(req)
+  const ip = extractClientIp(req, env)
   const verdict = checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ message: verdict.message }, 429)
   if (inFlight >= MAX_IN_FLIGHT) return json({ message: 'The gap report service is busy reading other pages. Try again in a moment; nothing was fetched.' }, 503)

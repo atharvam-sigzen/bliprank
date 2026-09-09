@@ -12,6 +12,7 @@ const originalEnv = { ...process.env }
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-competitors-api-'))
   process.env['GRADER_DATA_DIR'] = dir
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   recordCategory(dir, { host: 'acme.test', slug: 'crm-software', source: 'site-content', evidence: 'pipeline', decidedAt: '2026-08-01T00:00:00.000Z', generated: false, brandName: 'Acme' })
 })
 afterEach(() => {
@@ -19,7 +20,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-const headers = () => ({ 'x-forwarded-for': `10.1.0.${++ip % 250}` })
+const headers = () => ({ 'cf-connecting-ip': `10.1.0.${++ip % 250}` })
 const get = (q: string) => GET(new Request(`http://local/api/competitors${q}`, { headers: headers() }))
 const post = (body: unknown, h: Record<string, string> = headers()) =>
   POST(new Request('http://local/api/competitors', { method: 'POST', headers: { 'Content-Type': 'application/json', ...h }, body: JSON.stringify(body) }))

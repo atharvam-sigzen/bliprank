@@ -149,7 +149,7 @@ function cached(data: string, domain: string): unknown | null {
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
   const DATA = dataDir(env)
-  const visitorIp = extractClientIp(req)
+  const visitorIp = extractClientIp(req, env)
   const body = (await req.json().catch(() => ({}))) as { domain?: string; cycle?: string }
   const domain = normalise(String(body.domain ?? ''))
   const wantsNewCycle = body.cycle === 'new'

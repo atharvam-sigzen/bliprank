@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  DIRECT,
   checkVisitorThrottle,
   defaultVisitorThrottleConfig,
   extractClientIp,
@@ -31,48 +32,50 @@ const createCfg = (over: Partial<VisitorThrottleConfig> = {}): VisitorThrottleCo
 
 const NOW = new Date('2026-08-25T12:00:00.000Z')
 
-describe('client IP extraction across proxy headers', () => {
-  it('prefers Cloudflare cf-connecting-ip when present', () => {
-    const headers = new Headers({
+describe('the client IP is read only from the header the named proxy sets', () => {
+  // Every header a caller could write, all at once. Only the trusted one may be read.
+  const everything = () =>
+    new Headers({
       'cf-connecting-ip': '203.0.113.195',
-      'x-vercel-forwarded-for': '198.51.100.1',
-      'x-forwarded-for': '192.0.2.1',
-    })
-    expect(extractClientIp(headers)).toBe('203.0.113.195')
-  })
-
-  it('reads Vercel x-vercel-forwarded-for when Cloudflare header is absent', () => {
-    const headers = new Headers({
       'x-vercel-forwarded-for': '198.51.100.42, 10.0.0.1',
-      'x-forwarded-for': '192.0.2.1',
-    })
-    expect(extractClientIp(headers)).toBe('198.51.100.42')
-  })
-
-  it('reads x-real-ip when Vercel forwarded header is absent', () => {
-    const headers = new Headers({
       'x-real-ip': '198.51.100.99',
+      'x-forwarded-for': '192.0.2.55, 10.0.0.2',
     })
-    expect(extractClientIp(headers)).toBe('198.51.100.99')
+  const env = (proxy?: string) => ({ ...(proxy === undefined ? {} : { TRUSTED_PROXY: proxy }) }) as NodeJS.ProcessEnv
+
+  it('⚠️ with no trusted proxy, NO header is read: every caller is one bucket', () => {
+    expect(extractClientIp(everything(), env())).toBe(DIRECT)
+    expect(extractClientIp(new Headers(), env())).toBe(DIRECT)
   })
 
-  it('reads first IP from standard x-forwarded-for chain', () => {
-    const headers = new Headers({
-      'x-forwarded-for': '192.0.2.55, 10.0.0.2, 172.16.0.1',
-    })
-    expect(extractClientIp(headers)).toBe('192.0.2.55')
+  it('a misspelt or unknown proxy name fails closed, not open', () => {
+    expect(extractClientIp(everything(), env('cloudfare'))).toBe(DIRECT)
+    expect(extractClientIp(everything(), env('nginx'))).toBe(DIRECT)
   })
 
-  it('falls back to 127.0.0.1 when no proxy headers exist (local dev)', () => {
-    const headers = new Headers()
-    expect(extractClientIp(headers)).toBe('127.0.0.1')
+  it('behind Cloudflare only cf-connecting-ip counts', () => {
+    expect(extractClientIp(everything(), env('cloudflare'))).toBe('203.0.113.195')
+    const without = everything()
+    without.delete('cf-connecting-ip')
+    expect(extractClientIp(without, env('cloudflare'))).toBe(DIRECT)
+  })
+
+  it('behind Vercel only x-vercel-forwarded-for counts, first entry', () => {
+    expect(extractClientIp(everything(), env('vercel'))).toBe('198.51.100.42')
+    const without = everything()
+    without.delete('x-vercel-forwarded-for')
+    expect(extractClientIp(without, env('vercel'))).toBe(DIRECT)
+  })
+
+  it('a trusted header that is not an IP address is treated as absent', () => {
+    expect(extractClientIp(new Headers({ 'cf-connecting-ip': 'not-an-ip' }), env('cloudflare'))).toBe(DIRECT)
+    expect(extractClientIp(new Headers({ 'cf-connecting-ip': '' }), env('cloudflare'))).toBe(DIRECT)
+    expect(extractClientIp(new Headers({ 'cf-connecting-ip': '2001:db8::1' }), env('cloudflare'))).toBe('2001:db8::1')
   })
 
   it('accepts a Request object directly', () => {
-    const req = new Request('http://localhost/api/scan', {
-      headers: { 'cf-connecting-ip': '198.51.100.77' },
-    })
-    expect(extractClientIp(req)).toBe('198.51.100.77')
+    const req = new Request('http://localhost/api/scan', { headers: { 'cf-connecting-ip': '198.51.100.77' } })
+    expect(extractClientIp(req, env('cloudflare'))).toBe('198.51.100.77')
   })
 })
 

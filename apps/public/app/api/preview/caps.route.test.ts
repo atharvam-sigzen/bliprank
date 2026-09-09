@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 /**
  * THE BOUND THAT DOES NOT TRUST THE CALLER, on /api/preview.
  *
- * The per-visitor throttle keys on `cf-connecting-ip` / `x-forwarded-for`, and
- * every request below sets a fresh one — which is exactly what an attacker
- * does. The only thing replaced is the homepage fetch (mocked to fail fast, so
+ * The per-visitor throttle keys on `cf-connecting-ip` behind a Cloudflare edge
+ * (TRUSTED_PROXY, set below), and every request below sets a fresh one — which
+ * is exactly what an attacker on a misconfigured deployment does. The only thing replaced is the homepage fetch (mocked to fail fast, so
  * no socket opens and no page content can classify); the resolver, the
  * records, the ledgers and the route are real, in a scratch directory.
  */
@@ -32,6 +32,7 @@ const originalEnv = { ...process.env }
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-preview-caps-'))
   process.env['GRADER_DATA_DIR'] = dir
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
   // No author: an unclassifiable domain falls back after the (failed) read and never calls a model.
   delete process.env['OPENROUTER_API_KEY']
   delete process.env['BANK_AUTHOR_API_KEY']
