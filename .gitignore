@@ -31,3 +31,7 @@ services/grader/data*/
 # Screenshot output from scripts/shoot.mjs. Captures are build artifacts:
 # they are regenerated on demand and would otherwise land in every diff.
 shots/
+
+# TypeScript incremental build cache — a build artifact, never source.
+# It was tracked by mistake and showed up as a modified file after every build.
+*.tsbuildinfo

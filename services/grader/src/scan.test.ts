@@ -9,6 +9,7 @@ import {
   type DeadLetter,
 } from '@bliprank/collector'
 import type { AnswerBody, CollectRequest, EngineAdapter, EngineId, RawAnswer } from '@bliprank/contracts'
+import { SCORING_ALGO_VERSION, findMentions, normaliseForMatch } from '@bliprank/scorer'
 import { DEMO_BANKS, DEMO_TAXONOMY } from '@bliprank/taxonomy'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -253,7 +254,7 @@ describe('the numbers are what the answers said', () => {
     const r = await runScan(req('pipedrive.com'), d)
     if (r.status !== 'scanned') throw new Error(r.status)
     for (const b of r.brands) {
-      expect([b.id, b.metric.algo_version]).toEqual([b.id, 'det-1'])
+      expect([b.id, b.metric.algo_version]).toEqual([b.id, SCORING_ALGO_VERSION])
       expect([b.id, b.metric.collection_path]).toEqual([b.id, 'third-party-grounded'])
       expect([b.id, b.metric.n > 0]).toEqual([b.id, true])
       expect([b.id, b.metric.comparison_basis.length > 0]).toEqual([b.id, true])
@@ -349,5 +350,57 @@ describe('classification drives the bank, and the taxonomy is honoured', () => {
     const r = await runScan(req('my-orphan.io'), { ...d, taxonomy: [orphan], banks: [] })
     expect(r.status).toBe('unclassified')
     expect(d.blob.size).toBe(0)
+  })
+})
+
+/**
+ * THE FALSE ZERO — thecosmicbyte.com, 2026-09-01, algo det-1 → det-2.
+ *
+ * The subject's only alias was the domain label `thecosmicbyte`. All five
+ * engines write "Cosmic Byte". A brand named 139 times across 31 of 50 collected
+ * answers was published as mentioned in NONE of them, at 0.0%, beside a
+ * confidence grade. The instrument read zero; the world did not.
+ */
+describe('a brand whose domain runs its words together is still found', () => {
+  const bank = DEMO_BANKS.find((b) => b.category === 'general-business-software')!
+
+  it('derives the spaced trading name from the domain alone, with no site title', () => {
+    const { spec, source } = subjectFor('thecosmicbyte.com', bank)
+    expect(source).toBe('domain-label')
+    // The prefix-stripped form is what "Cosmic Byte" squashes to.
+    expect(spec.squashedAliases).toContain('cosmicbyte')
+    expect(spec.squashedAliases).toContain('thecosmicbyte')
+  })
+
+  it('MATCHES the form the engines actually wrote — the exact defect', () => {
+    const { spec } = subjectFor('thecosmicbyte.com', bank)
+    const real = 'For budget gaming in India, Cosmic Byte and a few others dominate the shelf.'
+    expect(findMentions(normaliseForMatch(real), spec)).not.toBeNull()
+
+    // And the old behaviour, to show what changed: label-only found nothing.
+    const before = { id: 'x', name: 'thecosmicbyte', aliases: ['thecosmicbyte'], domains: ['thecosmicbyte.com'] }
+    expect(findMentions(normaliseForMatch(real), before)).toBeNull()
+  })
+
+  it('a corroborated site title sharpens the NAME, and a wrong one cannot invent it', () => {
+    // The title names the brand: it squashes to the prefix-stripped label, so
+    // it is accepted and becomes the display name.
+    const good = subjectFor('thecosmicbyte.com', bank, 'Cosmic Byte - Gaming Peripherals India')
+    expect(good.spec.name).toBe('Cosmic Byte')
+    expect(good.spec.aliases).toContain('Cosmic Byte')
+
+    // A title that names something else contributes NOTHING. This is the
+    // safety property: the title corroborates a name the domain implies, it is
+    // never trusted to supply one.
+    const bad = subjectFor('thecosmicbyte.com', bank, 'Best Gaming Gear and Accessories in India')
+    expect(bad.spec.name).toBe('thecosmicbyte')
+    expect(bad.spec.aliases).not.toContain('Best Gaming Gear')
+  })
+
+  it('a leader domain is untouched — its reviewed alias table still wins', () => {
+    const crm = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const { spec, source } = subjectFor('pipedrive.com', crm)
+    expect(source).toBe('leader')
+    expect(spec.squashedAliases).toBeUndefined()
   })
 })

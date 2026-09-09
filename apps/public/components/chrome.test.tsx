@@ -131,7 +131,7 @@ describe('ProductBar, before any effect runs', () => {
 
 describe('workspaceGroups', () => {
   it('with no session scans, every bundled domain is reference and none is yours', () => {
-    // Node has no sessionStorage, which is exactly the fresh-browser case.
+    // Node has no localStorage, which is exactly the fresh-browser case.
     const { yours, reference } = workspaceGroups()
     expect(yours).toEqual([])
     expect(reference).toEqual([...new Set(BUNDLED_SCANS.map((s) => normaliseTyped(s.domain)))])
@@ -145,8 +145,8 @@ describe('workspaceGroups', () => {
       { ...BUNDLED_SCANS[0]!, domain: 'example.com' },
       { ...BUNDLED_SCANS[0]!, domain: bundled },
     ])
-    const g = globalThis as { sessionStorage?: Storage }
-    g.sessionStorage = { getItem: () => stash } as unknown as Storage
+    const g = globalThis as { localStorage?: Storage }
+    g.localStorage = { getItem: () => stash } as unknown as Storage
     try {
       const { yours, reference } = workspaceGroups()
       expect(yours).toContain('example.com')
@@ -155,7 +155,7 @@ describe('workspaceGroups', () => {
       expect(yours).toContain(bundled)
       expect(reference).not.toContain(bundled)
     } finally {
-      delete g.sessionStorage
+      delete g.localStorage
     }
   })
 })

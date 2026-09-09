@@ -35,7 +35,7 @@
  */
 
 import { cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
-import { SCORING_ALGO_VERSION, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
+import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
 import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
 import type { BlobStore, CollectionOrchestrator } from '@bliprank/collector'
@@ -104,6 +104,8 @@ export interface CategoryResolution {
   /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`. */
   readonly signal: string
   readonly evidence: string
+  /** The recorded trading name, when the decision has one. See `subjectFor`. */
+  readonly brandName?: string
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
 }
 
@@ -210,7 +212,7 @@ const leadersOf = (bank: PromptBank): BrandSpec[] =>
  * undercounted wherever answers use its real trading name. Recovering that is
  * what PHASES 3.1's unbuilt site-content signal is for.
  */
-export function subjectFor(domain: string, bank: PromptBank): { spec: BrandSpec; source: 'leader' | 'domain-label' } {
+export function subjectFor(domain: string, bank: PromptBank, siteTitle?: string): { spec: BrandSpec; source: 'leader' | 'domain-label' } {
   const host = domain.toLowerCase().replace(/^www\./, '')
   for (const l of bank.leaders) {
     for (const d of [...l.domains, ...(l.siteDomains ?? [])]) {
@@ -219,8 +221,25 @@ export function subjectFor(domain: string, bank: PromptBank): { spec: BrandSpec;
       }
     }
   }
-  const label = host.split('.')[0] ?? host
-  return { spec: { id: `domain:${host}`, name: label, aliases: [label], domains: [host] }, source: 'domain-label' }
+  /*
+   * ⚠️ THE FALSE ZERO, FIXED HERE — 2026-09-01, algo det-2.
+   *
+   * This returned `aliases: [label]` and nothing else, so `thecosmicbyte.com`
+   * searched every answer for `thecosmicbyte` while all five engines wrote
+   * "Cosmic Byte". The scan published 0 of 50 for a brand named 139 times
+   * across 31 of those answers. The docblock above had predicted exactly this
+   * and pointed at a signal that did not exist yet; it does now.
+   *
+   * `siteTitle` is the recorded one, never a fresh fetch. A re-scan reads the
+   * decision rather than re-reading the homepage, and a homepage rewritten on a
+   * Tuesday must not silently change what a historical number was measuring —
+   * the same reasoning that makes the category itself a written-down answer.
+   */
+  const forms = domainBrandForms(host, siteTitle)
+  return {
+    spec: { id: `domain:${host}`, name: forms.name, aliases: forms.aliases, squashedAliases: forms.squashedAliases, domains: [host] },
+    source: 'domain-label',
+  }
 }
 
 /**
@@ -306,11 +325,14 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   let slug: string
   let bank: PromptBank | undefined
   let categorySource: { signal: string; evidence: string } | undefined
+  // The RECORDED trading name, never a fresh read of the site. See `subjectFor`.
+  let brandName: string | undefined
 
   if (deps.resolveCategory) {
     const resolved = await deps.resolveCategory(req.domain)
     slug = resolved.slug
     bank = resolved.bank
+    brandName = resolved.brandName
     categorySource = { signal: resolved.signal, evidence: resolved.evidence }
     if (resolved.fallback) fallback = resolved.fallback
   } else if (classification.status === 'classified') {
@@ -336,7 +358,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
   const prompts = req.maxPrompts ? unprompted.slice(0, req.maxPrompts) : unprompted
 
-  const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank)
+  const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank, brandName)
   const competitors = leadersOf(bank).filter((c) => c.id !== subject.id)
   const scored: BrandSpec[] = [subject, ...competitors]
 

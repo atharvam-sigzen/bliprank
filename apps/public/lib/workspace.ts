@@ -263,14 +263,27 @@ export function readActiveDomain(): string | null {
   // or edited by hand in devtools, must not become a lookup key that no scan can
   // match.
   //
-  // Scoped to this session: a domain is only locked once genuinely entered
-  // during this visit, so prior localStorage / tests never leak into fresh sessions.
-  return normaliseHost(readRawSession(ACTIVE_STORAGE_KEY) ?? '') || null
+  // ⚠️ PERSISTED, NOT SESSION-SCOPED — changed 2026-09-01, deliberately, and it
+  // reverses an earlier decision. The old rule was "a domain is only locked once
+  // genuinely entered during this visit", which kept a stale workspace from
+  // leaking into a fresh session. The cost turned out to be larger than the
+  // protection: a scan that COST REAL MONEY vanished from the dashboard the
+  // moment the browser closed, and the only way back to it was through the
+  // Grader again. Storage that forgets what was paid for teaches people to
+  // re-run scans, which is the opposite of what every guard in this repo is for.
+  //
+  // Safe to persist because a scan result is immutable and day-stamped: every
+  // surface prints the cycle day through `runInfoOf`, so an old workspace reads
+  // as old rather than as current. That is exactly what makes this different
+  // from the category mirror in `resolved-category.ts`, which stays
+  // session-scoped — a stale DECISION would be presented as today's truth,
+  // where a stale RESULT carries its own date.
+  return normaliseHost(readRaw(ACTIVE_STORAGE_KEY) ?? '') || null
 }
 
 export function writeActiveDomain(domain: string): void {
   const host = normaliseHost(domain)
-  if (host) writeRawSession(ACTIVE_STORAGE_KEY, host)
+  if (host) writeRaw(ACTIVE_STORAGE_KEY, host)
 }
 
 export function readAgencyDomains(): readonly string[] {

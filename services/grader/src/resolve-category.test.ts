@@ -391,44 +391,51 @@ describe('⚠️ A GENERATED PROMPT MAY NOT NAME A BRAND WE ALREADY TRACK', () =
     expect(namesTrackedBrand('Zoho makes several products', brands)).toBeNull()
   })
 
-  it('⚠️ INHERITS FIVE ALIAS COLLISIONS FROM THE TAXONOMY, and this test exists to make them visible', () => {
+  it(`⚠️ ONE ALIAS COLLISION REMAINS, and four were this module own override`, () => {
     /*
-     * NOT AN ASSERTION THAT THIS IS CORRECT. It is a pin on behaviour that is
-     * wrong upstream, so the wrongness is countable and cannot be rediscovered
-     * as a surprise.
+     * ⚠️ THIS TEST USED TO ASSERT SOMETHING FALSE, and the correction matters
+     * more than the pin.
      *
-     * Five leaders carry a bare single-word alias that is also ordinary English:
-     * Wave, Sage, Notion, Asana and Close. `Close` is the worst of them - "our
-     * monthly close" is ACCOUNTING vocabulary, in a taxonomy that has an
-     * accounting-software category.
+     * It recorded FIVE leaders "carrying a bare single-word alias that is also
+     * ordinary English: Wave, Sage, Notion, Asana and Close", and concluded that
+     * fixing them "means editing leader aliases, which is scoring rule set and
+     * human-owned - so it is reported, not quietly changed".
      *
-     * The taxonomy's own docblock warns about exactly this and names the case it
-     * caught: "an alias must be a form a human would write - `monday.com`, never
-     * a bare `monday`, which collides with the weekday." These five were missed.
+     * Four of the five were never in the taxonomy at all. Their alias tables say
+     * "wave accounting", "sage accounting", "notion.so", "close crm" and stop
+     * short of the bare word ON PURPOSE - 104 leaders DO list their bare name
+     * and the 12 that do not are all common words. `trackedBrands` was adding
+     * `l.name` back, overriding the curation, and that override was the whole
+     * collision. It is gone, so they are gone.
      *
-     * ⚠️ THE COST IS NOT PRIMARILY HERE. `findMentions` is what decides
-     * `mentioned` in `scoreAnswer`, so a COLLECTED ANSWER containing "a wave of
-     * interest" already counts as a mention of Wave, inflating a published
-     * mention rate and its interval. This refusal merely inherits the same
-     * table. Fixing it means editing leader aliases, which is scoring rule set
-     * and human-owned (CLAUDE.md §4) - so it is reported, not quietly changed.
+     * The second claim was also wrong. It said the real cost was in SCORING -
+     * "a collected answer containing 'a wave of interest' already counts as a
+     * mention of Wave, inflating a published mention rate". `leadersOf` in
+     * scan.ts builds competitor specs from `l.aliases` alone and never from
+     * `l.name`, so no published rate was ever inflated by this.
      *
-     * The consequence for THIS check is a false refusal, which degrades to the
-     * general bucket. Safe direction, real cost.
+     * ASANA IS REAL AND REMAINS. Its alias list is literally ["asana"], so the
+     * bare word is in the taxonomy, and that IS human-owned data (CLAUDE.md §4).
+     * Reported, not quietly changed - which is what the original note should
+     * have said about one leader rather than five.
      */
     const brands = trackedBrands(DEMO_BANKS)
-    const collisions = [
-      ['we saw a wave of interest from buyers', 'Wave'],
-      ['sage advice from an accountant', 'Sage'],
-      ['the notion that this is simple', 'Notion'],
-      ['an asana pose between meetings', 'Asana'],
-      ['how do we speed up our monthly close', 'Close'],
-    ] as const
-    for (const [prose, brand] of collisions) {
-      expect([prose, namesTrackedBrand(prose, brands)?.name]).toEqual([prose, brand])
+
+    // The genuine one, still counted so it cannot be rediscovered as a surprise.
+    expect(namesTrackedBrand('an asana pose between meetings', brands)?.name).toBe('Asana')
+
+    // The four the override invented. Ordinary prose, no longer a refusal.
+    for (const prose of [
+      'we saw a wave of interest from buyers',
+      'sage advice from an accountant',
+      'the notion that this is simple',
+      'how do we speed up our monthly close',
+    ]) {
+      expect([prose, namesTrackedBrand(prose, brands)]).toEqual([prose, null])
     }
-    // And ordinary prose that does NOT collide stays clean, so the check is not
-    // simply matching everything.
+
+    // And ordinary prose that never collided stays clean, so the check is not
+    // simply matching nothing now.
     for (const clean of ['how do we keep our team in sync across two offices', 'which tool helps a small business file its taxes']) {
       expect([clean, namesTrackedBrand(clean, brands)]).toEqual([clean, null])
     }
@@ -504,5 +511,99 @@ describe('what an authored bank must satisfy before it exists', () => {
   it('derives the slug here, never from the model', () => {
     expect(slugify('Gaming Peripherals')).toBe('gaming-peripherals')
     expect(slugify('  Cybersecurity  consulting! ')).toBe('cybersecurity-consulting')
+  })
+})
+
+/**
+ * THE SUBJECT'S OWN NAME, SPACED — the other half of the false zero.
+ *
+ * `rejectionReason` tested `\bthecosmicbyte\b`, the literal concatenated label.
+ * A model reading thecosmicbyte.com's homepage writes "Cosmic Byte", because
+ * that is what the homepage says, and a spaced form never matches a
+ * concatenated regex. So the guard that exists to stop a prompt naming its own
+ * subject would have passed it — guaranteeing the brand a mention inside its
+ * own measurement, which is exactly what PROPERTY 2 refuses.
+ *
+ * One root cause with two victims: `subjectFor` could not FIND the brand and
+ * this could not REFUSE it. Both now share `domainBrandForms`.
+ */
+describe('⚠️ A GENERATED PROMPT MAY NOT NAME THE SUBJECT, HOWEVER IT IS SPACED', () => {
+  const withPrompt = (text: string): GeneratedBank => {
+    const base = goodBank()
+    return { ...base, prompts: [{ text, intent: 'discovery' as const }, ...base.prompts.slice(1)] }
+  }
+
+  it('catches the spaced trading name the domain only implies', () => {
+    // THE EXACT MISS. 'thecosmicbyte' does not appear; 'Cosmic Byte' does.
+    const refused = rejectionReason(withPrompt('best Cosmic Byte gaming headset under 3000'), 'thecosmicbyte.com', DEMO_BANKS)
+    expect(refused).toContain('names the subject brand')
+  })
+
+  it('catches every spacing of it, because separators are not evidence', () => {
+    for (const naming of ['CosmicByte keyboards worth buying', 'is Cosmic-Byte any good for fps', 'thecosmicbyte mouse review']) {
+      expect(rejectionReason(withPrompt(naming), 'thecosmicbyte.com', DEMO_BANKS), naming).toContain('names the subject brand')
+    }
+  })
+
+  it('does NOT refuse a clean prompt that merely shares a word', () => {
+    // The bank must not be thrown away for saying "byte" or "cosmic" alone. A
+    // refusal costs the visitor their whole category; it has to be earned.
+    for (const clean of [
+      'best budget mechanical keyboard under 3000 rupees',
+      'how many bytes of storage does a gaming keyboard need',
+      'cosmic themed rgb lighting for a desk setup',
+    ]) {
+      expect(rejectionReason(withPrompt(clean), 'thecosmicbyte.com', DEMO_BANKS), clean).toBeNull()
+    }
+  })
+})
+
+/**
+ * THE REFUSAL THAT PROTECTED AN EMAIL TOOL FROM A SENTENCE ABOUT LIGHTING.
+ *
+ * kreo-tech.com — a real gaming-peripherals retailer — had its authored bank
+ * DISCARDED in production because one prompt said "best softbox lighting kit for
+ * tiktok videos" and `kit` matched the tracked brand Kit (formerly ConvertKit).
+ * The domain fell through to the general business-software bank and was measured
+ * on "what software should a small business buy first". A wrong measurement,
+ * caused by a guard firing on an ordinary English word.
+ *
+ * The taxonomy already encodes the answer: 104 leaders list their bare name
+ * among their aliases, and the 12 that do not are all common words. Reading the
+ * alias table instead of overriding it is the whole fix.
+ */
+describe('a tracked brand whose name is an ordinary word does not refuse a bank', () => {
+  const withPrompt = (text: string): GeneratedBank => {
+    const base = goodBank()
+    return { ...base, prompts: [{ text, intent: 'discovery' as const }, ...base.prompts.slice(1)] }
+  }
+
+  it('THE PRODUCTION CASE: "lighting kit" no longer refuses the bank', () => {
+    expect(rejectionReason(withPrompt('best softbox lighting kit for tiktok videos'), 'kreo-tech.com', DEMO_BANKS)).toBeNull()
+  })
+
+  it('the other common-word brands are equally safe in ordinary sentences', () => {
+    for (const text of [
+      'how do i close more deals without a bigger team',        // Close (crm)
+      'best sound wave visualiser for a podcast studio',        // Wave (accounting)
+      'which webcam has the best zoom for a small room',        // Zoom (video-conferencing)
+      'what is the notion of total cost of ownership here',     // Notion (project-management)
+      'how much heap memory does a build server need',          // Heap (analytics)
+    ]) {
+      expect(rejectionReason(withPrompt(text), 'kreo-tech.com', DEMO_BANKS), text).toBeNull()
+    }
+  })
+
+  it('but the QUALIFIED form still refuses, because that names the product', () => {
+    for (const text of ['is convertkit better than a newsletter plugin', 'should i use close crm for a small sales team', 'is wave accounting enough for a sole trader']) {
+      expect(rejectionReason(withPrompt(text), 'kreo-tech.com', DEMO_BANKS), text).not.toBeNull()
+    }
+  })
+
+  it('a brand whose table DOES list its bare name is still caught', () => {
+    // HubSpot lists `hubspot` among its aliases, so nothing was weakened for the
+    // 104 leaders that do — which is the whole point of reading the table.
+    expect(rejectionReason(withPrompt('best gaming keyboard, or should I just use HubSpot?'), 'kreo-tech.com', DEMO_BANKS)).toContain('HubSpot')
+    expect(rejectionReason(withPrompt('how does this compare to Salesforce'), 'kreo-tech.com', DEMO_BANKS)).toContain('Salesforce')
   })
 })

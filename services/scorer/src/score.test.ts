@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnswerBody } from '@bliprank/contracts'
-import { findMentions, normaliseForMatch, scoreAnswer, SCORING_ALGO_VERSION, type BrandSpec } from './score.js'
+import { domainBrandForms, findMentions, normaliseForMatch, scoreAnswer, SCORING_ALGO_VERSION, type BrandSpec } from './score.js'
 
 const HUBSPOT: BrandSpec = { id: 'hubspot', name: 'HubSpot', aliases: ['HubSpot', 'Hub Spot', 'HubSpot CRM'], domains: ['hubspot.com'] }
 const SALESFORCE: BrandSpec = { id: 'salesforce', name: 'Salesforce', aliases: ['Salesforce', 'Sales Force'], domains: ['salesforce.com'] }
@@ -225,5 +225,136 @@ describe('review findings — regressions that were shipped and are now pinned',
 
   it('an underscore is a token boundary — handles are not mentions', () => {
     expect(scoreAnswer({ answer: answer('follow HubSpot_alt for updates'), brand: HUBSPOT }).mentioned).toBe(false)
+  })
+})
+
+/**
+ * THE FALSE ZERO — 2026-09-01, and the worst defect this scorer can produce.
+ *
+ * thecosmicbyte.com is not a tracked leader, so `subjectFor` gave it the domain
+ * label `thecosmicbyte` as its only alias. The engines write "Cosmic Byte".
+ * Whole-token matching found nothing, and a brand named 139 times across 31 of
+ * 50 collected answers was published as 0.0% — mentioned in none of them.
+ *
+ * A low number is a finding. A zero that should be ~62% is a broken instrument,
+ * and it is indistinguishable from the real thing on the page.
+ */
+describe('squashed aliases — a brand whose domain runs its words together', () => {
+  const cosmic: BrandSpec = {
+    id: 'domain:thecosmicbyte.com',
+    name: 'thecosmicbyte',
+    aliases: ['thecosmicbyte'],
+    squashedAliases: ['cosmicbyte'],
+    domains: ['thecosmicbyte.com'],
+  }
+
+  it('matches the trading name the engines actually write', () => {
+    for (const text of [
+      'For budget gaming, Cosmic Byte headsets are worth a look.',
+      'The CosmicByte CB-GK-19 is a solid pick.',
+      'Try the Cosmic-Byte mousepad.',
+      'brands like cosmic  byte compete on price',
+    ]) {
+      const m = findMentions(normaliseForMatch(text), cosmic)
+      expect(m, text).not.toBeNull()
+      expect(m!.count).toBe(1)
+    }
+  })
+
+  it('still matches the plain domain label when an answer uses it', () => {
+    const m = findMentions(normaliseForMatch('see thecosmicbyte for details'), cosmic)
+    expect(m).not.toBeNull()
+  })
+
+  it('⚠️ DOES NOT INVENT A MENTION across a word boundary', () => {
+    // Squashing destroys boundaries: "smart station" -> "smartstation", which
+    // CONTAINS "artstation". Inventing a mention is worse than missing one.
+    const artstation: BrandSpec = { id: 'a', name: 'ArtStation', aliases: ['ArtStation'], squashedAliases: ['artstation'], domains: ['artstation.com'] }
+    expect(findMentions(normaliseForMatch('a smart station for your desk'), artstation)).toBeNull()
+    // The real brand, properly bounded, still matches.
+    expect(findMentions(normaliseForMatch('posted on Art Station yesterday'), artstation)).not.toBeNull()
+  })
+
+  it('refuses a needle too short to be evidence', () => {
+    const tiny: BrandSpec = { id: 't', name: 'Go', aliases: [], squashedAliases: ['go'], domains: [] }
+    expect(findMentions(normaliseForMatch('go to the good goggles'), tiny)).toBeNull()
+  })
+
+  it('a squashed hit overlapping a plain alias is counted ONCE, not twice', () => {
+    // 'Cosmic Byte' matches the squashed form; if the brand also lists it as a
+    // plain alias, the existing overlap resolution must still collapse them.
+    const both: BrandSpec = { ...cosmic, aliases: ['thecosmicbyte', 'cosmic byte'] }
+    const m = findMentions(normaliseForMatch('Cosmic Byte makes keyboards'), both)
+    expect(m!.count).toBe(1)
+  })
+
+  it('a brand with no squashedAliases behaves exactly as before', () => {
+    const plain: BrandSpec = { id: 'p', name: 'Pipedrive', aliases: ['Pipedrive'], domains: ['pipedrive.com'] }
+    expect(findMentions(normaliseForMatch('Pipe drive is not the same word'), plain)).toBeNull()
+    expect(findMentions(normaliseForMatch('Pipedrive is a CRM'), plain)).not.toBeNull()
+  })
+})
+
+/**
+ * THE FLOOR, AND THE EVIDENCE THAT OVERRIDES IT.
+ *
+ * Reviewing MIN_STRIPPED_LENGTH = 5 exposed a real cost. `getlago.com` minus
+ * `get` is `lago` — four characters — so it was refused and every "Lago handles
+ * usage-based billing" went uncounted: the same false zero one letter further
+ * down. Lowering the floor to 4 fixes that and breaks `google.com`, whose
+ * remainder after `go` is `ogle`, an ordinary English word that would score a
+ * mention of Google every time somebody ogles something.
+ *
+ * Length cannot separate them — both are four letters. Evidence can: Lago's
+ * homepage says "Lago"; Google's does not say "Ogle".
+ *
+ * Every sentence and every title below is INVENTED for this test. Nothing here
+ * touches a provider, a stored scan, or a real homepage.
+ */
+describe('a four-letter remainder is admitted only when the site title names it', () => {
+  const specFor = (host: string, title?: string): BrandSpec => {
+    const f = domainBrandForms(host, title)
+    return { id: host, name: f.name, aliases: f.aliases, squashedAliases: f.squashedAliases, domains: [host] }
+  }
+  const matches = (host: string, sentence: string, title?: string) =>
+    findMentions(normaliseForMatch(sentence), specFor(host, title)) !== null
+
+  // Synthetic. No such scan exists and none is needed.
+  const LAGO_SENTENCE = 'For usage-based billing, Lago is the one people self-host.'
+  const OGLE_SENTENCE = 'People ogle at their phones all day on the train.'
+
+  it('WITH corroboration: "Lago" matches for getlago.com', () => {
+    expect(matches('getlago.com', LAGO_SENTENCE, 'Lago - Open Source Usage Based Billing')).toBe(true)
+    expect(specFor('getlago.com', 'Lago - Open Source Usage Based Billing').squashedAliases).toContain('lago')
+  })
+
+  it('WITHOUT corroboration: the same four letters stay refused', () => {
+    // No title at all, and a title that does not name it, are both "no evidence".
+    expect(matches('getlago.com', LAGO_SENTENCE)).toBe(false)
+    expect(matches('getlago.com', LAGO_SENTENCE, 'Open Source Billing for Developers')).toBe(false)
+  })
+
+  it('"ogle" is STILL refused for google.com, title or no title', () => {
+    // The case the floor exists for. Google's homepage does not say "Ogle", so
+    // nothing promotes it — this is what a blanket floor of 4 would have broken.
+    expect(matches('google.com', OGLE_SENTENCE)).toBe(false)
+    expect(matches('google.com', OGLE_SENTENCE, 'Google')).toBe(false)
+    expect(matches('google.com', OGLE_SENTENCE, 'Google - Search the world&apos;s information')).toBe(false)
+    expect(specFor('google.com', 'Google').squashedAliases).not.toContain('ogle')
+  })
+
+  it('a title naming a RIVAL cannot promote anything', () => {
+    // The corroboration is specific: the title must name THIS candidate, not
+    // merely be present. A competitor's name in the title promotes nothing.
+    const s = specFor('getlago.com', 'Alternatives to Stripe Billing and Chargebee')
+    expect(s.squashedAliases).not.toContain('lago')
+    expect(matches('getlago.com', LAGO_SENTENCE, 'Alternatives to Stripe Billing and Chargebee')).toBe(false)
+  })
+
+  it('the five-letter rule is unchanged — no title needed above the floor', () => {
+    // thecosmicbyte -> cosmicbyte is ten characters: trusted on length alone,
+    // which is why the original fix worked with no homepage read at all.
+    expect(matches('thecosmicbyte.com', 'Cosmic Byte makes budget headsets.')).toBe(true)
+    expect(matches('usebubbles.com', 'Bubbles is a decent async video tool.')).toBe(true)
   })
 })

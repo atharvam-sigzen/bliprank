@@ -26,10 +26,11 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { buildHeadToHead } from './head-to-head'
 import { previewScore } from './preview-score'
-import { BUNDLED_SCANS, SCAN, SIGZEN, rememberScan, runInfoOf, scanFor, scans, subjectOf, type ScanResultFile } from './scan-result'
+import { BUNDLED_SCANS, SCAN, measuresCurrentCategory, rememberScan, runInfoOf, scanFor, scans, subjectOf, type ScanResultFile } from './scan-result'
+import { NO_RUN_BLOCK_SCAN } from './__fixtures__/no-run-block-scan'
 import { workspaceFor } from './workspace'
 
-const SIGZEN_ENGINES = ['chatgpt', 'copilot', 'gemini', 'google-ai-mode', 'google-ai-overviews']
+const FIXTURE_ENGINES = ['chatgpt', 'copilot', 'gemini', 'google-ai-mode', 'google-ai-overviews']
 
 describe('runInfoOf — recorded when recorded, derived when not, invented never', () => {
   it('uses the run block VERBATIM when the file has one', () => {
@@ -47,10 +48,10 @@ describe('runInfoOf — recorded when recorded, derived when not, invented never
   })
 
   it('derives day and engines for a file with NO run block, and refuses to invent a cost', () => {
-    const info = runInfoOf(SIGZEN)
-    expect(SIGZEN.run).toBeUndefined()
+    const info = runInfoOf(NO_RUN_BLOCK_SCAN)
+    expect(NO_RUN_BLOCK_SCAN.run).toBeUndefined()
     expect(info.day).toBe('2026-08-25')
-    expect(info.engines).toEqual(SIGZEN_ENGINES)
+    expect(info.engines).toEqual(FIXTURE_ENGINES)
 
     // ⚠️ EXACTLY null, and the assertion is written twice on purpose: `toBe(0)`
     // and `toBeNull()` both pass for a value that is falsy, and 0 here is the
@@ -65,11 +66,11 @@ describe('runInfoOf — recorded when recorded, derived when not, invented never
   })
 
   it('a file with no run and no parseable comparisonBasis yields engines [] without throwing', () => {
-    const junk = { ...SIGZEN, comparisonBasis: 'grader|en-US|US' } as ScanResultFile
+    const junk = { ...NO_RUN_BLOCK_SCAN, comparisonBasis: 'grader|en-US|US' } as ScanResultFile
     expect(runInfoOf(junk).engines).toEqual([])
     // Not even a string, which is what a hand-edited or truncated cache file
     // looks like. The count is omitted; nothing throws.
-    const missing = { ...SIGZEN, comparisonBasis: undefined as unknown as string, collectedAt: undefined as unknown as string }
+    const missing = { ...NO_RUN_BLOCK_SCAN, comparisonBasis: undefined as unknown as string, collectedAt: undefined as unknown as string }
     expect(runInfoOf(missing)).toEqual({ day: '', engines: [], spentUsd: null, mode: 'unknown' })
   })
 })
@@ -78,30 +79,56 @@ describe('scanFor — a registry, not one constant', () => {
   it('resolves every scan this build holds, in any typed form', () => {
     expect(scanFor('pipedrive.com')?.domain).toBe('pipedrive.com')
     expect(scanFor('https://www.Pipedrive.com/')?.domain).toBe('pipedrive.com')
+
     // The one that used to be invisible: scanned through the UI, cached, and
     // then unreachable because `scanFor` only ever matched the committed scan.
-    expect(scanFor('sigzen.com')?.domain).toBe('sigzen.com')
-    expect(scanFor(' SIGZEN.com ')?.domain).toBe('sigzen.com')
+    // Exercised through the session registry, which is where a live-scanned
+    // domain actually lives — resolving in any typed form.
+    const store = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    })
+    rememberScan(NO_RUN_BLOCK_SCAN)
+    expect(scanFor('example.com')?.domain).toBe('example.com')
+    expect(scanFor(' EXAMPLE.com ')?.domain).toBe('example.com')
+    expect(scanFor('https://www.Example.com/pricing')?.domain).toBe('example.com')
+    vi.unstubAllGlobals()
   })
 
   it('returns null for a domain this build has not scanned', () => {
-    expect(scanFor('example.com')).toBeNull()
+    // NOT example.com: that is the synthetic fixture's domain, and the test
+    // above stashes it in the session registry.
+    expect(scanFor('never-scanned.test')).toBeNull()
     expect(scanFor('')).toBeNull()
   })
 })
 
 describe('the live-scanned domain is COLLECTED everywhere, not just on the Grader', () => {
-  it('workspaceFor(sigzen.com) reports data and the day it was collected', () => {
-    const w = workspaceFor('sigzen.com')
+  it('workspaceFor(example.com) reports data and the day it was collected', () => {
+    // Through the session registry, which is where a live-scanned domain now
+    // lives: sigzen was dropped from BUNDLED_SCANS because rung 4 reclassifies
+    // it, and the claim under test — a scan the Grader collected is COLLECTED on
+    // the dashboard too — is about the cached path, not about being bundled.
+    const store = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    })
+    rememberScan(NO_RUN_BLOCK_SCAN)
+
+    const w = workspaceFor('example.com')
     expect(w).not.toBeNull()
     expect(w!.hasData).toBe(true)
     expect(w!.lastRunDay).toBe('2026-08-25')
     expect(w!.answersCollected).toBe(85)
+
+    vi.unstubAllGlobals()
   })
 
   it('THE ZERO-COMPETITOR PATH: one brand is measured, ranked against nothing, and says so', () => {
-    const subject = subjectOf(SIGZEN)
-    const competitors = SIGZEN.brands.filter((b) => !b.isSubject)
+    const subject = subjectOf(NO_RUN_BLOCK_SCAN)
+    const competitors = NO_RUN_BLOCK_SCAN.brands.filter((b) => !b.isSubject)
     expect(competitors).toEqual([])
 
     // The position component is REPORTED MISSING rather than scored. Half credit
@@ -120,7 +147,7 @@ describe('the live-scanned domain is COLLECTED everywhere, not just on the Grade
 
     // The fallback disclosure has something to render, which is what stops the
     // category name reading as if it had been determined.
-    expect(SIGZEN.fallback?.reason).toBe('unclassified')
+    expect(NO_RUN_BLOCK_SCAN.fallback?.reason).toBe('unclassified')
   })
 })
 
@@ -200,13 +227,13 @@ describe('every scan file this build could load renders', () => {
  * REGRESSIONS. One per defect that was real.
  */
 describe('a scan collected this session is visible on every surface', () => {
-  const NOTION: ScanResultFile = { ...SIGZEN, domain: 'notion.so' }
+  const NOTION: ScanResultFile = { ...NO_RUN_BLOCK_SCAN, domain: 'notion.so' }
 
   it('scanFor and workspaceFor find it after rememberScan, and bundled scans still win', () => {
     // vitest runs in node; the stash is a no-op without storage, which is the
     // SSR/static-export case and must not throw.
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
@@ -235,15 +262,15 @@ describe('a scan collected this session is visible on every surface', () => {
 
   it('an unfinished scan is not remembered, and no storage is not a crash', () => {
     const store = new Map<string, string>()
-    vi.stubGlobal('sessionStorage', {
+    vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     })
-    rememberScan({ ...SIGZEN, domain: 'queued.com', status: 'no-answers' })
+    rememberScan({ ...NO_RUN_BLOCK_SCAN, domain: 'queued.com', status: 'no-answers' })
     expect(scanFor('queued.com')).toBeNull()
     vi.unstubAllGlobals()
 
-    // No sessionStorage at all: the bundled scans still resolve.
+    // No localStorage at all: the bundled scans still resolve.
     expect(() => rememberScan(NOTION)).not.toThrow()
     expect(scans()).toEqual(BUNDLED_SCANS)
   })
@@ -264,23 +291,26 @@ describe('a scan collected this session is visible on every surface', () => {
       // `undefined - undefined` in every record surface.
       JSON.stringify([{ domain: 'x.com', status: 'scanned', brands: [{}], counts: {} }]),
       // Rendered '−NaN% / +NaN%': metric present but empty.
-      JSON.stringify([{ ...SIGZEN, domain: 'x.com', brands: [{ ...SIGZEN.brands[0], metric: {} }] }]),
+      JSON.stringify([{ ...NO_RUN_BLOCK_SCAN, domain: 'x.com', brands: [{ ...NO_RUN_BLOCK_SCAN.brands[0], metric: {} }] }]),
       // Crashed HeadToHeadSection at scan.categoryName.toLowerCase().
-      JSON.stringify([{ ...SIGZEN, domain: 'x.com', categoryName: undefined }]),
+      JSON.stringify([{ ...NO_RUN_BLOCK_SCAN, domain: 'x.com', categoryName: undefined }]),
       // counts present but answersScored missing (stale-build shape drift).
-      JSON.stringify([{ ...SIGZEN, domain: 'x.com', counts: {} }]),
+      JSON.stringify([{ ...NO_RUN_BLOCK_SCAN, domain: 'x.com', counts: {} }]),
     ]
     for (const raw of cases) {
-      vi.stubGlobal('sessionStorage', { getItem: () => raw, setItem: () => undefined })
+      vi.stubGlobal('localStorage', { getItem: () => raw, setItem: () => undefined })
       expect(scans()).toEqual(BUNDLED_SCANS)
-      expect(scanFor('sigzen.com')?.domain).toBe('sigzen.com')
+      // The BUNDLED scan still resolves through a corrupt session entry — that
+      // is the claim. It was asserted on sigzen, which stopped being bundled;
+      // pipedrive is the domain that actually carries the property now.
+      expect(scanFor('pipedrive.com')?.domain).toBe('pipedrive.com')
       expect(workspaceFor('pipedrive.com')?.hasData).toBe(true)
       vi.unstubAllGlobals()
     }
 
     // A valid entry sharing the array with a corrupt one survives the filter.
-    const NOTION_OK: ScanResultFile = { ...SIGZEN, domain: 'notion.so' }
-    vi.stubGlobal('sessionStorage', { getItem: () => JSON.stringify([null, NOTION_OK]), setItem: () => undefined })
+    const NOTION_OK: ScanResultFile = { ...NO_RUN_BLOCK_SCAN, domain: 'notion.so' }
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify([null, NOTION_OK]), setItem: () => undefined })
     expect(scanFor('notion.so')?.domain).toBe('notion.so')
     vi.unstubAllGlobals()
   })
@@ -292,5 +322,47 @@ describe('no scan file carries a fabricated cost', () => {
     // scan. It is removed, not corrected: the real figure is not recoverable.
     expect(SCAN.run.spentUsd).toBeUndefined()
     expect(runInfoOf(SCAN).spentUsd).toBeNull()
+  })
+})
+
+/**
+ * THE STALE-CATEGORY CACHE, which served a measurement of a different thing.
+ *
+ * `/api/scan` keyed its result cache on the domain alone. example.com was
+ * collected under `general-business-software` and recorded since as
+ * `erp-software`, so the preview offered the ERP prompts and the cache answered
+ * with the general-business-software number. Same domain, different question,
+ * no indication on screen that the two had parted company.
+ */
+describe('measuresCurrentCategory — the category is part of the cache key', () => {
+  const under = (category: string) => ({ ...NO_RUN_BLOCK_SCAN, category })
+
+  it('a result collected under a category we no longer decide is a MISS', () => {
+    // The exact specimen: collected general-business-software, recorded erp.
+    expect(measuresCurrentCategory(under('general-business-software'), 'erp-software')).toBe(false)
+  })
+
+  it('a result collected under the category we still decide is a hit', () => {
+    expect(measuresCurrentCategory(under('crm-software'), 'crm-software')).toBe(true)
+  })
+
+  it('no record is not a mismatch — a scan predating the mechanism still stands', () => {
+    // Invalidating every result collected before records existed would re-spend
+    // the whole cache to learn nothing.
+    expect(measuresCurrentCategory(under('general-business-software'), null)).toBe(true)
+  })
+
+  it('a file recording no category is kept rather than guessed at', () => {
+    // Cannot be checked. Refuse to guess, in the direction that does not spend.
+    const { category: _dropped, ...noCategory } = NO_RUN_BLOCK_SCAN
+    expect(measuresCurrentCategory(noCategory, 'erp-software')).toBe(true)
+    expect(measuresCurrentCategory({ ...NO_RUN_BLOCK_SCAN, category: '' }, 'erp-software')).toBe(true)
+    expect(measuresCurrentCategory({ ...NO_RUN_BLOCK_SCAN, category: 42 }, 'erp-software')).toBe(true)
+  })
+
+  it('junk that is not an object is a miss, never a served result', () => {
+    for (const junk of [null, undefined, 'a string', 42, []]) {
+      expect(measuresCurrentCategory(junk, 'crm-software')).toBe(false)
+    }
   })
 })

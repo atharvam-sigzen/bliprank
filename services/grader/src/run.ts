@@ -365,6 +365,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
               bank: r.bank,
               signal: r.record.source,
               evidence: r.record.evidence,
+              ...(r.record.brandName ? { brandName: r.record.brandName } : {}),
               ...(r.fallback ? { fallback: r.fallback } : {}),
             }
           }

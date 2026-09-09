@@ -17,6 +17,9 @@ import { describe, expect, it } from 'vitest'
 import { wilson, type Metric } from '@bliprank/stats'
 import { SCAN_BASIS } from '../lib/fixtures'
 import { HeadToHeadChart } from './head-to-head-chart'
+import { HeadToHeadSection } from './head-to-head-section'
+import { NO_RUN_BLOCK_SCAN } from '../lib/__fixtures__/no-run-block-scan'
+import type { ScanResultFile } from '../lib/scan-result'
 import { VERDICT_WORDS, type HeadToHead, type HeadToHeadRow, type Verdict } from '../lib/head-to-head'
 
 const ALL: Verdict[] = ['you', 'ahead', 'behind', 'indistinguishable', 'insufficient-data', 'not-comparable']
@@ -91,6 +94,58 @@ describe('the chart renders every verdict it can produce', () => {
       const [cx, r] = [Number(m[1]), Number(m[2])]
       expect(cx - r).toBeGreaterThanOrEqual(108) // padLeft — the label column
       expect(cx + r).toBeLessThanOrEqual(574) // width - padRight
+    }
+  })
+})
+
+/**
+ * ZERO COMPETITORS HAS TWO CAUSES, AND THEY ARE NOT THE SAME SENTENCE.
+ *
+ * The copy asserted, unconditionally, that a zero-competitor scan "was measured
+ * against the general business-software prompt set" and belonged to "a business
+ * we could not categorise". True for the FALLBACK bank. False, and insulting,
+ * for a GENERATED one: thecosmicbyte.com was correctly placed in an authored
+ * "Gaming Peripherals India" and measured on its own seventeen prompts, then
+ * told on its own dashboard that we could not categorise it.
+ */
+describe('the zero-competitor explanation names the right cause', () => {
+  const base = {
+    ...NO_RUN_BLOCK_SCAN,
+    brands: [NO_RUN_BLOCK_SCAN.brands.find((b) => b.isSubject) ?? NO_RUN_BLOCK_SCAN.brands[0]!],
+  } as ScanResultFile
+
+  const html = (scan: ScanResultFile) => renderToStaticMarkup(<HeadToHeadSection scan={scan} />)
+
+  it('a GENERATED category says it was authored, and never says we could not categorise it', () => {
+    const authored = {
+      ...base,
+      domain: 'thecosmicbyte.com',
+      categoryName: 'Gaming Peripherals India',
+      fallback: undefined,
+      categorySource: { signal: 'generated', evidence: "authored from thecosmicbyte.com's homepage" },
+    } as unknown as ScanResultFile
+    const out = html(authored)
+    expect(out).toContain('a category authored for it')
+    expect(out).toContain('Gaming Peripherals India')
+    // THE TWO FALSE CLAIMS. Neither may appear for a categorised business.
+    expect(out).not.toContain('could not categorise')
+    expect(out).not.toContain('general business-software prompt set')
+  })
+
+  it('the FALLBACK bank still says exactly what it always said', () => {
+    const fell = {
+      ...base,
+      domain: 'example.com',
+      fallback: { reason: 'unclassified', detail: 'no known keyword', candidates: [] },
+    } as unknown as ScanResultFile
+    const out = html(fell)
+    expect(out).toContain('general business-software prompt set')
+    expect(out).toContain('could not categorise')
+  })
+
+  it('neither case ever draws a chart', () => {
+    for (const scan of [base, { ...base, categorySource: { signal: 'generated', evidence: 'x' } } as unknown as ScanResultFile]) {
+      expect(html(scan)).toContain('An empty chart is not drawn in its place')
     }
   })
 })

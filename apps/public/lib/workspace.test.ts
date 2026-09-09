@@ -259,12 +259,26 @@ describe('storage helpers', () => {
     expect(readActiveDomain()).toBeNull()
   })
 
-  it('active domain is strictly session-scoped and ignores localStorage remnants', () => {
-    // If localStorage has an old active domain left over from prior testing or visits,
-    // readActiveDomain must return null if sessionStorage has no entry.
+  it('active domain SURVIVES the session, and does not depend on sessionStorage', () => {
+    /*
+     * ⚠️ THIS ASSERTION IS THE REVERSE OF WHAT IT USED TO BE, deliberately.
+     *
+     * It read "strictly session-scoped and ignores localStorage remnants",
+     * protecting against a stale workspace leaking into a fresh visit. The cost
+     * outweighed it: a scan that spent real provider quota vanished from the
+     * dashboard the moment the browser closed, and the only route back was to
+     * run the Grader again. Storage that forgets what was paid for teaches
+     * people to re-spend, which every other guard in this repo exists to stop.
+     *
+     * Persisting is honest here because a scan result is immutable and carries
+     * its own day — `runInfoOf` prints it on every surface, so an old workspace
+     * reads as old. The category mirror stays session-scoped for the opposite
+     * reason: a stale decision has no date on its face.
+     */
     Object.defineProperty(globalThis, 'localStorage', { value: memoryStorage({ [ACTIVE_STORAGE_KEY]: 'pipedrive.com' }), configurable: true, writable: true })
+    // Empty, and irrelevant now: a fresh session must NOT lose the workspace.
     Object.defineProperty(globalThis, 'sessionStorage', { value: memoryStorage(), configurable: true, writable: true })
-    expect(readActiveDomain()).toBeNull()
+    expect(readActiveDomain()).toBe('pipedrive.com')
   })
 
   it('adds, dedupes and removes agency domains', () => {
