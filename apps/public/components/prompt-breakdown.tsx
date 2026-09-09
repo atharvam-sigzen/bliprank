@@ -286,14 +286,20 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
         </p>
       )}
 
-      <Evidence scan={scan} lines={breakdown.prompts} subjectName={subject.name} />
-
       <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
         There is no sentiment column. Sentiment is the one signal a model is allowed to produce here, on a sampled basis, and that pass is not
         built — so no answer in this cycle carries one. An empty column would read as &ldquo;neutral&rdquo;, which is a finding this scan did
         not make.
       </p>
       </div>
+
+      {/* OUTSIDE THE DETAIL WRAPPER, DELIBERATELY. The verbatim answers are the
+          evidence of last resort (PRODUCT_GOAL point 5), and a brand owner at
+          simple depth is exactly the reader who needs to be able to check the
+          number against what was actually said. Hiding the offer with the
+          instrumentation made the honest view the one that could not be
+          verified — audit defect 4. */}
+      <Evidence scan={scan} lines={breakdown.prompts} subjectName={subject.name} />
     </section>
   )
 }

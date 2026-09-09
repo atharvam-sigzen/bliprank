@@ -15,6 +15,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { SCAN } from '../lib/scan-result'
+import { simpleView } from '../lib/simple-view'
 import { PromptBreakdown } from './prompt-breakdown'
 
 const html = () => renderToStaticMarkup(<PromptBreakdown scan={SCAN} />)
@@ -32,6 +33,14 @@ describe('before a reader asks', () => {
     const out = html()
     expect(out).toContain('Read what the engines actually said')
     expect(out).toContain('not loaded until you ask')
+  })
+
+  it('⚠️ the offer survives the simple view: evidence is the reader’s, not agency detail', () => {
+    // PRODUCT_GOAL point 5: raw answers are the evidence of last resort, and
+    // the brand owner at the default depth is the reader who must be able to
+    // reach them. Stripping `.detail` the way the stylesheet does must leave
+    // the button standing (audit defect 4).
+    expect(simpleView(html())).toContain('Read what the engines actually said')
   })
 
   it('promises the answers that do NOT name the brand, not only the ones that do', () => {
