@@ -1340,6 +1340,52 @@ fresh session: 38.2k tokens, of which the four enabled plugins cost ≈ 3k.
 
 ---
 
+## 4a. Open methodology items
+
+### `comparison_basis` cannot express a prompt-subset comparison (2026-09-09)
+
+**Found while building the by-question-type split.** The Grader now groups a
+cycle by the bank's buyer intent — `discovery` against `problem-led` — and on
+the shipped scan the gap is the largest anywhere on the record: 58.0%
+[44.2–70.6] of discovery answers name the subject against 25.7% [14.2–42.1] of
+problem-led ones. The ranges do not overlap.
+
+**That comparison is statistically legitimate.** The two groups are disjoint
+prompt sets, so unlike two engines over the same prompts they are independent
+samples. Nothing about the arithmetic blocks `compare()`.
+
+**What blocks it is bookkeeping.** `comparison_basis` is a CYCLE-level string:
+it carries `unprompted=17`, the prompt count for the whole cycle. So a group
+metric can be built two ways and both are wrong:
+
+- with the cycle's basis — it claims seventeen prompts for a group that used
+  ten, which is a false statement about what the number measures;
+- with an honest subset basis (`unprompted=10` against `unprompted=7`) — the
+  two differ, and `compare()` correctly refuses a comparison that is in fact
+  valid.
+
+The basis has no way to say "this is a named subset of one cycle's prompts,
+compared with a sibling subset of the same cycle". That is the gap.
+
+**Not solved, and deliberately not worked around.** The surface states what the
+drawn ranges show ("the ranges do not overlap on this scan") and never the word
+"significant", which is the claim `compare()` exists to gate — the same
+discipline the per-engine strip follows for a different reason. Asserted by
+test, so a later edit cannot quietly upgrade the wording.
+
+**Where it will matter next.** Any subset comparison within one cycle wants the
+same thing: by intent, by locale once a bank spans more than one, by prompt
+cohort after a bank version bump. The per-engine strip is the same shape from
+the other direction — there the samples are disjoint too, and the basis differs
+by design, so `compare()` refuses a valid comparison there as well. One change
+to the basis would unblock both.
+
+⚠️ Human-owned (CLAUDE.md §4): it is a change to what a stored number claims
+about itself, not a rendering decision. Whoever takes it should decide whether
+the basis gains a subset qualifier, or whether `compare()` grows an explicit
+"same cycle, different slice" entry point that does not consult the basis at
+all.
+
 ## 5. What's next, in order
 
 **(a) Close G3's classifier criterion.** Build the labelled sample of 100

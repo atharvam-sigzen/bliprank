@@ -203,3 +203,51 @@ export function byEngine(b: PromptBreakdown): readonly { readonly engine: string
     return { engine, answers: cells.length, mentionedIn: cells.filter((c) => c.mentioned).length }
   })
 }
+
+/** One buyer intent, aggregated over the questions the bank assigned to it. */
+export interface IntentGroup {
+  readonly intent: string
+  /** Questions of this type in the cycle. */
+  readonly questions: number
+  /** Questions of this type the subject was named in at least one answer to. */
+  readonly questionsNamedIn: number
+  /** Answers those questions produced. */
+  readonly answers: number
+  /** Answers of this type naming the subject. */
+  readonly mentionedIn: number
+}
+
+/**
+ * The cycle split by the bank's own buyer intent — `discovery` against
+ * `problem-led`.
+ *
+ * ⚠️ UNCLASSIFIED IS RETURNED SEPARATELY AND IS NOT A GROUP. A prompt carries
+ * no intent for two reasons that are different facts and must not be merged:
+ * it is the CUSTOMER'S OWN (ADR-0016 — nobody assigned it a buyer intent), or
+ * the result predates 2026-09-07 when the field did not exist. Bucketing either
+ * into an "other" slice would draw the age of a file as though it were a
+ * property of the market. So they are counted, reported, and left out of the
+ * comparison.
+ *
+ * Groups are ordered by the bank's own intent names rather than by rate: a
+ * ranking that reorders itself between cycles is one a reader cannot compare
+ * against last month's screenshot.
+ */
+export function byIntent(b: PromptBreakdown): { readonly groups: readonly IntentGroup[]; readonly unclassified: IntentGroup | null } {
+  const held = new Map<string, { questions: number; questionsNamedIn: number; answers: number; mentionedIn: number }>()
+  for (const p of b.prompts) {
+    const key = p.intent ?? ''
+    const v = held.get(key) ?? { questions: 0, questionsNamedIn: 0, answers: 0, mentionedIn: 0 }
+    v.questions += 1
+    if (p.mentionedIn > 0) v.questionsNamedIn += 1
+    v.answers += p.answers
+    v.mentionedIn += p.mentionedIn
+    held.set(key, v)
+  }
+  const none = held.get('')
+  held.delete('')
+  const groups = [...held.entries()]
+    .sort((x, y) => (x[0] < y[0] ? -1 : 1))
+    .map(([intent, v]) => ({ intent, ...v }))
+  return { groups, unclassified: none ? { intent: '', ...none } : null }
+}

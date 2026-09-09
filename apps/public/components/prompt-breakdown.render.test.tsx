@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { SCAN } from '../lib/scan-result'
 import { wilson } from '@bliprank/stats'
-import { byEngine, promptBreakdown } from '../lib/prompt-breakdown'
+import { byEngine, byIntent, promptBreakdown } from '../lib/prompt-breakdown'
 import { simpleView, words } from '../lib/simple-view'
 import { PromptBreakdown } from './prompt-breakdown'
 
@@ -39,10 +39,23 @@ describe('the simple reading is a sentence, not a table', () => {
   })
 
   it('THE BUDGET: the plain reading is one sentence, not an essay', () => {
-    // The full section runs to several hundred words. What survives at simple
-    // depth has to stay a sentence, and a number is the only thing that keeps
-    // it one as the component grows.
-    expect(words(simple).length).toBeLessThanOrEqual(45)
+    /*
+     * SCOPED TO THE SENTENCE, not raised to fit.
+     *
+     * This guarded "the plain reading is one sentence" when the one-liner was
+     * the only thing at simple depth. `IntentSplit` was then added there
+     * deliberately — approved, and the most actionable block on the page after
+     * the headline — which took the section's simple reading to 139 words and
+     * failed this. Raising the number to 140 would have quietly retired the
+     * guard: the next paragraph would fit under it too.
+     *
+     * So the budget still applies to the sentence it was written for, and the
+     * new block carries its own below. Two small budgets keep meaning; one big
+     * one does not.
+     */
+    const opener = /<h2 id="breakdown-heading">[\s\S]*?<\/p>/.exec(simple)?.[0] ?? ''
+    expect(opener.length).toBeGreaterThan(50)
+    expect(words(opener).length).toBeLessThanOrEqual(45)
     expect(words(html).length).toBeGreaterThan(200)
   })
 
@@ -150,8 +163,17 @@ describe('per-engine intervals — the caveat drawn instead of asserted', () => 
   const b = promptBreakdown(SCAN)!
   const rows = byEngine(b)
 
+  /*
+   * SCOPED TO THE ENGINE SECTION. `IntentSplit` reuses the same `.estrip`
+   * instrument on purpose — one vocabulary for the fourth interval on the page —
+   * so a sweep over the whole document counts both strips' bands and reports
+   * seven where five were meant. Every assertion below reads this slice.
+   */
+  const section = /<section class="estrip" aria-labelledby="estrip-heading">[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
+  expect(section.length).toBeGreaterThan(200)
+
   it('draws one bar per engine, and the shipped scan has several', () => {
-    const bars = [...html.matchAll(/class="estrip__band"/g)]
+    const bars = [...section.matchAll(/class="estrip__band"/g)]
     expect(rows.length).toBeGreaterThan(1)
     expect(bars.length).toBe(rows.length)
   })
@@ -163,7 +185,7 @@ describe('per-engine intervals — the caveat drawn instead of asserted', () => 
      * omission, and the same rule the rail and the head-to-head already follow.
      * So the geometry is asserted against the interval directly.
      */
-    const bands = [...html.matchAll(/class="estrip__band" style="left:([\d.]+)%;width:([\d.]+)%"/g)]
+    const bands = [...section.matchAll(/class="estrip__band" style="left:([\d.]+)%;width:([\d.]+)%"/g)]
     expect(bands.length).toBe(rows.length)
     bands.forEach((m, i) => {
       const w = wilson(rows[i]!.mentionedIn, rows[i]!.answers)
@@ -173,7 +195,7 @@ describe('per-engine intervals — the caveat drawn instead of asserted', () => 
   })
 
   it('the reference sits at the cycle rate, identically on every row', () => {
-    const refs = [...html.matchAll(/class="estrip__ref" style="left:([\d.]+)%"/g)].map((m) => Number(m[1]))
+    const refs = [...section.matchAll(/class="estrip__ref" style="left:([\d.]+)%"/g)].map((m) => Number(m[1]))
     expect(refs.length).toBe(rows.length)
     expect(new Set(refs).size).toBe(1)
     expect(refs[0]).toBeCloseTo((b.mentionedIn / b.answers) * 100, 4)
@@ -197,8 +219,6 @@ describe('per-engine intervals — the caveat drawn instead of asserted', () => 
      * against the cycle rate is not legitimate at all: the overall contains this
      * engine's own answers. So nothing here ranks anything.
      */
-    const section = /<section class="estrip"[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
-    expect(section.length).toBeGreaterThan(200)
 
     /*
      * SCOPED TO THE ENGINE NAMES, not a blanket word ban. The first version of
@@ -219,11 +239,103 @@ describe('per-engine intervals — the caveat drawn instead of asserted', () => 
   })
 
   it('prints each count, so nothing depends on reading a bar', () => {
-    for (const r of rows) expect(html).toContain(`${r.mentionedIn} of ${r.answers}`)
+    for (const r of rows) expect(section).toContain(`${r.mentionedIn} of ${r.answers}`)
   })
 
   it('and the sentence it replaced is gone, not left beside it', () => {
     // Two statements of one fact is how they come to disagree.
     expect(html).not.toContain('The engine columns are counts, not rates')
+  })
+})
+
+describe('the question-type split', () => {
+  const html = renderToStaticMarkup(<PromptBreakdown scan={SCAN} />)
+  const b = promptBreakdown(SCAN)!
+  const { groups, unclassified } = byIntent(b)
+  const section = /<section class="estrip" aria-labelledby="intent-heading">[\s\S]*?<\/section>/.exec(html)?.[0] ?? ''
+
+  it('the shipped scan carries intent, or none of this asserts anything', () => {
+    expect(groups.length).toBe(2)
+    expect(groups.map((g) => g.intent).sort()).toEqual(['discovery', 'problem-led'])
+    expect(section.length).toBeGreaterThan(200)
+  })
+
+  it('draws one bar per type, on the same instrument as the engine strip', () => {
+    // One vocabulary for the fourth interval on the page, not a third.
+    const bands = [...section.matchAll(/class="estrip__band" style="left:([\d.]+)%;width:([\d.]+)%"/g)]
+    expect(bands.length).toBe(groups.length)
+    bands.forEach((m, i) => {
+      const w = wilson(groups[i]!.mentionedIn, groups[i]!.answers)
+      expect(Number(m[1])).toBeCloseTo(w.ci_low * 100, 4)
+      expect(Number(m[2])).toBeCloseTo((w.ci_high - w.ci_low) * 100, 4)
+    })
+  })
+
+  it('SURVIVES AT SIMPLE DEPTH — it is about the reader content, not our instruments', () => {
+    const simpleHtml = simpleView(html)
+    expect(simpleHtml).toContain('intent-heading')
+    expect(simpleHtml).toContain('Choosing a tool')
+    expect(simpleHtml).toContain('Solving a problem')
+  })
+
+  it('states BOTH denominators, because they say different things', () => {
+    /*
+     * On the shipped scan the question counts are nearly level (8 of 10 against
+     * 5 of 7) while the answer rates are not (58% against 26%). Showing only the
+     * questions would hide that the gap is in how OFTEN the brand is named, not
+     * in whether the type reaches it at all.
+     */
+    for (const g of groups) {
+      expect(section).toContain(`named in ${g.questionsNamedIn} of ${g.questions} questions`)
+      expect(section).toContain(`${g.mentionedIn} of the ${g.answers} answers`)
+    }
+  })
+
+  it('⚠️ NEVER CLAIMS SIGNIFICANCE — it states what the marks show', () => {
+    /*
+     * compare() would work on these two: discovery and problem-led are disjoint
+     * prompt sets, so unlike two engines they are independent samples. What
+     * blocks it is bookkeeping — comparison_basis is a CYCLE-level string
+     * carrying `unprompted=17`, so a group metric either claims prompts the
+     * group did not use or gets a subset basis that makes compare() refuse a
+     * valid comparison. Recorded in PROGRESS.md, not solved here.
+     */
+    for (const word of ['significant', 'significantly', 'p-value', 'confidence that']) {
+      expect([word, section.toLowerCase().includes(word)]).toEqual([word, false])
+    }
+    // What it does say is a fact about the drawn ranges.
+    expect(section).toMatch(/ranges (do not overlap|overlap)/)
+  })
+
+  it('the overlap statement is DERIVED, not assumed of two bars', () => {
+    /*
+     * The separation on the shipped scan is 44.2 against 42.1 — two points wide.
+     * One answer flipping would close it, so the sentence has to be computed
+     * from the intervals every time rather than written once as a fact.
+     */
+    const iv = groups.map((g) => wilson(g.mentionedIn, g.answers))
+    const separated = iv.every((a, i) => iv.every((c, j) => i === j || a.ci_high < c.ci_low || c.ci_high < a.ci_low))
+    expect(section).toContain(separated ? 'ranges do not overlap' : 'ranges overlap')
+    // ...and this scan really is the separated case, so the branch is exercised.
+    expect(separated).toBe(true)
+  })
+
+  it('UNCLASSIFIED IS NEVER A THIRD BAR', () => {
+    // Absent is not a category: a custom prompt nobody classified, or a cycle
+    // written before the field existed. An "other" group would draw the age of
+    // a file as though it were a property of the market.
+    const bands = [...section.matchAll(/class="estrip__band"/g)]
+    expect(bands.length).toBe(groups.length)
+    expect(section).not.toContain('>Other<')
+    expect(section).not.toContain('Unclassified')
+    // The shipped scan classifies everything, so there is nothing to report...
+    expect(unclassified).toBeNull()
+    expect(section).not.toContain('carries no type')
+  })
+
+  it('ITS OWN BUDGET: two bars and a sentence, not a third essay', () => {
+    // The one-liner above keeps its 45-word budget. This block gets its own, so
+    // neither can grow into the other's headroom unnoticed.
+    expect(words(section).length).toBeLessThanOrEqual(150)
   })
 })

@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { answerKey, indexAnswers, loadAnswers, type AnswerIndex, type StoredAnswer, type StoredCitation } from '@/lib/answers'
 import { shortFor } from '@/lib/citations'
-import { wilson } from '@bliprank/stats'
+import { MIN_N_FOR_COMPARISON, wilson } from '@bliprank/stats'
 import { engineName } from '@/lib/engines'
-import { byEngine, promptBreakdown, type BreakdownLine } from '@/lib/prompt-breakdown'
+import { byEngine, byIntent, promptBreakdown, type BreakdownLine, type PromptBreakdown } from '@/lib/prompt-breakdown'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 /**
@@ -149,6 +149,15 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
         flagged paragraph is normally a caveat about a VISIBLE number, and these
         two are caveats about the table above them, which goes when they do.
       */}
+      {/* SIMPLE DEPTH, and that is a departure from the rule that a breakdown
+          is agency territory. The difference is what it is a breakdown OF: the
+          engine strip and the matrix are about our instrumentation, and this is
+          about the reader's own content. "You are named in most of the buying
+          questions and a quarter of the problem ones" is the most actionable
+          thing on the page after the headline, and it is two bars and a
+          sentence. */}
+      <IntentSplit breakdown={breakdown} subjectName={subject.name} />
+
       <div className="detail">
         <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
           The same numerator and the same denominator as the rate above, listed out rather than summarised, least covered first.{' '}
@@ -588,4 +597,123 @@ function EngineIntervals({
       </p>
     </section>
   )
+}
+
+/* ==========================================================================
+   BY QUESTION TYPE — where the brand shows up, and where it does not
+   ==========================================================================
+
+   The bank classifies every question it authors as `discovery` ("which CRM
+   should I buy") or `problem-led` ("how do I fix this"), and until 2026-09-07
+   that classification was thrown away before the result was written. It is
+   carried on the row now, so the split is drawable — and on the shipped scan it
+   is the largest gap anywhere on the record: 58.0% of discovery answers name
+   the subject against 25.7% of problem-led ones.
+
+   THE SAME INSTRUMENT AS THE ENGINE STRIP, deliberately. A reader who has
+   learnt the rail should not be taught a third vocabulary for the fourth
+   interval on one page.
+
+   ⚠️ IT STATES WHAT THE PICTURE SHOWS AND STOPS THERE. `compare()` would
+   actually work on these two — discovery and problem-led are DISJOINT prompt
+   sets, so unlike two engines they are independent samples — but
+   `comparison_basis` is a CYCLE-level string carrying `unprompted=17`.
+   Building a group metric with it claims seventeen prompts for a group that
+   used ten; building an honest subset basis makes the two differ and
+   `compare()` refuses a comparison that is genuinely valid. The basis cannot
+   express a prompt-subset comparison, which is a real gap recorded in
+   docs/PROGRESS.md and not solved here.
+
+   So the wording is a fact about the marks — whether the ranges overlap — and
+   never the word "significant", which is the claim `compare()` exists to gate.
+   DERIVED EVERY TIME, never assumed: the separation on the shipped scan is
+   44.2 against 42.1, two points wide, and one answer flipping would close it.
+   A cycle where they overlap has to say so on its own.
+   ========================================================================== */
+
+function IntentSplit({ breakdown, subjectName }: { breakdown: PromptBreakdown; subjectName: string }) {
+  const { groups, unclassified } = byIntent(breakdown)
+  // Nothing classified at all — every result written before the field existed.
+  // The section is absent rather than empty, like the breakdown itself.
+  if (groups.length === 0) return null
+
+  const rows = groups.map((g) => ({ ...g, w: wilson(g.mentionedIn, g.answers) }))
+  const overall = breakdown.mentionedIn / breakdown.answers
+
+  // Overlap, computed over every pair rather than assumed of two.
+  const separated = rows.every((a, i) => rows.every((b, j) => i === j || a.w.ci_high < b.w.ci_low || b.w.ci_high < a.w.ci_low))
+  const thin = rows.filter((r) => r.answers < MIN_N_FOR_COMPARISON)
+
+  return (
+    <section className="estrip" aria-labelledby="intent-heading">
+      <h3 id="intent-heading">The kind of question matters more than the engine</h3>
+
+      <ol className="estrip__rows">
+        {rows.map((r) => (
+          <li className="estrip__row" key={r.intent}>
+            <span className="estrip__name">{INTENT_LABEL[r.intent] ?? r.intent}</span>
+            <span className="estrip__track" aria-hidden="true">
+              <span className="estrip__band" style={{ left: `${r.w.ci_low * 100}%`, width: `${(r.w.ci_high - r.w.ci_low) * 100}%` }} />
+              <span className="estrip__needle" style={{ left: `calc((100% - 3px) * ${r.w.value})` }} />
+              <span className="estrip__ref" style={{ left: `${overall * 100}%` }} />
+            </span>
+            <span className="estrip__count num">
+              {r.mentionedIn} of {r.answers}
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
+        {/* BOTH DENOMINATORS, for the reason the sentence above the table gives:
+            the question counts here are nearly level (8 of 10 against 5 of 7 on
+            the shipped scan) while the answer rates are not, and showing only
+            one pair hides that the gap is in how OFTEN rather than in whether. */}
+        {rows.map((r) => `${INTENT_LABEL[r.intent] ?? r.intent}: named in ${r.questionsNamedIn} of ${r.questions} questions, and in ${r.mentionedIn} of the ${r.answers} answers they produced`).join('. ')}. The
+        upright marks the rate across every question together.
+      </p>
+
+      <p className={separated ? 'prose' : 'prose prose--flag'} style={{ marginTop: 'var(--space-2)' }}>
+        {separated ? (
+          <>
+            The ranges do not overlap on this scan, so the gap between these question types is one this cycle can actually show — which the
+            engine columns above cannot say of themselves. It points at the questions {subjectName} is absent from rather than at a surface to
+            chase.
+          </>
+        ) : (
+          <>
+            These ranges overlap, so the difference between the two kinds of question is not something this cycle can show. The counts beside them
+            are real; the gap between them is not yet a finding.
+          </>
+        )}
+        {thin.length > 0 ? (
+          <>
+            {' '}
+            {thin.map((r) => INTENT_LABEL[r.intent] ?? r.intent).join(' and ')} rests on fewer than <span className="num">{MIN_N_FOR_COMPARISON}</span>{' '}
+            answers, which is below the floor this product will compare on at all.
+          </>
+        ) : null}
+      </p>
+
+      {unclassified ? (
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
+          {/* NOT A THIRD BAR. Absent is not a category: these are the customer's
+              own prompts, which nobody assigned a buyer intent, or a result
+              written before the field existed. An "other" group would draw the
+              age of a file as if it were a property of the market. */}
+          <span className="num">{unclassified.questions}</span> {unclassified.questions === 1 ? 'question carries' : 'questions carry'} no type and
+          {unclassified.questions === 1 ? ' is' : ' are'} left out of the split above: either your own prompts, which nobody classified, or a cycle
+          collected before the type was recorded. {unclassified.mentionedIn} of their {unclassified.answers} answers named {subjectName}, and that
+          is counted in the headline like every other answer.
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+/** The bank's two intents, in the reader's words. Unknown values surface as
+ *  themselves, the same rule the engine map follows. */
+const INTENT_LABEL: Readonly<Record<string, string>> = {
+  discovery: 'Choosing a tool',
+  'problem-led': 'Solving a problem',
 }
