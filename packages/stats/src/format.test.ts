@@ -3,6 +3,7 @@ import {
   compare,
   confidenceGrade,
   CONFIDENCE_GRADE_STATUS,
+  formatBounds,
   formatInterval,
   formatMetric,
   formatProvenance,
@@ -57,6 +58,15 @@ describe('formatting always carries the interval (R8)', () => {
     expect(formatMetric(m)).toBe(`24.7% (${formatInterval(m)}, n=150)`)
     expect(m.ci_low).toBeLessThan(m.value)
     expect(m.ci_high).toBeGreaterThan(m.value)
+  })
+
+  it('formatBounds is formatInterval taken apart, never a second opinion on the digits', () => {
+    for (const m of [metric(), fromWilson(37, 150), fromWilson(0, 10), fromWilson(10, 10)]) {
+      for (const dp of [0, 1, 2]) {
+        const b = formatBounds(m, dp)
+        expect(`${b.low}–${b.high}`).toBe(formatInterval(m, dp))
+      }
+    }
   })
 
   it('handles the boundary cases Wilson produces exactly', () => {

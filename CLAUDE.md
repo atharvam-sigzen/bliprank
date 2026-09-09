@@ -50,7 +50,7 @@ attached. Getting this mental model right prevents the two expensive mistakes.
         │  Cloudflare R2        │              │  services/scorer     │
         │  raw answers, batched │              │  1. deterministic    │  ← 90% of work
         │  1 obj / cell (prompt │              │  2. sampled LLM      │  ← 25% sample,
-        │  × engine × locale ×  │              │     sentiment        │    Batch + cache
+        │  × engine × locale ×  │              │     sentiment        │    NOT BUILT yet
         │  geo × day, ADR-0003) │              │                      │
         └───────────────────────┘              └──────────┬───────────┘
                                                           │ score rows
@@ -76,13 +76,15 @@ Full detail: `docs/ARCHITECTURE.md`. Read it when touching anything structural.
 ```
 apps/web              (not created yet; P4) Next.js paid product per ADR-0002
 apps/public           Grader + workspace record + free tools (separate deploy)
-services/collector    Worker fleet, Engine Adapters, rate-limit budget
-services/scorer       Deterministic pass + sampled LLM, versioned registry
-services/reconcile    Competitor export parsers, variance decomposition
+services/collector    Engine Adapters, orchestrator, spend + rate budgets, QStash runner
+services/grader       Scan runner, category resolver, cycles, gates, daily loop, CLIs
+services/scorer       Deterministic pass, versioned (the sampled sentiment pass is NOT built)
+services/reconcile    (not created yet; P4) competitor export parsers, variance decomposition
 packages/stats        Wilson, DiD, sampling. Pure functions. HUMAN-OWNED.
+packages/taxonomy     Categories, prompt banks, content classifier, publisher registry
 packages/db           Drizzle schema, migrations, RLS policies, partitions
 packages/contracts    Shared types + the Engine Adapter interface
-docs/                 ARCHITECTURE.md, PHASES.md, METHODOLOGY.md, adr/
+docs/                 ARCHITECTURE.md, PHASES.md, METHODOLOGY.md, PRODUCT_GOAL.md, MVP_PLAN.md, adr/
 ```
 
 ---
@@ -203,7 +205,7 @@ and `tenancy-auditor` must be invoked on any PR touching their domain.
 
 ## 6. Stack
 
-- **Web**: Next.js 15 (App Router), shadcn/ui, Tailwind, Visx (CI-aware charts)
+- **Web**: Next.js 15 (App Router); charts are hand-rolled SVG/CSS in `apps/public/components` (no chart library, no shadcn/Tailwind in `apps/public` today)
 - **Data**: Supabase Postgres + Drizzle · Cloudflare R2 · Upstash Redis · ClickHouse (from ~M22)
 - **Collection runner**: phased — see §6.1. Vercel Fluid Compute + QStash until ~M18, then Hetzner CAX (ARM) workers.
 - **Models**: Haiku 4.5 (scoring, batch+cache) · Sonnet 5 (customer-facing generation)

@@ -1,4 +1,4 @@
-import { formatInterval, formatValue, type Metric } from '@bliprank/stats'
+import { formatBounds, formatInterval, formatValue, type Metric } from '@bliprank/stats'
 
 /**
  * THE SIGNATURE: the interval is the hero and the estimate is a mark inside it.
@@ -76,7 +76,7 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
         label rather than overprinting them, and the quiet 0 / 100 endpoints
         state the fixed scale — yielding whenever a bound needs their corner.
       */}
-      <BoundsRow lo={metric.ci_low * 100} hi={metric.ci_high * 100} dp={dp} />
+      <BoundsRow metric={metric} dp={dp} />
 
       <p className="visually-hidden">
         95% confidence interval {formatInterval(metric, dp)}, sample size {metric.n}.
@@ -85,28 +85,37 @@ export function RangeRail({ label, metric, dp = 1 }: { label: string; metric: Me
   )
 }
 
-function BoundsRow({ lo, hi, dp }: { lo: number; hi: number; dp: number }) {
+/**
+ * The labels come from `packages/stats/format` (CLAUDE.md §8), never from a
+ * local `toFixed`: the digits under the band must be the digits every other
+ * surface prints for the same interval, or two views of one number disagree.
+ * Only the POSITIONS are computed here.
+ */
+function BoundsRow({ metric, dp }: { metric: Metric; dp: number }) {
+  const lo = metric.ci_low * 100
+  const hi = metric.ci_high * 100
   // Below ~10 points of separation two mono labels overprint, so a narrow
   // interval prints once, as the range it is.
   const narrow = hi - lo < 10
   const at = (x: number) => `${Math.min(97, Math.max(3, x))}%`
   const leftmost = narrow ? (lo + hi) / 2 : lo
   const rightmost = narrow ? (lo + hi) / 2 : hi
+  const bounds = formatBounds(metric, dp)
 
   return (
     <div className="rail__bounds rail__bounds--scale" aria-hidden="true">
       {leftmost >= 10 ? <span className="rail__end">0</span> : null}
       {narrow ? (
         <span className="rail__bound" style={{ left: at((lo + hi) / 2) }}>
-          {lo.toFixed(dp)}–{hi.toFixed(dp)}
+          {formatInterval(metric, dp)}
         </span>
       ) : (
         <>
           <span className="rail__bound" style={{ left: at(lo) }}>
-            {lo.toFixed(dp)}
+            {bounds.low}
           </span>
           <span className="rail__bound" style={{ left: at(hi) }}>
-            {hi.toFixed(dp)}
+            {bounds.high}
           </span>
         </>
       )}

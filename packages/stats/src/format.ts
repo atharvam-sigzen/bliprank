@@ -132,6 +132,16 @@ export function formatInterval(m: Metric, dp = 1): string {
 }
 
 /**
+ * The two bounds as separate strings, for a chart that places each under the
+ * edge it describes. The same digits and the same one-unit rule as
+ * `formatInterval` — `low` is bare, `high` carries the per cent sign — so a
+ * component cannot print an interval this file would not have printed.
+ */
+export function formatBounds(m: Metric, dp = 1): { readonly low: string; readonly high: string } {
+  return { low: (m.ci_low * 100).toFixed(dp), high: pct(m.ci_high, dp) }
+}
+
+/**
  * `23.4% (17.0–31.2%, n=150)` — the full disclosure, in one string.
  * Use this anywhere a number appears without a dedicated interval element.
  */
