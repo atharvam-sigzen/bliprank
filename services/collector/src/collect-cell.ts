@@ -93,29 +93,37 @@ export class CollectionOrchestrator {
     return this.d.collectionEnabled ? this.d.collectionEnabled() : process.env['COLLECTION_ENABLED'] === 'true'
   }
 
+  /**
+   * The runs a stored blob holds, or nothing when the object is confirmed
+   * absent (`null`) or holds something unparseable (a corrupt object is
+   * honestly re-collected). A READ THAT FAILS IS NEITHER: a network store
+   * answers 500, 403 or a dropped socket by throwing, and swallowing that
+   * into "nothing stored" turned every transient R2 blip into a duplicate
+   * purchase of a cell already paid for (2026-09-10 cost review, reachable
+   * for the first time once R2 was wired into the runner). The read is
+   * outside the catch so the failure halts the cell instead.
+   */
+  private async parsedRuns(r2Key: string): Promise<unknown[] | null> {
+    const body = await this.d.blob.get(r2Key)
+    if (!body) return null
+    try {
+      const runs = (JSON.parse(body) as { runs?: unknown[] }).runs
+      return Array.isArray(runs) ? runs : null
+    } catch {
+      return null
+    }
+  }
+
   /** Read an orphaned blob (crash between blob.put and markCollected) and re-index it. */
   private async recoverOrphan(cell: CacheCell, adapterId: string, r2Key: string): Promise<IndexEntry | null> {
-    try {
-      const body = await this.d.blob.get(r2Key)
-      if (!body) return null
-      const runs = (JSON.parse(body) as { runs?: unknown[] }).runs
-      if (!Array.isArray(runs) || runs.length === 0) return null
-      return await this.d.index.markCollected(cell, adapterId, runs.length, r2Key)
-    } catch {
-      return null // unreadable orphan: fall through and re-collect (overwrites it)
-    }
+    const runs = await this.parsedRuns(r2Key)
+    if (!runs || runs.length === 0) return null // absent or unreadable orphan: fall through and re-collect (overwrites it)
+    return this.d.index.markCollected(cell, adapterId, runs.length, r2Key)
   }
 
   /** The runs already stored in a blob (partial or orphaned), so they are not re-bought. */
   private async storedRuns(r2Key: string): Promise<RawAnswer[]> {
-    try {
-      const body = await this.d.blob.get(r2Key)
-      if (!body) return []
-      const runs = (JSON.parse(body) as { runs?: unknown[] }).runs
-      return Array.isArray(runs) ? (runs as RawAnswer[]) : []
-    } catch {
-      return []
-    }
+    return ((await this.parsedRuns(r2Key)) ?? []) as RawAnswer[]
   }
 
   /**

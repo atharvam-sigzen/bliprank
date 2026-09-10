@@ -203,6 +203,47 @@ describe('CollectionOrchestrator — the cache-check → collect → R2 funnel',
     expect(adapter.calls).toBe(0) // nothing re-collected, nothing re-paid
   })
 
+  it('a blob READ that fails is not "nothing stored": the cell halts and nothing is re-bought (2026-09-10 cost review)', async () => {
+    // A network store answers a 500, a 403 or a dropped socket by throwing.
+    // Swallowed into an empty read, that was a duplicate purchase of a cell
+    // already paid for — once per transient blip, unbounded across an incident.
+    const failing = (store: MemoryBlobStore): MemoryBlobStore => {
+      const f = Object.create(store) as MemoryBlobStore
+      f.get = async () => {
+        throw new Error('R2 GET failed: HTTP 500')
+      }
+      return f
+    }
+    const cell = cellOf('best crm')
+    const adapterId = 'stubsearch:chatgpt'
+
+    // Orphan path: the object exists, the index does not know it, the read fails.
+    const s1 = new MemoryBlobStore()
+    await s1.put(r2KeyFor(cell, adapterId), JSON.stringify({ runs: [1, 2, 3, 4, 5] }))
+    const d1 = deps({ blob: failing(s1) })
+    const a1 = countingStub('chatgpt')
+    await expect(new CollectionOrchestrator(d1).collectCell({ cell, prompt: 'best crm', runs: 5, adapter: a1 })).rejects.toThrow(/HTTP 500/)
+    expect(a1.calls).toBe(0)
+    expect(ledgerCalls(d1)).toBe(0)
+
+    // Partial path: the index says two runs are stored, the read of them fails.
+    const s2 = new MemoryBlobStore()
+    await s2.put(r2KeyFor(cell, adapterId), JSON.stringify({ runs: [1, 2] }))
+    const d2 = deps({ blob: failing(s2) })
+    await d2.index.markCollected(cell, adapterId, 2, r2KeyFor(cell, adapterId))
+    const a2 = countingStub('chatgpt')
+    await expect(new CollectionOrchestrator(d2).collectCell({ cell, prompt: 'best crm', runs: 5, adapter: a2 })).rejects.toThrow(/HTTP 500/)
+    expect(a2.calls).toBe(0)
+
+    // A CORRUPT object is still the honest re-collection, as before.
+    const d3 = deps()
+    await d3.blob.put(r2KeyFor(cell, adapterId), 'not json')
+    const a3 = countingStub('chatgpt')
+    const r = await new CollectionOrchestrator(d3).collectCell({ cell, prompt: 'best crm', runs: 2, adapter: a3 })
+    expect(r.status).toBe('collected')
+    expect(a3.calls).toBe(2)
+  })
+
   it('a non-retryable rejection dead-letters the run and writes nothing; failed status, no index entry', async () => {
     const d = deps()
     const orch = new CollectionOrchestrator(d)
