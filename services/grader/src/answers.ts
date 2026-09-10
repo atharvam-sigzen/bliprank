@@ -50,7 +50,7 @@ import { join } from 'node:path'
 import { AnswerIndex, r2KeyFor } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { PUBLISHER_REGISTRY } from '@bliprank/taxonomy'
-import { FileBlobStore, FileKV } from './local-store.js'
+import { answerStores } from './answer-stores.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { latestCycle, readCycle } from './cycles.js'
 import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scorer'
@@ -179,14 +179,17 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   if (cs.missing.length) return { refuse: `${domain}: this cycle's competitor set included ${cs.missing.join(', ')}, which this build no longer holds` }
   const competitors = cs.competitors.filter((b) => b.id !== subject.id)
 
-  const blob = new FileBlobStore(join(dataDir, 'answers'))
+  // R2 + Upstash when the deployment is configured for them, this machine's
+  // disk otherwise; one decision for both halves (answer-stores.ts).
+  const stores = answerStores(dataDir)
+  const blob = stores.blob
   // The index says where each cell's object is, qualified by whichever adapter
   // fetched it (ADR-0003 Amendment 1): the provider on a live run, the fixture
   // adapter on an offline one. Guessing the provider's key would read a
   // fixture cycle as a scan with no evidence at all. A cell the index does not
   // hold falls back to the provider-qualified key, which is how every cycle
   // collected before the index was consulted here was written.
-  const index = new AnswerIndex(new FileKV(join(dataDir, 'index.json')))
+  const index = new AnswerIndex(stores.kv)
   const { hits } = await index.lookup(cells.map((c) => c.cell))
   const runs: ScoredRun[] = []
   for (const c of cells) {

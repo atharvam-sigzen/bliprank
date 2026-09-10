@@ -75,7 +75,7 @@ const visible = async (ws: string, sub: string, relation: string, col: string) =
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql']) {
+  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql', '0004_workspace_state.sql']) {
     await db.exec(migration(m))
   }
   await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
@@ -89,6 +89,12 @@ beforeAll(async () => {
     INSERT INTO workspace_subscriptions (workspace_id,plan,status,brand_limit,current_period_end)
       VALUES ('${WS1}','growth','active',5,'2099-01-01'), ('${WS2}','growth','active',5,'2099-01-01');
     INSERT INTO workspace_brands (workspace_id,brand_id,relation) VALUES ('${WS1}','${B1}','own'), ('${WS2}','${B2}','own');
+    INSERT INTO workspace_cycles (workspace_id,host,day,algo_version,comparison_basis,result) VALUES
+      ('${WS1}','one.example','2026-09-01','det-2','b','{}'), ('${WS2}','two.example','2026-09-01','det-2','b','{}');
+    INSERT INTO workspace_documents (workspace_id,kind,host,version,body) VALUES
+      ('${WS1}','category-record','one.example',1,'{}'), ('${WS2}','category-record','two.example',1,'{}');
+    INSERT INTO workspace_requests (workspace_id,kind,host,body) VALUES
+      ('${WS1}','category','one.example','{}'), ('${WS2}','category','two.example','{}');
   `)
   await db.exec(`RESET ROLE`)
   await db.exec(`SET ROLE svc_scorer`)
@@ -122,6 +128,9 @@ const CASES: readonly (readonly [string, string])[] = [
   ['brands', 'id'],
   ['score_rows', 'brand_id'],
   ['score_aggregates', 'brand_id'],
+  ['workspace_cycles', 'host'],
+  ['workspace_documents', 'host'],
+  ['workspace_requests', 'host'],
 ]
 
 describe('every tenant-scoped relation has a disjointness case here', () => {

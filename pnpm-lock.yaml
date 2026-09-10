@@ -108,6 +108,9 @@ importers:
       '@bliprank/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@bliprank/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@bliprank/scorer':
         specifier: workspace:*
         version: link:../scorer

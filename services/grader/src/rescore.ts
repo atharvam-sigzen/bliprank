@@ -56,7 +56,7 @@ import { ENGINES, parseBasis, type EngineId } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION } from '@bliprank/scorer'
 import { DEFAULT_CAP_USD, defaultGateConfig } from './live-gate.js'
 import { loadApiKey } from './load-key.js'
-import { FileKV } from './local-store.js'
+import { answerStores } from './answer-stores.js'
 import { allBanks, readCategoryRecord } from './resolve-category.js'
 import { runGrader } from './run.js'
 import { basisOf, cellsFor, customCellsFor } from './scan.js'
@@ -213,7 +213,7 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
   const customSet = customVersion === null ? null : customPromptsAt(dataDir, domain, customVersion)
   if (customVersion !== null && !customSet) return { refuse: `${domain}: this cycle asked custom prompt set ${customVersion}, which the store no longer holds` }
   const cells = [...cellsFor(bank, engines, day, maxPrompts), ...(customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [])]
-  const index = new AnswerIndex(new FileKV(join(dataDir, 'index.json')))
+  const index = new AnswerIndex(answerStores(dataDir).kv)
   const { hits } = await index.lookup(cells.map((c) => c.cell))
   const missing = cells.filter((c) => !hits.has(c.cell.key)).map((c) => `${c.engine} ${c.prompt.slice(0, 40)}`)
 

@@ -38,7 +38,7 @@ describe('identity off', () => {
 
   it('a SITE_URL that is not an absolute http(s) origin keeps identity off, and the origin is what is kept', async () => {
     const { identityConfig } = await import('@/lib/auth/config')
-    const full = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'k', DATABASE_URL: 'postgresql://u:p@h/db', AUTH_SIGNING_KID: 'k1', AUTH_SIGNING_SECRET: 's', AUTH_ISSUER: 'i', AUTH_AUDIENCE: 'a' } as NodeJS.ProcessEnv
+    const full = { NODE_ENV: 'test' as const, SUPABASE_URL: 'https://x.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'k', DATABASE_URL: 'postgresql://u:p@h/db', AUTH_SIGNING_KID: 'k1', AUTH_SIGNING_SECRET: 's', AUTH_ISSUER: 'i', AUTH_AUDIENCE: 'a' }
     expect(identityConfig({ ...full, SITE_URL: 'bliprank.com' }).on).toBe(false)
     expect(identityConfig({ ...full, SITE_URL: 'javascript:alert(1)' }).on).toBe(false)
     const on = identityConfig({ ...full, SITE_URL: 'https://bliprank.com/some/path?x=1' })

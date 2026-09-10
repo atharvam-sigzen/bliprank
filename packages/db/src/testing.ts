@@ -9,7 +9,7 @@ import type { Db } from './client.js'
  * that passes here passed the policies, the triggers and the definer
  * functions, not a mock of them.
  */
-export const MIGRATIONS = ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql'] as const
+export const MIGRATIONS = ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql', '0004_workspace_state.sql'] as const
 
 export const TEST_KEY = { kid: 'k1', secret: 'a-secret-long-enough-to-satisfy-the-constraint', issuer: 'iss', audience: 'aud' } as const
 

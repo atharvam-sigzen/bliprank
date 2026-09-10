@@ -45,7 +45,7 @@ import {
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { fixtureAdapter } from '@bliprank/collector/fixture'
 import { loadApiKey } from './load-key.js'
-import { FileBlobStore, FileKV } from './local-store.js'
+import { answerStores } from './answer-stores.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.js'
 import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
@@ -341,7 +341,10 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
 
     const declared = { ...process.env, COLLECTOR_TOPOLOGY: 'single-process' }
     const reason = 'local Grader runner: one process, holding an exclusive run.lock over its data dir'
-    const blob = new FileBlobStore(join(o.dataDir, 'answers'))
+    // Where the answers this run pays for are kept: R2 + Upstash when the
+    // environment names them, this machine's disk otherwise (answer-stores.ts).
+    const stores = answerStores(o.dataDir, process.env)
+    const blob = stores.blob
     // A real DeadLetter, appended to disk. A cell that fails after burning its
     // attempts must leave a durable trace: the scan then reports a smaller `n`
     // and a wider interval, and without this the reason for the shortfall is
@@ -359,7 +362,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     }
 
     const orchestrator = new CollectionOrchestrator({
-      index: new AnswerIndex(new FileKV(join(o.dataDir, 'index.json'))),
+      index: new AnswerIndex(stores.kv),
       blob,
       rateBudget: LocalRateBudget.forSingleProcess(buckets, { iUnderstandThisBudgetIsPerProcess: true, reason, env: declared }),
       budget: LocalSpendLedger.forSingleProcess(budget, { iUnderstandThisCapIsPerProcess: true, reason, env: declared }),
@@ -465,7 +468,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
     // Cumulative here, deliberately: "of the cap" is a statement about the cap,
     // which is per data dir and not per scan.
-    o.log(`\nspent $${budget.state.spentUsd.toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${blob.size} stored cells · wrote ${o.outFile}`)
+    o.log(`\nspent $${budget.state.spentUsd.toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${'size' in blob ? `${(blob as { size: number }).size} stored cells` : `cells stored in ${stores.backend}`} · wrote ${o.outFile}`)
     return envelope
   } finally {
     if (existsSync(lock)) unlinkSync(lock)

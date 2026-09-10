@@ -438,9 +438,18 @@ the only onboarding path and the web tier keeps only `app_rw`),
 (the minter) and `testing` (the real migrations on PGlite behind the same
 interface), and the app gains `/sign-in`, `/auth/confirm`, `/account`,
 `/api/me`, `/api/workspaces`, `/api/auth/sign-in` and the session
-middleware. ⚠️ HUMAN REVIEW: migration 0003 and `packages/db/src/client.ts`
-(tenancy). **Numbering clash to resolve at merge:** `fix/tenancy-deploy-gate`
-holds an unmerged `0003_tenancy_exposure_manifest.sql`. Not done: B3 (the
-store) and B4 (operator corrections); `/account` says so.
+middleware; the tenancy audit of that commit (2edceeb) closed a blocker
+(`auth_uid` was readable by the tenant role) and six more findings. **B3a:**
+migration `0004_workspace_state.sql` (cycles, versioned documents,
+requests, scoped by workspace; written only through definer functions that
+take the workspace from the verified context), `WorkspaceStore` +
+`pgWorkspaceStore` in `services/grader/src/store/`, and `answerStores()`
+choosing R2 + Upstash or the file store for raw answers (R4). ⚠️ HUMAN
+REVIEW: migrations 0003 and 0004, `packages/db/src/client.ts` (tenancy),
+`answer-stores.ts` wiring in the runner (spend control). **Numbering clash
+to resolve at merge:** `fix/tenancy-deploy-gate` holds an unmerged
+`0003_tenancy_exposure_manifest.sql`. Not done: B3b (the file modules onto
+the store interface, the routes through a workspace token, the spend
+ledgers off disk) and B4 (operator corrections); `/account` says so.
 
 Update this section at every phase transition. It is the first thing a new session reads.
