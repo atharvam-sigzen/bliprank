@@ -21,8 +21,11 @@ export const maxDuration = 30
 
 export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url)
-  const back = (reason: string) => NextResponse.redirect(new URL(`/sign-in?error=${reason}`, url.origin))
   const identity = identityConfig(process.env)
+  // Redirects are built on the configured origin, never on the request's
+  // host header (2026-09-10 tenancy audit, MEDIUM-2). With identity off there
+  // is no configured origin, and a relative redirect is the safe form.
+  const back = (reason: string) => NextResponse.redirect(new URL(`/sign-in?error=${reason}`, identity.on ? identity.config.siteUrl : url.origin))
   if (!identity.on) return back('off')
 
   const tokenHash = url.searchParams.get('token_hash') ?? ''
@@ -38,5 +41,6 @@ export async function GET(req: Request): Promise<Response> {
 
   const got = await confirmAccount({ user: () => currentUser(identity.config), db: appDb(identity.config) }, url.searchParams.get('kind'))
   if (!got) return back('account')
-  return NextResponse.redirect(new URL('/account', url.origin))
+  if ('refuse' in got) return back('email')
+  return NextResponse.redirect(new URL('/account', identity.config.siteUrl))
 }

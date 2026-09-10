@@ -176,6 +176,28 @@ describe('the standing sweep that catches the next migration', () => {
     expect(badly).toEqual([])
   })
 
+  it('every SECURITY DEFINER function an application role may execute is one the model declares', async () => {
+    // Same derivation as check-deploy.sql, run here so the suite catches a new
+    // door before a deploy does. The declared list is the arrangement; that
+    // anything reachable and not on it fails is the property.
+    const DECLARED = new Set([
+      'current_workspace_id()', 'current_account_id()', 'set_workspace_jwt(text)',
+      'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
+      'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb)',
+      'ws_file_request(text,text,jsonb,timestamp with time zone)',
+      'ws_resolve_request(text,text,timestamp with time zone,text,text,text)',
+    ])
+    const reachable = (await db.query(`
+      SELECT p.oid::regprocedure::text AS sig
+        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE p.prosecdef AND n.nspname NOT IN ('pg_catalog','information_schema')
+         AND EXISTS (SELECT 1 FROM unnest(ARRAY['app_rw','svc_scorer','svc_onboard']) AS g(r)
+                      WHERE has_function_privilege(g.r, p.oid, 'EXECUTE'))
+       ORDER BY 1`)).rows as { sig: string }[]
+    expect(reachable.length).toBeGreaterThanOrEqual(6)
+    expect(reachable.map((r) => r.sig).filter((s) => !DECLARED.has(s))).toEqual([])
+  })
+
   it('no login-capable role is a member of more than one service group (MAJOR-C invariant)', async () => {
     // In this migration there are no login roles; the assertion is the standing
     // check that a deploy-time GRANT never puts one in two groups.

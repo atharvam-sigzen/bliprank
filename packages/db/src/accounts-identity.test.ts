@@ -75,9 +75,11 @@ beforeAll(async () => {
     await db.exec(migration(m))
   }
   await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('k1','${SECRET}','iss','aud')`)
-  // An account provisioned by hand before its person ever signed in.
+  // Two accounts provisioned by hand before their people ever signed in: one
+  // inside an adoption window, one with none (never adoptable).
   await db.exec(`SET ROLE svc_onboard`)
-  await db.exec(`INSERT INTO accounts (email, kind) VALUES ('pre@agency.test', 'agency')`)
+  await db.exec(`INSERT INTO accounts (email, kind, adoptable_until) VALUES ('pre@agency.test', 'agency', now() + interval '1 day')`)
+  await db.exec(`INSERT INTO accounts (email, kind) VALUES ('closed@agency.test', 'agency')`)
   await db.exec(`RESET ROLE`)
 })
 
@@ -94,11 +96,39 @@ describe('ensure_account — one account per verified auth user', () => {
     expect(rows).toEqual([{ kind: 'brand', email: 'owner@brand.test' }])
   })
 
-  it('adopts a pre-provisioned account by email instead of creating a duplicate', async () => {
+  it('adopts a pre-provisioned account by email inside its window, once, and closes the window', async () => {
     const [got] = await asAppCommitted<{ id: string }>(`SELECT ensure_account($1, $2, $3) AS id`, [UID_P, 'pre@agency.test', 'brand'])
-    const rows = (await db.query(`SELECT id, kind, auth_uid FROM accounts WHERE email = 'pre@agency.test'`)).rows as { id: string; kind: string; auth_uid: string }[]
+    const rows = (await db.query(`SELECT id, kind, auth_uid, adoptable_until FROM accounts WHERE email = 'pre@agency.test'`)).rows as { id: string; kind: string; auth_uid: string; adoptable_until: unknown }[]
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toEqual({ id: got!.id, kind: 'agency', auth_uid: UID_P }) // the provisioned kind wins
+    expect(rows[0]).toEqual({ id: got!.id, kind: 'agency', auth_uid: UID_P, adoptable_until: null }) // the provisioned kind wins
+  })
+
+  it('a provisioned account with no window, and an email bound to another sign-in, are explicit refusals (audit MAJOR-1, MINOR-1)', async () => {
+    await asApp(async (q) => {
+      await expect(q(`SELECT ensure_account($1, 'closed@agency.test', 'brand')`, [UID_X])).rejects.toThrow(/already belongs to another sign-in/)
+      await expect(q(`SELECT ensure_account($1, 'pre@agency.test', 'brand')`, [UID_X])).rejects.toThrow(/already belongs to another sign-in/)
+    })
+    expect((await db.query(`SELECT auth_uid FROM accounts WHERE email = 'closed@agency.test'`)).rows).toEqual([{ auth_uid: null }])
+  })
+
+  it('the tenant role cannot read auth_uid, the capability the functions are keyed on (audit BLOCKER-1)', async () => {
+    await asApp(async (q) => {
+      await expect(q(`SELECT auth_uid FROM accounts`)).rejects.toThrow(/permission denied/)
+    })
+  })
+
+  it('owner writes refuse REPEATABLE READ, where the lock cannot serialise the recount (audit MAJOR-2)', async () => {
+    await db.exec('BEGIN ISOLATION LEVEL REPEATABLE READ')
+    try {
+      await db.exec('SET LOCAL ROLE svc_onboard')
+      await expect(db.query(`INSERT INTO workspaces (name) VALUES ('rr') RETURNING id`)).resolves.toBeDefined()
+      const ws = (await db.query(`SELECT id FROM workspaces WHERE name = 'rr'`)).rows[0] as { id: string }
+      const acct = (await db.query(`SELECT id FROM accounts WHERE email = 'closed@agency.test'`)).rows[0] as { id: string }
+      await expect(db.query(`INSERT INTO workspace_members (workspace_id, account_id, role) VALUES ($1, $2, 'owner')`, [ws.id, acct.id])).rejects.toThrow(/not safe at REPEATABLE READ/)
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+    }
   })
 
   it('refuses a missing uid, a missing email and an unknown kind', async () => {
@@ -160,6 +190,27 @@ describe('the one-workspace rule — brand = one, agency = many', () => {
       await db.exec('ROLLBACK')
       await db.exec('RESET ROLE')
     }
+  })
+
+  it('moving an owner membership to another workspace re-runs the rule (audit MINOR-3)', async () => {
+    const brand = (await db.query(`SELECT account_id AS id, workspace_id FROM workspaces_of($1)`, [UID_B])).rows[0] as { id: string; workspace_id: string }
+    const other = (await db.query(`SELECT workspace_id FROM workspaces_of($1) WHERE workspace_name = 'Client Two'`, [UID_A])).rows[0] as { workspace_id: string }
+    await db.exec('BEGIN')
+    try {
+      await db.exec('SET LOCAL ROLE svc_onboard')
+      // The brand keeps exactly one owned workspace either way; the move itself is allowed and re-checked.
+      await db.query(`UPDATE workspace_members SET workspace_id = $1 WHERE account_id = $2 AND workspace_id = $3`, [other.workspace_id, brand.id, brand.workspace_id])
+      expect((await db.query(`SELECT count(*)::int AS n FROM workspace_members WHERE account_id = $1 AND role = 'owner'`, [brand.id])).rows).toEqual([{ n: 1 }])
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+    }
+  })
+
+  it('an agency is bounded too: the fiftieth owned workspace is the last (audit MINOR-2)', async () => {
+    await asAppCommitted(`SELECT ensure_account($1, $2, $3)`, ['11111111-0000-4000-8000-000000000050', 'big@agency.test', 'agency'])
+    for (let i = 0; i < 50; i++) await asAppCommitted(`SELECT create_workspace($1, $2)`, ['11111111-0000-4000-8000-000000000050', `Client ${i}`])
+    await expect(asAppCommitted(`SELECT create_workspace($1, $2)`, ['11111111-0000-4000-8000-000000000050', 'One too many'])).rejects.toThrow(/the ceiling/)
   })
 
   it('an agency that owns several cannot be relabelled a brand', async () => {

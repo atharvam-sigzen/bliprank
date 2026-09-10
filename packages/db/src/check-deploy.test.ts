@@ -226,6 +226,13 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await expect(check(d)).rejects.toThrow(/app_rw has EXECUTE on set_workspace/)
   })
 
+  it('an undeclared SECURITY DEFINER function reachable by the tenant role is caught (2026-09-10 audit)', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE FUNCTION peek_everything() RETURNS SETOF accounts LANGUAGE sql SECURITY DEFINER AS $$ SELECT * FROM accounts $$`)
+    await d.exec(`GRANT EXECUTE ON FUNCTION peek_everything() TO app_rw`)
+    await expect(check(d)).rejects.toThrow(/undeclared SECURITY DEFINER functions .*peek_everything\(\)/)
+  })
+
   it('a table that loses FORCE RLS is caught', async () => {
     const d = await healthy()
     await d.exec(`ALTER TABLE score_rows NO FORCE ROW LEVEL SECURITY`)

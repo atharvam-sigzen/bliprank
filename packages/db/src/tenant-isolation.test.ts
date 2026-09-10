@@ -193,6 +193,19 @@ describe('two real tenants, disjoint row sets', () => {
   })
 })
 
+describe('the capability column is not readable by the tenant (2026-09-10 audit, BLOCKER-1)', () => {
+  it('accounts.auth_uid is permission denied for app_rw even inside a verified context, and the other columns are not', async () => {
+    await asTenant(WS1, U1, async (q) => {
+      await db.exec('SAVEPOINT s')
+      await expect(db.query(`SELECT auth_uid FROM accounts`)).rejects.toThrow(/permission denied/)
+      await db.exec('ROLLBACK TO SAVEPOINT s')
+      await expect(db.query(`SELECT * FROM accounts`)).rejects.toThrow(/permission denied/)
+      await db.exec('ROLLBACK TO SAVEPOINT s')
+      expect(await q(`SELECT email, kind FROM accounts`)).toEqual([{ email: 'a@one.test', kind: 'brand' }])
+    })
+  })
+})
+
 describe('writes are scoped too, not only reads', () => {
   it('a tenant holds no write privilege on any scoped relation', async () => {
     // The catalog gate declares this; here it is exercised. A DELETE or TRUNCATE

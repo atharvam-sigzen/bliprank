@@ -33,10 +33,18 @@ export interface AuthUser {
   readonly email: string
 }
 
-/** The signed-in person, verified with the Supabase server, or null. */
+/**
+ * The signed-in person, verified with the Supabase server, or null.
+ *
+ * The email must be CONFIRMED by that server. `ensure_account` adopts a
+ * pre-provisioned account by email, so an unconfirmed address would be a
+ * chosen string carrying rights (2026-09-10 tenancy audit, MAJOR-1). A magic
+ * link confirms by construction; a provider someone enables later without
+ * confirmation does not, and that session is not a person here.
+ */
 export async function currentUser(config: IdentityConfig): Promise<AuthUser | null> {
   const supabase = await serverSupabase(config)
   const { data, error } = await supabase.auth.getUser()
-  if (error || !data.user || !data.user.email) return null
+  if (error || !data.user || !data.user.email || !data.user.email_confirmed_at) return null
   return { id: data.user.id, email: data.user.email }
 }

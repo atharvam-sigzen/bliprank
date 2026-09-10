@@ -29,9 +29,21 @@ export async function withWorkspace<T>(db: Db, token: string, fn: (tx: Db) => Pr
  * `app_rw`). `prepare: false` because Supabase's transaction-mode pooler does
  * not support named prepared statements; `max` small because a serverless
  * instance serves few requests at once and the pooler is the real pool.
+ *
+ * `ssl: 'verify-full'`, not `'require'`: in this driver `require` sets
+ * rejectUnauthorized=false — encrypted but unauthenticated, so an active
+ * interposer between the function and the pooler could read every tenant
+ * query. Supabase's endpoints carry publicly-trusted certificates, so full
+ * verification needs no extra CA (2026-09-10 tenancy audit, MEDIUM-1).
+ *
+ * POOLER MODE MATTERS. The tenant context of migration 0002 is keyed on the
+ * backend pid and the transaction id, so it needs one server backend for the
+ * whole transaction: session or transaction pooling. Under statement pooling
+ * the stamp and the read would land on different backends and every read
+ * would see zero rows — fail closed, never another tenant's rows, but broken.
  */
 export function postgresDb(url: string, opts: { max?: number } = {}): Db & { end(): Promise<void> } {
-  const sql = postgres(url, { prepare: false, max: opts.max ?? 4, ssl: 'require' })
+  const sql = postgres(url, { prepare: false, max: opts.max ?? 4, ssl: 'verify-full' })
   const query = (s: postgres.Sql | postgres.TransactionSql) => async <T,>(text: string, params: readonly unknown[] = []) =>
     (await s.unsafe(text, params as postgres.ParameterOrJSON<never>[])) as unknown as T[]
   return {

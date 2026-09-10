@@ -21,15 +21,27 @@ export interface IdentityConfig {
   readonly supabaseKey: string
   readonly databaseUrl: string
   readonly key: SigningKey
+  /** the deployment's own origin, e.g. https://bliprank.com; every redirect and the magic link's return URL are built on it, never on a request header */
+  readonly siteUrl: string
 }
 
 export type Identity = { readonly on: true; readonly config: IdentityConfig } | { readonly on: false; readonly missing: readonly string[] }
 
-export const IDENTITY_ENV = ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'DATABASE_URL', 'AUTH_SIGNING_KID', 'AUTH_SIGNING_SECRET', 'AUTH_ISSUER', 'AUTH_AUDIENCE'] as const
+export const IDENTITY_ENV = ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'DATABASE_URL', 'AUTH_SIGNING_KID', 'AUTH_SIGNING_SECRET', 'AUTH_ISSUER', 'AUTH_AUDIENCE', 'SITE_URL'] as const
 
 export function identityConfig(env: NodeJS.ProcessEnv = process.env): Identity {
   const missing = IDENTITY_ENV.filter((k) => !env[k])
   if (missing.length > 0) return { on: false, missing }
+  // The origin only: a path or query here would smuggle itself into every
+  // redirect. A value that is not an absolute http(s) URL keeps identity off.
+  let siteUrl: string
+  try {
+    const u = new URL(env['SITE_URL']!)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('scheme')
+    siteUrl = u.origin
+  } catch {
+    return { on: false, missing: ['SITE_URL (not an absolute http(s) URL)'] }
+  }
   return {
     on: true,
     config: {
@@ -37,6 +49,7 @@ export function identityConfig(env: NodeJS.ProcessEnv = process.env): Identity {
       supabaseKey: env['SUPABASE_PUBLISHABLE_KEY']!,
       databaseUrl: env['DATABASE_URL']!,
       key: { kid: env['AUTH_SIGNING_KID']!, secret: env['AUTH_SIGNING_SECRET']!, issuer: env['AUTH_ISSUER']!, audience: env['AUTH_AUDIENCE']! },
+      siteUrl,
     },
   }
 }

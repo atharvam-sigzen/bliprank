@@ -286,6 +286,7 @@ DATABASE_URL=                      # the app_rw login role's DSN, through Supaba
 AUTH_SIGNING_KID=                  # a live row of auth_signing_keys
 AUTH_SIGNING_SECRET=               # that row's secret; the server mints workspace tokens with it, the database verifies them
 AUTH_ISSUER= AUTH_AUDIENCE=        # must equal that row's issuer and audience (migration 0002 binds them to the key)
+SITE_URL=                          # this deployment's own origin; the magic link's return URL and every redirect are built on it, never on a request header
 ```
 
 Deploy prerequisites on the Supabase side, owner's steps: the magic-link

@@ -72,10 +72,15 @@ export async function me(deps: Deps): Promise<Reply> {
  * with `kind` on first sign-in and found afterwards (the kind argument is
  * then ignored by the database, deliberately).
  */
-export async function confirmAccount(deps: Deps, kind: unknown): Promise<{ readonly kind: AccountKind } | null> {
+export async function confirmAccount(deps: Deps, kind: unknown): Promise<{ readonly kind: AccountKind } | { readonly refuse: 'email-taken' } | null> {
   const user = await deps.user()
   if (!user) return null
-  await deps.db.query('SELECT ensure_account($1, $2, $3)', [user.id, user.email, isKind(kind) ? kind : 'brand'])
+  try {
+    await deps.db.query('SELECT ensure_account($1, $2, $3)', [user.id, user.email, isKind(kind) ? kind : 'brand'])
+  } catch (e) {
+    if (/already belongs to another sign-in/.test(e instanceof Error ? e.message : String(e))) return { refuse: 'email-taken' }
+    throw e
+  }
   const got = await meOf(deps)
   return got ? { kind: got.account.kind } : null
 }

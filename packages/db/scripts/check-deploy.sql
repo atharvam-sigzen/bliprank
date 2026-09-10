@@ -142,6 +142,41 @@ EXCEPTION WHEN undefined_function OR undefined_table THEN
   RAISE EXCEPTION 'pgcrypto is not resolvable as public.digest/public.hmac; set_workspace_jwt() pins search_path=public,pg_temp and would fail at call time';
 END $do$;
 
+-- Every SECURITY DEFINER function an application role may EXECUTE is a door
+-- through RLS: it runs as its owner, and its body is the whole of what the
+-- caller can do. The 2026-09-10 tenancy audit found that migration 0003
+-- added three such doors and no derivation in the repo could see them
+-- (every standing check derives over tables and policies). So the property
+-- is inverted here the way the exposure manifest inverts it for tables:
+-- every reachable definer function must be declared, and one that is not
+-- fails the deploy. The declared list is the arrangement; the derivation is
+-- the property.
+\echo 'checking every SECURITY DEFINER function an application role may execute is declared...'
+DO $do$
+DECLARE bad text;
+BEGIN
+  SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
+    SELECT p.oid::regprocedure::text AS sig
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE p.prosecdef AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+       AND EXISTS (SELECT 1 FROM unnest(ARRAY['app_rw', 'svc_scorer', 'svc_onboard']) AS g(r)
+                    WHERE has_function_privilege(g.r, p.oid, 'EXECUTE'))
+  ) f
+  WHERE sig <> ALL (ARRAY[
+    -- 0002: the context readers (PUBLIC) and the verifier (app_rw)
+    'current_workspace_id()', 'current_account_id()', 'set_workspace_jwt(text)',
+    -- 0003: onboarding, owned by svc_onboard, app_rw only
+    'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
+    -- 0004: workspace state writers, owned by svc_onboard, workspace from the verified context
+    'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb)',
+    'ws_file_request(text,text,jsonb,timestamp with time zone)',
+    'ws_resolve_request(text,text,timestamp with time zone,text,text,text)'
+  ]);
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'undeclared SECURITY DEFINER functions reachable by an application role: %', bad;
+  END IF;
+END $do$;
+
 -- DELIBERATELY ABSENT, and moving with the gate rather than being reimplemented
 -- here (ADR-0007):
 --

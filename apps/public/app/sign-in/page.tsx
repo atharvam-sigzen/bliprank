@@ -29,9 +29,11 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
       ? 'That sign-in link is not valid any more. Links work once and for a short while; request a new one.'
       : error === 'account'
         ? 'You are signed in, but no account could be created. The cause has been logged; try again in a moment.'
-        : error === 'off'
-          ? IDENTITY_OFF
-          : null
+        : error === 'email'
+          ? 'That email already belongs to another sign-in. Sign in the way you did before, or write to us to move it.'
+          : error === 'off'
+            ? IDENTITY_OFF
+            : null
   return (
     <main className="shell shell--pricing">
       <ProductBar current="grader" />

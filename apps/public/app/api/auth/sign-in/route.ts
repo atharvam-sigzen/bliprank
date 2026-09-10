@@ -38,11 +38,13 @@ export async function POST(req: Request): Promise<Response> {
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !isKind(body.kind)) return json({ message: BAD_REQUEST }, 400)
 
-  const origin = new URL(req.url).origin
+  // The return URL is the configured origin, never the request's host header:
+  // a header-derived origin would mail the confirm token to whichever host the
+  // request named (2026-09-10 tenancy audit, MEDIUM-2).
   const supabase = await serverSupabase(identity.config)
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${origin}/auth/confirm?kind=${body.kind}` },
+    options: { emailRedirectTo: `${identity.config.siteUrl}/auth/confirm?kind=${body.kind}` },
   })
   if (error) {
     console.error('[auth] signInWithOtp failed:', error.message)
