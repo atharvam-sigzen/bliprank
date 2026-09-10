@@ -78,7 +78,7 @@ export interface SpendAlert {
 export type AlertSink = (alert: SpendAlert) => void
 
 const defaultAlertSink: AlertSink = (a) => {
-  // eslint-disable-next-line no-console -- an unreported spend fault is worse than a log line
+  // console on purpose: an unreported spend fault is worse than a log line.
   console.error(`[spend:${a.kind}] ${a.message}`)
 }
 

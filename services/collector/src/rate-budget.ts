@@ -190,7 +190,7 @@ export class LocalRateBudget implements RateBudget {
         `refusing a per-process rate budget: ${because}, so this process cannot show it is the only one. ` +
         `Set COLLECTOR_TOPOLOGY=single-process (ADR-0006). Stated reason was: "${ack.reason}".`
       if (!ack.overrideUndeclaredTopology) throw new UnsafeRateBudgetError(detail)
-      // eslint-disable-next-line no-console -- an unreported topology waiver is worse than a log line
+      // console on purpose: an unreported topology waiver is worse than a log line.
       const alert = ack.onAlert ?? ((m: string) => console.error(`[rate:undeclared-topology-override] ${m}`))
       alert(`per-process rate budget taken on an undeclared topology. ${because}. Reason given: "${ack.reason}".`)
     }
