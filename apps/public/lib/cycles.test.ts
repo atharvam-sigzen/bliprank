@@ -166,7 +166,7 @@ describe('the server’s cycles reach the browser once, on load', () => {
     expect(cyclesFor('acme.test')[0]!.brands[0]!.mentions).toBe(20)
   })
 
-  it('a 404 — the static deployment — adds nothing and claims nothing', async () => {
+  it('a 404 — a deployment whose store lacks the domain — adds nothing and claims nothing', async () => {
     expect(await syncCycles('acme.test', server([], 404))).toBe(0)
     expect(await syncCycles('acme.test', (async () => { throw new Error('offline') }) as unknown as typeof fetch)).toBe(0)
     expect(cyclesFor('acme.test')).toEqual([])

@@ -229,7 +229,7 @@ export const BUNDLED_SCANS: readonly ScanResultFile[] = [SCAN]
  * Scans this browser collected through /api/scan during this session.
  *
  * `/api/scan` caches to `services/grader/data-live/results/`, which no client
- * can read - a static export has no filesystem and no route. So the third
+ * reads directly and which, until MVP_PLAN B3, is one machine's disk. So the third
  * domain anyone scanned rendered a full record on the Grader and then, one
  * click later, a dashboard saying "no cycle collected" for it. The result the
  * SSE already handed the client is stashed here instead, which costs nothing

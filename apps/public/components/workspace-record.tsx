@@ -86,7 +86,7 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   const [, refresh] = useState(0)
   // Once, on load: cycles the server filed that this browser never saw — a run
   // that finished after the tab closed, another browser, cleared site data.
-  // A 404 (the static deployment) adds nothing and says nothing.
+  // A 404 (a deployment whose store lacks the domain) adds nothing and says nothing.
   useEffect(() => {
     let live = true
     void syncCycles(workspace.domain).then((added) => {

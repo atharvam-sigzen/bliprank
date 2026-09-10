@@ -226,7 +226,7 @@ Three different problems, three different homes. See `docs/adr/0002-hosting-topo
 | Piece | Host | Why |
 |---|---|---|
 | `apps/web` — dashboard, reconciliation, agency workspaces | **Vercel** | Low volume, latency-sensitive, cacheable. Cheap: ~$70/mo Y1, ~$320/mo Y3. |
-| `apps/public` — Grader + free tools | **Cloudflare Pages** | Static asset requests free and unlimited. Vercel charges $0.15/GB past 1TB plus $2/M edge requests — on *acquisition* traffic. Also isolates a tool that may get hammered from the paid product. |
+| `apps/public` — Grader + workspace record + free tools | **Vercel** (ADR-0002 Amendment 1, 2026-09-10) | Eight route handlers need a Node function host; Cloudflare Pages runs Next.js only through a workers adapter the grader's Node code does not run on. Bandwidth metering on acquisition traffic is re-assessed when that traffic is measurable. Deploy needs `ENABLE_EXPERIMENTAL_COREPACK=1` (pnpm 11) and `TRUSTED_PROXY=vercel`. |
 | `services/collector` | **Vercel Fluid Compute + QStash → Hetzner CAX (ARM)** | Phased. See below. |
 | Postgres / R2 / Redis | Supabase / Cloudflare / Upstash | Unchanged. |
 

@@ -26,12 +26,13 @@ import type { CompetitorStatus } from '../../../lib/competitor-request'
  * it. ADR-0016, decision 3. The same shape and the same bounds as
  * `/api/category`: GET reads, POST files a request and never writes the
  * override, one pending per domain, caps on their own ledgers, and the
- * request's reason is not published.
- *
- * ⚠️ LOCAL DEMO ONLY. On the static deployment this route does not exist.
+ * request's reason is not published. Deployed as a function (ADR-0002
+ * Amendment 1); its store is one machine's disk until MVP_PLAN B3.
  */
 
 export const dynamic = 'force-dynamic'
+// JSON reads and one small write; the plan default (300s) is a runaway ceiling, not a need.
+export const maxDuration = 30
 
 const resolveRoot = (): string => {
   let curr = process.cwd()

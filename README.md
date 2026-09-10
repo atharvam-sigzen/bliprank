@@ -22,7 +22,7 @@ be **reproduced** and **reconciled against the tools you already use**.
 
 ## Hosting
 
-`apps/public` on Cloudflare Pages · `apps/web` (the paid product, planned for P4,
+`apps/public` on Vercel (ADR-0002 Amendment 1, 2026-09-10) · `apps/web` (the paid product, planned for P4,
 not created yet) on Vercel · collection on Vercel
 Fluid Compute + QStash until ~M18, then a Hetzner CAX (ARM) fleet. Rationale and
 the migration trigger are in `docs/adr/0002-hosting-topology.md`.

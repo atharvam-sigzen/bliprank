@@ -25,10 +25,13 @@ import type { CustomPromptStatus } from '../../../lib/custom-prompt-request'
  * brand is refused here with the same matcher the scorer uses (PROPERTY 2),
  * so a visitor learns at filing time, not when an operator declines.
  *
- * ⚠️ LOCAL DEMO ONLY. On the static deployment this route does not exist.
+ * Deployed as a function (ADR-0002 Amendment 1); its store is one machine's
+ * disk until MVP_PLAN B3.
  */
 
 export const dynamic = 'force-dynamic'
+// JSON reads and one small write; the plan default (300s) is a runaway ceiling, not a need.
+export const maxDuration = 30
 
 const resolveRoot = (): string => {
   let curr = process.cwd()

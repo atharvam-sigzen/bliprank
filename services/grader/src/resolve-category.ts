@@ -189,10 +189,9 @@ export interface ResolveDeps {
  * ─────────────────────────────────────────────────────────────────────────────
  * THE STORE. Two files, both write-once, both plain JSON.
  *
- * A JSON file rather than Postgres because there is no Postgres on this path:
- * `apps/public` is a static deploy with one route handler and the gate ledgers
- * already live here. When accounts exist this becomes a table with the same two
- * columns and the same write-once rule.
+ * A JSON file rather than Postgres because there was no Postgres on this path
+ * when it was written, and the gate ledgers already lived here. MVP_PLAN B3
+ * makes this a table with the same two columns and the same write-once rule.
  *
  * Two writers since ADR-0016: `recordCategory` (a first decision) and
  * `correctCategory` (a person's replacement). Each is a read-modify-write of

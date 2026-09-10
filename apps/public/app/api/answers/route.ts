@@ -28,13 +28,15 @@ import { readScanAnswers } from '../../../../../services/grader/src/answers.js'
  * protect provider quota and there is no quota here to protect. If this ever
  * grows a path that leaves the machine, that reasoning expires with it.
  *
- * ⚠️ LOCAL DEMO ONLY, like /api/scan. ADR-0002 puts this app on Cloudflare Pages
- * as static assets; on that deployment this route does not exist and the client
- * falls back to the committed evidence file, which is why `loadAnswers` treats a
- * 404 as a fact about the deployment rather than about the scan.
+ * ON THE DEPLOYMENT (Vercel, ADR-0002 Amendment 1) this route exists and reads
+ * the store that deployment holds. Until MVP_PLAN B3 moves the store off one
+ * machine's disk, a domain scanned elsewhere is a 404 here, and `loadAnswers`
+ * reports that as a fact about the deployment rather than about the scan.
  */
 
 export const dynamic = 'force-dynamic'
+// One JSON read; the plan default (300s) is a runaway ceiling, not a need.
+export const maxDuration = 30
 
 const resolveRoot = (): string => {
   let curr = process.cwd()
@@ -44,7 +46,10 @@ const resolveRoot = (): string => {
   }
   return join(process.cwd(), '..', '..')
 }
-const DATA = join(resolveRoot(), 'services', 'grader', 'data-live')
+// Per request, like every other route, so a test or a deployment can point it
+// at another directory through `GRADER_DATA_DIR`; this was the one route that
+// ignored the variable.
+const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(resolveRoot(), 'services', 'grader', 'data-live')
 
 /** The same normalisation /api/scan and /api/preview apply, so one typed domain resolves once. */
 
@@ -61,7 +66,7 @@ export async function GET(req: Request): Promise<Response> {
   // value reaches a file name inside `readCycle`, which refuses anything else.
   const dayParam = new URL(req.url).searchParams.get('day') ?? ''
   const day = /^\d{4}-\d{2}-\d{2}$/.test(dayParam) ? dayParam : undefined
-  const got = await readScanAnswers(DATA, domain, day)
+  const got = await readScanAnswers(dataDir(process.env), domain, day)
   if ('refuse' in got) {
     // 404 rather than 500: "this machine holds no evidence for that domain" is
     // an absence, and the client renders an absence differently from a fault.

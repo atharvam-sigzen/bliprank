@@ -202,7 +202,7 @@ investment is cheap insurance.
 | Piece | Host | Notes |
 |---|---|---|
 | `apps/web` | Vercel | ~$70/mo Y1 → ~$320/mo Y3 incl. seats and usage. Rounding error against total tech spend. |
-| `apps/public` (Grader, free tools) | Cloudflare Pages | Static asset requests free and unlimited. Vercel would meter bandwidth ($0.15/GB past 1TB) and edge requests ($2/M past 10M) on acquisition traffic. Also isolates a hammerable public tool from the paid product. |
+| `apps/public` (Grader, workspace record, free tools) | Vercel (ADR-0002 Amendment 1) | Eight route handlers need a Node function host. The original Cloudflare Pages reasoning (free static requests, isolation from the paid product) is recorded in ADR-0002 and re-assessed when acquisition traffic is measurable. |
 | `services/collector` | Vercel Fluid Compute + QStash → Hetzner CAX | Phased, see 4.1 |
 | `services/scorer` | Batch jobs; co-located with the collector runner | Batch API means latency is irrelevant |
 | Postgres | Supabase → dedicated Postgres at ~150M score rows | |

@@ -14,16 +14,18 @@ import { listCycles } from '../../../../../services/grader/src/cycles.js'
  * any other browser and after cleared site data. The record now asks this
  * route once on load and remembers what the server holds that it does not.
  *
- * ⚠️ LOCAL DEMO ONLY, like /api/scan and /api/answers. ADR-0002 puts this app
- * on Cloudflare Pages as static assets; there this route does not exist, the
- * client's request 404s, and the client treats that as a fact about the
- * deployment and says nothing. Reads disk only: no key, no provider, no path
- * that can collect or spend. The domain is normalised and host-shape checked
+ * On the deployment (Vercel, ADR-0002 Amendment 1) this route exists and lists
+ * what that deployment's store holds, which until MVP_PLAN B3 is one machine's
+ * disk: a domain scanned elsewhere 404s, and the client treats that as a fact
+ * about the deployment and says nothing. Reads disk only: no key, no provider,
+ * no path that can collect or spend. The domain is normalised and host-shape checked
  * and never reaches a path segment unvalidated — `listCycles` builds the path
  * from a sanitised name and checks the domain inside every file it lists.
  */
 
 export const dynamic = 'force-dynamic'
+// A directory listing; the plan default (300s) is a runaway ceiling, not a need.
+export const maxDuration = 30
 
 const resolveRoot = (): string => {
   let curr = process.cwd()

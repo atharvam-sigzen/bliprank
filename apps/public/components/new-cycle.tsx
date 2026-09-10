@@ -24,8 +24,8 @@ type State =
  * throttle, the per-domain ceiling, the live quota check — and then collects a
  * new UTC day's cells through the budgeted runner. When live scanning is on,
  * that spends real provider quota, and the button says so. When it is off, or
- * on a static deployment where the route does not exist, the refusal is shown
- * in words and nothing is substituted.
+ * on a deployment whose store cannot take the cycle (MVP_PLAN B3), the
+ * refusal is shown in words and nothing is substituted.
  *
  * The result comes back over the same SSE stream the Grader reads, is
  * remembered in this browser's registry beside the earlier cycles, and the

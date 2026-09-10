@@ -60,7 +60,7 @@ an ops ticket — it drives both gross margin and the benchmark corpus.
 | Piece | Host | Y1 | Y3 |
 |---|---|---|---|
 | `apps/web` | Vercel | ~$70/mo | ~$320/mo |
-| `apps/public` (Grader) | Cloudflare Pages | ~$5/mo | ~$260/mo |
+| `apps/public` (Grader) | Vercel (ADR-0002 Amendment 1) | $0 Hobby / $20 Pro seat | not re-estimated; revisit with measured traffic |
 | Collector runner | Vercel → Hetzner CAX | included in app tier | ~$320/mo |
 
 Vercel is not where this project's money goes — at M36 it is ~0.4% of $89K/mo

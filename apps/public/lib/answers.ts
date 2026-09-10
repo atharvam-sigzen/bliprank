@@ -6,10 +6,10 @@
  *
  * Measured, not assumed: one scan's answer text is 200,311 characters —
  * 191 KB raw, 64 KB gzipped, against the 2.5 KB gzipped that the whole result
- * file weighs. `apps/public` is on Cloudflare Pages precisely because it sits on
- * acquisition traffic nobody can forecast (ADR-0002), and putting 64 KB of
- * evidence into the first paint of a landing page — for the overwhelming
- * majority of visitors who will never open it — is the wrong trade.
+ * file weighs. `apps/public` sits on acquisition traffic nobody can forecast
+ * (ADR-0002), and putting 64 KB of evidence into the first paint of a landing
+ * page — for the overwhelming majority of visitors who will never open it — is
+ * the wrong trade on any host.
  *
  * A dynamic `import()` was tried first and MEASURED TO WORK: webpack emitted it
  * as its own 221 KB chunk, on no page's critical path. It is not what shipped,
@@ -17,10 +17,11 @@
  *
  * The evidence is a STATIC ASSET under `public/`, fetched at runtime, because:
  *
- *   - ADR-0002 puts this app on Cloudflare Pages specifically because static
- *     asset requests there are free and unlimited. A JSON file is one of those.
- *     A 221 KB JS chunk is not: it is JavaScript, parsed by the JS engine, to
- *     hand back an object a JSON parser would have produced faster.
+ *   - A file under `public/` is served from the CDN with no function invoked
+ *     and no store read, on Vercel (ADR-0002 Amendment 1) as on the static
+ *     host before it. A 221 KB JS chunk is not that: it is JavaScript, parsed
+ *     by the JS engine, to hand back an object a JSON parser would have
+ *     produced faster.
  *   - It collapses two mechanisms into one. Both sources below are now a fetch,
  *     and `loadAnswers` has a single path with a single set of failure modes.
  *   - It takes the bundler out of the decision. Code-splitting is a compiler
@@ -39,12 +40,12 @@
  * APP.
  *
  *   BUNDLED — the committed reference scan. Its evidence is a static file at
- *   `/scan-answers.json`, which Cloudflare Pages serves for free and which
- *   exists on a static export where there is no server and no route.
+ *   `/scan-answers.json`, served as a static asset that needs no route and no
+ *   store.
  *
- *   SESSION — a scan this browser ran through /api/scan, which exists only on
- *   the local demo. Its evidence comes from the route, read back out of the
- *   answer store on the machine that collected it.
+ *   SESSION — a scan this browser ran through /api/scan. Its evidence comes
+ *   from the route, read back out of the answer store on the deployment that
+ *   collected it (one machine's disk until MVP_PLAN B3).
  *
  * Neither path stores answer text in `localStorage`. `rememberScan` keeps every
  * scan a browser has run, and 191 KB of text per scan against a ~5 MB quota
@@ -241,9 +242,9 @@ async function fetchAnswers(scan: ScanResultFile, fetchImpl: typeof fetch): Prom
   try {
     const res = await fetchImpl(evidenceUrl(scan))
     if (!res.ok) {
-      // A static export has no route handlers at all, so a session scan's
-      // evidence answers 404 there. That is a fact about the deployment, not
-      // about the scan, and the message may not imply otherwise.
+      // A deployment whose store does not hold this domain answers 404 (until
+      // MVP_PLAN B3 the store is one machine's disk). That is a fact about the
+      // deployment, not about the scan, and the message may not imply otherwise.
       return {
         ok: false,
         message:
@@ -252,9 +253,9 @@ async function fetchAnswers(scan: ScanResultFile, fetchImpl: typeof fetch): Prom
             : `The answer store answered ${res.status}, so the text behind these numbers could not be read.`,
       }
     }
-    // A static host that answers an unknown path with its own HTML not-found
-    // page and a 200 is the deployment saying the route does not exist, not
-    // the store saying something unparseable.
+    // A host that answers an unknown path with its own HTML not-found page and
+    // a 200 is the deployment saying the route does not exist (a build without
+    // it, a wrong rewrite), not the store saying something unparseable.
     if (/text\/html/i.test(res.headers.get('content-type') ?? '')) {
       return { ok: false, message: 'The answers for this scan are not available in this build. They live on the machine that collected them.' }
     }

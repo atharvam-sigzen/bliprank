@@ -30,10 +30,13 @@ import {
  * than one forgotten flag. With either unset the page falls back to the
  * committed scan and nothing here can run.
  *
- * ⚠️ LOCAL DEMO ONLY. ADR-0002 puts this app on Cloudflare Pages as static
- * assets precisely because it sits on traffic nobody can forecast. A route
- * handler is a server, and shipping one changes that decision — which needs an
- * ADR and P3.6, not a flag.
+ * ⚠️ DEPLOYED AS A FUNCTION (Vercel, ADR-0002 Amendment 1, 2026-09-10). The
+ * `maxDuration` below bounds the whole SSE stream: Vercel's limits page
+ * (2026-08-24) counts "streamed responses" inside it. 300s is the Hobby
+ * maximum and the Pro default, so it needs no dashboard change on either plan,
+ * and G3's p95 ≤ 90s sits inside it. The store behind `writeCycle` is one
+ * machine's disk until MVP_PLAN B3, so on the deployment `GRADER_LIVE_SCAN`
+ * stays unset and this route refuses before it could write.
  *
  * SSE rather than a request that returns in 90 seconds: G3 allows p95 ≤ 90s
  * domain-to-first-insight, and a browser staring at a pending fetch for that

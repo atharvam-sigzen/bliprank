@@ -17,8 +17,9 @@ import type { CategoryStatus } from '../../../lib/category-request'
  * A domain's recorded category, its history, and the request to change it.
  * ADR-0016, decisions 2 and 5.
  *
- * ⚠️ LOCAL DEMO ONLY, like /api/scan. On the static deployment this route does
- * not exist and the surface says corrections are filed where the record is.
+ * On the deployment (Vercel, ADR-0002 Amendment 1) this route exists; its
+ * store is one machine's disk until MVP_PLAN B3, so a domain with no record
+ * here is a 404 and the surface says corrections are filed where the record is.
  *
  * ⚠️ NOTHING HERE WRITES THE RECORD. GET reads it. POST files a REQUEST, which
  * the record shows as pending and which changes no measurement until
@@ -42,6 +43,8 @@ import type { CategoryStatus } from '../../../lib/category-request'
  */
 
 export const dynamic = 'force-dynamic'
+// Two JSON reads and one small write; the plan default (300s) is a runaway ceiling, not a need.
+export const maxDuration = 30
 
 const resolveRoot = (): string => {
   let curr = process.cwd()

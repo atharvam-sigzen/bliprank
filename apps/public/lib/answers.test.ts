@@ -126,9 +126,9 @@ describe('loading, and every way it can honestly fail', () => {
     return new Response(readFileSync(p, 'utf8'), { status: 200 })
   }) as unknown as typeof fetch
 
-  it('a build with no route says so as a fact about the deployment', async () => {
-    // A static export has no route handlers at all. That is not a statement
-    // about the scan, and the message must not imply one.
+  it('a deployment that does not hold the scan says so as a fact about the deployment', async () => {
+    // A 404 is the store not holding this domain, or a build with no route.
+    // Neither is a statement about the scan, and the message must not imply one.
     const got = await loadAnswers(scan({ domain: 'nowhere.example' }), notFound)
     expect(got.ok).toBe(false)
     if (!got.ok) expect(got.message).toMatch(/not available in this build/)
@@ -190,9 +190,9 @@ describe('loading, and every way it can honestly fail', () => {
 
 describe('⚠️ where the evidence is fetched from', () => {
   it('the reference scan reads a static asset, which needs no server', async () => {
-    // The path that has to work on Cloudflare Pages, where `/api/answers` does
-    // not exist. A file under `public/` is served for free and, unlike a
-    // dynamic import, no bundler gets to decide where it ends up.
+    // The path that needs no function invocation and no store: a file under
+    // `public/` is served from the CDN and, unlike a dynamic import, no
+    // bundler gets to decide where it ends up.
     const { SCAN } = await import('./scan-result')
     expect(evidenceUrl(SCAN)).toBe('/scan-answers.json')
   })

@@ -15,9 +15,10 @@ import {
  * The gap report for a domain this machine has scanned: its homepage, read
  * once now, against the prompts its stored cycle was measured over. ADR-0014.
  *
- * ⚠️ LOCAL DEMO ONLY, like /api/scan and /api/answers. On the static deployment
- * this route does not exist; the bundled reference scan ships its report as a
- * static file and the client falls back to that (`lib/gaps.ts`).
+ * On the deployment (Vercel, ADR-0002 Amendment 1) this route exists; the
+ * bundled reference scan still ships its report as a static file and the
+ * client reads that first (`lib/gaps.ts`). The store is one machine's disk
+ * until MVP_PLAN B3, so a domain scanned elsewhere is a 404 before any fetch.
  *
  * ⚠️ IT MAKES ONE OUTBOUND GET TO A CALLER-NAMED HOST, which is an amplifier,
  * so it is bounded three ways, and the first two do not trust the caller:
@@ -39,6 +40,9 @@ import {
  */
 
 export const dynamic = 'force-dynamic'
+// One homepage read under fetch-site's 6s-per-hop timeout; 60s is the ceiling
+// on a slow redirect chain, not a need.
+export const maxDuration = 60
 
 const resolveRoot = (): string => {
   let curr = process.cwd()

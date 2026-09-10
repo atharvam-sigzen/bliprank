@@ -120,9 +120,9 @@ export function whyNotComparable(a: Metric, b: Metric): string | null {
  * The browser registry is the store that forgets: a run that finished after
  * the tab closed was filed on disk and never reached `rememberScan`, so the
  * record said one cycle and the button said "already collected today", with
- * no click that reconciled them. This asks `/api/cycles` once. On a static
- * deployment the route does not exist, the request 404s, and nothing is
- * added or claimed — the same rule `loadAnswers` follows. A day this browser
+ * no click that reconciled them. This asks `/api/cycles` once. On a
+ * deployment whose store does not hold the domain the request 404s, and
+ * nothing is added or claimed — the same rule `loadAnswers` follows. A day this browser
  * already holds is never replaced: the bundled reference cycle stays the
  * committed file, not the server's re-derived copy of the same day.
  */
