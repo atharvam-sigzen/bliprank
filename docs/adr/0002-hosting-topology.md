@@ -122,7 +122,11 @@ code.
 ### Decision
 
 `apps/public` deploys to **Vercel** as one project with root directory
-`apps/public`. Cloudflare keeps R2 (raw answers, R4) and nothing else in this
+`apps/public`. This was already done once as an interim step: project
+`bliprank-public`, 2026-08-26 (`docs/PROGRESS.md`, "First Vercel
+deployment"), recorded then as "a conscious interim deviation" from this
+ADR. Owner decision D1 makes it the decision. Cloudflare keeps R2 (raw
+answers, R4) and nothing else in this
 app's path. The original reasoning — free static requests, isolation of a
 hammerable tool from the paid product — is not wrong; it is deferred until the
 Grader's acquisition traffic is measurable, at which point the bandwidth line
@@ -151,13 +155,17 @@ Consequences of those facts, as built:
   supported range, through `packageManager`), and `TRUSTED_PROXY=vercel` so
   the visitor throttle reads `x-vercel-forwarded-for` (MVP_PLAN A1). Nothing
   else: no provider key, no `COLLECTION_ENABLED`, no `GRADER_LIVE_SCAN`.
-- **⚠️ One unverified fact.** The routes import `services/grader/src` by
+- **The relative imports build.** The routes import `services/grader/src` by
   relative path, above the root directory, and `apps/public/package.json` does
-  not declare it. Vercel's workspace install and Next's file tracing are
-  expected to carry those files into the function bundle; the first deploy is
-  the test. If it fails, the fix is to make `services/grader` a declared
-  workspace dependency of `apps/public` (as `@bliprank/taxonomy` is), not to
-  copy code.
+  not declare it. The 2026-08-26 deployment built and served those routes
+  (they refused honestly, as designed), so Vercel's workspace install plus
+  Next's file tracing do carry the files. Since B2 the app also imports
+  `@bliprank/db`, declared like the other workspace packages.
+- **⚠️ One unverified fact.** That deployment ran under the pnpm the lockfile
+  then implied; the repo has since pinned pnpm 11.5.2, above Vercel's
+  supported 6–10, so the next deploy is the first with Corepack. If the
+  install fails, the fallback is an `installCommand` in `vercel.json` that
+  enables Corepack explicitly, not a downgrade of the pin.
 
 ### What this amendment does not do
 
