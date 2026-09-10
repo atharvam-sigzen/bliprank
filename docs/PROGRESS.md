@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-09-07 · **branch:** `fix/preview-every-domain` (carries `main`; last commit before this session `5be9b84`) · **First commit:** 2026-08-18 · **Tests:** 1,478 passing, 107 files, all offline
+**As of:** 2026-09-10 · **branch:** `mvp/stage-a` (off `fix/preview-every-domain`, which carries `main`; Stage A landed 2026-09-09, Stage B0–B3a 2026-09-10) · **First commit:** 2026-08-18 · **Tests:** 1,701 passing, 126 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -1269,6 +1269,64 @@ in code with its upgrade path). `stats-reviewer` on the format change:
 statistically neutral; the sighted and screen-reader renderings of a zero
 bound now agree. No provider was called by any of it.
 
+### Stage B — foundation: CI, Vercel, identity, the workspace store (2026-09-10)
+
+`docs/MVP_PLAN.md` Stage B, taken in order on `mvp/stage-a`, one commit per
+row. Nothing armed, nothing spent; the whole suite still runs offline.
+
+**B0 — the CI gate** (`caf86ec`). `.github/workflows/ci.yml` runs `pnpm
+install --frozen-lockfile`, `pnpm typecheck`, `pnpm test` on every push and
+pull request with no key, no collection flag and no secret; the suite was
+verified green under `env -u COLLECTION_ENABLED`. The three `eslint-disable`
+directives that named a linter never installed are gone; strict tsc is the
+lint. `build-env.test.ts` pins all of it.
+
+**B1 — `apps/public` on Vercel** (`63e1dcb`, `dd0ce6d`). ADR-0002 Amendment
+1 records the decision and the provider facts it rests on, each with its doc
+page and date: Hobby 300s default and maximum, Pro 300s/800s, streamed
+responses counted; App Router duration in the route file; pnpm 6–10
+supported so the pinned pnpm 11 needs `ENABLE_EXPERIMENTAL_COREPACK=1`; the
+2026-08-26 interim deployment as precedent. Every route exports its own
+`maxDuration`; `vercel.json` sets none. The seven "LOCAL DEMO ONLY" claims
+are gone. The amendment is explicit that this makes the routes deployable,
+not useful: their store was one machine's disk, which is what B3 is for.
+
+**B2 — identity** (`28e4901`, audited and fixed in `2edceeb`). Migration
+0003: accounts carry the Supabase auth uid and a kind; a brand account owns
+one workspace by trigger; three definer functions (`ensure_account`,
+`create_workspace`, `workspaces_of`) are the only onboarding path, so the
+web tier holds one credential. `packages/db` gains `client` (a two-method
+`Db`, `withWorkspace`), `token` (the minter, round-tripped through
+`set_workspace_jwt` in its test) and `testing` (the real migrations on
+PGlite behind the same interface). The app gains the magic-link sign-in,
+the confirm route, `/account`, `/api/me`, `/api/workspaces` and the session
+middleware; identity is all-eight-variables-or-off, and off is one fixed
+sentence. The tenancy audit of the first commit found a blocker — the
+tenant role could read `auth_uid`, the argument that names an account — and
+six more findings; all are fixed with tests that fail before the fix, and
+the deploy check and the standing sweep now derive every SECURITY DEFINER
+function an application role may execute and fail on one not declared.
+
+**B3a — the workspace store** (`2fd6524`). Migration 0004: `workspace_cycles`
+(keyed by algo version too, so a re-score is a new row, R5),
+`workspace_documents` (INSERT-only, version N+1 chosen by the database,
+earlier rows are the history) and `workspace_requests` (one pending per
+host by partial unique index, optimistic resolve). SELECT policies on the
+verified context; four definer writers take the workspace from
+`ws_required()` and refuse without one — nothing the caller passes chooses
+the tenant. `services/grader/src/store/pg-store.ts` is the `WorkspaceStore`
+interface and its Postgres implementation, tested in two real workspace
+contexts on PGlite. `answer-stores.ts` chooses R2 + Upstash or the file
+store for raw answers (R4) in one place, replacing three copies of the file
+constructors. **B3b is not done:** the file modules still own the
+invariants over files, the routes still read files, and the spend ledgers
+still write files, which is what keeps `/api/scan` off on the deployment.
+
+⚠️ HUMAN REVIEW REQUIRED, all on this branch: migrations 0003 and 0004
+and `packages/db/src/client.ts` (tenancy); `answer-stores.ts` wired into
+the scan runner (spend control); the numbering clash with
+`fix/tenancy-deploy-gate`'s unmerged 0003.
+
 ---
 
 ## 3. Tools and services, and why
@@ -1418,6 +1476,13 @@ rather than a measurement. Runbook: `services/collector/pilot/README.md`.
 hits on a repeat cycle — and the deploy-time tenancy gate that ADR-0007 makes a
 hard prerequisite for G1. That gate is still on `fix/tenancy-deploy-gate`,
 still not merged; until it lands, `main` has no complete deploy-time gate.
+
+**(f) MVP_PLAN Stage B3b, then B4, C, D, E** — the file modules onto the
+`WorkspaceStore` interface with a file implementation for the CLIs, the
+routes reading through a workspace token, the spend ledgers off disk (the
+last thing keeping live scans off the deployment), then operator corrections
+inside a workspace. Before any of it merges: the human reviews above, and the
+0003 numbering clash.
 
 **(f) G2** needs the golden set at 300–500 hand-labelled answers. It holds 7 of
 300, and `grader:version-diff` reports agreement beside the flip list.
