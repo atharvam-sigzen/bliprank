@@ -271,6 +271,28 @@ COLLECTION_ENABLED=                # see below: ON in agent sessions by decision
 TRUSTED_PROXY=                     # cloudflare | vercel. Names the edge whose client-IP header the visitor throttle may read; unset = no header is trusted, every caller is one bucket
 ```
 
+**Identity (MVP_PLAN B2, migration 0003).** All seven or none: with any
+missing, identity is OFF — the sign-in routes answer 503 with one fixed
+sentence naming nothing, the middleware passes every request through, and
+the Grader, the record and every test run exactly as before. The web tier
+holds ONE database credential, the tenant login role (a member of `app_rw`
+and nothing else); onboarding writes go through the three definer functions
+of migration 0003, never a second DSN.
+
+```
+SUPABASE_URL=                      # the project URL
+SUPABASE_PUBLISHABLE_KEY=          # the publishable (anon) key; never the service key
+DATABASE_URL=                      # the app_rw login role's DSN, through Supabase's transaction pooler
+AUTH_SIGNING_KID=                  # a live row of auth_signing_keys
+AUTH_SIGNING_SECRET=               # that row's secret; the server mints workspace tokens with it, the database verifies them
+AUTH_ISSUER= AUTH_AUDIENCE=        # must equal that row's issuer and audience (migration 0002 binds them to the key)
+```
+
+Deploy prerequisites on the Supabase side, owner's steps: the magic-link
+email template must link to `/auth/confirm?token_hash={{ .TokenHash }}&type=email`
+(the default template sends a browser-only fragment a server never sees),
+and `<site>/auth/confirm` must be an allowed redirect URL.
+
 **The prompt-bank author** (ADR-0009 Amendment 1). Optional: with no key it is
 off, and a domain in no known category falls back to the general bank exactly as
 it did before authoring existed. Everything here is an env edit on purpose —
@@ -402,5 +424,22 @@ complete flip list (ADR-0012's bar, as a tool; the snapshot is untracked, the
 changelog holds the list). The golden set holds 7 of 300 cases, so its
 agreement is reported beside the flip list and its G2 gate stays NOT RUN; the
 flip list is the gate for a bump.
+
+**Stage B, 2026-09-10 (branch `mvp/stage-a`, continued):** B0 CI gate
+(`.github/workflows/ci.yml`, offline, typecheck + test), B1 `apps/public`
+on Vercel (ADR-0002 Amendment 1; every route carries its `maxDuration`;
+the store is still one machine's disk until B3), B2 identity: Supabase Auth
+magic link, migration `0003_accounts_identity.sql` (accounts carry the auth
+uid and a kind; a brand account owns one workspace by trigger; three
+definer functions `ensure_account`, `create_workspace`, `workspaces_of` are
+the only onboarding path and the web tier keeps only `app_rw`),
+`packages/db` gains `client` (a `Db` interface, `withWorkspace`), `token`
+(the minter) and `testing` (the real migrations on PGlite behind the same
+interface), and the app gains `/sign-in`, `/auth/confirm`, `/account`,
+`/api/me`, `/api/workspaces`, `/api/auth/sign-in` and the session
+middleware. ⚠️ HUMAN REVIEW: migration 0003 and `packages/db/src/client.ts`
+(tenancy). **Numbering clash to resolve at merge:** `fix/tenancy-deploy-gate`
+holds an unmerged `0003_tenancy_exposure_manifest.sql`. Not done: B3 (the
+store) and B4 (operator corrections); `/account` says so.
 
 Update this section at every phase transition. It is the first thing a new session reads.

@@ -63,6 +63,7 @@ async function db(opts: { legacyKey?: 'short' | 'long' } = {}): Promise<PGlite> 
     await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
   }
   await d.exec(migration('0002_tenancy_context.sql'))
+  await d.exec(migration('0003_accounts_identity.sql'))
   // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
   // assertion correctly refuses. A harness artifact, not a production shape —
   // managed Postgres gives you a privileged non-superuser. Named in the

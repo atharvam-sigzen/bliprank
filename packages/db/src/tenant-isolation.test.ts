@@ -75,7 +75,7 @@ const visible = async (ws: string, sub: string, relation: string, col: string) =
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql']) {
+  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql']) {
     await db.exec(migration(m))
   }
   await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)

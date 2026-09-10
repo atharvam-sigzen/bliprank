@@ -4,14 +4,18 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/schema.ts"
+    ".": "./src/schema.ts",
+    "./client": "./src/client.ts",
+    "./token": "./src/token.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "test": "vitest run",
     "db:check": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f scripts/check-deploy.sql"
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.0"
+    "drizzle-orm": "^0.44.0",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.0"

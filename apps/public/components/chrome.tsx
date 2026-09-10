@@ -210,6 +210,7 @@ function NeutralBar({ current }: { current: Surface }) {
         <div className="navbar__links">
           <NavLink link={{ href: '/', label: 'Grader', on: 'grader' }} current={current} />
           <NavLink link={{ href: '/pricing', label: 'Pricing', on: 'pricing' }} current={current} />
+          <NavLink link={{ href: '/sign-in', label: 'Sign in' }} current={current} />
         </div>
 
         <div className="navbar__util">

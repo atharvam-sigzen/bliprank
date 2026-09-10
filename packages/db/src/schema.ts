@@ -18,6 +18,10 @@ import { boolean, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uu
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
+  /** the Supabase Auth user id; null for a row provisioned before its person signed in (0003) */
+  authUid: uuid('auth_uid').unique(),
+  /** brand = owns one workspace; agency = owns many (0003) */
+  kind: text('kind', { enum: ['brand', 'agency'] }).notNull().default('brand'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

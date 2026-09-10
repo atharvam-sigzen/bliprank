@@ -112,6 +112,7 @@ beforeAll(async () => {
   await db.exec(readFileSync(new URL('../migrations/0000_init.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('../migrations/0001_tenancy_identity.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('../migrations/0002_tenancy_context.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('../migrations/0003_accounts_identity.sql', import.meta.url), 'utf8'))
   await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('${KID}', '${SECRET}', '${ISS}', '${AUD}')`)
   // Seed as svc_onboard (identity + entitlements) and svc_scorer (corpus) — the roles that may write.
   await db.exec(`SET ROLE svc_onboard`)
