@@ -696,6 +696,26 @@ describe('adversarial paths — a tenant must not be able to manufacture a conte
     })
   })
 
+  it('the 0004 writers refuse a context stamped for another backend, and one from an earlier transaction', async () => {
+    // The writer mechanism is context-dependent like the reads, so it gets
+    // the same non-sanctioned paths (audit m8): a foreign pid's row, and a
+    // committed row from a previous transaction on this backend.
+    await db.exec(`INSERT INTO auth_tenant_context (backend_pid, xact_id, workspace_id, account_id)
+                   VALUES (pg_backend_pid() + 1, pg_current_xact_id(), '${WS1}', '${USER1}')`)
+    await asTenant(async (q) => {
+      await expect(q(`SELECT ws_put_document('category-record', 'x.example', '{}')`)).rejects.toThrow(/no verified tenant context/)
+      await expect(q(`SELECT ws_file_request('category', 'x.example', '{}', now())`)).rejects.toThrow(/no verified tenant context/)
+    })
+    await db.exec(`DELETE FROM auth_tenant_context WHERE backend_pid <> pg_backend_pid()`)
+    await db.exec(`SELECT set_workspace('${WS1}')`) // committed, own transaction
+    await asTenant(async (q) => {
+      await expect(q(`SELECT ws_put_cycle('x.example', '2026-09-01', 'det-2', 'b', '{"status":"scanned","domain":"x.example"}')`)).rejects.toThrow(/no verified tenant context/)
+      await expect(q(`SELECT ws_resolve_request('category', 'x.example', now(), 'applied', 'op', null)`)).rejects.toThrow(/no verified tenant context/)
+    })
+    await db.exec(`DELETE FROM auth_tenant_context`)
+    expect((await db.query(`SELECT count(*)::int AS n FROM workspace_documents WHERE host = 'x.example'`)).rows).toEqual([{ n: 0 }])
+  })
+
   it('a context stamped for ANOTHER backend is not visible to this one', async () => {
     // Keyed on pg_backend_pid(), so a row belonging to a different connection
     // must not leak in. Written as the owner, read as the tenant.

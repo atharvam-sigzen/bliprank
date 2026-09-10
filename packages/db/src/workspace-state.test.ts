@@ -131,12 +131,33 @@ describe('cycles: one row per (host, day, algo_version); same version re-writes,
     ])
   })
 
-  it('refuses a non-object result, an upper-case host and an empty version', async () => {
+  it('refuses a non-object result, an upper-case host, an over-long host and an empty version', async () => {
     await inWorkspace(WS1, async (q) => {
       await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', 'det-2', 'b', '[]')`)).rejects.toThrow(/must be an object/)
-      await expect(q(`SELECT ws_put_cycle('Acme.example', '2026-09-03', 'det-2', 'b', '{}')`)).rejects.toThrow(/check constraint/)
-      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', '', 'b', '{}')`)).rejects.toThrow(/check constraint/)
+      await expect(q(`SELECT ws_put_cycle('Acme.example', '2026-09-03', 'det-2', 'b', $1)`, [RESULT])).rejects.toThrow(/names domain acme.example, filed under Acme.example/)
+      await expect(q(`SELECT ws_put_cycle($1, '2026-09-03', 'det-2', 'b', $2)`, ['x'.repeat(254), { ...RESULT, domain: 'x'.repeat(254) }])).rejects.toThrow(/check constraint/)
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', '', 'b', $1)`, [RESULT])).rejects.toThrow(/check constraint/)
     })
+  })
+
+  it('keeps the file store\'s guards: only a scanned result, under its own domain and its own day (audit M3)', async () => {
+    await inWorkspace(WS1, async (q) => {
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', 'det-2', 'b', $1)`, [{ ...RESULT, status: 'failed' }])).rejects.toThrow(/only a scanned cycle is filed, not failed/)
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', 'det-2', 'b', $1)`, [{ ...RESULT, domain: 'other.example' }])).rejects.toThrow(/names domain other.example/)
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', 'det-2', 'b', $1)`, [{ ...RESULT, run: { day: '2026-09-04' } }])).rejects.toThrow(/collected on 2026-09-04, filed under 2026-09-03/)
+      // A result whose run block names the same day, and one with no run block, both file.
+      await q(`SELECT ws_put_cycle('acme.example', '2026-09-03', 'det-2', 'b', $1)`, [{ ...RESULT, run: { day: '2026-09-03' } }])
+      await q(`SELECT ws_put_cycle('acme.example', '2026-09-04', 'det-2', 'b', $1)`, [RESULT])
+    })
+    expect((await db.query(`SELECT count(*)::int AS n FROM workspace_cycles WHERE host = 'acme.example' AND day >= '2026-09-03'`)).rows).toEqual([{ n: 2 }])
+  })
+
+  it('a same-day, same-version write on ANOTHER basis is refused, not a re-write (audit M2, R5)', async () => {
+    await inWorkspace(WS1, async (q) => {
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-03', 'det-2', 'set=2', $1)`, [RESULT])).rejects.toThrow(/already stored on another basis/)
+    })
+    const rows = await inWorkspace(WS1, (q) => q(`SELECT comparison_basis FROM workspace_cycles WHERE host = 'acme.example' AND day = '2026-09-03'`))
+    expect(rows).toEqual([{ comparison_basis: 'b' }])
   })
 })
 
@@ -158,11 +179,25 @@ describe('documents: version N+1 is the database\'s, history is rows, nothing is
     ])
   })
 
-  it('an unknown kind and a non-object body are refused', async () => {
+  it('an unknown kind, a non-object body and a body over 64 KiB are refused', async () => {
     await inWorkspace(WS1, async (q) => {
       await expect(q(`SELECT ws_put_document('notes', 'acme.example', '{}')`)).rejects.toThrow(/check constraint/)
       await expect(q(`SELECT ws_put_document('custom-prompts', 'acme.example', '"text"')`)).rejects.toThrow(/must be an object/)
+      await expect(q(`SELECT ws_put_document('custom-prompts', 'acme.example', $1)`, [{ big: 'x'.repeat(70_000) }])).rejects.toThrow(/check constraint/)
     })
+  })
+
+  it('document writes refuse REPEATABLE READ, where the lock cannot serialise the version (audit M4)', async () => {
+    await db.exec('BEGIN ISOLATION LEVEL REPEATABLE READ')
+    try {
+      await db.exec('SET LOCAL ROLE app_rw')
+      await db.query(`SELECT set_workspace_jwt($1)`, [token(WS1, U1)])
+      await expect(db.query(`SELECT ws_put_document('category-record', 'rr.example', '{}')`)).rejects.toThrow(/not safe at REPEATABLE READ/)
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('RESET ROLE')
+      await db.exec('DELETE FROM auth_tenant_context')
+    }
   })
 
   it('no role but the migration owner can update or delete a document row', async () => {
@@ -209,6 +244,18 @@ describe('requests: one pending per host, filing replaces, resolving is optimist
       await expect(q(`SELECT ws_resolve_request('competitors', 'acme.example', $1, 'done', 'op', null)`, [T1])).rejects.toThrow(/applied or declined/)
       await expect(q(`SELECT ws_resolve_request('competitors', 'acme.example', $1, 'applied', '  ', null)`, [T1])).rejects.toThrow(/names who made it/)
     })
+  })
+
+  it('twenty resolved requests are kept per host; older ones go when a new one is filed (audit m6)', async () => {
+    await inWorkspace(WS1, async (q) => {
+      for (let i = 0; i < 25; i++) {
+        const at = `2026-08-${String(1 + (i % 28)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}:00:00Z`
+        await q(`SELECT ws_file_request('custom-prompts', 'many.example', '{}', $1)`, [at])
+        await q(`SELECT ws_resolve_request('custom-prompts', 'many.example', $1, 'declined', 'op', null)`, [at])
+      }
+    })
+    // Trimmed at each filing: twenty resolved kept, plus the one filed and resolved after the last trim.
+    expect(await inWorkspace(WS1, (q) => q(`SELECT count(*)::int AS n FROM workspace_requests WHERE host = 'many.example'`))).toEqual([{ n: 21 }])
   })
 
   it('the other workspace sees none of it and cannot resolve it', async () => {

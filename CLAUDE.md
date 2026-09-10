@@ -444,8 +444,11 @@ migration `0004_workspace_state.sql` (cycles, versioned documents,
 requests, scoped by workspace; written only through definer functions that
 take the workspace from the verified context), `WorkspaceStore` +
 `pgWorkspaceStore` in `services/grader/src/store/`, and `answerStores()`
-choosing R2 + Upstash or the file store for raw answers (R4). ⚠️ HUMAN
-REVIEW: migrations 0003 and 0004, `packages/db/src/client.ts` (tenancy),
+choosing R2 + Upstash or the file store for raw answers (R4); its tenancy
+audit found no leak and eight defence-in-depth findings, all fixed with
+tests; the cost review found the orchestrator re-bought a cell when a blob
+read failed, fixed in collect-cell.ts. ⚠️ HUMAN REVIEW: migrations 0003 and
+0004, `collect-cell.ts` (retry logic), `packages/db/src/client.ts` (tenancy),
 `answer-stores.ts` wiring in the runner (spend control). **Numbering clash
 to resolve at merge:** `fix/tenancy-deploy-gate` holds an unmerged
 `0003_tenancy_exposure_manifest.sql`. Not done: B3b (the file modules onto

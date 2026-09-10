@@ -141,17 +141,24 @@ function assertDay(day: string): void {
 
 /** The store over a `Db` that is already inside a workspace context. */
 export function pgWorkspaceStore(db: Db): WorkspaceStore {
+  // EVERY READ NAMES THE WORKSPACE, although the policies already do: on a
+  // Db that is not the tenant role (a maintenance job, a test helper opened
+  // as svc_onboard) the policy is not there, and a DISTINCT ON without the
+  // workspace would quietly hand back another tenant's row for the same host
+  // and day — the agency case by construction (2026-09-10 audit, M1). The
+  // predicate makes the store correct on its own, not only authorised.
+  const WS = 'workspace_id = current_workspace_id()'
   // The newest algorithm version per day: versions are strings ('det-2',
   // 'det-3'), ordered by the write that produced them, which is the order a
   // re-score happens in. `written_at` is the tie-break the reader wants.
   const CYCLES = `
-    SELECT DISTINCT ON (host, day) host, day::text AS day, algo_version, comparison_basis, result, written_at
-      FROM workspace_cycles WHERE host = $1
-     ORDER BY host, day, written_at DESC`
+    SELECT DISTINCT ON (workspace_id, host, day) host, day::text AS day, algo_version, comparison_basis, result, written_at
+      FROM workspace_cycles WHERE ${WS} AND host = $1
+     ORDER BY workspace_id, host, day, written_at DESC`
 
   async function versioned<T>(kind: DocumentKind, host: string, upTo: number | null): Promise<Versioned<T> | null> {
     const rows = await db.query<DocRow<T>>(
-      `SELECT version, body, written_at FROM workspace_documents WHERE kind = $1 AND host = $2 AND ($3::int IS NULL OR version <= $3) ORDER BY version DESC`,
+      `SELECT version, body, written_at FROM workspace_documents WHERE ${WS} AND kind = $1 AND host = $2 AND ($3::int IS NULL OR version <= $3) ORDER BY version DESC`,
       [kind, host, upTo],
     )
     const [head, ...rest] = rows
@@ -197,15 +204,15 @@ export function pgWorkspaceStore(db: Db): WorkspaceStore {
     },
     requests: {
       async pending(kind, host) {
-        const rows = await db.query<RequestRow<never>>(`SELECT * FROM workspace_requests WHERE kind = $1 AND host = $2 AND status = 'pending'`, [kind, host])
+        const rows = await db.query<RequestRow<never>>(`SELECT * FROM workspace_requests WHERE ${WS} AND kind = $1 AND host = $2 AND status = 'pending'`, [kind, host])
         return rows[0] ? requestOf(rows[0]) : null
       },
       async forHost(kind, host) {
-        const rows = await db.query<RequestRow<never>>(`SELECT * FROM workspace_requests WHERE kind = $1 AND host = $2 ORDER BY requested_at`, [kind, host])
+        const rows = await db.query<RequestRow<never>>(`SELECT * FROM workspace_requests WHERE ${WS} AND kind = $1 AND host = $2 ORDER BY requested_at`, [kind, host])
         return rows.map(requestOf)
       },
       async allPending(kind) {
-        const rows = await db.query<RequestRow<never>>(`SELECT * FROM workspace_requests WHERE kind = $1 AND status = 'pending' ORDER BY requested_at`, [kind])
+        const rows = await db.query<RequestRow<never>>(`SELECT * FROM workspace_requests WHERE ${WS} AND kind = $1 AND status = 'pending' ORDER BY requested_at`, [kind])
         return rows.map(requestOf)
       },
       async file(kind, host, body, requestedAt) {

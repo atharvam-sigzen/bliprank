@@ -234,6 +234,12 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await expect(check(d)).rejects.toThrow(/undeclared SECURITY DEFINER functions .*peek_everything\(\)/)
   })
 
+  it('a migration owner left a member of a writing group is caught (2026-09-10 audit, m7)', async () => {
+    const d = await healthy()
+    await d.exec(`GRANT svc_onboard TO postgres`)
+    await expect(check(d)).rejects.toThrow(/owner of public.accounts is a member of svc_onboard/)
+  })
+
   it('a table that loses FORCE RLS is caught', async () => {
     const d = await healthy()
     await d.exec(`ALTER TABLE score_rows NO FORCE ROW LEVEL SECURITY`)

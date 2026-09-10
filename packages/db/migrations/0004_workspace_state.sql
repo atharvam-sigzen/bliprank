@@ -46,13 +46,22 @@
 -- declined), and only through ws_resolve_request with the same optimistic
 -- check the file store makes.
 
+-- ONE TRANSACTION. The GRANT/REVOKE pair around the definer functions must
+-- not be left half-done by a failure between them: a migration owner left a
+-- standing member of svc_onboard holds unbounded write on identity and state
+-- (2026-09-10 tenancy audit, m7). check-deploy.sql asserts the property too.
+BEGIN;
+
 -- ---------------------------------------------------------------------------
 -- 1. Tables
 -- ---------------------------------------------------------------------------
 
+-- Hosts are bounded at the DNS limit and bodies at 64 KiB on the tables a
+-- visitor can reach through a filing route (audit m5); a cycle result is
+-- the app's own scored output and carries its own bounds.
 CREATE TABLE workspace_cycles (
   workspace_id     uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
-  host             text        NOT NULL CHECK (host = lower(host) AND host <> ''),
+  host             text        NOT NULL CHECK (host = lower(host) AND host <> '' AND length(host) <= 253),
   day              date        NOT NULL,
   algo_version     text        NOT NULL CHECK (algo_version <> ''),
   comparison_basis text        NOT NULL,
@@ -64,9 +73,9 @@ CREATE TABLE workspace_cycles (
 CREATE TABLE workspace_documents (
   workspace_id uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   kind         text        NOT NULL CHECK (kind IN ('category-record', 'competitor-override', 'custom-prompts')),
-  host         text        NOT NULL CHECK (host = lower(host) AND host <> ''),
+  host         text        NOT NULL CHECK (host = lower(host) AND host <> '' AND length(host) <= 253),
   version      integer     NOT NULL CHECK (version >= 1),
-  body         jsonb       NOT NULL,
+  body         jsonb       NOT NULL CHECK (pg_column_size(body) < 65536),
   written_at   timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (workspace_id, kind, host, version)
 );
@@ -75,8 +84,8 @@ CREATE TABLE workspace_requests (
   id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   kind         text        NOT NULL CHECK (kind IN ('category', 'competitors', 'custom-prompts')),
-  host         text        NOT NULL CHECK (host = lower(host) AND host <> ''),
-  body         jsonb       NOT NULL,
+  host         text        NOT NULL CHECK (host = lower(host) AND host <> '' AND length(host) <= 253),
+  body         jsonb       NOT NULL CHECK (pg_column_size(body) < 65536),
   requested_at timestamptz NOT NULL DEFAULT now(),
   status       text        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'applied', 'declined')),
   resolved_at  timestamptz,
@@ -130,15 +139,32 @@ BEGIN
   RETURN ws;
 END $$;
 
+-- The file store's own guards, kept (cycles.ts: a cycle is filed only when
+-- it is `scanned`, under a day it can establish, and a file whose inner day
+-- or domain disagrees with its name is skipped, "because a wrong one would
+-- put this cycle's number on another cycle's point of the trend"). And the
+-- basis is provenance (contracts/basis.ts): a same-day, same-version write
+-- on a DIFFERENT basis is not the same measurement and is refused, never
+-- replaced (audit M2, M3).
 CREATE OR REPLACE FUNCTION ws_put_cycle(p_host text, p_day date, p_algo_version text, p_comparison_basis text, p_result jsonb) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE ws uuid := ws_required();
 BEGIN
   IF jsonb_typeof(p_result) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'workspace: a cycle result must be an object'; END IF;
+  IF p_result->>'status' IS DISTINCT FROM 'scanned' THEN RAISE EXCEPTION 'workspace: only a scanned cycle is filed, not %', coalesce(p_result->>'status', 'no status'); END IF;
+  IF p_result->>'domain' IS DISTINCT FROM p_host THEN RAISE EXCEPTION 'workspace: the result names domain %, filed under %', p_result->>'domain', p_host; END IF;
+  IF coalesce(p_result->'run'->>'day', p_day::text) IS DISTINCT FROM p_day::text THEN
+    RAISE EXCEPTION 'workspace: the result was collected on %, filed under %', p_result->'run'->>'day', p_day;
+  END IF;
   INSERT INTO workspace_cycles (workspace_id, host, day, algo_version, comparison_basis, result)
   VALUES (ws, p_host, p_day, p_algo_version, p_comparison_basis, p_result)
   ON CONFLICT (workspace_id, host, day, algo_version) DO UPDATE
-     SET result = EXCLUDED.result, comparison_basis = EXCLUDED.comparison_basis, written_at = now();
+     SET result = EXCLUDED.result, written_at = now()
+   WHERE workspace_cycles.comparison_basis = EXCLUDED.comparison_basis;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'workspace: % on % under % is already stored on another basis; a different measurement is not a re-write', p_host, p_day, p_algo_version
+      USING ERRCODE = 'check_violation';
+  END IF;
 END $$;
 
 -- The next version of a document, computed here so a caller cannot choose
@@ -151,7 +177,14 @@ DECLARE
 BEGIN
   IF jsonb_typeof(p_body) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'workspace: a document must be an object'; END IF;
   -- Serialise two writers of one document: the lock is the workspace row,
-  -- which every writer of this workspace already references.
+  -- which every writer of this workspace already references. That holds at
+  -- READ COMMITTED and SERIALIZABLE; at REPEATABLE READ a lock-only tuple
+  -- does not raise and max(version) would come from a stale snapshot, so the
+  -- level is refused, as 0002's gate and 0003's trigger refuse it (audit M4).
+  IF current_setting('transaction_isolation') = 'repeatable read' THEN
+    RAISE EXCEPTION 'workspace: document writes are not safe at REPEATABLE READ; use READ COMMITTED or SERIALIZABLE'
+      USING ERRCODE = 'invalid_transaction_state';
+  END IF;
   PERFORM 1 FROM workspaces w WHERE w.id = ws FOR UPDATE;
   SELECT coalesce(max(d.version), 0) + 1 INTO next_version FROM workspace_documents d
    WHERE d.workspace_id = ws AND d.kind = p_kind AND d.host = p_host;
@@ -172,6 +205,14 @@ BEGIN
   INSERT INTO workspace_requests (workspace_id, kind, host, body, requested_at)
   VALUES (ws, p_kind, p_host, p_body, coalesce(p_requested_at, now()))
   RETURNING workspace_requests.id INTO id;
+  -- The file store kept twenty resolved requests per host; so does this,
+  -- because an unauthenticated filing route with unbounded retention is a
+  -- row-growth surface (audit m6).
+  DELETE FROM workspace_requests r
+   WHERE r.workspace_id = ws AND r.kind = p_kind AND r.host = p_host AND r.status <> 'pending'
+     AND r.id IN (SELECT o.id FROM workspace_requests o
+                   WHERE o.workspace_id = ws AND o.kind = p_kind AND o.host = p_host AND o.status <> 'pending'
+                   ORDER BY o.requested_at DESC OFFSET 20);
   RETURN id;
 END $$;
 
@@ -213,3 +254,5 @@ GRANT EXECUTE ON FUNCTION ws_file_request(text, text, jsonb, timestamptz)       
 GRANT EXECUTE ON FUNCTION ws_resolve_request(text, text, timestamptz, text, text, text) TO app_rw;
 
 DO $$ BEGIN EXECUTE format('REVOKE svc_onboard FROM %I', current_user); END $$;
+
+COMMIT;

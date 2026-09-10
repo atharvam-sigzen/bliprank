@@ -177,6 +177,27 @@ BEGIN
   END IF;
 END $do$;
 
+-- Migrations 0003 and 0004 grant the migration owner a writing group to
+-- transfer function ownership and revoke it at the end. A failure between
+-- the two leaves the owner a standing member with unbounded write on
+-- identity and state, and exclusivity only fires at TWO groups. The owner
+-- of the identity table is derived from the catalog and must be in neither
+-- (2026-09-10 tenancy audit, m7).
+\echo 'checking the migration owner is not left in a writing group...'
+DO $do$
+DECLARE bad text;
+BEGIN
+  SELECT string_agg(g.rolname, ', ' ORDER BY g.rolname) INTO bad
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_auth_members am ON am.member = c.relowner
+    JOIN pg_roles g ON g.oid = am.roleid
+   WHERE n.nspname = 'public' AND c.relname = 'accounts' AND g.rolname IN ('svc_onboard', 'auth_verifier');
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'the owner of public.accounts is a member of %: a migration left its grant behind', bad;
+  END IF;
+END $do$;
+
 -- DELIBERATELY ABSENT, and moving with the gate rather than being reimplemented
 -- here (ADR-0007):
 --
