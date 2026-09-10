@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 
@@ -71,7 +72,7 @@ async function asAppCommitted<T>(sql: string, p?: unknown[]): Promise<T[]> {
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql']) {
+  for (const m of MIGRATIONS) {
     await db.exec(migration(m))
   }
   await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('k1','${SECRET}','iss','aud')`)

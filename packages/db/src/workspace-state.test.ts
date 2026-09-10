@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 
@@ -62,7 +63,7 @@ async function inWorkspace<T>(ws: string | null, fn: (q: Q) => Promise<T>): Prom
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql', '0004_workspace_state.sql']) {
+  for (const m of MIGRATIONS) {
     await db.exec(migration(m))
   }
   await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('k1','${SECRET}','iss','aud')`)
@@ -266,7 +267,7 @@ describe('requests: one pending per host, filing replaces, resolving is optimist
 })
 
 describe('the migration leaves the model as it found it', () => {
-  it('the five writers are definer-owned, executable by the tenant role only, and the owner is not left in svc_onboard', async () => {
+  it('the four writers are definer-owned and executable by the tenant role only, ws_required by the writers only, and the owner is not left in svc_onboard', async () => {
     const rows = (await db.query(`
       SELECT p.proname, o.rolname AS owner, has_function_privilege('app_rw', p.oid, 'EXECUTE') AS app_rw, has_function_privilege('svc_scorer', p.oid, 'EXECUTE') AS scorer
         FROM pg_proc p JOIN pg_roles o ON o.oid = p.proowner WHERE p.proname LIKE 'ws\\_%' ORDER BY 1`)).rows
@@ -274,7 +275,8 @@ describe('the migration leaves the model as it found it', () => {
       { proname: 'ws_file_request', owner: 'svc_onboard', app_rw: true, scorer: false },
       { proname: 'ws_put_cycle', owner: 'svc_onboard', app_rw: true, scorer: false },
       { proname: 'ws_put_document', owner: 'svc_onboard', app_rw: true, scorer: false },
-      { proname: 'ws_required', owner: 'auth_verifier', app_rw: true, scorer: false },
+      // the wrapper is the writers' to call, never the tenant's (B3r item 2)
+      { proname: 'ws_required', owner: 'auth_verifier', app_rw: false, scorer: false },
       { proname: 'ws_resolve_request', owner: 'svc_onboard', app_rw: true, scorer: false },
     ])
     const r = await db.query(`SELECT count(*)::int AS n FROM pg_auth_members am JOIN pg_roles g ON g.oid = am.roleid JOIN pg_roles m ON m.oid = am.member WHERE g.rolname = 'svc_onboard' AND m.rolname = current_user`)

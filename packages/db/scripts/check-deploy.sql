@@ -198,6 +198,74 @@ BEGIN
   END IF;
 END $do$;
 
+-- The migration record (0003, section 0). One row per applied file, a unique
+-- index on the four-digit number, and no gap: a database that skipped a file,
+-- or applied a second file under a number it already holds (the unmerged
+-- 0003_tenancy_exposure_manifest, if it were applied without renumbering),
+-- fails here. The list on disk is the migrations directory; the record is its
+-- applied prefix, and packages/db/src/migrations.test.ts asserts the two agree
+-- on a full apply (MVP_PLAN B3r, item 4).
+\echo 'checking the migration record is present, indexed by number and gapless...'
+DO $do$
+DECLARE bad text;
+BEGIN
+  IF to_regclass('public.schema_migrations') IS NULL THEN
+    RAISE EXCEPTION 'schema_migrations is missing: migration 0003 was never applied here, or the record was dropped';
+  END IF;
+  SELECT string_agg(name, ', ' ORDER BY name) INTO bad
+    FROM (SELECT name, left(name, 4)::int AS num, row_number() OVER (ORDER BY name) - 1 AS expected FROM schema_migrations) s
+   WHERE num <> expected;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'the migration record is not 0000..N with one file per number; out of sequence at: %', bad;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'schema_migrations'
+                  AND indexname = 'schema_migrations_one_per_number' AND indexdef LIKE 'CREATE UNIQUE INDEX%') THEN
+    RAISE EXCEPTION 'schema_migrations has lost its unique index on the migration number: two files with one number could both be applied';
+  END IF;
+END $do$;
+
+-- THE INVERSE OVER WHAT THE TENANT CAN READ (oversight review 2026-09-10,
+-- B3r item 3). Every relation — any schema, any relation kind, any column —
+-- that app_rw or PUBLIC can SELECT is either on the shared-corpus allowlist
+-- or carries at least one read policy for the tenant, and every policy the
+-- tenant meets there scopes on current_workspace_id in the expression that
+-- governs its verb: `qual` for rows read, updated or deleted, `with_check`
+-- for rows written (which defaults to `qual` when absent). The earlier
+-- derivations started from pg_policies and asked the policy whether it
+-- needed checking, so `USING (true)` and a policy through a wrapper function
+-- were never examined. A substring is still not a scope — the behavioural
+-- proof is tenant-isolation.test.ts, whose subject is derived the same way —
+-- but a policy that cannot even name the context is refused at deploy.
+\echo 'checking every relation the tenant role can read is shared by declaration or scoped by every policy it meets...'
+DO $do$
+DECLARE bad text;
+BEGIN
+  SELECT string_agg(rel || ' (' || why || ')', '; ' ORDER BY rel) INTO bad FROM (
+    SELECT ns.nspname || '.' || c.relname AS rel,
+           CASE
+             WHEN NOT EXISTS (SELECT 1 FROM pg_policies p
+                               WHERE p.schemaname = ns.nspname AND p.tablename = c.relname
+                                 AND p.cmd IN ('SELECT', 'ALL') AND (p.roles = '{public}' OR 'app_rw' = ANY (p.roles)))
+               THEN 'no read policy for the tenant role'
+             ELSE (SELECT string_agg('policy ' || p.policyname || ' does not scope on current_workspace_id', ', ' ORDER BY p.policyname)
+                     FROM pg_policies p
+                    WHERE p.schemaname = ns.nspname AND p.tablename = c.relname
+                      AND (p.roles = '{public}' OR 'app_rw' = ANY (p.roles))
+                      AND ((p.cmd IN ('SELECT', 'ALL', 'UPDATE', 'DELETE') AND coalesce(p.qual, '') NOT LIKE '%current_workspace_id%')
+                        OR (p.cmd IN ('INSERT', 'ALL', 'UPDATE') AND coalesce(p.with_check, p.qual, '') NOT LIKE '%current_workspace_id%')))
+           END AS why
+      FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+     WHERE ns.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+       AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+       AND (has_any_column_privilege('app_rw', c.oid, 'SELECT') OR has_any_column_privilege('public', c.oid, 'SELECT'))
+       -- the shared-corpus allowlist: read in full by every tenant, by decision
+       AND ns.nspname || '.' || c.relname <> ALL (ARRAY['public.prompt_banks'])
+  ) x WHERE why IS NOT NULL;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'tenant-readable relations that are neither shared nor scoped: %', bad;
+  END IF;
+END $do$;
+
 -- DELIBERATELY ABSENT, and moving with the gate rather than being reimplemented
 -- here (ADR-0007):
 --

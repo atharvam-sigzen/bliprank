@@ -32,6 +32,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { afterEach, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 /** psql meta-commands are not SQL; PGlite runs the rest verbatim. */
@@ -53,18 +54,16 @@ afterEach(async () => {
 async function db(opts: { legacyKey?: 'short' | 'long' } = {}): Promise<PGlite> {
   const d = new PGlite({ extensions: { pgcrypto } })
   open.push(d)
-  await d.exec(migration('0000_init.sql'))
-  await d.exec(migration('0001_tenancy_identity.sql'))
-  // PRODUCTION ORDER. A database that ran 0001 in service MUST hold a signing
-  // key — without one nobody can log in. Inserting the key AFTER the migrations
-  // is the one ordering in which a migration that cannot be applied looks fine.
-  if (opts.legacyKey) {
-    const secret = opts.legacyKey === 'short' ? 'short-0001-secret' : 'a-long-enough-0001-era-secret-value'
-    await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
+  for (const m of MIGRATIONS) {
+    // PRODUCTION ORDER. A database that ran 0001 in service MUST hold a signing
+    // key — without one nobody can log in. Inserting the key AFTER the migrations
+    // is the one ordering in which a migration that cannot be applied looks fine.
+    if (opts.legacyKey && m.startsWith('0002_')) {
+      const secret = opts.legacyKey === 'short' ? 'short-0001-secret' : 'a-long-enough-0001-era-secret-value'
+      await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
+    }
+    await d.exec(migration(m))
   }
-  await d.exec(migration('0002_tenancy_context.sql'))
-  await d.exec(migration('0003_accounts_identity.sql'))
-  await d.exec(migration('0004_workspace_state.sql'))
   // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
   // assertion correctly refuses. A harness artifact, not a production shape —
   // managed Postgres gives you a privileged non-superuser. Named in the
@@ -238,6 +237,56 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     const d = await healthy()
     await d.exec(`GRANT svc_onboard TO postgres`)
     await expect(check(d)).rejects.toThrow(/owner of public.accounts is a member of svc_onboard/)
+  })
+
+  it('a missing migration record, a lost number index, and a gap or a second file under one number are all caught (B3r item 4)', async () => {
+    const d = await healthy()
+    await d.exec(`DROP TABLE schema_migrations`)
+    await expect(check(d)).rejects.toThrow(/schema_migrations is missing/)
+
+    const d2 = await healthy()
+    await d2.exec(`DROP INDEX schema_migrations_one_per_number`)
+    await expect(check(d2)).rejects.toThrow(/lost its unique index/)
+
+    const d3 = await healthy()
+    // The index refuses the second file under a held number outright...
+    await expect(d3.query(`INSERT INTO schema_migrations (name) VALUES ('0003_tenancy_exposure_manifest')`)).rejects.toThrow(
+      /schema_migrations_one_per_number/,
+    )
+    // ...and with the index gone, the gate still sees the sequence break.
+    await d3.exec(`DROP INDEX schema_migrations_one_per_number`)
+    await d3.exec(`INSERT INTO schema_migrations (name) VALUES ('0003_tenancy_exposure_manifest')`)
+    await expect(check(d3)).rejects.toThrow(/out of sequence at: 0003_tenancy_exposure_manifest/)
+
+    const d4 = await healthy()
+    await d4.exec(`INSERT INTO schema_migrations (name) VALUES ('0006_skipped_one')`)
+    await expect(check(d4)).rejects.toThrow(/out of sequence at: 0006_skipped_one/)
+  })
+
+  it('a tenant-readable relation with an open policy, a wrapper policy, an open WITH CHECK, or no read policy is caught (B3r item 3)', async () => {
+    const d = await healthy()
+    await d.exec(`CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;
+                  GRANT SELECT ON leaky TO app_rw; CREATE POLICY open ON leaky FOR SELECT USING (true)`)
+    await expect(check(d)).rejects.toThrow(/public\.leaky \(policy open does not scope on current_workspace_id\)/)
+
+    const d2 = await healthy()
+    await d2.exec(`CREATE FUNCTION ws_wrap() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT current_workspace_id() $$;
+                   CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;
+                   GRANT SELECT ON leaky TO app_rw; CREATE POLICY wrapped ON leaky FOR SELECT USING (workspace_id = ws_wrap())`)
+    await expect(check(d2)).rejects.toThrow(/policy wrapped does not scope/)
+
+    const d3 = await healthy()
+    // qual is scoped; the write side is open. Reading qual alone passed this.
+    await d3.exec(`CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;
+                   GRANT SELECT, INSERT ON leaky TO app_rw;
+                   CREATE POLICY r ON leaky FOR SELECT USING (workspace_id = current_workspace_id());
+                   CREATE POLICY w ON leaky FOR INSERT WITH CHECK (true)`)
+    await expect(check(d3)).rejects.toThrow(/policy w does not scope/)
+
+    const d4 = await healthy()
+    // A view is a relation too; the old sweeps looked at tables only.
+    await d4.exec(`CREATE VIEW everyone AS SELECT id, email FROM accounts; GRANT SELECT ON everyone TO app_rw`)
+    await expect(check(d4)).rejects.toThrow(/public\.everyone \(no read policy for the tenant role\)/)
   })
 
   it('a table that loses FORCE RLS is caught', async () => {

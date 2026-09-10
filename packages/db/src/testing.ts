@@ -1,6 +1,6 @@
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import type { Db } from './client.js'
 
 /**
@@ -9,7 +9,17 @@ import type { Db } from './client.js'
  * that passes here passed the policies, the triggers and the definer
  * functions, not a mock of them.
  */
-export const MIGRATIONS = ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql', '0004_workspace_state.sql'] as const
+/**
+ * The ordered migration list IS the directory, sorted: the four-digit prefix
+ * is the order, and migrations.test.ts asserts the prefixes are consecutive
+ * from 0000 with one file per number, and that a full apply records exactly
+ * this list in schema_migrations (which check-deploy.sql reads on the real
+ * database). A hand-written copy of this list was how two 0003s could have
+ * coexisted silently (MVP_PLAN B3r, item 4).
+ */
+export const MIGRATIONS: readonly string[] = readdirSync(new URL('../migrations/', import.meta.url))
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
 
 export const TEST_KEY = { kid: 'k1', secret: 'a-secret-long-enough-to-satisfy-the-constraint', issuer: 'iss', audience: 'aud' } as const
 

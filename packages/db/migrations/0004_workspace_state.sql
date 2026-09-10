@@ -246,13 +246,20 @@ REVOKE ALL ON FUNCTION ws_put_cycle(text, date, text, text, jsonb)              
 REVOKE ALL ON FUNCTION ws_put_document(text, text, jsonb)                       FROM PUBLIC;
 REVOKE ALL ON FUNCTION ws_file_request(text, text, jsonb, timestamptz)          FROM PUBLIC;
 REVOKE ALL ON FUNCTION ws_resolve_request(text, text, timestamptz, text, text, text) FROM PUBLIC;
--- ws_required() is read by the four writers, which run as svc_onboard.
-GRANT EXECUTE ON FUNCTION ws_required()                                            TO svc_onboard, app_rw;
+-- ws_required() is read by the four writers, which run as svc_onboard, and by
+-- nothing else. The tenant role deliberately holds no EXECUTE on it: a policy
+-- written through this wrapper would not name current_workspace_id, so the
+-- standing sweeps could not see it as scoped; without EXECUTE such a policy
+-- raises for the tenant instead of returning rows (oversight review
+-- 2026-09-10, B3r item 2).
+GRANT EXECUTE ON FUNCTION ws_required()                                            TO svc_onboard;
 GRANT EXECUTE ON FUNCTION ws_put_cycle(text, date, text, text, jsonb)              TO app_rw;
 GRANT EXECUTE ON FUNCTION ws_put_document(text, text, jsonb)                       TO app_rw;
 GRANT EXECUTE ON FUNCTION ws_file_request(text, text, jsonb, timestamptz)          TO app_rw;
 GRANT EXECUTE ON FUNCTION ws_resolve_request(text, text, timestamptz, text, text, text) TO app_rw;
 
 DO $$ BEGIN EXECUTE format('REVOKE svc_onboard FROM %I', current_user); END $$;
+
+INSERT INTO schema_migrations (name) VALUES ('0004_workspace_state');
 
 COMMIT;

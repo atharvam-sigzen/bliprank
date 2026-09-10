@@ -7,8 +7,19 @@
 --
 -- NUMBERING. `fix/tenancy-deploy-gate` carries an unmerged
 -- 0003_tenancy_exposure_manifest.sql (ADR-0007). Two files cannot share a
--- number in one lineage; whichever merges second is renumbered, and the
--- manifest, when it merges, must declare the three functions below.
+-- number in one lineage: that file is renumbered 0005 when it merges, records
+-- itself in schema_migrations as every file from here on does, and must
+-- declare the three functions below. The record (section 0) is what makes
+-- two files with one number impossible rather than merely noticed: the
+-- second INSERT fails on the number's unique index before the file changes
+-- anything (MVP_PLAN B3r, item 4).
+--
+-- ONE TRANSACTION. Section 3 grants the migration owner svc_onboard to
+-- transfer function ownership and revokes it at the end; a failure between
+-- the two used to leave the owner a standing member with unbounded write on
+-- identity (oversight review 2026-09-10, B3r item 1). The file-level BEGIN
+-- means a mid-file failure leaves nothing, and migrations.test.ts runs the
+-- file statement by statement, as psql does, cut after the GRANT, to prove it.
 --
 -- WHAT THIS DOES NOT TOUCH. The tenant context mechanism of 0002 — the
 -- unlogged context table, its readers, set_workspace_jwt() — is unchanged, and
@@ -56,6 +67,30 @@
 -- at READ COMMITTED and SERIALIZABLE; at REPEATABLE READ a lock-only tuple
 -- does not raise and the recount would run on a stale snapshot, so the
 -- trigger refuses that level outright, as 0002's billing gate does.
+
+BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- 0. The migration record: one applied file per number
+-- ---------------------------------------------------------------------------
+
+-- One row per applied file, keyed by name, and a unique index on the
+-- four-digit number. Created here rather than in 0000 because 0000–0002 may
+-- already be applied somewhere; they are backfilled. The ordered list on disk
+-- is the migrations directory itself (packages/db/src/testing.ts reads it);
+-- migrations.test.ts asserts the record equals that list after a full apply,
+-- and check-deploy.sql asserts the record is gapless and still carries the
+-- index. FORCE binds the owner, so the owner holds the one policy; no
+-- application role holds any privilege here.
+CREATE TABLE schema_migrations (
+  name       text        PRIMARY KEY CHECK (name ~ '^[0-9]{4}_[a-z0-9_]+$'),
+  applied_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX schema_migrations_one_per_number ON schema_migrations ((left(name, 4)));
+ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schema_migrations FORCE  ROW LEVEL SECURITY;
+CREATE POLICY schema_migrations_owner ON schema_migrations FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+INSERT INTO schema_migrations (name) VALUES ('0000_init'), ('0001_tenancy_identity'), ('0002_tenancy_context');
 
 -- ---------------------------------------------------------------------------
 -- 1. Accounts: the auth identity and the kind
@@ -234,3 +269,7 @@ GRANT EXECUTE ON FUNCTION workspaces_of(uuid)              TO app_rw;
 
 -- The migration owner is not left a standing member of the writing role.
 DO $$ BEGIN EXECUTE format('REVOKE svc_onboard FROM %I', current_user); END $$;
+
+INSERT INTO schema_migrations (name) VALUES ('0003_accounts_identity');
+
+COMMIT;

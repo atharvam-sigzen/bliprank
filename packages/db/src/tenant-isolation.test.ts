@@ -23,10 +23,12 @@
  * turns one into the other — which is why this file drives data rather than
  * reading pg_policies.
  *
- * THE RULE: every relation whose policy consults the tenant context gets a case
- * here that establishes two real tenant contexts and asserts the visible row
- * sets do not intersect. The subject is derived from `pg_policies`, so a new
- * scoped relation fails the first test below until a case is written for it.
+ * THE RULE: every relation the tenant role can read at all gets a case here
+ * that establishes two real tenant contexts and asserts the visible row sets
+ * do not intersect, unless it is on the shared allowlist by decision. The
+ * subject is derived from what app_rw can SELECT, never from what a policy
+ * says, so a new readable relation fails the first test below until a case is
+ * written for it — a `USING (true)` policy included.
  */
 
 import { createHmac } from 'node:crypto'
@@ -34,6 +36,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 
@@ -75,7 +78,7 @@ const visible = async (ws: string, sub: string, relation: string, col: string) =
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_accounts_identity.sql', '0004_workspace_state.sql']) {
+  for (const m of MIGRATIONS) {
     await db.exec(migration(m))
   }
   await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
@@ -133,30 +136,47 @@ const CASES: readonly (readonly [string, string])[] = [
   ['workspace_requests', 'host'],
 ]
 
-describe('every tenant-scoped relation has a disjointness case here', () => {
-  it('nothing whose visibility depends on tenant context is left unexercised', async () => {
-    const COVERED = new Set(CASES.map(([r]) => r))
-    // DERIVED FROM pg_policies, not from a declaration. The manifest in
-    // migration 0003 is the deploy gate's own list and does not merge with this
-    // file (see ADR-0007); deriving the subject from the catalog is in any case
-    // the property we want — anything app_rw can read whose policy consults the
-    // tenant context belongs here by construction, declared or not.
-    const scoped = (
-      (
-        await db.query(`
-          SELECT DISTINCT p.tablename FROM pg_policies p
-           WHERE p.schemaname = 'public'
-             AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
-             AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
-           ORDER BY p.tablename`)
-      ).rows as { tablename: string }[]
-    ).map((r) => r.tablename)
-    // If the derivation comes back short, the sweep below is asserting nothing.
-    expect(scoped.length).toBeGreaterThanOrEqual(CASES.length)
-    // Partitions are exercised through their parent; everything else must have
-    // its own case. A new scoped relation fails here until one is written.
-    const missing = scoped.filter((r) => !COVERED.has(r) && !r.startsWith('score_rows_'))
-    expect(missing).toEqual([])
+/**
+ * The shared-corpus allowlist: relations every tenant may read in full, by
+ * decision. Anything else the tenant role can read must have a disjointness
+ * case below. Adding a name here is a product decision, not a test fix.
+ */
+const SHARED = new Set(['public.prompt_banks'])
+
+/**
+ * THE INVERSE (oversight review 2026-09-10, B3r item 3). The subject used to be
+ * derived from pg_policies — "every relation whose policy mentions
+ * current_workspace_id" — which asked the policy whether it needed checking.
+ * A table with `USING (true)`, or a policy written through a wrapper function,
+ * mentioned nothing and so was never required to have a case: it passed this
+ * guard and the deploy gate while returning every tenant's rows. The subject
+ * is now everything the tenant role can read at all — every schema, every
+ * relation kind, any column — minus the shared allowlist. What a policy says
+ * is irrelevant; that a case proves the row sets disjoint is the property.
+ */
+async function uncovered(): Promise<string[]> {
+  const COVERED = new Set(CASES.map(([r]) => (r.includes('.') ? r : `public.${r}`)))
+  const readable = (
+    (
+      await db.query(`
+        SELECT ns.nspname || '.' || c.relname AS rel
+          FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+         WHERE ns.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+           AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+           -- partitions are exercised through their parent, which owns the case
+           AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid)
+           AND (has_any_column_privilege('app_rw', c.oid, 'SELECT') OR has_any_column_privilege('public', c.oid, 'SELECT'))
+         ORDER BY 1`)
+    ).rows as { rel: string }[]
+  ).map((r) => r.rel)
+  // If the derivation comes back short, the sweep is asserting nothing.
+  expect(readable.length).toBeGreaterThanOrEqual(CASES.length + SHARED.size)
+  return readable.filter((r) => !SHARED.has(r) && !COVERED.has(r))
+}
+
+describe('every relation the tenant role can read has a disjointness case here, or is shared by decision', () => {
+  it('nothing the tenant can read is left unexercised', async () => {
+    expect(await uncovered()).toEqual([])
   })
 })
 
@@ -275,4 +295,45 @@ describe('the shared relation is genuinely shared, and stays that way', () => {
   // a workspace column lives with the deploy gate, on fix/tenancy-deploy-gate:
   // `shared-columns-changed` is a fault kind of tenancy_exposure_faults(), which
   // does not merge here (ADR-0007).
+})
+
+describe('the guard bites: a readable relation that no case covers is caught, whatever its policy says (B3r item 3)', () => {
+  afterAll(async () => {
+    await db.exec(`DROP TABLE IF EXISTS leaky_open, leaky_wrapped, leaky_required; DROP FUNCTION IF EXISTS ws_wrap()`)
+  })
+
+  it('a USING (true) table the tenant can read is uncovered', async () => {
+    await db.exec(`
+      CREATE TABLE leaky_open (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_open ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_open FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_open TO app_rw;
+      CREATE POLICY open ON leaky_open FOR SELECT USING (true);
+      INSERT INTO leaky_open VALUES ('${WS1}'), ('${WS2}')`)
+    expect(await uncovered()).toContain('public.leaky_open')
+    // And the case it would need is the one that fails: both tenants see both rows.
+    expect(await visible(WS1, U1, 'leaky_open', 'workspace_id')).toEqual([WS1, WS2])
+  })
+
+  it('a policy through a wrapper that never names current_workspace_id is uncovered too', async () => {
+    await db.exec(`
+      CREATE FUNCTION ws_wrap() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT current_workspace_id() $$;
+      CREATE TABLE leaky_wrapped (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_wrapped ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_wrapped FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_wrapped TO app_rw;
+      CREATE POLICY wrapped ON leaky_wrapped FOR SELECT USING (workspace_id = ws_wrap())`)
+    // The old derivation (qual LIKE '%current_workspace_id%') would not have listed this relation at all.
+    expect(await uncovered()).toContain('public.leaky_wrapped')
+  })
+
+  it('ws_required() is not the tenant role to call: a policy through it fails closed rather than scoping (B3r item 2)', async () => {
+    expect((await db.query(`SELECT has_function_privilege('app_rw', 'ws_required()', 'EXECUTE') AS x`)).rows).toEqual([{ x: false }])
+    await db.exec(`
+      CREATE TABLE leaky_required (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_required ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_required FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_required TO app_rw;
+      CREATE POLICY required ON leaky_required FOR SELECT USING (workspace_id = ws_required());
+      INSERT INTO leaky_required VALUES ('${WS1}')`)
+    await expect(visible(WS1, U1, 'leaky_required', 'workspace_id')).rejects.toThrow(/permission denied for function ws_required/)
+    expect(await uncovered()).toContain('public.leaky_required')
+  })
 })

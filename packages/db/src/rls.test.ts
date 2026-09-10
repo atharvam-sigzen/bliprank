@@ -40,6 +40,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 let db: PGlite
 
@@ -109,11 +110,7 @@ async function as<T>(role: Role, ctx: { workspace?: string; leakStaleWs?: string
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  await db.exec(readFileSync(new URL('../migrations/0000_init.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../migrations/0001_tenancy_identity.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../migrations/0002_tenancy_context.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../migrations/0003_accounts_identity.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../migrations/0004_workspace_state.sql', import.meta.url), 'utf8'))
+  for (const m of MIGRATIONS) await db.exec(readFileSync(new URL(`../migrations/${m}`, import.meta.url), 'utf8'))
   await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('${KID}', '${SECRET}', '${ISS}', '${AUD}')`)
   // Seed as svc_onboard (identity + entitlements) and svc_scorer (corpus) — the roles that may write.
   await db.exec(`SET ROLE svc_onboard`)
@@ -166,12 +163,23 @@ describe('the standing sweep that catches the next migration', () => {
     const badly: string[] = []
     for (const { relname } of readable) {
       if (SHARED.has(relname)) continue
-      // a SELECT/ALL policy applying to PUBLIC or app_rw must mention current_workspace_id
+      // Every policy applying to PUBLIC or app_rw must scope on current_workspace_id
+      // in the expression that governs the verb: `qual` for rows read, updated or
+      // deleted, `with_check` for rows written (it defaults to `qual` when absent).
+      // Reading only `qual` let an INSERT policy with an open WITH CHECK pass
+      // (oversight review 2026-09-10, B3r item 3). At least one read policy must exist.
       const pols = (await db.query(`
-        SELECT qual FROM pg_policies
-        WHERE schemaname='public' AND tablename=$1 AND cmd IN ('SELECT','ALL')
-          AND (roles = '{public}' OR 'app_rw' = ANY(roles))`, [relname])).rows as { qual: string | null }[]
-      const scoped = pols.length > 0 && pols.every((p) => (p.qual ?? '').includes('current_workspace_id'))
+        SELECT cmd, qual, with_check FROM pg_policies
+        WHERE schemaname='public' AND tablename=$1
+          AND (roles = '{public}' OR 'app_rw' = ANY(roles))`, [relname])).rows as { cmd: string; qual: string | null; with_check: string | null }[]
+      const scopes = (expr: string | null) => (expr ?? '').includes('current_workspace_id')
+      const scoped =
+        pols.some((p) => p.cmd === 'SELECT' || p.cmd === 'ALL') &&
+        pols.every(
+          (p) =>
+            (!['SELECT', 'ALL', 'UPDATE', 'DELETE'].includes(p.cmd) || scopes(p.qual)) &&
+            (!['INSERT', 'ALL', 'UPDATE'].includes(p.cmd) || scopes(p.with_check ?? p.qual)),
+        )
       if (!scoped) badly.push(relname)
     }
     expect(badly).toEqual([])
@@ -602,24 +610,26 @@ describe('(B) the billing gate blocks before it creates', () => {
 // ===========================================================================
 describe('adversarial paths — a tenant must not be able to manufacture a context', () => {
   /**
-   * Every table whose visibility depends on tenant context — DERIVED, not
-   * listed. A hardcoded array silently stops covering the next table someone
-   * adds, which is the same failure mode as a hardcoded role list in the deploy
-   * check. Anything app_rw can read and whose policy mentions
-   * current_workspace_id belongs here by construction.
+   * Every table the tenant role can read — DERIVED, not listed. A hardcoded
+   * array silently stops covering the next table someone adds, which is the
+   * same failure mode as a hardcoded role list in the deploy check. The subject
+   * is what app_rw can SELECT minus the shared allowlist, never what a policy
+   * mentions: a `USING (true)` table must be blind without a context too, and
+   * asking its policy whether it needed checking is how one would have escaped
+   * (oversight review 2026-09-10, B3r item 3).
    */
   let SCOPED: string[] = []
   beforeAll(async () => {
     SCOPED = (
       (
         await db.query(`
-          SELECT DISTINCT p.tablename FROM pg_policies p
-           WHERE p.schemaname = 'public'
-             AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
-             AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
-           ORDER BY p.tablename`)
-      ).rows as { tablename: string }[]
-    ).map((r) => r.tablename)
+          SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+             AND c.relname <> 'prompt_banks'
+             AND (has_any_column_privilege('app_rw', c.oid, 'SELECT') OR has_any_column_privilege('public', c.oid, 'SELECT'))
+           ORDER BY 1`)
+      ).rows as { relname: string }[]
+    ).map((r) => r.relname)
     // If this ever comes back short, the sweep below is asserting nothing.
     expect(SCOPED.length).toBeGreaterThanOrEqual(7)
   })
