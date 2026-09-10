@@ -134,6 +134,14 @@ export interface ScoredCycle {
  * In `cellsFor` order. Reads only: no provider call, no model call, no path
  * here can collect.
  */
+
+/** `fn` over `items`, at most `limit` in flight, results in the items' order. */
+async function inBatches<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = []
+  for (let i = 0; i < items.length; i += limit) out.push(...(await Promise.all(items.slice(i, i + limit).map(fn))))
+  return out
+}
+
 export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay?: string): Promise<ScoredCycle | { readonly refuse: string }> {
   // One cycle's evidence, by day (ADR-0013). The latest when no day is asked
   // for, which is what every reader before cycles existed was reading.
@@ -191,9 +199,14 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   // collected before the index was consulted here was written.
   const index = new AnswerIndex(stores.kv)
   const { hits } = await index.lookup(cells.map((c) => c.cell))
+  // One object per cell, read a few at a time: up to 160 cells (17 curated +
+  // 15 custom prompts across five engines) would be 160 sequential round trips
+  // against a network store on a request path (2026-09-10 cost review). The
+  // bound keeps it a burst of eight, not a fan-out, and the order is kept.
+  const bodies = await inBatches(cells, 8, (c) => blob.get(hits.get(c.cell.key)?.r2Key ?? r2KeyFor(c.cell, `openwebninja:${c.engine}`)))
   const runs: ScoredRun[] = []
-  for (const c of cells) {
-    const body = await blob.get(hits.get(c.cell.key)?.r2Key ?? r2KeyFor(c.cell, `openwebninja:${c.engine}`))
+  for (const [i, c] of cells.entries()) {
+    const body = bodies[i]
     if (!body) continue
     try {
       const parsed = JSON.parse(body) as { runs?: { text?: unknown; collectedAt?: unknown; citations?: unknown }[] }
