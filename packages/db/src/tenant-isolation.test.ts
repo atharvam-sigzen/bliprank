@@ -54,7 +54,7 @@ let db: PGlite
 function token(ws: string, sub: string): string {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const h = b64({ alg: 'HS256', typ: 'JWT', kid: 'k1' })
-  const p = b64({ sub, workspace_id: ws, exp: Math.floor(Date.now() / 1000) + 300, iss: 'iss', aud: 'aud' })
+  const p = b64({ sub, workspace_id: ws, role: 'owner', exp: Math.floor(Date.now() / 1000) + 300, iss: 'iss', aud: 'aud' })
   return `${h}.${p}.${createHmac('sha256', SECRET).update(`${h}.${p}`).digest('base64url')}`
 }
 

@@ -75,8 +75,8 @@ DO $do$
 DECLARE bad text;
 BEGIN
   SELECT coalesce(string_agg(sig, ', ' ORDER BY sig), '') INTO bad
-    FROM unnest(ARRAY['current_workspace_id()', 'current_account_id()', 'stamp_tenant_context(uuid,uuid)',
-                      'set_workspace_jwt(text)', 'set_workspace(uuid)']) AS sig
+    FROM unnest(ARRAY['current_workspace_id()', 'current_account_id()', 'current_workspace_role()',
+                      'stamp_tenant_context(uuid,uuid,text)', 'set_workspace_jwt(text)', 'set_workspace(uuid)']) AS sig
    WHERE NOT EXISTS (
      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       JOIN pg_roles o ON o.oid = p.proowner
@@ -163,8 +163,8 @@ BEGIN
                     WHERE has_function_privilege(g.r, p.oid, 'EXECUTE'))
   ) f
   WHERE sig <> ALL (ARRAY[
-    -- 0002: the context readers (PUBLIC) and the verifier (app_rw)
-    'current_workspace_id()', 'current_account_id()', 'set_workspace_jwt(text)',
+    -- 0002: the context readers (PUBLIC) and the verifier (app_rw); 0005 adds the role reader
+    'current_workspace_id()', 'current_account_id()', 'current_workspace_role()', 'set_workspace_jwt(text)',
     -- 0003: onboarding, owned by svc_onboard, app_rw only
     'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
     -- 0004: workspace state writers, owned by svc_onboard, workspace from the verified context

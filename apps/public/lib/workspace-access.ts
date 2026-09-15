@@ -98,18 +98,22 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
   }
   if (me.workspaces.length === 0) return { ok: false, status: 409, message: NO_WORKSPACE }
   if (me.workspaces.length > 1) return { ok: false, status: 409, message: SEVERAL_WORKSPACES }
-  const token = mintWorkspaceToken(config.key, { sub: me.account.id, workspaceId: me.workspaces[0]!.id })
+  // The role rides in the token (B3c item 8): the database re-checks it
+  // against membership on every presentation and stamps the verified role
+  // into the context the definer writers read.
+  const token = mintWorkspaceToken(config.key, { sub: me.account.id, workspaceId: me.workspaces[0]!.id, role: me.workspaces[0]!.role })
   return { ok: true, backend: 'postgres', store: sessionWorkspaceStore(db, token), ledgers, dataDir: data, who: me.account.id, role: me.workspaces[0]!.role, workspaceId: me.workspaces[0]!.id }
 }
 
 /**
  * WHO APPLIES A CORRECTION: an owner or admin, on the Postgres store. One
  * gate for the three correction routes rather than a line in each (B4
- * tenancy audit, MAJOR 1). The database enforces membership on every write
- * (ws_required) and nothing about role; until the token carries a role claim
- * the definer functions check (human-owned, CLAUDE.md §4), this function is
- * the role check, and a route that writes a document without it writes as a
- * member.
+ * tenancy audit, MAJOR 1). This decides which PATH a POST takes — apply, or
+ * file a request for an operator — and it is no longer the only check: since
+ * migration 0005 the token carries the role, the verifier stamps it, and
+ * ws_put_document and ws_resolve_request refuse a session that is not an
+ * owner or admin, so a route that wrote a document without this gate would
+ * be refused by the database rather than write as a member (B3c item 8).
  */
 export const applies = (access: WorkspaceAccess & { ok: true }): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')
 

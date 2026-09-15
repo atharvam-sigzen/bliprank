@@ -27,8 +27,8 @@ beforeAll(async () => {
   }
   const [a] = await app.query<{ account_id: string; workspace_id: string }>('SELECT account_id, workspace_id FROM workspaces_of($1)', [UID_A])
   const [b] = await app.query<{ account_id: string; workspace_id: string }>('SELECT account_id, workspace_id FROM workspaces_of($1)', [UID_B])
-  tokenA = mintWorkspaceToken(TEST_KEY, { sub: a!.account_id, workspaceId: a!.workspace_id })
-  tokenB = mintWorkspaceToken(TEST_KEY, { sub: b!.account_id, workspaceId: b!.workspace_id })
+  tokenA = mintWorkspaceToken(TEST_KEY, { sub: a!.account_id, workspaceId: a!.workspace_id, role: 'owner' })
+  tokenB = mintWorkspaceToken(TEST_KEY, { sub: b!.account_id, workspaceId: b!.workspace_id, role: 'owner' })
 })
 afterAll(async () => {
   await pg.close()

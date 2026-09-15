@@ -25,22 +25,35 @@ describe('mintWorkspaceToken round-trips through the database verifier', () => {
   it('a token for a member reads exactly that workspace, and the context ends with the transaction', async () => {
     const app = pgliteDb(pg)
     const [me] = await app.query<{ account_id: string; workspace_id: string }>(`SELECT account_id, workspace_id FROM workspaces_of($1)`, [UID])
-    const token = mintWorkspaceToken(TEST_KEY, { sub: me!.account_id, workspaceId: me!.workspace_id })
+    const token = mintWorkspaceToken(TEST_KEY, { sub: me!.account_id, workspaceId: me!.workspace_id, role: 'owner' })
     const seen = await withWorkspace(app, token, (tx) => tx.query<{ id: string }>('SELECT id FROM workspaces'))
     expect(seen).toEqual([{ id: me!.workspace_id }])
     expect(await app.query('SELECT id FROM workspaces')).toEqual([])
+    // The role the token carried is the role the context holds, for this transaction only (B3c item 8).
+    expect(await withWorkspace(app, token, (tx) => tx.query<{ r: string }>('SELECT current_workspace_role() AS r'))).toEqual([{ r: 'owner' }])
+    expect(await app.query<{ r: string | null }>('SELECT current_workspace_role() AS r')).toEqual([{ r: null }])
   })
 
   it('the wrong secret, the wrong audience and a lifetime over the key ceiling are all refused by the database', async () => {
     const app = pgliteDb(pg)
     const [me] = await app.query<{ account_id: string; workspace_id: string }>(`SELECT account_id, workspace_id FROM workspaces_of($1)`, [UID])
-    const claims = { sub: me!.account_id, workspaceId: me!.workspace_id }
+    const claims = { sub: me!.account_id, workspaceId: me!.workspace_id, role: 'owner' as const }
     await expect(withWorkspace(app, mintWorkspaceToken({ ...TEST_KEY, secret: 'other' }, claims), (tx) => tx.query('SELECT 1'))).rejects.toThrow(/bad signature/)
     await expect(withWorkspace(app, mintWorkspaceToken({ ...TEST_KEY, audience: 'elsewhere' }, claims), (tx) => tx.query('SELECT 1'))).rejects.toThrow(/audience mismatch/)
     await expect(withWorkspace(app, mintWorkspaceToken(TEST_KEY, { ...claims, ttlSec: 43260 }), (tx) => tx.query('SELECT 1'))).rejects.toThrow(/lifetime exceeds/)
   })
 
-  it('refuses a non-positive ttl before anything is signed', () => {
-    expect(() => mintWorkspaceToken(TEST_KEY, { sub: 'a', workspaceId: 'b', ttlSec: 0 })).toThrow(/positive integer/)
+  it('a role claim the membership does not hold is refused by the database, whoever signed it (B3c item 8)', async () => {
+    const app = pgliteDb(pg)
+    const [me] = await app.query<{ account_id: string; workspace_id: string }>(`SELECT account_id, workspace_id FROM workspaces_of($1)`, [UID])
+    // The creator is the owner; a token calling it an admin or a member does not verify.
+    for (const role of ['admin', 'member'] as const) {
+      await expect(withWorkspace(app, mintWorkspaceToken(TEST_KEY, { sub: me!.account_id, workspaceId: me!.workspace_id, role }), (tx) => tx.query('SELECT 1'))).rejects.toThrow(/role does not match membership/)
+    }
+  })
+
+  it('refuses a non-positive ttl, and a role that is not one of the three, before anything is signed', () => {
+    expect(() => mintWorkspaceToken(TEST_KEY, { sub: 'a', workspaceId: 'b', role: 'owner', ttlSec: 0 })).toThrow(/positive integer/)
+    expect(() => mintWorkspaceToken(TEST_KEY, { sub: 'a', workspaceId: 'b', role: 'superuser' as never })).toThrow(/role must be one of owner, admin, member/)
   })
 })

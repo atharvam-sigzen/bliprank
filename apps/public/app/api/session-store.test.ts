@@ -85,7 +85,7 @@ let dir: string
 const ONE: AuthUser = { id: '66666666-0000-4000-8000-000000000001', email: 'one@brand.test' }
 const TWO: AuthUser = { id: '66666666-0000-4000-8000-000000000002', email: 'two@brand.test' }
 const MEMBER: AuthUser = { id: '66666666-0000-4000-8000-000000000003', email: 'member@brand.test' }
-const ws: Record<string, { account: string; workspace: string }> = {}
+const ws: Record<string, { account: string; workspace: string; role: 'owner' | 'member' }> = {}
 const originalEnv = { ...process.env }
 
 beforeAll(async () => {
@@ -96,12 +96,12 @@ beforeAll(async () => {
     await app.query('SELECT ensure_account($1, $2, $3)', [u.id, u.email, 'brand'])
     await app.query('SELECT create_workspace($1, $2)', [u.id, name])
     const [row] = await app.query<{ account_id: string; workspace_id: string }>('SELECT account_id, workspace_id FROM workspaces_of($1)', [u.id])
-    ws[u.id] = { account: row!.account_id, workspace: row!.workspace_id }
+    ws[u.id] = { account: row!.account_id, workspace: row!.workspace_id, role: 'owner' }
   }
   // A member of One's workspace: an account with no workspace of its own, added by the onboarding role.
   const [m] = await app.query<{ id: string }>('SELECT ensure_account($1, $2, $3) AS id', [MEMBER.id, MEMBER.email, 'brand'])
   await pgliteDb(pg, 'svc_onboard').query('INSERT INTO workspace_members (workspace_id, account_id, role) VALUES ($1, $2, $3)', [ws[ONE.id]!.workspace, m!.id, 'member'])
-  ws[MEMBER.id] = { account: m!.id, workspace: ws[ONE.id]!.workspace }
+  ws[MEMBER.id] = { account: m!.id, workspace: ws[ONE.id]!.workspace, role: 'member' }
 })
 afterAll(async () => {
   await pg.close()
@@ -132,7 +132,7 @@ afterEach(() => {
 })
 
 /** The store as the app would open it for `u`: a real token for that account's workspace. */
-const storeOf = (u: AuthUser) => sessionWorkspaceStore(pgliteDb(pg), mintWorkspaceToken(TEST_KEY, { sub: ws[u.id]!.account, workspaceId: ws[u.id]!.workspace }))
+const storeOf = (u: AuthUser) => sessionWorkspaceStore(pgliteDb(pg), mintWorkspaceToken(TEST_KEY, { sub: ws[u.id]!.account, workspaceId: ws[u.id]!.workspace, role: ws[u.id]!.role }))
 
 let ip = 0
 const headers = () => ({ 'cf-connecting-ip': `10.0.0.${++ip % 250}`, 'Content-Type': 'application/json' })
@@ -294,6 +294,18 @@ describe('request → session → token → context → store → response', () 
     const res = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'seo-tools', reason: 'a reason long enough to pass the check' })
     expect(res.status).toBe(200)
     expect(((await res.json()) as { request: { slug: string } }).request.slug).toBe('seo-tools')
+  })
+
+  it('a member\'s token cannot apply even with the application gate bypassed: the store\'s write and resolve are refused at the database (B3c item 8)', async () => {
+    const member = storeOf(MEMBER)
+    await expect(member.documents.put('category-record', 'acme.test', { ...RECORD, slug: 'seo-tools' }, 2)).rejects.toThrow(/only an owner or admin applies a decision; this session is member/)
+    const pending = await member.requests.pending<{ slug: string }>('category', 'acme.test')
+    expect(pending).not.toBeNull()
+    await expect(member.requests.resolve('category', 'acme.test', pending!.requestedAt, { status: 'applied', by: 'member' })).rejects.toThrow(/only an owner or admin/)
+    // The member still reads the workspace, and nothing of the refused writes landed.
+    expect((await member.documents.latest('category-record', 'acme.test'))?.version).toBe(2)
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE workspace_id = $1 AND kind = 'category-record' AND host = 'acme.test'`, [ws[ONE.id]!.workspace])).rows).toEqual([{ n: 2 }])
+    expect((await pg.query<{ status: string }>(`SELECT status FROM workspace_requests WHERE workspace_id = $1 AND kind = 'category' AND host = 'acme.test' AND status = 'pending'`, [ws[ONE.id]!.workspace])).rows).toEqual([{ status: 'pending' }])
   })
 
   it('a correction that loses the version race is a 409 read-again, nothing of it lands, and read again it applies (B3c item 7)', async () => {

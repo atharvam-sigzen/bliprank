@@ -259,8 +259,10 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await expect(check(d3)).rejects.toThrow(/out of sequence at: 0003_tenancy_exposure_manifest/)
 
     const d4 = await healthy()
-    await d4.exec(`INSERT INTO schema_migrations (name) VALUES ('0006_skipped_one')`)
-    await expect(check(d4)).rejects.toThrow(/out of sequence at: 0006_skipped_one/)
+    // One number past the next: a gap, whatever the last migration on disk is.
+    const skipped = `${String(MIGRATIONS.length + 1).padStart(4, '0')}_skipped_one`
+    await d4.exec(`INSERT INTO schema_migrations (name) VALUES ('${skipped}')`)
+    await expect(check(d4)).rejects.toThrow(new RegExp(`out of sequence at: ${skipped}`))
   })
 
   it('a tenant-readable relation with an open policy, a wrapper policy, an open WITH CHECK, or no read policy is caught (B3r item 3)', async () => {
@@ -407,7 +409,7 @@ describe('the attacks hold for a real non-superuser LOGIN principal', () => {
     await withTenant(async (d) => {
       await expect(d.query(`SELECT secret FROM auth_signing_keys`)).rejects.toThrow(/permission denied/)
       await expect(d.query(`SELECT * FROM auth_tenant_context`)).rejects.toThrow(/permission denied/)
-      await expect(d.query(`SELECT stamp_tenant_context('${WS1}','${USER1}')`)).rejects.toThrow(/permission denied/)
+      await expect(d.query(`SELECT stamp_tenant_context('${WS1}','${USER1}','owner')`)).rejects.toThrow(/permission denied/)
       await expect(d.query(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
     })
   })

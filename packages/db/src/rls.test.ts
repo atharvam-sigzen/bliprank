@@ -63,7 +63,8 @@ const OWNER_OF: Record<string, string> = { [WS1]: USER1, [WS2]: USER2 }
 function mint(claims: Record<string, unknown>, opts: { secret?: string; kid?: string; alg?: string } = {}): string {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const head = b64({ alg: opts.alg ?? 'HS256', typ: 'JWT', kid: opts.kid ?? KID })
-  const body = b64({ exp: Math.floor(Date.now() / 1000) + 300, iss: ISS, aud: AUD, ...claims })
+  // Every member this suite creates is an owner, so the role claim 0005 requires defaults to it; a case overrides it to test the check.
+  const body = b64({ exp: Math.floor(Date.now() / 1000) + 300, iss: ISS, aud: AUD, role: 'owner', ...claims })
   const sig = createHmac('sha256', opts.secret ?? SECRET).update(`${head}.${body}`).digest('base64url')
   return `${head}.${body}.${sig}`
 }
@@ -194,7 +195,7 @@ describe('the standing sweep that catches the next migration', () => {
     // door before a deploy does. The declared list is the arrangement; that
     // anything reachable and not on it fails is the property.
     const DECLARED = new Set([
-      'current_workspace_id()', 'current_account_id()', 'set_workspace_jwt(text)',
+      'current_workspace_id()', 'current_account_id()', 'current_workspace_role()', 'set_workspace_jwt(text)',
       'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
       'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb,integer)',
       'ws_file_request(text,text,jsonb,timestamp with time zone)',
@@ -705,7 +706,7 @@ describe('adversarial paths — a tenant must not be able to manufacture a conte
 
   it('the tenant cannot call the context writer directly', async () => {
     await asTenant(async (q) => {
-      await expect(q(`SELECT stamp_tenant_context('${WS1}','${USER1}')`)).rejects.toThrow(/permission denied/)
+      await expect(q(`SELECT stamp_tenant_context('${WS1}','${USER1}','owner')`)).rejects.toThrow(/permission denied/)
       await expect(q(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
     })
   })

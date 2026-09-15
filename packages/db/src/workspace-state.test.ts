@@ -25,21 +25,24 @@ const SECRET = 'a-secret-long-enough-to-satisfy-the-constraint'
 
 let db: PGlite
 
-function token(ws: string, sub: string): string {
+type Role = 'owner' | 'admin' | 'member'
+
+/** A token as the web tier mints it (0005: the role rides along); `null` omits the claim, to test that it is required. */
+function token(ws: string, sub: string, role: Role | null = 'owner'): string {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const h = b64({ alg: 'HS256', typ: 'JWT', kid: 'k1' })
-  const p = b64({ sub, workspace_id: ws, exp: Math.floor(Date.now() / 1000) + 300, iss: 'iss', aud: 'aud' })
+  const p = b64({ sub, workspace_id: ws, ...(role ? { role } : {}), exp: Math.floor(Date.now() / 1000) + 300, iss: 'iss', aud: 'aud' })
   return `${h}.${p}.${createHmac('sha256', SECRET).update(`${h}.${p}`).digest('base64url')}`
 }
 
 type Q = (sql: string, p?: unknown[]) => Promise<unknown[]>
 
-/** One transaction as the tenant role in `ws`'s verified context; committed unless `fn` throws. */
-async function inWorkspace<T>(ws: string | null, fn: (q: Q) => Promise<T>): Promise<T> {
+/** One transaction as the tenant role in `ws`'s verified context (its owner unless `as` names another member); committed unless `fn` throws. */
+async function inWorkspace<T>(ws: string | null, fn: (q: Q) => Promise<T>, as?: { readonly sub: string; readonly role: Role }): Promise<T> {
   await db.exec('BEGIN')
   try {
     await db.exec('SET LOCAL ROLE app_rw')
-    if (ws) await db.query(`SELECT set_workspace_jwt($1)`, [token(ws, ws === WS1 ? U1 : U2)])
+    if (ws) await db.query(`SELECT set_workspace_jwt($1)`, [as ? token(ws, as.sub, as.role) : token(ws, ws === WS1 ? U1 : U2)])
     const q: Q = async (sql, p) => {
       await db.exec('SAVEPOINT s')
       try {
@@ -276,6 +279,77 @@ describe('requests: one pending per host, filing replaces, resolving is optimist
     expect(await inWorkspace(WS2, (q) => q(`SELECT count(*)::int AS n FROM workspace_requests`))).toEqual([{ n: 0 }])
     expect(await inWorkspace(WS2, (q) => q(`SELECT ws_resolve_request('competitors', 'acme.example', $1, 'applied', 'intruder', null) AS r`, [T1]))).toEqual([{ r: false }])
     expect(await inWorkspace(WS1, (q) => q(`SELECT status FROM workspace_requests WHERE kind = 'competitors'`))).toEqual([{ status: 'pending' }])
+  })
+})
+
+describe('the role travels in the token, is verified against membership, and the writers that apply a decision refuse a member (B3c item 8, migration 0005)', () => {
+  const U3 = '00000000-0000-4000-8000-0000000000f3' // a member of WS1
+  const U4 = '00000000-0000-4000-8000-0000000000f4' // an admin of WS1
+  const MEMBER = { sub: U3, role: 'member' } as const
+  const ADMIN = { sub: U4, role: 'admin' } as const
+  const T = '2026-09-15T10:00:00Z'
+  beforeAll(async () => {
+    await db.exec(`SET ROLE svc_onboard`)
+    await db.exec(`
+      INSERT INTO accounts (id,email) VALUES ('${U3}','c@one.test'), ('${U4}','d@one.test');
+      INSERT INTO workspace_members (workspace_id,account_id,role) VALUES ('${WS1}','${U3}','member'), ('${WS1}','${U4}','admin');
+    `)
+    await db.exec(`RESET ROLE`)
+  })
+
+  it('the context carries the verified role for the transaction, and nothing outside one', async () => {
+    expect(await inWorkspace(WS1, (q) => q(`SELECT current_workspace_role() AS r`), MEMBER)).toEqual([{ r: 'member' }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT current_workspace_role() AS r`), ADMIN)).toEqual([{ r: 'admin' }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT current_workspace_role() AS r`))).toEqual([{ r: 'owner' }])
+    expect(await inWorkspace(null, (q) => q(`SELECT current_workspace_role() AS r`))).toEqual([{ r: null }])
+  })
+
+  it('a member\'s token cannot apply, with no application gate in the way: ws_put_document and ws_resolve_request refuse; filing a request and a cycle still work', async () => {
+    await inWorkspace(
+      WS1,
+      async (q) => {
+        await expect(q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"crm"}', 0)`)).rejects.toThrow(/only an owner or admin applies a decision; this session is member/)
+        await expect(q(`SELECT ws_put_document('competitor-override', 'role.example', '{"exclude":[]}', 0)`)).rejects.toThrow(/only an owner or admin/)
+        await q(`SELECT ws_file_request('category', 'role.example', '{"slug":"erp","reason":"asked"}', $1)`, [T])
+        await expect(q(`SELECT ws_resolve_request('category', 'role.example', $1, 'applied', 'member', null)`, [T])).rejects.toThrow(/only an owner or admin/)
+        await q(`SELECT ws_put_cycle('role.example', '2026-09-15', 'det-3', 'b', $1)`, [{ ...RESULT, domain: 'role.example' }])
+      },
+      MEMBER,
+    )
+    expect(await inWorkspace(WS1, (q) => q(`SELECT count(*)::int AS n FROM workspace_documents WHERE host = 'role.example'`))).toEqual([{ n: 0 }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT status FROM workspace_requests WHERE host = 'role.example'`))).toEqual([{ status: 'pending' }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT count(*)::int AS n FROM workspace_cycles WHERE host = 'role.example'`))).toEqual([{ n: 1 }])
+  })
+
+  it('an admin applies as an owner does, and resolves the request the member filed', async () => {
+    expect(await inWorkspace(WS1, (q) => q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"crm"}', 0) AS v`), ADMIN)).toEqual([{ v: 1 }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT ws_resolve_request('category', 'role.example', $1, 'declined', 'admin', 'no') AS r`, [T]), ADMIN)).toEqual([{ r: true }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT status, resolved_by FROM workspace_requests WHERE host = 'role.example'`))).toEqual([{ status: 'declined', resolved_by: 'admin' }])
+  })
+
+  it('a token whose role claim disagrees with the membership is refused at verification, and so is one that names no role; a non-member is still told only that', async () => {
+    await inWorkspace(null, async (q) => {
+      await expect(q(`SELECT set_workspace_jwt($1)`, [token(WS1, U3, 'owner')])).rejects.toThrow(/auth: token role does not match membership/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [token(WS1, U3, 'admin')])).rejects.toThrow(/auth: token role does not match membership/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [token(WS1, U1, 'member')])).rejects.toThrow(/auth: token role does not match membership/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [token(WS1, U1, null)])).rejects.toThrow(/auth: token is missing role/)
+      await expect(q(`SELECT set_workspace_jwt($1)`, [token(WS2, U3, 'owner')])).rejects.toThrow(/not a member/)
+      // Nothing was stamped by a refused presentation.
+      expect(await q(`SELECT current_workspace_id() AS w, current_workspace_role() AS r`)).toEqual([{ w: null, r: null }])
+    })
+  })
+
+  it('the migration leaves the context mechanism as it found it: the two-argument stamp is gone, the three-argument one and the role reader are verifier-owned definers, the reader is PUBLIC and the stamp is not', async () => {
+    const rows = (await db.query(`
+      SELECT p.oid::regprocedure::text AS sig, o.rolname AS owner, p.prosecdef AS definer, has_function_privilege('app_rw', p.oid, 'EXECUTE') AS app_rw
+        FROM pg_proc p JOIN pg_roles o ON o.oid = p.proowner
+       WHERE p.proname IN ('stamp_tenant_context', 'current_workspace_role') ORDER BY 1`)).rows
+    expect(rows).toEqual([
+      { sig: 'current_workspace_role()', owner: 'auth_verifier', definer: true, app_rw: true },
+      { sig: 'stamp_tenant_context(uuid,uuid,text)', owner: 'auth_verifier', definer: true, app_rw: false },
+    ])
+    const r = await db.query(`SELECT count(*)::int AS n FROM pg_auth_members am JOIN pg_roles g ON g.oid = am.roleid JOIN pg_roles m ON m.oid = am.member WHERE g.rolname IN ('svc_onboard', 'auth_verifier') AND m.rolname = current_user`)
+    expect(r.rows).toEqual([{ n: 0 }])
   })
 })
 
