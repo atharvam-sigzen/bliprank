@@ -101,7 +101,8 @@ function allPendingOf(dataDir: string, kind: RequestKind): readonly Req[] {
 
 const storedOf = <T,>(r: Req): StoredRequest<T> => {
   const { requestedAt, status, resolvedAt, resolvedBy, note, ...body } = r
-  return { id: requestedAt, host: r.host, body: body as T, requestedAt, status, resolvedAt: resolvedAt ?? null, resolvedBy: resolvedBy ?? null, note: note ?? null }
+  // A machine is one operator: its filings name no account.
+  return { id: requestedAt, host: r.host, body: body as T, requestedAt, status, resolvedAt: resolvedAt ?? null, resolvedBy: resolvedBy ?? null, note: note ?? null, filedBy: null }
 }
 
 const cycleOf = (c: FileCycle): StoredCycle => {

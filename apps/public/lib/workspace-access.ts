@@ -125,3 +125,7 @@ export const applies = (access: WorkspaceAccess & { ok: true }): boolean => acce
 /** The message the store raises when a write names a version that is no longer the current one: the caller reads again. */
 export const isStaleVersion = (e: unknown): boolean => /read it again before deciding/.test(e instanceof Error ? e.message : String(e))
 export const READ_AGAIN = 'The record changed while you were deciding. Read it again and decide against what stands now.'
+
+/** The message the store raises when a member's filing would replace another account's pending one (migration 0007, B3d item 4). */
+export const isForeignPending = (e: unknown): boolean => /filed by another account/.test(e instanceof Error ? e.message : String(e))
+export const PENDING_BY_ANOTHER = "Another account's request for this domain is already pending, and only an owner or admin can replace it. Yours was not filed."

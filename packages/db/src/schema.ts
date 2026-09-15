@@ -214,4 +214,6 @@ export const workspaceRequests = pgTable('workspace_requests', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   resolvedBy: text('resolved_by'),
   note: text('note'),
+  /** the filing account (migration 0007); null on rows filed before it */
+  filedBy: text('filed_by'),
 })

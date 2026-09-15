@@ -11,7 +11,7 @@ import {
   type VisitorThrottleConfig,
 } from '../../../../../services/grader/src/visitor-throttle.js'
 import type { CompetitorStatus } from '../../../lib/competitor-request'
-import { applies, isStaleVersion, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
+import { applies, isForeignPending, isStaleVersion, PENDING_BY_ANOTHER, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
  * The competitor set a domain is measured against, and the request to adjust
@@ -137,7 +137,14 @@ export async function POST(req: Request): Promise<Response> {
     return json({ applied: true, version: written.version, request: { host: domain, exclude: written.exclude, include: written.include, reason: written.reason, requestedAt: written.at, status: 'applied' } })
   }
 
-  const filed = await fileCompetitorRequestIn(store, data, { host: domain, exclude, include, reason })
+  let filed: Awaited<ReturnType<typeof fileCompetitorRequestIn>>
+  try {
+    filed = await fileCompetitorRequestIn(store, data, { host: domain, exclude, include, reason })
+  } catch (e) {
+    // Another account's filing stands and this session is a member: the store refused, nothing changed (0007).
+    if (isForeignPending(e)) return json({ kind: 'pending-elsewhere', message: PENDING_BY_ANOTHER }, 409)
+    throw e
+  }
   if ('refuse' in filed) {
     const status = filed.kind === 'input' || filed.kind === 'no-change' ? 400 : filed.kind === 'no-record' ? 404 : 422
     return json({ kind: filed.kind, message: filed.refuse }, status)

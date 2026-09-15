@@ -11,7 +11,7 @@ import {
 } from '../../../../../services/grader/src/visitor-throttle.js'
 import { FALLBACK_SLUG } from '@bliprank/taxonomy'
 import type { CategoryStatus } from '../../../lib/category-request'
-import { applies, isStaleVersion, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
+import { applies, isForeignPending, isStaleVersion, PENDING_BY_ANOTHER, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
  * A domain's recorded category, its history, and the request to change it.
@@ -166,7 +166,14 @@ export async function POST(req: Request): Promise<Response> {
     return json({ applied: true, version: written.version, request: { host: domain, slug: written.slug, reason: written.correction?.reason ?? reason, requestedAt: written.decidedAt, status: 'applied' } })
   }
 
-  const filed = await fileCategoryRequestIn(store, data, { host: domain, slug, reason })
+  let filed: Awaited<ReturnType<typeof fileCategoryRequestIn>>
+  try {
+    filed = await fileCategoryRequestIn(store, data, { host: domain, slug, reason })
+  } catch (e) {
+    // Another account's filing stands and this session is a member: the store refused, nothing changed (0007).
+    if (isForeignPending(e)) return json({ kind: 'pending-elsewhere', message: PENDING_BY_ANOTHER }, 409)
+    throw e
+  }
   if ('refuse' in filed) {
     const status = filed.kind === 'input' ? 400 : filed.kind === 'same-category' ? 409 : 422
     return json({ kind: filed.kind, message: filed.refuse }, status)

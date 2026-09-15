@@ -359,6 +359,58 @@ describe('the role travels in the token, is verified against membership, and the
   })
 })
 
+describe('a filing is the filer\'s: a member replaces only its own pending request, an owner or admin any (B3d item 4, migration 0007)', () => {
+  const U5 = '00000000-0000-4000-8000-0000000000f5' // a second member of WS1
+  const MEMBER = { sub: '00000000-0000-4000-8000-0000000000f3', role: 'member' } as const
+  const OTHER = { sub: U5, role: 'member' } as const
+  const ADMIN = { sub: '00000000-0000-4000-8000-0000000000f4', role: 'admin' } as const
+  const T1 = '2026-09-15T12:00:00Z'
+  const T2 = '2026-09-15T12:30:00Z'
+  const T3 = '2026-09-15T13:00:00Z'
+  const pending = () => inWorkspace(WS1, (q) => q(`SELECT filed_by, body->>'slug' AS slug FROM workspace_requests WHERE host = 'filing.example' AND kind = 'category' AND status = 'pending'`))
+  beforeAll(async () => {
+    await db.exec(`SET ROLE svc_onboard`)
+    await db.exec(`
+      INSERT INTO accounts (id,email) VALUES ('${U5}','e@one.test');
+      INSERT INTO workspace_members (workspace_id,account_id,role) VALUES ('${WS1}','${U5}','member');
+    `)
+    await db.exec(`RESET ROLE`)
+  })
+
+  it('the filer is stamped from the context; another member cannot displace the filing and it stands unchanged; the filer replaces its own', async () => {
+    await inWorkspace(WS1, (q) => q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"erp","reason":"mine"}', $1)`, [T1]), MEMBER)
+    expect(await pending()).toEqual([{ filed_by: MEMBER.sub, slug: 'erp' }])
+    await inWorkspace(WS1, (q) => expect(q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"hr","reason":"theirs"}', $1)`, [T2])).rejects.toThrow(/filed by another account; an owner or admin can replace it/), OTHER)
+    expect(await pending()).toEqual([{ filed_by: MEMBER.sub, slug: 'erp' }])
+    await inWorkspace(WS1, (q) => q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"crm","reason":"changed my mind"}', $1)`, [T2]), MEMBER)
+    expect(await pending()).toEqual([{ filed_by: MEMBER.sub, slug: 'crm' }])
+    // A different kind for the same host is the other member's own queue.
+    await inWorkspace(WS1, (q) => q(`SELECT ws_file_request('competitors', 'filing.example', '{"exclude":["x"]}', $1)`, [T2]), OTHER)
+  })
+
+  it('an admin or owner replaces anyone\'s, and a row that names no filer (from before 0007) is theirs alone to replace', async () => {
+    await inWorkspace(WS1, (q) => q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"seo","reason":"admin"}', $1)`, [T3]), ADMIN)
+    expect(await pending()).toEqual([{ filed_by: ADMIN.sub, slug: 'seo' }])
+    await inWorkspace(WS1, (q) => q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"erp","reason":"owner"}', $1)`, [T3]))
+    expect(await pending()).toEqual([{ filed_by: U1, slug: 'erp' }])
+    // A legacy pending row: no filer.
+    await db.exec(`SET ROLE svc_onboard`)
+    await db.exec(`DELETE FROM workspace_requests WHERE host = 'filing.example' AND kind = 'category' AND status = 'pending';
+                   INSERT INTO workspace_requests (workspace_id, kind, host, body, requested_at) VALUES ('${WS1}', 'category', 'filing.example', '{"slug":"old"}', '${T1}')`)
+    await db.exec(`RESET ROLE`)
+    await inWorkspace(WS1, (q) => expect(q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"hr","reason":"member"}', $1)`, [T3])).rejects.toThrow(/filed by another account/), MEMBER)
+    expect(await pending()).toEqual([{ filed_by: null, slug: 'old' }])
+    await inWorkspace(WS1, (q) => q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"hr","reason":"admin"}', $1)`, [T3]), ADMIN)
+    expect(await pending()).toEqual([{ filed_by: ADMIN.sub, slug: 'hr' }])
+  })
+
+  it('the other workspace sees and touches none of it', async () => {
+    expect(await inWorkspace(WS2, (q) => q(`SELECT count(*)::int AS n FROM workspace_requests WHERE host = 'filing.example'`))).toEqual([{ n: 0 }])
+    await inWorkspace(WS2, (q) => q(`SELECT ws_file_request('category', 'filing.example', '{"slug":"two"}', $1)`, [T3]))
+    expect(await pending()).toEqual([{ filed_by: ADMIN.sub, slug: 'hr' }])
+  })
+})
+
 describe('the migration leaves the model as it found it', () => {
   it('the four writers are definer-owned and executable by the tenant role only, ws_required by the writers only, and the owner is not left in svc_onboard', async () => {
     const rows = (await db.query(`

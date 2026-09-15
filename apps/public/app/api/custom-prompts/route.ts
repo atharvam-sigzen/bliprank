@@ -12,7 +12,7 @@ import {
   type VisitorThrottleConfig,
 } from '../../../../../services/grader/src/visitor-throttle.js'
 import type { CustomPromptStatus } from '../../../lib/custom-prompt-request'
-import { applies, isStaleVersion, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
+import { applies, isForeignPending, isStaleVersion, PENDING_BY_ANOTHER, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
  * The custom prompts a domain's cycles ask beside the curated bank, and the
@@ -127,7 +127,14 @@ export async function POST(req: Request): Promise<Response> {
     return json({ applied: true, version: written.version, request: { host: domain, prompts: written.prompts, reason: written.reason, requestedAt: written.at, status: 'applied' } })
   }
 
-  const filed = await filePromptRequestIn(store, data, { host: domain, prompts: raw.prompts as string[], reason })
+  let filed: Awaited<ReturnType<typeof filePromptRequestIn>>
+  try {
+    filed = await filePromptRequestIn(store, data, { host: domain, prompts: raw.prompts as string[], reason })
+  } catch (e) {
+    // Another account's filing stands and this session is a member: the store refused, nothing changed (0007).
+    if (isForeignPending(e)) return json({ kind: 'pending-elsewhere', message: PENDING_BY_ANOTHER }, 409)
+    throw e
+  }
   if ('refuse' in filed) {
     const status = filed.kind === 'input' || filed.kind === 'no-change' ? 400 : filed.kind === 'no-record' ? 404 : 422
     return json({ kind: filed.kind, message: filed.refuse }, status)

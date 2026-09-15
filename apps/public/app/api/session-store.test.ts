@@ -53,7 +53,7 @@ import { GET as gaps } from './gaps/route'
 import { POST as preview } from './preview/route'
 import { POST as scan } from './scan/route'
 import { NOT_SIGNED_IN } from '@/lib/auth/handlers'
-import { READ_AGAIN } from '@/lib/workspace-access'
+import { PENDING_BY_ANOTHER, READ_AGAIN } from '@/lib/workspace-access'
 
 /**
  * The app's Db with one race on demand (B3c item 7): while `race.armed`, the
@@ -86,6 +86,7 @@ let dir: string
 const ONE: AuthUser = { id: '66666666-0000-4000-8000-000000000001', email: 'one@brand.test' }
 const TWO: AuthUser = { id: '66666666-0000-4000-8000-000000000002', email: 'two@brand.test' }
 const MEMBER: AuthUser = { id: '66666666-0000-4000-8000-000000000003', email: 'member@brand.test' }
+const MEMBER2: AuthUser = { id: '66666666-0000-4000-8000-000000000004', email: 'member2@brand.test' }
 const ws: Record<string, { account: string; workspace: string; role: 'owner' | 'member' }> = {}
 const originalEnv = { ...process.env }
 
@@ -103,6 +104,9 @@ beforeAll(async () => {
   const [m] = await app.query<{ id: string }>('SELECT ensure_account($1, $2, $3) AS id', [MEMBER.id, MEMBER.email, 'brand'])
   await pgliteDb(pg, 'svc_onboard').query('INSERT INTO workspace_members (workspace_id, account_id, role) VALUES ($1, $2, $3)', [ws[ONE.id]!.workspace, m!.id, 'member'])
   ws[MEMBER.id] = { account: m!.id, workspace: ws[ONE.id]!.workspace, role: 'member' }
+  const [m2] = await app.query<{ id: string }>('SELECT ensure_account($1, $2, $3) AS id', [MEMBER2.id, MEMBER2.email, 'brand'])
+  await pgliteDb(pg, 'svc_onboard').query('INSERT INTO workspace_members (workspace_id, account_id, role) VALUES ($1, $2, $3)', [ws[ONE.id]!.workspace, m2!.id, 'member'])
+  ws[MEMBER2.id] = { account: m2!.id, workspace: ws[ONE.id]!.workspace, role: 'member' }
 })
 afterAll(async () => {
   await pg.close()
@@ -335,6 +339,37 @@ describe('request → session → token → context → store → response', () 
     expect(((await filed.json()) as { applied?: boolean }).applied).toBeUndefined()
     await expect(storeOf(MEMBER).documents.put('category-record', 'fresh.test', { ...RECORD, slug: 'hr-payroll-software' }, 1)).rejects.toThrow(/only an owner or admin applies a decision/)
     expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE kind = 'category-record' AND host = 'fresh.test'`)).rows).toEqual([{ n: 1 }])
+  })
+
+  it('a member cannot displace another member\'s pending filing through any of the three routes; the filer can replace its own (B3d item 4, migration 0007)', async () => {
+    // acme.test in One carries the member's pending category request (filed above); competitors and prompts get one each here.
+    session.user = MEMBER
+    // Each differs from the set and the prompts the owner applied above, or the modules would refuse them as no change before the store is asked.
+    expect((await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['gusto', 'deel'], include: [], reason: 'a reason long enough to pass the check' })).status).toBe(200)
+    expect((await post(promptsPost, 'custom-prompts', { domain: 'acme.test', prompts: ['how do small bakeries run payroll each month'], reason: 'our buyers ask this exact question' })).status).toBe(200)
+    const filed = await pg.query<{ kind: string; filed_by: string }>(`SELECT kind, filed_by FROM workspace_requests WHERE workspace_id = $1 AND host = 'acme.test' AND status = 'pending' ORDER BY kind`, [ws[ONE.id]!.workspace])
+    expect(filed.rows).toEqual([
+      { kind: 'category', filed_by: ws[MEMBER.id]!.account },
+      { kind: 'competitors', filed_by: ws[MEMBER.id]!.account },
+      { kind: 'custom-prompts', filed_by: ws[MEMBER.id]!.account },
+    ])
+    session.user = MEMBER2
+    for (const [name, call] of [
+      ['category', () => post(categoryPost, 'category', { domain: 'acme.test', slug: 'seo-tools', reason: 'a reason long enough to pass the check' })],
+      ['competitors', () => post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['rippling'], include: [], reason: 'a reason long enough to pass the check' })],
+      ['custom-prompts', () => post(promptsPost, 'custom-prompts', { domain: 'acme.test', prompts: ['is there payroll software for a bakery'], reason: 'a reason long enough to pass the check' })],
+    ] as const) {
+      const res = await call()
+      expect([name, res.status]).toEqual([name, 409])
+      expect([name, await res.json()]).toEqual([name, { kind: 'pending-elsewhere', message: PENDING_BY_ANOTHER }])
+    }
+    // Nothing of the second member's landed: the three pending rows are still the first member's.
+    expect((await pg.query<{ kind: string; filed_by: string }>(`SELECT kind, filed_by FROM workspace_requests WHERE workspace_id = $1 AND host = 'acme.test' AND status = 'pending' ORDER BY kind`, [ws[ONE.id]!.workspace])).rows).toEqual(filed.rows)
+    // The filer replaces its own.
+    session.user = MEMBER
+    const again = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'crm-software', reason: 'a reason long enough to pass the check' })
+    expect(again.status).toBe(200)
+    expect((await pg.query<{ slug: string }>(`SELECT body->>'slug' AS slug FROM workspace_requests WHERE workspace_id = $1 AND host = 'acme.test' AND kind = 'category' AND status = 'pending'`, [ws[ONE.id]!.workspace])).rows).toEqual([{ slug: 'crm-software' }])
   })
 
   it('a correction that loses the version race is a 409 read-again, nothing of it lands, and read again it applies (B3c item 7)', async () => {

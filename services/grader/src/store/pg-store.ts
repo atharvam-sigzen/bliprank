@@ -69,6 +69,8 @@ export interface StoredRequest<T> {
   readonly resolvedAt: string | null
   readonly resolvedBy: string | null
   readonly note: string | null
+  /** the account that filed it (migration 0007); null on the file store, and on a row filed before 0007 */
+  readonly filedBy: string | null
 }
 
 export interface WorkspaceStore {
@@ -125,6 +127,7 @@ interface RequestRow<T> {
   resolved_at: string | null
   resolved_by: string | null
   note: string | null
+  filed_by: string | null
 }
 
 const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : String(v))
@@ -138,6 +141,7 @@ const requestOf = <T,>(r: RequestRow<T>): StoredRequest<T> => ({
   resolvedAt: r.resolved_at === null ? null : iso(r.resolved_at),
   resolvedBy: r.resolved_by,
   note: r.note,
+  filedBy: r.filed_by,
 })
 
 function assertDay(day: string): void {
