@@ -463,3 +463,37 @@ per-workspace, what happens to an in-flight cycle at the boundary, and who is
 told when it binds. None of those can be answered before there is a customer and
 a plan. Flagged here so the lifetime model is a recorded decision with a known
 expiry rather than an assumption nobody revisits.
+
+# Amendment 2 — admission is per workspace, spend bounds are deployment-wide (2026-09-15, MVP_PLAN B3d item 1)
+
+Decided by the oversight session after the B3c tenancy audit (MAJOR 2), the
+owner may overrule. The per-domain monthly ceiling on hand-started cycles
+(`domain-ceiling.ts`) was keyed by the bare host on the deployment-wide
+ledger. On a deployment with more than one workspace that meant one
+workspace's two hand-started cycles of a host refused every other workspace
+tracking the same host for the rest of the month, and the refusal was a
+one-bit oracle that someone else on the deployment scans that host.
+
+**The bound statement, amended.** A host's hand-started cycles per month are
+counted PER WORKSPACE: the ledger key is `${workspaceId}:${host}`
+(`ceilingKey`), and `checkDomainCeiling` and `recordDomainCycle` take the
+workspace and the host together. What is still bounded for everyone at once
+is the money: the daily cap of decision 2 and the per-run allowance, both of
+which sit under the provider's shared quota and neither of which changed. On
+a machine with identity off the workspace is `local` and the key is the bare
+host, which is what the file has always held, so a machine's month is
+unchanged.
+
+**The burst cap's repeat exemption stays keyed by the bare host, and that is
+accepted.** `live-gate.ts` lets a host already scanned today by anyone pass
+the day's new-domain cap, so a caller at the cap can learn that a host was
+scanned today by someone. It only ever ADMITS on another workspace's activity,
+never refuses on it, and what it admits is served from the day's cache without
+a provider call; the leak is the existence of a cache entry, which the cached
+answer itself reveals. Recorded as accepted rather than re-keyed, because
+re-keying would refuse a free, cached re-show.
+
+Verification, without spending: `domain-ceiling.test.ts` (two workspaces on
+one ledger take their own two cycles of one host, a machine's ledger keeps its
+bare-host history), `session-store.test.ts` (through `/api/scan`: Two's two
+cycles of a host do not refuse One, and Two is refused on its own).

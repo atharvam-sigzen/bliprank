@@ -236,7 +236,7 @@ describe('what refuses a second cycle, before anything could spend', () => {
   it('the per-domain ceiling applies to a second cycle exactly as to a first', async () => {
     writeCycle(dir, firstCycle('2026-09-01'))
     const ceilingCfg = defaultDomainCeilingConfig(dir, process.env)
-    for (let i = 0; i < ceilingCfg.maxCyclesPerMonth; i++) await recordDomainCycle(DOMAIN, 85, ceilingCfg, new Date())
+    for (let i = 0; i < ceilingCfg.maxCyclesPerMonth; i++) await recordDomainCycle({ workspaceId: 'local', host: DOMAIN }, 85, ceilingCfg, new Date())
     const events = await post({ domain: DOMAIN, cycle: 'new' })
     const err = events.find((e) => e.event === 'error')!.data
     expect(err['kind']).toBe('domain-ceiling')

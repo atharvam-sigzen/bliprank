@@ -26,6 +26,8 @@ let dir: string
 let cfg: DomainCeilingConfig
 const at = (d: string) => new Date(`${d}T09:00:00.000Z`)
 const PER_PROMPT = 0.007 * 3 + 0.008 + 0.005
+/** A machine's own ceiling subject: the workspace is `local`, the key the bare host (B3d item 1). */
+const S = (host: string) => ({ workspaceId: 'local', host })
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-worked-'))
   cfg = { maxCyclesPerMonth: 2, ledgerFile: join(dir, 'domain-ceiling.json') }
@@ -34,10 +36,10 @@ afterEach(async () => rmSync(dir, { recursive: true, force: true }))
 
 /** A hand-started cycle as the route runs it: refuse on the count, else run, then book the cycle with its realised calls. */
 async function manualCycle(day: string, cells: number, realised: number): Promise<'allowed' | 'refused'> {
-  const v = await checkDomainCeiling('acme.test', cfg, at(day))
+  const v = await checkDomainCeiling(S('acme.test'),cfg, at(day))
   if (!v.ok) return 'refused'
   expect(runAllowanceFor(cells)).toBeGreaterThanOrEqual(realised) // the run itself would have been stopped at the allowance
-  await recordDomainCycle('acme.test', realised, cfg, at(day))
+  await recordDomainCycle(S('acme.test'),realised, cfg, at(day))
   return 'allowed'
 }
 
@@ -46,16 +48,16 @@ describe('A · the prompt set shrinks mid-month', () => {
     expect(await manualCycle('2026-09-01', 160, 160)).toBe('allowed')
     expect(await manualCycle('2026-09-08', 160, 160)).toBe('allowed')
     // The customer clears the set; the next hand-started cycle would be 85 cells.
-    const third = await checkDomainCeiling('acme.test', cfg, at('2026-09-15'))
+    const third = await checkDomainCeiling(S('acme.test'),cfg, at('2026-09-15'))
     expect(third.ok).toBe(false)
     if (third.ok) return
-    expect(third.message).toContain('has reached its 2 hand-started cycles')
+    expect(third.message).toContain('has started its 2 hand-started cycles of acme.test')
     expect(third.message).not.toContain('320')
     expect(third).toMatchObject({ cycles: 2, limit: 2 })
     // Under the old, call-denominated ceiling this read "used 320 + 85 > 204": a refusal caused by the set change.
     // Now it is the same refusal the domain would have met at 85 cells all month: two cycles, then October.
-    expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-22'))).toEqual({ cycles: 2, calls: 320 })
-    expect((await checkDomainCeiling('acme.test', cfg, at('2026-10-01'))).ok).toBe(true)
+    expect(await cyclesThisMonth(S('acme.test'),cfg, at('2026-09-22'))).toEqual({ cycles: 2, calls: 320 })
+    expect((await checkDomainCeiling(S('acme.test'),cfg, at('2026-10-01'))).ok).toBe(true)
   })
 })
 
@@ -66,7 +68,7 @@ describe('B · the prompt set grows mid-month', () => {
     expect(await manualCycle('2026-09-12', 85, 85)).toBe('refused')
     // The customer adds 15 own prompts: a cycle is now 160 cells. Under the old ceiling this raised the limit to 384 and admitted a third cycle.
     expect(await manualCycle('2026-09-15', 160, 160)).toBe('refused')
-    expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-15'))).toEqual({ cycles: 2, calls: 170 })
+    expect(await cyclesThisMonth(S('acme.test'),cfg, at('2026-09-15'))).toEqual({ cycles: 2, calls: 170 })
     // What the month cost: the designed two cycles, 170 calls, not 330.
     expect(170 * PER_PROMPT / ENGINES.length).toBeCloseTo(1.156, 3)
   })
@@ -129,11 +131,11 @@ describe('C · a daily loop for a whole month', () => {
     expect(new Set(allowances)).toEqual(new Set([102]))
     // Under the old ceiling the third day was `not due: ceiling` (170 + 85 > 204). The manual ledger was never written by the loop: the file does not exist.
     expect(existsSync(cfg.ledgerFile)).toBe(false)
-    expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-30'))).toEqual({ cycles: 0, calls: 0 })
+    expect(await cyclesThisMonth(S('acme.test'),cfg, at('2026-09-30'))).toEqual({ cycles: 0, calls: 0 })
     // Thirty days of ledger, each its own cap.
     expect(Object.keys(await readDailyLedger(dir))).toHaveLength(30)
     // A hand-started cycle in the same month is still bounded by the manual ceiling, on its own count.
-    expect(await checkDomainCeiling('acme.test', cfg, at('2026-09-30'))).toMatchObject({ ok: true, cycles: 0 })
+    expect(await checkDomainCeiling(S('acme.test'),cfg, at('2026-09-30'))).toMatchObject({ ok: true, cycles: 0 })
   })
 
   it('a retry storm inside one run is stopped at the allowance by the real runner, offline, with the ledger left clean', async () => {

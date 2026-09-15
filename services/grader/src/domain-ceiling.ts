@@ -49,6 +49,19 @@
  * ponytail: a UTC calendar month, not a rolling 30 days. The provider's own
  * quota resets on a cycle boundary, so a ceiling that drifts against it would
  * refuse scans the provider would happily serve, and permit scans it would not.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHOSE CEILING — decided by the oversight session, 2026-09-15 (MVP_PLAN B3d
+ * item 1, ADR-0017 Amendment 2): ADMISSION IS PER WORKSPACE, THE MONEY IS
+ * BOUNDED DEPLOYMENT-WIDE. The ledger is the deployment's, and keyed by bare
+ * host it made one workspace's two hand-started cycles of a host refuse every
+ * other workspace tracking the same host for the rest of the month, and made
+ * the refusal a one-bit oracle that someone else scans it (B3c tenancy audit,
+ * MAJOR 2). The key is now `${workspaceId}:${host}`; the dollars stay bounded
+ * for everyone at once by the daily cap and the per-run allowance, which is
+ * where a shared provider quota belongs. On a machine the workspace is
+ * `local` and the key is the bare host, which is what the file has always
+ * held, so a machine's month is unchanged.
  */
 
 import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
@@ -84,6 +97,18 @@ export const DEFAULT_CELLS_PER_CYCLE = DEFAULT_PROMPTS_PER_SCAN * ENGINES.length
  * 102 at 17 prompts on five engines.
  */
 export const runAllowanceFor = (cellsPerCycle: number): number => Math.ceil(cellsPerCycle * RETRY_HEADROOM)
+
+/** The workspace of a machine with identity off: the machine is the tenant (apps/public/lib/workspace-access.ts). */
+export const LOCAL_WORKSPACE = 'local'
+
+/** Whose cycles of which host: the ledger is keyed by both (B3d item 1). */
+export interface CeilingSubject {
+  readonly workspaceId: string
+  readonly host: string
+}
+
+/** The ledger key: `${workspaceId}:${host}` on a deployment, the bare host on a machine, whose file has always been keyed so. */
+export const ceilingKey = (s: CeilingSubject): string => (s.workspaceId === LOCAL_WORKSPACE ? s.host : `${s.workspaceId}:${s.host}`)
 
 export interface DomainCeilingConfig {
   readonly maxCyclesPerMonth: number
@@ -153,29 +178,27 @@ const shape = (v: Entry | number | undefined, cellsPerCycle: number): Entry => {
   return { cycles: 0, calls: 0 }
 }
 
-/** Hand-started cycles this domain has run this month, and the calls they realised. */
-export async function cyclesThisMonth(domain: string, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<Entry> {
+/** Hand-started cycles this workspace has run of this host this month, and the calls they realised. */
+export async function cyclesThisMonth(subject: CeilingSubject, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<Entry> {
   const l = await readLedger(cfg)
   if ('__corrupt' in l) return { cycles: cfg.maxCyclesPerMonth, calls: 0 }
-  return shape(l[utcMonth(now)]?.[domain], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
+  return shape(l[utcMonth(now)]?.[ceilingKey(subject)], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
 }
 
 /**
- * May this domain be hand-collected again this month? Checked BEFORE the
- * scan; a domain at its count is refused outright rather than half-collected.
+ * May this workspace hand-collect this host again this month? Checked BEFORE
+ * the scan; a host at its count is refused outright rather than half-collected.
  */
-export async function checkDomainCeiling(domain: string, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<CeilingVerdict> {
-  const used = await cyclesThisMonth(domain, cfg, now)
+export async function checkDomainCeiling(subject: CeilingSubject, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<CeilingVerdict> {
+  const used = await cyclesThisMonth(subject, cfg, now)
   if (used.cycles >= cfg.maxCyclesPerMonth) {
     return {
       ok: false,
       reason: 'domain-ceiling',
-      // NO FIGURE IN THE SENTENCE. The ledger is deployment-wide (R3), so the
-      // count may be another workspace's cycles of the same domain; a caller
-      // learning "2 cycles, 320 requests" would be learning that (B3b tenancy
-      // audit, MAJOR). The verdict carries the numbers for the caller's own
-      // log; the sentence carries the ceiling and the reset date.
-      message: `${domain} has reached its ${cfg.maxCyclesPerMonth} hand-started ${cfg.maxCyclesPerMonth === 1 ? 'cycle' : 'cycles'} this month. This is a per-domain ceiling on manual cycles, not the shared quota: it exists so one domain's repeated scans cannot use up everyone else's. It resets on ${resetDate(now)}. Nothing was collected and nothing was charged, and any scan already collected for this domain still loads instantly from cache.`,
+      // The count is this workspace's own since B3d item 1, so it could be
+      // said; the sentence still carries only the ceiling and the reset date,
+      // and the verdict carries the numbers for the caller's own log.
+      message: `This workspace has started its ${cfg.maxCyclesPerMonth} hand-started ${cfg.maxCyclesPerMonth === 1 ? 'cycle' : 'cycles'} of ${subject.host} this month. This is a per-domain ceiling on manual cycles, not the shared quota: it exists so one domain's repeated scans cannot use up everyone else's. It resets on ${resetDate(now)}. Nothing was collected and nothing was charged, and any scan already collected for this domain still loads instantly from cache.`,
       cycles: used.cycles,
       limit: cfg.maxCyclesPerMonth,
       resetsOn: resetDate(now),
@@ -190,14 +213,15 @@ export async function checkDomainCeiling(domain: string, cfg: DomainCeilingConfi
  * and consumed no allowance, so the caller records only when `providerCalls`
  * is positive. Only the current month is kept.
  */
-export async function recordDomainCycle(domain: string, calls: number, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<void> {
-  if (!domain || !Number.isFinite(calls) || calls <= 0) return
+export async function recordDomainCycle(subject: CeilingSubject, calls: number, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<void> {
+  if (!subject.host || !subject.workspaceId || !Number.isFinite(calls) || calls <= 0) return
+  const key = ceilingKey(subject)
   await docOf(cfg).update((raw) => {
     const l: Ledger = raw === CORRUPT ? {} : shapeLedger(raw)
     const month = utcMonth(now)
     const current = l[month] ?? {}
-    const was = shape(current[domain], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
-    const next: Ledger = { [month]: { ...current, [domain]: { cycles: was.cycles + 1, calls: was.calls + calls } } }
+    const was = shape(current[key], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
+    const next: Ledger = { [month]: { ...current, [key]: { cycles: was.cycles + 1, calls: was.calls + calls } } }
     return next
   })
 }

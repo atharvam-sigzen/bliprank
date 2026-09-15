@@ -341,8 +341,11 @@ export async function POST(req: Request): Promise<Response> {
         //    gets. The cycle's cells size the per-run allowance below instead.
         const customCount = (await customPromptsIn(store, domain))?.prompts.length ?? 0
         const cellsThisCycle = (cfg.callsPerEngine + customCount) * ENGINES.length
+        //    Keyed by THIS workspace and the host (B3d item 1): admission is
+        //    the workspace's, the money is everyone's through the daily cap.
         const ceilingCfg = defaultDomainCeilingConfig(DATA, env, ledgers)
-        const ceiling = await checkDomainCeiling(domain, ceilingCfg, now)
+        const ceilingSubject = { workspaceId: access.workspaceId, host: domain }
+        const ceiling = await checkDomainCeiling(ceilingSubject, ceilingCfg, now)
         if (!ceiling.ok) {
           send(c, 'error', { kind: ceiling.reason, message: ceiling.message })
           return done(c)
@@ -431,7 +434,7 @@ export async function POST(req: Request): Promise<Response> {
         //    A cycle that reached the provider is one hand-started cycle
         //    against the month's count, with the calls it realised beside it.
         if ('counts' in result && result.counts.providerCalls > 0) {
-          await recordDomainCycle(domain, result.counts.providerCalls, ceilingCfg, now)
+          await recordDomainCycle(ceilingSubject, result.counts.providerCalls, ceilingCfg, now)
         }
 
         // 6. FILE THE CYCLE. The envelope, not a bare result: what is written

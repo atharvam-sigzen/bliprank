@@ -41,6 +41,7 @@ vi.mock('../../../../services/grader/src/fetch-site.js', async (importActual) =>
   }
 })
 
+import { defaultDomainCeilingConfig, recordDomainCycle } from '../../../../services/grader/src/domain-ceiling.js'
 import { defaultGateConfig, recordScan } from '../../../../services/grader/src/live-gate.js'
 import { ledgerStores } from '../../../../services/grader/src/ledger-stores.js'
 import { GET as answers } from './answers/route'
@@ -371,6 +372,31 @@ describe('request → session → token → context → store → response', () 
     expect(text).not.toContain('client-of-two.test')
     expect(fetchSpy).not.toHaveBeenCalled()
     expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_cycles WHERE host = 'newco.test'`)).rows).toEqual([{ n: 0 }])
+  })
+
+  it('the per-domain cycle ceiling is the workspace\'s: Two\'s two hand-started cycles of acme.test do not refuse One a new cycle, and Two is refused on its own (B3d item 1)', async () => {
+    Object.assign(process.env, { COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'test-key-never-used' })
+    const fetchSpy = vi.fn(async () => {
+      throw new Error('the test never reaches a network')
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    // Two's month on the deployment-wide ledger: two hand-started cycles of acme.test, the default ceiling.
+    const cfg = defaultDomainCeilingConfig(dir, process.env, ledgerStores(dir, process.env))
+    for (let i = 0; i < cfg.maxCyclesPerMonth; i++) await recordDomainCycle({ workspaceId: ws[TWO.id]!.workspace, host: 'acme.test' }, 85, cfg, new Date())
+    const errorOf = (text: string) => JSON.parse(/^event: error\ndata: (.*)$/m.exec(text)![1]!) as { kind: string; message: string }
+    // One holds cycles and a record of acme.test, so a new cycle passes every check up to the provider gate, whose fetch is shut: the refusal is the gate's, not the ceiling's.
+    session.user = ONE
+    const one = errorOf(await (await post(scan, 'scan', { domain: 'acme.test', cycle: 'new' })).text())
+    expect(one.kind).toBe('unreadable')
+    expect(fetchSpy).toHaveBeenCalled()
+    // Two, at its own ceiling, is refused before the gate is asked, and the sentence names only its own count.
+    fetchSpy.mockClear()
+    session.user = TWO
+    const two = errorOf(await (await post(scan, 'scan', { domain: 'acme.test', cycle: 'new' })).text())
+    expect(two.kind).toBe('domain-ceiling')
+    expect(two.message).toContain('This workspace has started its 2 hand-started cycles of acme.test')
+    expect(two.message).not.toContain(ws[ONE.id]!.workspace)
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('the per-domain gap-report cap is the workspace\'s: Two reading acme.test to its cap does not cap One (B3c item 2)', async () => {

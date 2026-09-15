@@ -25,53 +25,87 @@ import {
 let dir: string
 let cfg: DomainCeilingConfig
 const SEP = new Date('2026-09-10T12:00:00.000Z')
+/** A ceiling subject: a machine's (`local`, keyed by the bare host) unless a workspace is named (B3d item 1). */
+const S = (host: string, workspaceId = 'local') => ({ workspaceId, host })
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-ceiling-'))
   cfg = { maxCyclesPerMonth: 2, ledgerFile: join(dir, 'domain-ceiling.json') }
 })
 afterEach(async () => rmSync(dir, { recursive: true, force: true }))
 
+describe('admission is per workspace on one ledger (B3d item 1, ADR-0017 Amendment 2)', () => {
+  const ONE = '00000000-0000-4000-8000-000000000001'
+  const TWO = '00000000-0000-4000-8000-000000000002'
+
+  it('two workspaces each take their own two cycles of one host; neither refuses the other, and the file keys them apart', async () => {
+    await recordDomainCycle(S('acme.test', ONE), 85, cfg, SEP)
+    await recordDomainCycle(S('acme.test', ONE), 85, cfg, SEP)
+    expect((await checkDomainCeiling(S('acme.test', ONE), cfg, SEP)).ok).toBe(false)
+    expect(await checkDomainCeiling(S('acme.test', TWO), cfg, SEP)).toMatchObject({ ok: true, cycles: 0 })
+    await recordDomainCycle(S('acme.test', TWO), 90, cfg, SEP)
+    expect(await cyclesThisMonth(S('acme.test', TWO), cfg, SEP)).toEqual({ cycles: 1, calls: 90 })
+    expect(await cyclesThisMonth(S('acme.test', ONE), cfg, SEP)).toEqual({ cycles: 2, calls: 170 })
+    const stored = JSON.parse(readFileSync(cfg.ledgerFile, 'utf8')) as Record<string, Record<string, unknown>>
+    expect(Object.keys(stored['2026-09']!).sort()).toEqual([`${ONE}:acme.test`, `${TWO}:acme.test`])
+    // The refusal names the host and the workspace's own ceiling, never the other workspace.
+    const v = await checkDomainCeiling(S('acme.test', ONE), cfg, SEP)
+    if (v.ok) throw new Error('expected a refusal')
+    expect(v.message).toContain('This workspace has started its 2 hand-started cycles of acme.test')
+    expect(v.message).not.toContain(TWO)
+  })
+
+  it('a machine is the tenant: the local workspace keys the ledger by the bare host, so a file written before the split keeps its month', async () => {
+    mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
+    writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': { cycles: 1, calls: 97 } } }))
+    expect(await cyclesThisMonth(S('acme.test'), cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
+    await recordDomainCycle(S('acme.test'), 85, cfg, SEP)
+    const stored = JSON.parse(readFileSync(cfg.ledgerFile, 'utf8')) as Record<string, Record<string, unknown>>
+    expect(Object.keys(stored['2026-09']!)).toEqual(['acme.test'])
+    expect((await checkDomainCeiling(S('acme.test'), cfg, SEP)).ok).toBe(false)
+  })
+})
+
 describe('the ceiling counts hand-started cycles, and records the calls each realised', () => {
   it('starts at zero, admits a cycle, books the realised calls beside the count', async () => {
-    expect(await checkDomainCeiling('acme.test', cfg, SEP)).toMatchObject({ ok: true, cycles: 0, calls: 0, limit: 2 })
-    await recordDomainCycle('acme.test', 97, cfg, SEP)
-    expect(await cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
-    expect(await checkDomainCeiling('acme.test', cfg, SEP)).toMatchObject({ ok: true, cycles: 1, calls: 97 })
+    expect(await checkDomainCeiling(S('acme.test'),cfg, SEP)).toMatchObject({ ok: true, cycles: 0, calls: 0, limit: 2 })
+    await recordDomainCycle(S('acme.test'),97, cfg, SEP)
+    expect(await cyclesThisMonth(S('acme.test'),cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
+    expect(await checkDomainCeiling(S('acme.test'),cfg, SEP)).toMatchObject({ ok: true, cycles: 1, calls: 97 })
   })
 
   it('refuses the cycle after the count is reached, naming cycles and the reset date, whatever the cycle size', async () => {
-    await recordDomainCycle('acme.test', 160, cfg, SEP)
-    await recordDomainCycle('acme.test', 160, cfg, SEP)
-    const v = await checkDomainCeiling('acme.test', cfg, SEP)
+    await recordDomainCycle(S('acme.test'),160, cfg, SEP)
+    await recordDomainCycle(S('acme.test'),160, cfg, SEP)
+    const v = await checkDomainCeiling(S('acme.test'),cfg, SEP)
     expect(v).toMatchObject({ ok: false, reason: 'domain-ceiling', cycles: 2, limit: 2, resetsOn: '2026-10-01' })
     if (v.ok) return
-    expect(v.message).toContain('has reached its 2 hand-started cycles')
+    expect(v.message).toContain('has started its 2 hand-started cycles of acme.test')
     // The figures are the verdict's, never the sentence's: the ledger is deployment-wide, and a count may be another workspace's (B3b tenancy audit).
     expect(v.message).not.toMatch(/\d+ provider requests|started \d+ of/)
     expect(v).toMatchObject({ cycles: 2, limit: 2 })
   })
 
   it('a cycle served entirely from cache made no call and is not a cycle against the count', async () => {
-    await recordDomainCycle('acme.test', 0, cfg, SEP)
-    expect(await cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
+    await recordDomainCycle(S('acme.test'),0, cfg, SEP)
+    expect(await cyclesThisMonth(S('acme.test'),cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
   })
 
   it('holds one domain down without touching another', async () => {
-    await recordDomainCycle('acme.test', 85, cfg, SEP)
-    await recordDomainCycle('acme.test', 85, cfg, SEP)
-    expect((await checkDomainCeiling('acme.test', cfg, SEP)).ok).toBe(false)
-    expect((await checkDomainCeiling('beta.test', cfg, SEP)).ok).toBe(true)
+    await recordDomainCycle(S('acme.test'),85, cfg, SEP)
+    await recordDomainCycle(S('acme.test'),85, cfg, SEP)
+    expect((await checkDomainCeiling(S('acme.test'),cfg, SEP)).ok).toBe(false)
+    expect((await checkDomainCeiling(S('beta.test'),cfg, SEP)).ok).toBe(true)
   })
 })
 
 describe('the month boundary', () => {
   it('resets on the first of the next UTC month; a domain held down in September scans in October; only the current month is kept', async () => {
     expect(resetDate(SEP)).toBe('2026-10-01')
-    await recordDomainCycle('acme.test', 85, cfg, SEP)
-    await recordDomainCycle('acme.test', 85, cfg, SEP)
+    await recordDomainCycle(S('acme.test'),85, cfg, SEP)
+    await recordDomainCycle(S('acme.test'),85, cfg, SEP)
     const OCT = new Date('2026-10-01T00:00:01.000Z')
-    expect(await checkDomainCeiling('acme.test', cfg, OCT)).toMatchObject({ ok: true, cycles: 0 })
-    await recordDomainCycle('acme.test', 85, cfg, OCT)
+    expect(await checkDomainCeiling(S('acme.test'),cfg, OCT)).toMatchObject({ ok: true, cycles: 0 })
+    await recordDomainCycle(S('acme.test'),85, cfg, OCT)
     const file = JSON.parse(readFileSync(cfg.ledgerFile, 'utf8')) as Record<string, unknown>
     expect(Object.keys(file)).toEqual(['2026-10'])
   })
@@ -81,29 +115,29 @@ describe('failure modes', () => {
   it('a corrupt ledger refuses THIS request without taking the month down for a repair', async () => {
     mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
     writeFileSync(cfg.ledgerFile, '{ not json')
-    expect((await checkDomainCeiling('acme.test', cfg, SEP)).ok).toBe(false)
-    await recordDomainCycle('acme.test', 85, cfg, SEP)
-    expect(await checkDomainCeiling('acme.test', cfg, SEP)).toMatchObject({ ok: true, cycles: 1 })
+    expect((await checkDomainCeiling(S('acme.test'),cfg, SEP)).ok).toBe(false)
+    await recordDomainCycle(S('acme.test'),85, cfg, SEP)
+    expect(await checkDomainCeiling(S('acme.test'),cfg, SEP)).toMatchObject({ ok: true, cycles: 1 })
   })
 
   it('a bare call count from before the split reads as the nearest number of cycles at the size in force, at least one', async () => {
     mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
     writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': 97, 'beta.test': 170, 'gamma.test': -4 } }))
-    expect(await cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
-    expect(await cyclesThisMonth('beta.test', cfg, SEP)).toEqual({ cycles: 2, calls: 170 })
-    expect(await cyclesThisMonth('gamma.test', cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
-    expect((await checkDomainCeiling('beta.test', cfg, SEP)).ok).toBe(false)
+    expect(await cyclesThisMonth(S('acme.test'),cfg, SEP)).toEqual({ cycles: 1, calls: 97 })
+    expect(await cyclesThisMonth(S('beta.test'),cfg, SEP)).toEqual({ cycles: 2, calls: 170 })
+    expect(await cyclesThisMonth(S('gamma.test'),cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
+    expect((await checkDomainCeiling(S('beta.test'),cfg, SEP)).ok).toBe(false)
     // Two 10-prompt cycles under the old ledger were 102 calls; at the size in force (50 cells) that is two cycles, not one.
     const ten: DomainCeilingConfig = { ...cfg, legacyCellsPerCycle: 50 }
     writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': 102 } }))
-    expect(await cyclesThisMonth('acme.test', ten, SEP)).toEqual({ cycles: 2, calls: 102 })
+    expect(await cyclesThisMonth(S('acme.test'),ten, SEP)).toEqual({ cycles: 2, calls: 102 })
     expect(defaultDomainCeilingConfig(dir, { GRADER_PROMPTS_PER_SCAN: '10' }).legacyCellsPerCycle).toBe(50)
   })
 
   it('a nonsense entry reads as zero rather than throwing', async () => {
     mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
     writeFileSync(cfg.ledgerFile, JSON.stringify({ '2026-09': { 'acme.test': { cycles: 'two', calls: null } } }))
-    expect(await cyclesThisMonth('acme.test', cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
+    expect(await cyclesThisMonth(S('acme.test'),cfg, SEP)).toEqual({ cycles: 0, calls: 0 })
   })
 })
 

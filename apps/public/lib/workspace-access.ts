@@ -1,4 +1,5 @@
 import { mintWorkspaceToken } from '@bliprank/db/token'
+import { LOCAL_WORKSPACE } from '../../../services/grader/src/domain-ceiling.js'
 import { ledgerStores, resolveTopology, type LedgerStores } from '../../../services/grader/src/ledger-stores.js'
 import { readFlag } from '../../../services/grader/src/load-key.js'
 import { fileWorkspaceStore } from '../../../services/grader/src/store/file-store.js'
@@ -86,7 +87,7 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
   }
   if (!identity.on) {
     if (resolveTopology(declared).topology === 'fleet') return { ok: false, status: 503, message: NO_STORE }
-    return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local', role: 'local', workspaceId: 'local' }
+    return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local', role: 'local', workspaceId: LOCAL_WORKSPACE }
   }
   const config = identity.config
   const db = appDb(config)
