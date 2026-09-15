@@ -457,8 +457,9 @@ in 0003 with a unique index on the four-digit number, every file from 0003
 on records itself first, the test helper derives the ordered list from the
 directory, and the deploy check asserts the record is gapless; when
 `fix/tenancy-deploy-gate` merges its `0003_tenancy_exposure_manifest.sql`
-is renumbered 0006 (0005 is B3c's role claim, 2026-09-15). The oversight
-review's other three findings (0003 in
+is renumbered 0008 (0005 is B3c's role claim, 0006 and 0007 are B3d's
+member writes, all 2026-09-15). The oversight review's other three
+findings (0003 in
 one transaction; `ws_required()` for the writers only; the two standing
 gates assert the inverse over everything a tenant session can read, with
 `with_check`) are built with failing cases. **B3b (2026-09-15, ADR-0002
@@ -501,20 +502,54 @@ and stamps it, and `ws_put_document` and `ws_resolve_request` refuse
 unless the stamped role is owner or admin. ⚠️ HUMAN REVIEW: migration
 0005, `token.ts`, `workspace-access.ts` (tenancy); `daily-loop.ts`,
 `ledger-stores.ts`, `ledgerCapUsd` (spend control). One consequence for
-the reviewer: a member's session cannot write a first category record, so
-the preview and scan routes refuse its request for an unrecorded domain
-before anything runs (`recordsFirst`; recorded in 0005's header). The
-`cost-sentinel` and `tenancy-auditor` reviews of B3c are fixed in the
-follow-up commit: the file-backed ledger document writes under an
-exclusive lock file; the deploy check derives that every definer writer of
-workspace state uses `ws_required()` and every writer of a decision reads
+the reviewer at the time: a member's session could not write a first
+category record (reversed by B3d, below). The `cost-sentinel` and
+`tenancy-auditor` reviews of B3c are fixed in the follow-up commit: the
+file-backed ledger document writes under an exclusive lock file; the
+deploy check derives that every definer writer of workspace state uses
+`ws_required()` and every writer of a decision reads
 `current_workspace_role()`; the migrations test cuts after every GRANT.
-**Open for the owner, not changed:** the per-domain cycle ceiling and the
-burst cap's repeat exemption are keyed by bare host on the deployment-wide
-ledger (`domain-ceiling.ts`, `live-gate.ts`), a cross-workspace bound and a
-one-bit oracle; re-keying by workspace changes what ADR-0017 bounds against
-the shared provider quota. Stage B is complete; the next session takes
-Stage C (the daily schedule, C1's ADR) or Stage D1 (the agency portfolio,
-which `workspaceAccess` refuses until it exists).
+**B3d (2026-09-15, the oversight pass on B3c, six items, six commits;
+the oversight session took two decisions the owner may overrule):**
+(1) admission is per workspace, spend bounds stay deployment-wide: the
+per-domain cycle ceiling is keyed `${workspaceId}:${host}` (`local` on a
+machine, the bare host), ADR-0017 Amendment 2; the burst cap's repeat
+exemption stays keyed by bare host and is recorded as accepted. (2) a
+first category record is a measurement's precondition, not a decision:
+migration `0006_member_first_record.sql` lets any member write version 1
+of a category record and keeps every other write owner/admin; the two
+route refusals are gone, a member previews and scans an unrecorded domain
+and still cannot apply. (3) the deploy check's derivation runs first and
+over every definer that touches workspace state, any owner, every form of
+write, schema-qualified or quoted, and refuses dynamic SQL outright, with
+a failing database per hole. (4) migration `0007_filing_ownership.sql`:
+a request records who filed it and a member replaces only its own pending
+filing, an owner or admin any; the three routes answer 409
+`pending-elsewhere`. (5) `set_workspace`'s owner→admin→member ordering
+is tested. (6) the intermittent `Timeout calling "onTaskUpdate"` on the
+full suite was measured to the pre-spend hook test, whose 34 synchronous
+bash spawns blocked its worker past vitest's 60 s acknowledgement; it now
+runs every case through one asynchronous bash, three clean full runs in
+an isolated worktree, and the exit code no longer depends on load. The
+`cost-sentinel` and `tenancy-auditor` reviews of B3d are fixed in the
+follow-up commit (no blocker): the ADR amendment's bound statement now
+names what really bounds a hand-started scan (the burst cap, the provider's
+live quota, the per-run allowance, the lifetime ledger; never the loop's
+daily cap); the deploy check scans every function that touches workspace
+state, counts MERGE, ONLY, TRUNCATE, COPY and a status-landing upsert,
+refuses updatable views, requires the search_path pin, and pins
+`ws_put_document`'s exemption; `ws_file_request` locks the workspace row.
+⚠️ HUMAN REVIEW: migrations 0006 and 0007, `check-deploy.sql`'s derivation
+(tenancy); `domain-ceiling.ts` (spend control). **Two questions for the
+owner from the reviews:** hand-started spend now has no bound that scales
+with the number of workspaces (re-keying removed the per-host monthly one),
+and any member may open first cycles on any number of new hosts; both are
+the same spend-cap question ADR-0017's open section describes. **Found, not
+fixed, for a follow-up row:** `apps/public/app/api/scan/route.test.ts`
+reads and writes the machine's own `data-live` and expects a pipedrive.com
+cycle only this machine holds, so it fails on a clean checkout and would
+fail in CI. Stage B is complete; the next session takes Stage C (the daily
+schedule, C1's ADR) or Stage D1 (the agency portfolio, which
+`workspaceAccess` refuses until it exists).
 
 Update this section at every phase transition. It is the first thing a new session reads.
