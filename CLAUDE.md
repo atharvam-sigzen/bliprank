@@ -270,6 +270,7 @@ STRIPE_SECRET_KEY= RAZORPAY_KEY_ID= RAZORPAY_KEY_SECRET=
 COLLECTION_BUDGET_USD_DAILY=      # hard daily ceiling, read by the daily loop (ADR-0017); a live tick refuses without it
 COLLECTION_ENABLED=                # see below: ON in agent sessions by decision, OFF everywhere else
 TRUSTED_PROXY=                     # cloudflare | vercel. Names the edge whose client-IP header the visitor throttle may read; unset = no header is trusted, every caller is one bucket
+COLLECTOR_TOPOLOGY=                # single-process | fleet (ADR-0006). A machine running the Grader over its own data directory declares single-process, or the file ledgers are refused (B3c item 4); a fleet declares fleet (a Vercel marker implies it) and sets the six answer-store variables so the ledgers live in Upstash. The CLIs declare single-process for themselves when nothing is declared; a route never does
 ```
 
 **Identity (MVP_PLAN B2, migration 0003).** All seven or none: with any

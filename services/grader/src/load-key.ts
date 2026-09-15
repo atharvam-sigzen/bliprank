@@ -88,8 +88,15 @@ export function loadApiKey(root: string, env: NodeJS.ProcessEnv = process.env, n
 /**
  * Flags the route may read from a file. An allow-list, not a general loader:
  * anything not named here still has to come from the environment.
+ *
+ * `COLLECTOR_TOPOLOGY` (ADR-0006) is here for the same reason the two
+ * collection flags are: a person running the Grader on a machine declares
+ * it in the repo-root `.env.local` CLAUDE.md §7 documents, and a route that
+ * could not read it there would refuse the file ledgers (B3c item 4). It is
+ * read, never defaulted: a route that declared single-process for itself
+ * would be the bug that change removed.
  */
-const FILE_FLAGS = new Set(['COLLECTION_ENABLED', 'GRADER_LIVE_SCAN'])
+const FILE_FLAGS = new Set(['COLLECTION_ENABLED', 'GRADER_LIVE_SCAN', 'COLLECTOR_TOPOLOGY'])
 
 /**
  * Resolve one boolean-ish flag, reporting where it came from.

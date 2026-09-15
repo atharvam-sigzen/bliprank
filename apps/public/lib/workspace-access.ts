@@ -1,12 +1,13 @@
 import { mintWorkspaceToken } from '@bliprank/db/token'
-import { detectMultiInstanceRuntime, ledgerStores, type LedgerStores } from '../../../services/grader/src/ledger-stores.js'
+import { ledgerStores, resolveTopology, type LedgerStores } from '../../../services/grader/src/ledger-stores.js'
+import { readFlag } from '../../../services/grader/src/load-key.js'
 import { fileWorkspaceStore } from '../../../services/grader/src/store/file-store.js'
 import { sessionWorkspaceStore, type WorkspaceStore } from '../../../services/grader/src/store/pg-store.js'
 import { identityConfig } from './auth/config'
 import { appDb } from './auth/db'
 import { meOf, NOT_SIGNED_IN, NO_ACCOUNT } from './auth/handlers'
 import { currentUser } from './auth/supabase'
-import { dataDir } from './data-dir'
+import { dataDir, ROOT } from './data-dir'
 
 /**
  * THE ONE WAY A ROUTE REACHES WORKSPACE STATE. MVP_PLAN B3b.
@@ -29,9 +30,14 @@ import { dataDir } from './data-dir'
  * WITH IDENTITY OFF (a laptop running the Grader, the CLIs, every test): the
  * file store over this machine's data directory. There is no workspace
  * because the machine is the tenant. Never on a deployment: a runtime that
- * is many instances (`detectMultiInstanceRuntime`) is refused the file store
- * outright, so a half-configured deployment says so rather than serving one
- * instance's disk as if it were a store.
+ * is many instances, by a PaaS marker or by a declared
+ * `COLLECTOR_TOPOLOGY=fleet` (`resolveTopology`, ADR-0006), is refused the
+ * file store outright, so a half-configured deployment says so rather than
+ * serving one instance's disk as if it were a store. And the machine has to
+ * SAY it is one process: the ledgers open on files only under a declared
+ * `single-process`, read from the environment or the repo-root `.env.local`
+ * exactly as the two collection flags are, and never declared by a route
+ * (B3c item 4).
  *
  * WHO MAY APPLY (MVP_PLAN B4). The session's role in the workspace comes back
  * too: an owner or admin applies a correction directly (the POST on
@@ -67,15 +73,19 @@ export type WorkspaceAccess =
 export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log: (e: unknown) => void = console.error): Promise<WorkspaceAccess> {
   const data = dataDir(env)
   const identity = identityConfig(env)
+  // The topology as declared, from the environment or the documented dotenv
+  // file; a route reads it and never supplies it.
+  const topology = readFlag(ROOT, 'COLLECTOR_TOPOLOGY', env)
+  const declared = topology.value ? { ...env, COLLECTOR_TOPOLOGY: topology.value } : env
   let ledgers: LedgerStores
   try {
-    ledgers = ledgerStores(data, env)
+    ledgers = ledgerStores(data, declared)
   } catch (e) {
     log(e)
     return { ok: false, status: 503, message: NO_STORE }
   }
   if (!identity.on) {
-    if (detectMultiInstanceRuntime(env)) return { ok: false, status: 503, message: NO_STORE }
+    if (resolveTopology(declared).topology === 'fleet') return { ok: false, status: 503, message: NO_STORE }
     return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local', role: 'local', workspaceId: 'local' }
   }
   const config = identity.config

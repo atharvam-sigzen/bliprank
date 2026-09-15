@@ -77,6 +77,14 @@ export default defineConfig({
   // harness, not the component.
   esbuild: { jsx: 'automatic' },
   test: {
+    // The file-backed ledgers open only for a process that has DECLARED itself
+    // the only one over its data directory (services/grader/src/ledger-stores.ts,
+    // ADR-0006, MVP_PLAN B3c item 4). Every test file runs in its own worker
+    // over its own scratch directory, which is exactly that, so the suite
+    // declares it once here rather than in forty beforeEach blocks. A test
+    // that asserts the refusal passes its own environment object, which this
+    // does not reach.
+    env: { COLLECTOR_TOPOLOGY: 'single-process' },
     // packages/db/src/deploy-check.test.ts stands up a fresh PGlite instance and
     // runs three migrations per case — the states it tests (role attributes,
     // ad-hoc grants, a legacy signing key present before 0002) cannot be undone

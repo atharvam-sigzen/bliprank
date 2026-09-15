@@ -116,7 +116,7 @@ describe('C · a daily loop for a whole month', () => {
     for (let d = 1; d <= 30; d++) {
       const day = `2026-09-${String(d).padStart(2, '0')}`
       const outcome = await runTick(
-        { dataDir: dir, env: {}, day, apply: true, mode: 'fixture' },
+        { dataDir: dir, env: { COLLECTOR_TOPOLOGY: 'single-process' }, day, apply: true, mode: 'fixture' },
         { collect: async (dom, o) => (allowances.push(o.allowanceCalls), scanned(dom.host, o.day)), now: () => at(day) },
       )
       if ('refuse' in outcome) throw new Error(outcome.refuse)

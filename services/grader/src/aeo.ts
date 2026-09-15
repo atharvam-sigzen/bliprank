@@ -39,6 +39,7 @@ import { join } from 'node:path'
 import { auditSite, type AeoReport, type Finding } from './aeo-audit.js'
 import { gapReportFor } from './gaps.js'
 import { bankAuthorConfig } from './bank-author.js'
+import { declaredSingleProcess } from './ledger-stores.js'
 import { fetchSiteHtml } from './fetch-site.js'
 import { loadApiKey } from './load-key.js'
 import { resolveCategory } from './resolve-category.js'
@@ -135,7 +136,8 @@ async function main(): Promise<void> {
     return
   }
   const root = join(here, '..', '..', '..')
-  const env = process.env
+  // A CLI over its own data directory: its author ledger is a file, and the file backend is declared, not inferred (B3c item 4).
+  const env = declaredSingleProcess(process.env)
   const author = bankAuthorConfig(env, (n) => loadApiKey(root, env, n)?.key, o.dataDir) ?? undefined
 
   /*

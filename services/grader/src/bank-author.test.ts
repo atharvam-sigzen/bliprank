@@ -19,6 +19,8 @@ import {
 /** A scratch data dir: every config in this file charges a ledger in it. */
 const DIR = mkdtempSync(join(tmpdir(), 'bank-author-'))
 afterAll(() => rmSync(DIR, { recursive: true, force: true }))
+/** The author's ledger is a file, and a file ledger opens only for a process that says it is the only one (B3c item 4). */
+const ONE = { COLLECTOR_TOPOLOGY: 'single-process' }
 let ledgerSeq = 0
 /** A fresh ledger per test, so attempts charged by one cannot exhaust another. */
 const ledger = (capUsd = 5, usdPerCall = 0) => ({ file: join(DIR, `ledger-${(ledgerSeq += 1)}.json`), capUsd, usdPerCall })
@@ -63,7 +65,7 @@ describe('the model and provider come from the environment, not from code', () =
   const key = (n: string) => (n === 'OPENROUTER_API_KEY' ? 'or-key' : undefined)
 
   it('defaults to Nemotron on OpenRouter, with a DIFFERENT VENDOR behind it', () => {
-    const c = bankAuthorConfig({} as NodeJS.ProcessEnv, key, DIR)!
+    const c = bankAuthorConfig({ ...ONE,} as NodeJS.ProcessEnv, key, DIR)!
     expect(c.provider).toBe('openai-compatible')
     expect(c.model).toBe(DEFAULT_BANK_AUTHOR_MODEL)
     expect(c.fallbackModel).toBe(DEFAULT_BANK_AUTHOR_FALLBACK_MODEL)
@@ -76,13 +78,13 @@ describe('the model and provider come from the environment, not from code', () =
   it('swaps the model on ONE env var — the whole point of the seam', () => {
     // Free tiers get rate-limited and withdrawn. The response has to be an edit
     // to .env.local, not a deploy.
-    const c = bankAuthorConfig({ BANK_AUTHOR_MODEL: 'qwen/qwen-2.5-72b-instruct:free' } as NodeJS.ProcessEnv, key, DIR)!
+    const c = bankAuthorConfig({ ...ONE, BANK_AUTHOR_MODEL: 'qwen/qwen-2.5-72b-instruct:free' } as NodeJS.ProcessEnv, key, DIR)!
     expect(c.model).toBe('qwen/qwen-2.5-72b-instruct:free')
     expect(c.fallbackModel).toBe(DEFAULT_BANK_AUTHOR_FALLBACK_MODEL)
   })
 
   it('points at any other OpenAI-compatible host on one more', () => {
-    const c = bankAuthorConfig({ BANK_AUTHOR_BASE_URL: 'https://integrate.api.nvidia.com/v1/' } as NodeJS.ProcessEnv, key, DIR)!
+    const c = bankAuthorConfig({ ...ONE, BANK_AUTHOR_BASE_URL: 'https://integrate.api.nvidia.com/v1/' } as NodeJS.ProcessEnv, key, DIR)!
     // Trailing slash trimmed, or the request would be to `/v1//chat/completions`.
     expect(c.baseUrl).toBe('https://integrate.api.nvidia.com/v1')
     /*
@@ -95,12 +97,12 @@ describe('the model and provider come from the environment, not from code', () =
   })
 
   it('does not carry an OpenRouter slug into an Anthropic config either', () => {
-    const c = bankAuthorConfig({ BANK_AUTHOR_PROVIDER: 'anthropic' } as NodeJS.ProcessEnv, () => 'ant', DIR)!
+    const c = bankAuthorConfig({ ...ONE, BANK_AUTHOR_PROVIDER: 'anthropic' } as NodeJS.ProcessEnv, () => 'ant', DIR)!
     expect(c.fallbackModel).toBeUndefined()
     // Naming one explicitly still works — nothing is inferred, only defaulted.
     const named = bankAuthorConfig(
       // A paid fallback needs a price too, or the config is refused (R3).
-      { BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_FALLBACK_MODEL: 'claude-haiku-4-5', BANK_AUTHOR_USD_PER_CALL: '0.001' } as NodeJS.ProcessEnv,
+      { ...ONE, BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_FALLBACK_MODEL: 'claude-haiku-4-5', BANK_AUTHOR_USD_PER_CALL: '0.001' } as NodeJS.ProcessEnv,
       () => 'ant',
       DIR,
     )!
@@ -109,20 +111,20 @@ describe('the model and provider come from the environment, not from code', () =
 
   it('switches provider, and then takes the provider-conventional key', () => {
     const both = (n: string) => ({ OPENROUTER_API_KEY: 'or', ANTHROPIC_API_KEY: 'ant' })[n]
-    expect(bankAuthorConfig({ BANK_AUTHOR_PROVIDER: 'anthropic' } as NodeJS.ProcessEnv, both, DIR)!.apiKey).toBe('ant')
-    expect(bankAuthorConfig({} as NodeJS.ProcessEnv, both, DIR)!.apiKey).toBe('or')
+    expect(bankAuthorConfig({ ...ONE, BANK_AUTHOR_PROVIDER: 'anthropic' } as NodeJS.ProcessEnv, both, DIR)!.apiKey).toBe('ant')
+    expect(bankAuthorConfig({ ...ONE,} as NodeJS.ProcessEnv, both, DIR)!.apiKey).toBe('or')
     // An explicit key outranks both, so a machine holding several is not
     // ambiguous about which one this uses.
-    expect(bankAuthorConfig({} as NodeJS.ProcessEnv, (n) => (n === 'BANK_AUTHOR_API_KEY' ? 'explicit' : 'other'), DIR)!.apiKey).toBe('explicit')
+    expect(bankAuthorConfig({ ...ONE,} as NodeJS.ProcessEnv, (n) => (n === 'BANK_AUTHOR_API_KEY' ? 'explicit' : 'other'), DIR)!.apiKey).toBe('explicit')
   })
 
   it('an empty fallback disables the second attempt', () => {
     // The only way to say "use one model and tell me when it breaks".
-    expect(bankAuthorConfig({ BANK_AUTHOR_FALLBACK_MODEL: '' } as NodeJS.ProcessEnv, key, DIR)!.fallbackModel).toBeUndefined()
+    expect(bankAuthorConfig({ ...ONE, BANK_AUTHOR_FALLBACK_MODEL: '' } as NodeJS.ProcessEnv, key, DIR)!.fallbackModel).toBeUndefined()
   })
 
   it('is null with no key at all, which is the authoring-is-off state', () => {
-    expect(bankAuthorConfig({} as NodeJS.ProcessEnv, () => undefined, DIR)).toBeNull()
+    expect(bankAuthorConfig({ ...ONE,} as NodeJS.ProcessEnv, () => undefined, DIR)).toBeNull()
   })
 })
 
@@ -359,21 +361,21 @@ describe('the request itself', () => {
 
 describe('⚠️ EVERY ATTEMPT IS CHARGED TO A DOLLAR LEDGER BEFORE IT IS MADE (R3)', () => {
   it('the ledger is named from the data dir, priced and capped from the environment, free by default', () => {
-    const c = bankAuthorConfig({ BANK_AUTHOR_CAP_USD: '2', BANK_AUTHOR_USD_PER_CALL: '0.004' } as NodeJS.ProcessEnv, () => 'k', DIR)!
+    const c = bankAuthorConfig({ ...ONE, BANK_AUTHOR_CAP_USD: '2', BANK_AUTHOR_USD_PER_CALL: '0.004' } as NodeJS.ProcessEnv, () => 'k', DIR)!
     expect(c.ledger).toMatchObject({ file: authorLedgerFile(DIR), capUsd: 2, usdPerCall: 0.004 })
     expect(c.ledger.stores?.backend).toBe('file')
-    const d = bankAuthorConfig({} as NodeJS.ProcessEnv, () => 'k', DIR)!
+    const d = bankAuthorConfig({ ...ONE,} as NodeJS.ProcessEnv, () => 'k', DIR)!
     expect(d.ledger.usdPerCall).toBe(0)
     expect(d.ledger.capUsd).toBe(5)
   })
 
   it('⚠️ a paid model with no price is refused at configuration, never metered at $0', () => {
-    expect(() => bankAuthorConfig({ BANK_AUTHOR_MODEL: 'openai/gpt-4o' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/BANK_AUTHOR_USD_PER_CALL/)
-    expect(() => bankAuthorConfig({ BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_MODEL: 'claude-haiku-4-5' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/R3/)
-    expect(() => bankAuthorConfig({ BANK_AUTHOR_FALLBACK_MODEL: 'openai/gpt-4o-mini' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/gpt-4o-mini/)
-    expect(bankAuthorConfig({ BANK_AUTHOR_MODEL: 'openai/gpt-4o', BANK_AUTHOR_USD_PER_CALL: '0.02' } as NodeJS.ProcessEnv, () => 'k', DIR)!.ledger.usdPerCall).toBe(0.02)
+    expect(() => bankAuthorConfig({ ...ONE, BANK_AUTHOR_MODEL: 'openai/gpt-4o' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/BANK_AUTHOR_USD_PER_CALL/)
+    expect(() => bankAuthorConfig({ ...ONE, BANK_AUTHOR_PROVIDER: 'anthropic', BANK_AUTHOR_MODEL: 'claude-haiku-4-5' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/R3/)
+    expect(() => bankAuthorConfig({ ...ONE, BANK_AUTHOR_FALLBACK_MODEL: 'openai/gpt-4o-mini' } as NodeJS.ProcessEnv, () => 'k', DIR)).toThrow(/gpt-4o-mini/)
+    expect(bankAuthorConfig({ ...ONE, BANK_AUTHOR_MODEL: 'openai/gpt-4o', BANK_AUTHOR_USD_PER_CALL: '0.02' } as NodeJS.ProcessEnv, () => 'k', DIR)!.ledger.usdPerCall).toBe(0.02)
     // A free slug is exactly the case $0 is for.
-    expect(bankAuthorConfig({} as NodeJS.ProcessEnv, () => 'k', DIR)!.ledger.usdPerCall).toBe(0)
+    expect(bankAuthorConfig({ ...ONE,} as NodeJS.ProcessEnv, () => 'k', DIR)!.ledger.usdPerCall).toBe(0)
   })
 
   it('counts an attempt per model tried, at the configured price, in the file', async () => {

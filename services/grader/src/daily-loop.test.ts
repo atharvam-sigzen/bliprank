@@ -2,23 +2,28 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MemoryKV } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { applyCustomPrompts } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
 import { dailyCapUsd, dailyLedgerFile, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, setTracked } from './due.js'
+import { kvLedgerStores } from './ledger-stores.js'
 import { recordCategory } from './resolve-category.js'
 import type { ScanResult } from './scan.js'
 
 /**
  * THE DAILY LOOP, OFFLINE (ADR-0017 decisions 1 and 2). A fake collector
  * proves the cap gates and the ledger books; the real runner in fixture mode
- * proves the loop files cycles through the store. Nothing here spends.
+ * proves the loop files cycles through the store. Nothing here spends. The
+ * KV cases run over the collector's in-memory double, never a network.
  */
 
 let dir: string
 const PER_PROMPT = 0.007 * 3 + 0.008 + 0.005 // pay-as-you-go, one prompt on five engines
+/** This test is one process over its scratch directory, which the file ledgers require it to say (B3c item 4). */
+const ONE: NodeJS.ProcessEnv = { COLLECTOR_TOPOLOGY: 'single-process' }
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-loop-'))
   recordCategory(dir, { host: 'acme.test', slug: 'crm-software', source: 'site-content', evidence: 'x', decidedAt: '2026-08-01', generated: false })
@@ -73,14 +78,14 @@ describe('the loop, with a fake collector', () => {
   it('dry: lists, books nothing; apply offline: runs each due domain, books realised spend and calls, files the cycle, and a second tick the same day runs nothing', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
-    const dry = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: false, mode: 'fixture' })
+    const dry = await runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: false, mode: 'fixture' })
     if ('refuse' in dry) throw new Error(dry.refuse)
     expect(dry.ran).toEqual([])
     expect(await readDailyLedger(dir)).toEqual({})
 
     const collected: string[] = []
     const applied = await runTick(
-      { dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' },
+      { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' },
       { collect: async (d, o) => (collected.push(d.host), scanned(d.host, o.day, 0.41, 85)), now: () => new Date('2026-09-07T06:00:00.000Z') },
     )
     if ('refuse' in applied) throw new Error(applied.refuse)
@@ -91,13 +96,13 @@ describe('the loop, with a fake collector', () => {
     ])
     expect(applied.spentAfter).toBeCloseTo(0.82, 6)
     const ledger = (await readDailyLedger(dir))['2026-09-07']!
-    expect(ledger).toMatchObject({ capUsd: applied.capUsd, spentUsd: 0.82, calls: 170 })
+    expect(ledger).toMatchObject({ capUsd: applied.capUsd, spentUsd: expect.closeTo(0.82, 9), calls: 170 })
     expect(Object.keys(ledger.domains)).toEqual(['acme.test', 'beta.test'])
     expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
     // The loop never books the manual per-domain ceiling: that ledger counts hand-started cycles (ADR-0017).
     expect(existsSync(join(dir, 'domain-ceiling.json'))).toBe(false)
 
-    const again = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })
+    const again = await runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })
     if ('refuse' in again) throw new Error(again.refuse)
     expect(again.ran).toEqual([])
     expect(again.list.notDue.map((n) => n.reason)).toEqual(['cycle-today', 'cycle-today'])
@@ -110,7 +115,7 @@ describe('the loop, with a fake collector', () => {
     const cap = dailyCapUsd(dueToday(dir, {}, '2026-09-07'))
     // The first domain's runner reports a storm: it spent almost the whole day's cap. The second must be refused, not run.
     const outcome = await runTick(
-      { dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' },
+      { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' },
       { collect: async (d, o) => scanned(d.host, o.day, cap - 0.01, 300) },
     )
     if ('refuse' in outcome) throw new Error(outcome.refuse)
@@ -122,7 +127,7 @@ describe('the loop, with a fake collector', () => {
   it('a collector that reports no spend figure is booked at the expected cost with headroom, never at zero', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     const outcome = await runTick(
-      { dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' },
+      { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' },
       { collect: async (d, o) => ({ ...scanned(d.host, o.day, 0, 85), run: undefined }) as never },
     )
     if ('refuse' in outcome) throw new Error(outcome.refuse)
@@ -133,7 +138,7 @@ describe('the loop, with a fake collector', () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
     const outcome = await runTick(
-      { dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' },
+      { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' },
       { collect: async (d, o) => (d.host === 'acme.test' ? Promise.reject(new Error('socket hung up')) : scanned(d.host, o.day, 0.4, 85)) },
     )
     if ('refuse' in outcome) throw new Error(outcome.refuse)
@@ -149,7 +154,7 @@ describe('the loop’s allowance, live', () => {
   it('is the cycle’s cells with headroom whenever the cap gate lets a domain start; at the dearest price it would have been truncated; a domain the cap cannot pay for is refused before any allowance', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
-    const armed = { GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg', COLLECTION_BUDGET_USD_DAILY: '100' }
+    const armed = { ...ONE, GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg', COLLECTION_BUDGET_USD_DAILY: '100' }
     const run = async (firstFactor: number) => {
       const allowances: number[] = []
       const outcome = await runTick(
@@ -183,14 +188,14 @@ describe('fail closed', () => {
   it('a corrupt daily ledger refuses the whole tick before a cell is asked', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     writeFileSync(dailyLedgerFile(dir), '{ not json')
-    await expect(runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })).rejects.toThrow(/not readable JSON/)
+    await expect(runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })).rejects.toThrow(/not readable JSON/)
   })
 
   it('a live tick refuses without the loop armed, without both flags, without a key, without a plan, without the hard ceiling, for a day that is not today, and on an exhausted or short runner ledger, in that order', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     const now = () => new Date('2026-09-07T06:00:00.000Z')
-    const live = (env: NodeJS.ProcessEnv, day = '2026-09-07') => runTick({ dataDir: dir, env, day, apply: true, mode: 'live', root: dir }, { collect: async () => { throw new Error('must not be called') }, now })
-    const armed = { GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg' }
+    const live = (env: NodeJS.ProcessEnv, day = '2026-09-07') => runTick({ dataDir: dir, env: { ...ONE, ...env }, day, apply: true, mode: 'live', root: dir }, { collect: async () => { throw new Error('must not be called') }, now })
+    const armed = { ...ONE, GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg' }
     expect(await live({})).toMatchObject({ refuse: expect.stringContaining('not armed') })
     expect(await live({ GRADER_DAILY_LOOP: 'armed' })).toMatchObject({ refuse: expect.stringContaining('live collection is off') })
     expect(await live({ GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true' })).toMatchObject({ refuse: expect.stringContaining('no provider key') })
@@ -204,32 +209,142 @@ describe('fail closed', () => {
     expect(await readDailyLedger(dir)).toEqual({})
   })
 
-  it('one tick at a time: a second tick over the same store is refused while the lock is held', async () => {
+  it('one tick at a time: a fresh lease on the store refuses a second tick, a stale one is reclaimed and released after the run, and a lease that does not parse is refused rather than reclaimed', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
-    writeFileSync(join(dir, 'tick.lock'), '999 now')
-    const outcome = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })
-    expect(outcome).toMatchObject({ refuse: expect.stringContaining('another tick holds') })
+    const T = new Date('2026-09-07T06:00:00.000Z')
+    const lock = join(dir, 'tick-lock.json')
+    const tick = () => runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async (d, o) => scanned(d.host, o.day, 0.1, 5), now: () => T })
+    writeFileSync(lock, JSON.stringify({ holder: 'someone-else', pid: 999, at: new Date(T.getTime() - 60_000).toISOString() }))
+    expect(await tick()).toMatchObject({ refuse: expect.stringContaining('another tick holds') })
+    expect(existsSync(join(dir, 'results'))).toBe(false)
+    // Six hours and a second old: presumed dead, reclaimed, and the lease is cleared once the tick is done.
+    writeFileSync(lock, JSON.stringify({ holder: 'someone-else', pid: 999, at: new Date(T.getTime() - 6 * 3600_000 - 1000).toISOString() }))
+    const ran = await tick()
+    if ('refuse' in ran) throw new Error(ran.refuse)
+    expect(ran.ran.map((r) => r.host)).toEqual(['acme.test'])
+    expect(JSON.parse(readFileSync(lock, 'utf8'))).toBeNull()
+    // Not a lease at all: nobody's to reclaim, so the tick refuses and says what to delete.
+    writeFileSync(lock, '{ not json')
+    expect(await tick()).toMatchObject({ refuse: expect.stringMatching(/tick-lock\.json is not readable JSON; delete it/) })
   })
 
   it('a run the runner refused before any call, because another scan holds its lock, is booked at zero', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
-    const outcome = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => Promise.reject(new Error('another scan holds d:/x/run.lock (pid 1, last active 3s ago)')) })
+    const outcome = await runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => Promise.reject(new Error('another scan holds d:/x/run.lock (pid 1, last active 3s ago)')) })
     if ('refuse' in outcome) throw new Error(outcome.refuse)
     expect(outcome.ran[0]).toMatchObject({ status: expect.stringContaining('refused-before-call'), spentUsd: 0 })
   })
 
   it('nobody tracked: the cap is zero and nothing runs even with --apply', async () => {
-    const outcome = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })
+    const outcome = await runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' }, { collect: async () => { throw new Error('must not be called') } })
     if ('refuse' in outcome) throw new Error(outcome.refuse)
     expect(outcome.capUsd).toBe(0)
     expect(outcome.ran).toEqual([])
   })
 })
 
+describe('the tick lock and the daily ledger live in the store\'s ledgers, and every write folds (B3c item 3)', () => {
+  const T0 = new Date('2026-09-07T00:10:00.000Z')
+  const pause = () => new Promise<void>((r) => setTimeout(r, 20))
+  const until = async (pred: () => Promise<boolean>): Promise<void> => {
+    for (let i = 0; i < 250 && !(await pred()); i++) await pause()
+  }
+  const blocked = () => {
+    let go!: () => void
+    const held = new Promise<void>((r) => (go = r))
+    return { held, go }
+  }
+
+  it('on KV: a second tick is refused while the first holds the lease; the lease is released after; nothing is written to disk', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+    const ledgers = kvLedgerStores(new MemoryKV())
+    const { held, go } = blocked()
+    const first = runTick(
+      { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture', ledgers },
+      { collect: async (d, o) => (await held, scanned(d.host, o.day, 0.4, 85)), now: () => T0 },
+    )
+    await until(async () => (await ledgers.doc('tick-lock.json').read()) !== null)
+    const second = await runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture', ledgers }, { collect: async () => { throw new Error('must not be called') }, now: () => T0 })
+    expect(second).toMatchObject({ refuse: expect.stringContaining('another tick holds the tick-lock.json ledger in Upstash') })
+    go()
+    const outcome = await first
+    if ('refuse' in outcome) throw new Error(outcome.refuse)
+    expect(outcome.ran.map((r) => r.host)).toEqual(['acme.test', 'beta.test'])
+    expect(outcome.spentAfter).toBeCloseTo(0.8, 6)
+    expect(await ledgers.doc('tick-lock.json').read()).toBeNull()
+    const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+    expect(day).toMatchObject({ spentUsd: expect.closeTo(0.8, 6), calls: 170 })
+    expect(Object.values(day.domains).map((d) => d.status)).toEqual(['scanned', 'scanned'])
+    expect(existsSync(dailyLedgerFile(dir))).toBe(false)
+    expect(existsSync(join(dir, 'tick-lock.json'))).toBe(false)
+  })
+
+  it('two ticks that overlap (a stale lease reclaimed) book against ONE stored total: the host the first has in flight is refused to the second, the cap admits one cycle in all, and the day never exceeds it', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+    // The hard ceiling is exactly one cycle's expected cost with headroom, so the two ticks compete for one admission.
+    const cycle = 17 * PER_PROMPT
+    const env = { ...ONE, COLLECTION_BUDGET_USD_DAILY: String(cycle * RETRY_HEADROOM + 1e-6) }
+    const ledgers = kvLedgerStores(new MemoryKV())
+    const { held, go } = blocked()
+    const first = runTick(
+      { dataDir: dir, env, day: '2026-09-07', apply: true, mode: 'fixture', ledgers },
+      { collect: async (d, o) => (await held, scanned(d.host, o.day, cycle * 1.1, 90)), now: () => T0 },
+    )
+    // The first has reserved acme.test and is collecting it.
+    await until(async () => (await readDailyLedger(dir, ledgers))['2026-09-07']?.domains['acme.test']?.status === 'running')
+    // Seven hours on, with the first still in flight, its lease is presumed dead and reclaimed. Before the fold, this tick read a stale snapshot and could authorise the whole cap again.
+    const second = await runTick(
+      { dataDir: dir, env, day: '2026-09-07', apply: true, mode: 'fixture', ledgers },
+      { collect: async () => { throw new Error('must not be called') }, now: () => new Date(T0.getTime() + 7 * 3600_000) },
+    )
+    if ('refuse' in second) throw new Error(second.refuse)
+    expect(second.ran).toEqual([])
+    expect(second.refused).toEqual([
+      { host: 'acme.test', reason: expect.stringContaining('already booked today') },
+      { host: 'beta.test', reason: expect.stringContaining('daily cap') },
+    ])
+    go()
+    const outcome = await first
+    if ('refuse' in outcome) throw new Error(outcome.refuse)
+    expect(outcome.ran.map((r) => [r.host, r.status])).toEqual([['acme.test', 'scanned']])
+    expect(outcome.refused).toEqual([{ host: 'beta.test', reason: expect.stringContaining('daily cap') }])
+    const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+    expect(Object.keys(day.domains)).toEqual(['acme.test'])
+    expect(day.domains['acme.test']).toMatchObject({ status: 'scanned', calls: 90, spentUsd: expect.closeTo(cycle * 1.1, 6) })
+    expect(day.spentUsd).toBeCloseTo(cycle * 1.1, 6)
+    expect(day.calls).toBe(90)
+    expect(day.spentUsd).toBeLessThanOrEqual(day.capUsd + 1e-9)
+    expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
+  })
+
+  it('a live gate refusal gives its reservation back, so the next domain is not charged for it', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+    const armed = { ...ONE, GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg', COLLECTION_BUDGET_USD_DAILY: String(17 * PER_PROMPT * RETRY_HEADROOM + 1e-6) }
+    const ledgers = kvLedgerStores(new MemoryKV())
+    const outcome = await runTick(
+      { dataDir: dir, env: armed, day: '2026-09-07', apply: true, mode: 'live', root: dir, ledgers },
+      {
+        gate: async (domain) => (domain === 'acme.test' ? ({ ok: false, reason: 'quota', message: 'used up', short: [] } as never) : ({ ok: true, quota: [] } as never)),
+        collect: async (d, o) => scanned(d.host, o.day, 17 * PER_PROMPT, 85),
+        now: () => T0,
+      },
+    )
+    if ('refuse' in outcome) throw new Error(outcome.refuse)
+    expect(outcome.refused).toEqual([{ host: 'acme.test', reason: 'quota: used up' }])
+    expect(outcome.ran.map((r) => r.host)).toEqual(['beta.test'])
+    const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+    expect(Object.keys(day.domains)).toEqual(['beta.test'])
+    expect(day.spentUsd).toBeCloseTo(17 * PER_PROMPT, 6)
+  })
+})
+
 describe('the loop through the real runner, offline', () => {
   it('a fixture tick collects a due domain through runGrader, files the cycle, books the ledger, and honours the one-cycle-per-day rule on the next tick', async () => {
     setTracked(dir, 'pipedrive.com', true, { by: 'operator', reason: 'reference domain' })
-    const env = { GRADER_PROMPTS_PER_SCAN: '2' }
+    const env = { ...ONE, GRADER_PROMPTS_PER_SCAN: '2' }
     const first = await runTick({ dataDir: dir, env, day: '2026-09-07', apply: true, mode: 'fixture' })
     if ('refuse' in first) throw new Error(first.refuse)
     expect(first.ran.map((r) => [r.host, r.status, r.calls])).toEqual([['pipedrive.com', 'scanned', 2 * ENGINES.length]])

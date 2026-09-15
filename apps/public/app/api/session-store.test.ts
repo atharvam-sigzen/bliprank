@@ -82,6 +82,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-session-store-'))
   Object.assign(process.env, {
     GRADER_DATA_DIR: dir,
+    COLLECTOR_TOPOLOGY: 'single-process',
     TRUSTED_PROXY: 'cloudflare',
     SUPABASE_URL: 'https://x.supabase.test',
     SUPABASE_PUBLISHABLE_KEY: 'pk',

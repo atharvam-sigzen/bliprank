@@ -23,6 +23,7 @@
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ARMED, dailyCapUsd, formulaCapUsd, hardCeilingUsd, runTick } from './daily-loop.js'
+import { declaredSingleProcess } from './ledger-stores.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, monthlyEstimate, readTracked, setTracked } from './due.js'
 
@@ -125,7 +126,8 @@ async function main(): Promise<void> {
   if (!parsed.apply) return
   line('')
   line(parsed.fixture ? 'applying OFFLINE (fixture adapter): cycles are filed, nothing is spent' : 'applying LIVE: every gate below must pass, and this spends')
-  const outcome = await runTick({ dataDir: parsed.dataDir, env: process.env, ...(parsed.day ? { day: parsed.day } : {}), apply: true, mode: parsed.fixture ? 'fixture' : 'live', root: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..') }, { log: line })
+  // One command a person runs over a data directory: the CLI declares single-process for its ledgers when nothing is declared (B3c item 4).
+  const outcome = await runTick({ dataDir: parsed.dataDir, env: declaredSingleProcess(process.env), ...(parsed.day ? { day: parsed.day } : {}), apply: true, mode: parsed.fixture ? 'fixture' : 'live', root: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..') }, { log: line })
   if ('refuse' in outcome) {
     process.stderr.write(`refusing: ${outcome.refuse}\n`)
     process.exit(2)

@@ -4,13 +4,13 @@ import { join } from 'node:path'
 import { BudgetExceeded, MemoryKV, RunAllowanceExceeded } from '@bliprank/collector'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CORRUPT, fileLedgerDoc, kvLedgerDoc, withRunAllowance } from './ledger-doc.js'
-import { ledgerStores } from './ledger-stores.js'
+import { declaredSingleProcess, kvLedgerStores, ledgerStores } from './ledger-stores.js'
 import { checkVisitorThrottle, recordVisitorScan } from './visitor-throttle.js'
 
 /**
  * Where the ledgers live and how they behave on each backend (MVP_PLAN B3b,
- * R3). Nothing here reaches a network: the KV is the collector's in-memory
- * double, the fetch handed to the Upstash path is never called.
+ * B3c item 4, R3). Nothing here reaches a network: the KV is the collector's
+ * in-memory double, the fetch handed to the Upstash path is never called.
  */
 let dir: string
 beforeEach(() => {
@@ -21,24 +21,59 @@ afterEach(() => {
 })
 
 const KV_ENV = { R2_ACCOUNT_ID: 'a', R2_ACCESS_KEY_ID: 'k', R2_SECRET_ACCESS_KEY: 's', R2_BUCKET: 'b', UPSTASH_REDIS_REST_URL: 'https://kv.test', UPSTASH_REDIS_REST_TOKEN: 't' }
+const ONE = { COLLECTOR_TOPOLOGY: 'single-process' }
 const neverFetch: typeof fetch = () => Promise.reject(new Error('the test never reaches a network'))
 
 describe('the choice of backend', () => {
-  it('files on a machine with no store configured', () => {
-    expect(ledgerStores(dir, {}).backend).toBe('file')
+  it('files on a machine that declares itself one process over its data directory', () => {
+    expect(ledgerStores(dir, ONE).backend).toBe('file')
   })
 
-  it('Upstash when the answer store is configured, chosen by the same six variables', () => {
+  it('Upstash when the answer store is configured, chosen by the same six variables, whatever the topology says', () => {
     expect(ledgerStores(dir, KV_ENV, neverFetch).backend).toBe('kv')
+    expect(ledgerStores(dir, { ...KV_ENV, COLLECTOR_TOPOLOGY: 'fleet' }, neverFetch).backend).toBe('kv')
   })
 
   it('a partly configured store is refused, never silently files', () => {
-    expect(() => ledgerStores(dir, { UPSTASH_REDIS_REST_URL: 'https://kv.test' })).toThrow(/partly configured/)
+    expect(() => ledgerStores(dir, { UPSTASH_REDIS_REST_URL: 'https://kv.test', ...ONE })).toThrow(/partly configured/)
   })
 
-  it('a fleet runtime with no KV is refused: a file ledger there is a cap per instance (R3)', () => {
+  it('a fleet runtime with no KV is refused, by marker or by declaration: a file ledger there is a cap per instance (R3, B3c item 4)', () => {
     expect(() => ledgerStores(dir, { VERCEL: '1' })).toThrow(/VERCEL is set, so this runtime is many instances/)
+    expect(() => ledgerStores(dir, { COLLECTOR_TOPOLOGY: 'fleet' })).toThrow(/COLLECTOR_TOPOLOGY=fleet, so this runtime is many instances/)
+    // A marker wins over a declaration: a process cannot declare its way off Vercel.
+    expect(() => ledgerStores(dir, { VERCEL: '1', ...ONE })).toThrow(/VERCEL is set/)
     expect(ledgerStores(dir, { ...KV_ENV, VERCEL: '1' }, neverFetch).backend).toBe('kv')
+  })
+
+  it('an undeclared runtime is refused too: a bare VM looks exactly like a laptop from in here (ADR-0006)', () => {
+    expect(() => ledgerStores(dir, {})).toThrow(/COLLECTOR_TOPOLOGY is not set, so this process cannot show it is the only one/)
+    expect(() => ledgerStores(dir, { COLLECTOR_TOPOLOGY: 'laptop' })).toThrow(/not a recognised value/)
+  })
+
+  it('the file backend hands the collector the environment as given, so its own guard agrees or refuses on the same facts', async () => {
+    const ledger = ledgerStores(dir, ONE).spend('ledger.json', 1, () => 0.004)
+    await ledger.charge('chatgpt')
+    expect(await ledger.spentUsd()).toBeCloseTo(0.004, 9)
+  })
+
+  it('a CLI declares single-process for itself only when nothing is declared; a declared fleet stays a fleet', () => {
+    expect(declaredSingleProcess({})).toEqual({ COLLECTOR_TOPOLOGY: 'single-process' })
+    expect(declaredSingleProcess({ COLLECTOR_TOPOLOGY: 'fleet' })).toEqual({ COLLECTOR_TOPOLOGY: 'fleet' })
+    expect(() => ledgerStores(dir, declaredSingleProcess({ COLLECTOR_TOPOLOGY: 'fleet' }))).toThrow(/COLLECTOR_TOPOLOGY=fleet/)
+    expect(() => ledgerStores(dir, declaredSingleProcess({ VERCEL: '1' }))).toThrow(/VERCEL is set/)
+    expect(ledgerStores(dir, declaredSingleProcess({})).backend).toBe('file')
+  })
+
+  it('the KV ledgers over the in-memory double are the deployment\'s shape: a document under a lock and an atomic spend ledger', async () => {
+    const s = kvLedgerStores(new MemoryKV())
+    expect(s.backend).toBe('kv')
+    await s.doc('x.json').update(() => ({ n: 1 }))
+    expect(await s.doc('x.json').read()).toEqual({ n: 1 })
+    const ledger = s.spend('ledger.json', 0.01, () => 0.004, { runAllowanceCalls: 5 })
+    await ledger.charge('chatgpt')
+    await ledger.charge('chatgpt')
+    await expect(ledger.charge('chatgpt')).rejects.toBeInstanceOf(BudgetExceeded)
   })
 })
 
@@ -79,7 +114,7 @@ describe('a ledger document', () => {
 
   it('the visitor throttle is the same throttle on either backend', async () => {
     const NOW = new Date('2026-09-15T10:00:00Z')
-    for (const stores of [ledgerStores(dir, {}), { doc: (name: string) => kvLedgerDoc(new MemoryKV(), name) }]) {
+    for (const stores of [ledgerStores(dir, ONE), { doc: (name: string) => kvLedgerDoc(new MemoryKV(), name) }]) {
       const cfg = { maxScansPerHour: 1, windowMs: 3600_000, ledgerFile: join(dir, 'visitor-throttle.json'), ledger: stores.doc('visitor-throttle.json') }
       expect((await checkVisitorThrottle('1.2.3.4', cfg, NOW)).ok).toBe(true)
       await recordVisitorScan('1.2.3.4', cfg, NOW)
@@ -91,7 +126,7 @@ describe('a ledger document', () => {
 
 describe('the spend ledger', () => {
   it('on a file: Budget under LocalSpendLedger, charged before the attempt, the file the CLIs read', async () => {
-    const s = ledgerStores(dir, {})
+    const s = ledgerStores(dir, ONE)
     const ledger = s.spend('ledger.json', 0.01, () => 0.004)
     await ledger.charge('chatgpt')
     await ledger.charge('chatgpt')

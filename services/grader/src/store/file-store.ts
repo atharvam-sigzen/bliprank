@@ -5,7 +5,7 @@ import { allPendingCompetitorRequests, competitorRequestsFor } from '../competit
 import { allPendingPromptRequests, promptRequestsFor, readCustomPromptSet } from '../custom-prompts.js'
 import { latestCycle, listCycles, readCycle, writeCycle, type CycleResult, type StoredCycle as FileCycle } from '../cycles.js'
 import { readOverride } from '../override-store.js'
-import { detectMultiInstanceRuntime } from '../ledger-stores.js'
+import { resolveTopology } from '../ledger-stores.js'
 import { readCategoryRecord, withRecordLock } from '../resolve-category.js'
 import type { DocumentKind, RequestKind, StoredCycle, StoredRequest, Versioned, WorkspaceStore } from './pg-store.js'
 
@@ -205,7 +205,8 @@ export function fileWorkspaceStore(dataDir: string): WorkspaceStore {
  * workspace (B3b tenancy audit). The CLIs run on a machine and get the files.
  */
 export function defaultWorkspaceStore(dataDir: string, env: NodeJS.ProcessEnv = process.env): WorkspaceStore {
-  const marker = detectMultiInstanceRuntime(env)
-  if (marker) throw new Error(`workspace store: ${marker} is set, so this runtime is many instances; a caller here must pass the session's store, never fall back to files`)
+  // A fleet by marker or by declaration (B3c item 4): a bare fleet sets no marker.
+  const { topology, because } = resolveTopology(env)
+  if (topology === 'fleet') throw new Error(`workspace store: ${because}, so this runtime is many instances; a caller here must pass the session's store, never fall back to files`)
   return fileWorkspaceStore(dataDir)
 }

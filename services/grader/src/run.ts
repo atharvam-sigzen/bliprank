@@ -51,7 +51,7 @@ import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.
 import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
 import { competitorsIn } from './competitor-overrides.js'
 import { customPromptsAt, readCustomPromptSet } from './custom-prompts.js'
-import { ledgerStores, type LedgerStores } from './ledger-stores.js'
+import { declaredSingleProcess, ledgerStores, type LedgerStores } from './ledger-stores.js'
 import { categoryRecordIn, customPromptsAtIn, customPromptsIn, recordsIn } from './store/documents.js'
 import { defaultWorkspaceStore } from './store/file-store.js'
 import type { WorkspaceStore } from './store/pg-store.js'
@@ -170,8 +170,9 @@ export function parseArgs(
 
   const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const dataDir = args.get('data') ?? join(here, '..', 'data')
-  // After the data dir: the author's ledger lives beside the collector's.
-  const author = bankAuthorConfig(env, (n) => loadApiKey(repoRoot, env, n)?.key, dataDir) ?? undefined
+  // After the data dir: the author's ledger lives beside the collector's, on
+  // the file backend this CLI declares for itself (see runGrader).
+  const author = bankAuthorConfig(declaredSingleProcess(env), (n) => loadApiKey(repoRoot, env, n)?.key, dataDir) ?? undefined
   const maxPromptsArg = args.get('max-prompts')
   const allowanceArg = args.get('allowance')
   if (allowanceArg !== undefined && !(Number.isInteger(Number(allowanceArg)) && Number(allowanceArg) >= 0)) return { refuse: `--allowance must be a non-negative integer of attempts, got ${allowanceArg}` }
@@ -314,7 +315,12 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // of $1 therefore blocked every live scan afterwards, which is a fixture
     // run breaking live collection while spending nothing. Found by doing
     // exactly that during a lock test.
-    const ledgers = o.ledgers ?? ledgerStores(o.dataDir, process.env)
+    // The CLI's own ledgers: this process holds run.lock over the data
+    // directory, which is what `single-process` asserts, so the declaration is
+    // made here when the environment makes none; a declared fleet or a PaaS
+    // marker still refuses (ledger-stores.ts, B3c item 4). A route passes its
+    // own ledgers and never reaches this line.
+    const ledgers = o.ledgers ?? ledgerStores(o.dataDir, declaredSingleProcess(process.env))
     const store = o.store ?? defaultWorkspaceStore(o.dataDir)
     const spendLedger = ledgers.spend(offline ? `ledger.${o.mode}.json` : 'ledger.json', o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]), {
       ...(o.runAllowanceCalls !== undefined ? { runAllowanceCalls: o.runAllowanceCalls } : {}),
@@ -352,7 +358,8 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
       }),
     )
 
-    const declared = { ...process.env, COLLECTOR_TOPOLOGY: 'single-process' }
+    // Declared only when nothing is declared: a fleet stays a fleet (B3c item 4).
+    const declared = declaredSingleProcess(process.env)
     const reason = 'local Grader runner: one process, holding an exclusive run.lock over its data dir'
     // Where the answers this run pays for are kept: R2 + Upstash when the
     // environment names them, this machine's disk otherwise (answer-stores.ts).

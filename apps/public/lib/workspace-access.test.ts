@@ -56,21 +56,23 @@ afterEach(() => {
 })
 
 describe('identity off', () => {
-  it('a machine gets the file store over its data directory, and file ledgers', async () => {
-    const a = await workspaceAccess({ NODE_ENV: 'test', GRADER_DATA_DIR: dir })
+  it('a machine that declares itself one process gets the file store over its data directory, and file ledgers', async () => {
+    const a = await workspaceAccess({ NODE_ENV: 'test', GRADER_DATA_DIR: dir, COLLECTOR_TOPOLOGY: 'single-process' })
     expect(a.ok && a.backend).toBe('file')
     expect(a.ok && a.ledgers.backend).toBe('file')
     expect(a.ok && a.who).toBe('local')
   })
 
-  it('a fleet runtime is refused the file store outright', async () => {
-    const a = await workspaceAccess({ NODE_ENV: 'test', GRADER_DATA_DIR: dir, VERCEL: '1' }, () => {})
-    expect(a).toEqual({ ok: false, status: 503, message: NO_STORE })
+  it('a fleet runtime is refused the file store outright, by marker or by declaration (B3c item 4)', async () => {
+    expect(await workspaceAccess({ NODE_ENV: 'test', GRADER_DATA_DIR: dir, VERCEL: '1' }, () => {})).toEqual({ ok: false, status: 503, message: NO_STORE })
+    expect(await workspaceAccess({ NODE_ENV: 'test', GRADER_DATA_DIR: dir, COLLECTOR_TOPOLOGY: 'fleet' }, () => {})).toEqual({ ok: false, status: 503, message: NO_STORE })
+    // A route never declares single-process for itself: a marker set beside the declaration is still a fleet.
+    expect(await workspaceAccess({ NODE_ENV: 'test', GRADER_DATA_DIR: dir, VERCEL: '1', COLLECTOR_TOPOLOGY: 'single-process' }, () => {})).toEqual({ ok: false, status: 503, message: NO_STORE })
   })
 })
 
 describe('identity on: the workspace is the session\'s, and only the session\'s', () => {
-  const env: NodeJS.ProcessEnv = { NODE_ENV: 'test', ...IDENTITY, GRADER_DATA_DIR: '' }
+  const env: NodeJS.ProcessEnv = { NODE_ENV: 'test', ...IDENTITY, GRADER_DATA_DIR: '', COLLECTOR_TOPOLOGY: 'single-process' }
   beforeEach(() => {
     env.GRADER_DATA_DIR = dir
   })
