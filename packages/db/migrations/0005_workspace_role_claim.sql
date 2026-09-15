@@ -32,14 +32,23 @@
 --
 -- ⚠️ CONSEQUENCE FOR A HUMAN TO WEIGH. ws_put_document is also how a FIRST
 -- category record is written when a domain is scanned or previewed, so under
--- this rule a member's session cannot record a first category: a member's
--- preview or scan of a domain with no record fails at the record write,
--- before anything is spent. If a member should be able to start a first
--- scan, the rule below is where that is decided (version 1 of a
+-- this rule a member's session cannot record a first category. The resolver
+-- would author a bank BEFORE writing the record (a model call, charged to
+-- the author's ledger before it is made), so the refusal here alone would
+-- have let a member pay for a record it cannot write (B3c tenancy audit,
+-- MAJOR 3); the preview and scan routes therefore refuse a member's request
+-- for an unrecorded domain before anything runs (apps/public/lib/
+-- workspace-access.ts, recordsFirst). If a member should be able to start a
+-- first scan, the rule below is where that is decided (version 1 of a
 -- category-record by any member; every other write by an owner or admin),
--- and it is one condition in ws_put_document. Today no member exists on the
--- deployment: members are added by the onboarding role only, and D1 has not
--- been built.
+-- one condition in ws_put_document and one line in recordsFirst. Today no
+-- member exists on the deployment: members are added by the onboarding role
+-- only, and D1 has not been built.
+--
+-- set_workspace(uuid), the owner-only maintenance path, stamps the
+-- workspace's owner, else an admin, else any member; a workspace whose only
+-- member is a member is stamped as one, and a maintenance write that applies
+-- a decision is then refused like the member's own. Fail closed, stated here.
 --
 -- ONE TRANSACTION, as 0003 and 0004: the migration owner joins two writing
 -- groups to replace verifier-owned and svc_onboard-owned functions, and a

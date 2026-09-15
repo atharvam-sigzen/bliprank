@@ -265,6 +265,34 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await expect(check(d4)).rejects.toThrow(new RegExp(`out of sequence at: ${skipped}`))
   })
 
+  it('a definer writer of a decision that stops reading the role is caught, and so is a writer of state that stops taking its workspace from the context (B3c tenancy audit, MAJOR 1)', async () => {
+    const d = await healthy()
+    // ws_resolve_request with 0005's role check dropped: still scoped by ws_required(), still owned by svc_onboard, still on the allowlist.
+    await d.exec(`CREATE OR REPLACE FUNCTION ws_resolve_request(p_kind text, p_host text, p_expect_requested_at timestamptz, p_status text, p_by text, p_note text) RETURNS boolean
+      LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+      DECLARE ws uuid := ws_required(); n integer;
+      BEGIN
+        UPDATE workspace_requests r SET status = p_status, resolved_at = now(), resolved_by = p_by, note = p_note
+         WHERE r.workspace_id = ws AND r.kind = p_kind AND r.host = p_host AND r.status = 'pending' AND r.requested_at = p_expect_requested_at;
+        GET DIAGNOSTICS n = ROW_COUNT;
+        RETURN n = 1;
+      END $fn$`)
+    await expect(check(d)).rejects.toThrow(/without ws_required\(\) or, for a decision, current_workspace_role\(\): ws_resolve_request/)
+
+    // ws_put_cycle taking its workspace straight from the reader instead of ws_required(): not a decision, but no longer refused without a context.
+    const d2 = await healthy()
+    await d2.exec(`CREATE OR REPLACE FUNCTION ws_put_cycle(p_host text, p_day date, p_algo_version text, p_comparison_basis text, p_result jsonb) RETURNS void
+      LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+      BEGIN
+        INSERT INTO workspace_cycles (workspace_id, host, day, algo_version, comparison_basis, result)
+        VALUES (current_workspace_id(), p_host, p_day, p_algo_version, p_comparison_basis, p_result);
+      END $fn$`)
+    await expect(check(d2)).rejects.toThrow(/ws_put_cycle/)
+
+    // Filing a request is not a decision: the real ws_file_request, which reads no role, passes (the healthy database does).
+    await check(await healthy())
+  })
+
   it('a tenant-readable relation with an open policy, a wrapper policy, an open WITH CHECK, or no read policy is caught (B3r item 3)', async () => {
     const d = await healthy()
     await d.exec(`CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;

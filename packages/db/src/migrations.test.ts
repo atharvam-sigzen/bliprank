@@ -91,11 +91,12 @@ describe('the migration lineage is one ordered list', () => {
 })
 
 describe('a migration that fails after granting the owner a writing group leaves no standing membership (B3r item 1)', () => {
-  const grantIn = (file: string) => {
+  /** Every GRANT of a writing group in the file, not only the first: 0005 joins two groups in turn (B3c tenancy audit, MINOR 3). */
+  const grantsIn = (file: string) => {
     const stmts = splitStatements(read(file))
-    const grantAt = stmts.findIndex((s) => /GRANT (svc_onboard|auth_verifier) TO %I/.test(s))
-    expect(grantAt).toBeGreaterThan(0)
-    return { stmts, grantAt }
+    const at = stmts.map((s, i) => (/GRANT (svc_onboard|auth_verifier) TO %I/.test(s) ? i : -1)).filter((i) => i > 0)
+    expect(at.length).toBeGreaterThan(0)
+    return { stmts, at }
   }
 
   /** Every file before `file`, applied whole; then `file`'s statements one at a time up to and including the GRANT. */
@@ -123,21 +124,23 @@ describe('a migration that fails after granting the owner a writing group leaves
     expect(subjects).toEqual(expect.arrayContaining(['0003_accounts_identity.sql', '0004_workspace_state.sql']))
   })
   for (const file of subjects) {
-    it(`${file}: cut after its GRANT, the owner is in no writing group`, async () => {
-      const { stmts, grantAt } = grantIn(file)
+    it(`${file}: cut after each of its GRANTs, the owner is in no writing group`, async () => {
+      const { stmts, at } = grantsIn(file)
       // The first statement carries the header comments; what it says is BEGIN.
       expect((stmts[0] ?? '').split('\n').filter((l) => l.trim() && !l.trim().startsWith('--')).join('\n').trim()).toBe('BEGIN')
-      const pg = await cutAfterGrant(file, stmts, grantAt)
-      try {
-        expect((await membership(pg)).rows).toEqual([])
-      } finally {
-        await pg.close()
+      for (const grantAt of at) {
+        const pg = await cutAfterGrant(file, stmts, grantAt)
+        try {
+          expect([grantAt, (await membership(pg)).rows]).toEqual([grantAt, []])
+        } finally {
+          await pg.close()
+        }
       }
     })
 
     it(`${file}: the test bites — without the BEGIN the membership stands`, async () => {
-      const { stmts, grantAt } = grantIn(file)
-      const pg = await cutAfterGrant(file, stmts, grantAt, 1)
+      const { stmts, at } = grantsIn(file)
+      const pg = await cutAfterGrant(file, stmts, at[0]!, 1)
       try {
         expect((await membership(pg)).rows.length).toBe(1)
       } finally {

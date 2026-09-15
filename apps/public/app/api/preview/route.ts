@@ -10,7 +10,7 @@ import { competitorsIn } from '../../../../../services/grader/src/competitor-ove
 import { categoryRecordIn, recordsIn } from '../../../../../services/grader/src/store/documents.js'
 import type { WorkspaceStore } from '../../../../../services/grader/src/store/pg-store.js'
 import { ROOT } from '@/lib/data-dir'
-import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
+import { FIRST_RECORD_NEEDS_OPERATOR, recordsFirst, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
 import { PREVIEW_FAILED } from '@/lib/route-errors'
 import {
@@ -136,6 +136,11 @@ export async function POST(req: Request): Promise<Response> {
   const access = await workspaceAccess(env)
   if (!access.ok) return json({ kind: 'access', message: access.message }, access.status)
   const { store, ledgers, dataDir: DATA } = access
+  // A first record is an operator's act on the Postgres store (migration
+  // 0005). Asked before any throttle is booked, any homepage is read or any
+  // bank is authored: a member's preview of an unrecorded domain would pay
+  // for a record it cannot write (B3c tenancy audit, MAJOR 3).
+  if (!recordsFirst(access) && !(await categoryRecordIn(store, domain))) return json({ kind: 'operator-only', message: FIRST_RECORD_NEEDS_OPERATOR }, 403)
   const now = new Date()
   const cfg = previewThrottleConfig(access, env)
   const visitorIp = extractClientIp(req, env)

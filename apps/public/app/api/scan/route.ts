@@ -13,7 +13,7 @@ import { categoryRecordIn, customPromptsIn, cycleInputOf } from '../../../../../
 import type { WorkspaceStore } from '../../../../../services/grader/src/store/pg-store.js'
 import { measuresCurrentCategory } from '@/lib/scan-result'
 import { ROOT } from '@/lib/data-dir'
-import { workspaceAccess } from '@/lib/workspace-access'
+import { FIRST_RECORD_NEEDS_OPERATOR, recordsFirst, workspaceAccess } from '@/lib/workspace-access'
 import {
   checkVisitorThrottle,
   defaultVisitorThrottleConfig,
@@ -290,6 +290,17 @@ export async function POST(req: Request): Promise<Response> {
               return done(c)
             }
           }
+        }
+
+        // 1''. A FIRST RECORD IS AN OPERATOR'S ACT on the Postgres store
+        //      (migration 0005). Refused here, before the flags, the key and
+        //      every gate: the runner would resolve the category first, which
+        //      may author a bank (a charged model call), and only then be
+        //      refused the record write (B3c tenancy audit, MAJOR 3). A
+        //      cached cycle above is still served: reading is every member's.
+        if (!recordsFirst(access) && !(await categoryRecordIn(store, domain))) {
+          send(c, 'error', { kind: 'operator-only', message: FIRST_RECORD_NEEDS_OPERATOR })
+          return done(c)
         }
 
         const flags = resolveFlags(env)

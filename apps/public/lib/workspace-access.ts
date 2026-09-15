@@ -117,6 +117,21 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
  */
 export const applies = (access: WorkspaceAccess & { ok: true }): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')
 
+/**
+ * MAY THIS SESSION WRITE A FIRST CATEGORY RECORD? On the Postgres store a
+ * first record goes through ws_put_document, which since migration 0005
+ * refuses a member; on a machine's file store everyone records. The preview
+ * and scan routes ask this BEFORE resolving a category for a domain with no
+ * record, because the resolver may author a bank (a model call, charged to
+ * the author's ledger before it is made) and only then write the record —
+ * a member would have paid for a record it cannot write (B3c tenancy audit,
+ * MAJOR 3). Whether a member should be allowed a first record at all is the
+ * human question 0005's header records; this keeps the app and the database
+ * saying the same thing until it is decided.
+ */
+export const recordsFirst = (access: WorkspaceAccess & { ok: true }): boolean => access.backend !== 'postgres' || applies(access)
+export const FIRST_RECORD_NEEDS_OPERATOR = "This domain has no category on record in this workspace yet, and recording one is an owner's or admin's act. Ask them to run its first scan. Nothing was fetched, collected or charged."
+
 /** The message the store raises when a write names a version that is no longer the current one: the caller reads again. */
 export const isStaleVersion = (e: unknown): boolean => /read it again before deciding/.test(e instanceof Error ? e.message : String(e))
 export const READ_AGAIN = 'The record changed while you were deciding. Read it again and decide against what stands now.'

@@ -177,6 +177,34 @@ BEGIN
   END IF;
 END $do$;
 
+-- THE ROLE CHECK IS DERIVED, NOT ASSUMED (B3c tenancy audit, MAJOR 1). The
+-- allowlist above says which definer doors exist; it says nothing about what
+-- their bodies enforce, so a CREATE OR REPLACE that dropped one line of
+-- ws_put_document would pass it. Here every SECURITY DEFINER function owned
+-- by svc_onboard whose body writes one of the 0004 state tables must take
+-- its workspace from ws_required(), and one that lands a DECISION — an
+-- insert into workspace_documents, an update of workspace_requests — must
+-- read current_workspace_role() (0005). Filing a request and filing a cycle
+-- are not decisions and are not held to the role. A substring is not a
+-- semantics; the behavioural proof is workspace-state.test.ts, but a writer
+-- that cannot even name the check is refused at deploy.
+\echo 'checking every definer writer of workspace state takes its workspace from the context and, for a decision, reads the role...'
+DO $do$
+DECLARE bad text;
+BEGIN
+  SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
+    SELECT p.oid::regprocedure::text AS sig
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles o ON o.oid = p.proowner
+     WHERE p.prosecdef AND n.nspname = 'public' AND o.rolname = 'svc_onboard'
+       AND p.prosrc ~* '(insert\s+into|update|delete\s+from)\s+workspace_(cycles|documents|requests)\M'
+       AND (p.prosrc NOT LIKE '%ws_required()%'
+            OR (p.prosrc ~* '(insert\s+into\s+workspace_documents|update\s+workspace_requests)\M' AND p.prosrc NOT LIKE '%current_workspace_role()%'))
+  ) f;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'definer writers of workspace state without ws_required() or, for a decision, current_workspace_role(): %', bad;
+  END IF;
+END $do$;
+
 -- Migrations 0003 and 0004 grant the migration owner a writing group to
 -- transfer function ownership and revoke it at the end. A failure between
 -- the two leaves the owner a standing member with unbounded write on

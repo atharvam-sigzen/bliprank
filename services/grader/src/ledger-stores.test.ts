@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { BudgetExceeded, MemoryKV, RunAllowanceExceeded } from '@bliprank/collector'
@@ -87,6 +87,25 @@ describe('a ledger document', () => {
     await expect(doc.read()).rejects.toThrow()
     expect(await doc.update((cur) => (cur === CORRUPT ? 'started afresh' : 'kept'))).toBe('started afresh')
     expect(JSON.parse(readFileSync(join(dir, 'x.json'), 'utf8'))).toBe('started afresh')
+  })
+
+  it('on a file: two updates at once in one process both land; a fresh lock another writer holds fails the write closed; a lock a dead process left behind is reclaimed (B3c cost review)', async () => {
+    const file = join(dir, 'c.json')
+    const doc = fileLedgerDoc(file, async () => {})
+    await doc.update(() => ({ n: 0 }))
+    // Without the lock the two reads interleaved across the await and one increment was lost.
+    await Promise.all([doc.update((c) => ({ n: (c as { n: number }).n + 1 })), doc.update((c) => ({ n: (c as { n: number }).n + 1 }))])
+    expect(await doc.read()).toEqual({ n: 2 })
+    expect(existsSync(`${file}.lock`)).toBe(false)
+    // Another process holds the lock, freshly: refused after the attempts, nothing written.
+    writeFileSync(`${file}.lock`, 'someone else')
+    await expect(doc.update(() => ({ n: 99 }))).rejects.toThrow(/could not take its lock/)
+    expect(await doc.read()).toEqual({ n: 2 })
+    // The same lock, older than the TTL: its holder is presumed dead and the write lands.
+    const old = new Date(Date.now() - 11_000)
+    utimesSync(`${file}.lock`, old, old)
+    expect(await doc.update((c) => ({ n: (c as { n: number }).n + 1 }))).toEqual({ n: 3 })
+    expect(existsSync(`${file}.lock`)).toBe(false)
   })
 
   it('on KV: the same contract, and update serialises under a lock that a second writer waits for', async () => {

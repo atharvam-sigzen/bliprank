@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { RunAllowanceExceeded, type KV, type SpendLedger } from '@bliprank/collector'
 
@@ -42,30 +42,83 @@ const readOrCorrupt = async (read: () => Promise<unknown> | unknown): Promise<un
   }
 }
 
-export function fileLedgerDoc(file: string): LedgerDoc {
+/** How long a lock may be held before it is presumed abandoned, and how long a waiter tries. The same figures on both backends. */
+const LOCK_TTL_SEC = 10
+const LOCK_ATTEMPTS = 40
+const LOCK_WAIT_MS = 50
+const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * A file document, written under an EXCLUSIVE LOCK FILE (B3c cost review).
+ *
+ * The first version read, computed and wrote with nothing around it, on the
+ * argument that one process runs on a machine. Two things were wrong with
+ * that. The tick lock this replaced was a file opened `wx`, which the OS
+ * makes exclusive across processes, so two `tick` commands started in the
+ * same instant from two shells could not both win; a plain read-modify-write
+ * lets both. And the read sat behind an `await`, so even inside ONE process
+ * two updates could interleave and one count be lost.
+ *
+ * Now `${file}.lock` is created `wx` (the OS refuses a second creator), and
+ * from the moment it is held to the moment the file is written there is no
+ * `await`: the critical section is synchronous, so a second update in this
+ * process cannot run inside it, and a second process cannot take the lock.
+ * A lock older than the TTL belongs to a process that died and is reclaimed;
+ * a waiter tries for as long as a KV waiter does and then fails CLOSED. The
+ * shape is the KV one: setnx with a TTL, release after the write.
+ */
+export function fileLedgerDoc(file: string, sleep: (ms: number) => Promise<void> = defaultSleep): LedgerDoc {
   const read = (): unknown => (existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as unknown) : null)
+  const lock = `${file}.lock`
+  /** The lock's descriptor, or null while another writer holds a fresh one. */
+  const tryLock = (): number | null => {
+    try {
+      if (existsSync(lock) && Date.now() - statSync(lock).mtimeMs > LOCK_TTL_SEC * 1000) rmSync(lock, { force: true })
+    } catch {
+      /* vanished between the check and the stat: the open below decides */
+    }
+    try {
+      return openSync(lock, 'wx')
+    } catch {
+      return null
+    }
+  }
   return {
     async read() {
       return read()
     },
     async update(fn) {
-      // One process on this machine (the runner holds run.lock; the routes run
-      // in one Node process when identity is off): the synchronous
-      // read-modify-write is atomic for the same reason it always was.
-      const next = fn(await readOrCorrupt(read))
       mkdirSync(dirname(file), { recursive: true })
-      writeFileSync(file, JSON.stringify(next, null, 2) + '\n')
-      return next
+      let fd: number | null = null
+      for (let i = 0; i < LOCK_ATTEMPTS && fd === null; i++) {
+        fd = tryLock()
+        if (fd === null) await sleep(LOCK_WAIT_MS)
+      }
+      if (fd === null) throw new Error(`ledger ${file}: could not take its lock in ${(LOCK_ATTEMPTS * LOCK_WAIT_MS) / 1000}s; another writer holds ${lock}, or a process left it behind less than ${LOCK_TTL_SEC}s ago`)
+      try {
+        // No await from here to the write.
+        let current: unknown
+        try {
+          current = read()
+        } catch {
+          current = CORRUPT
+        }
+        const next = fn(current)
+        writeFileSync(file, JSON.stringify(next, null, 2) + '\n')
+        return next
+      } finally {
+        try {
+          closeSync(fd)
+        } catch {
+          /* already closed */
+        }
+        rmSync(lock, { force: true })
+      }
     },
   }
 }
 
-/** How long a KV lock may be held before it is presumed abandoned, and how long a waiter tries. */
-const LOCK_TTL_SEC = 10
-const LOCK_ATTEMPTS = 40
-const LOCK_WAIT_MS = 50
-
-export function kvLedgerDoc(kv: KV, key: string, sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): LedgerDoc {
+export function kvLedgerDoc(kv: KV, key: string, sleep: (ms: number) => Promise<void> = defaultSleep): LedgerDoc {
   const read = async (): Promise<unknown> => {
     const raw = await kv.get(key)
     return raw === null ? null : (JSON.parse(raw) as unknown)

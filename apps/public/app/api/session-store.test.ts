@@ -52,7 +52,7 @@ import { GET as gaps } from './gaps/route'
 import { POST as preview } from './preview/route'
 import { POST as scan } from './scan/route'
 import { NOT_SIGNED_IN } from '@/lib/auth/handlers'
-import { READ_AGAIN } from '@/lib/workspace-access'
+import { FIRST_RECORD_NEEDS_OPERATOR, READ_AGAIN } from '@/lib/workspace-access'
 
 /**
  * The app's Db with one race on demand (B3c item 7): while `race.armed`, the
@@ -306,6 +306,30 @@ describe('request → session → token → context → store → response', () 
     expect((await member.documents.latest('category-record', 'acme.test'))?.version).toBe(2)
     expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE workspace_id = $1 AND kind = 'category-record' AND host = 'acme.test'`, [ws[ONE.id]!.workspace])).rows).toEqual([{ n: 2 }])
     expect((await pg.query<{ status: string }>(`SELECT status FROM workspace_requests WHERE workspace_id = $1 AND kind = 'category' AND host = 'acme.test' AND status = 'pending'`, [ws[ONE.id]!.workspace])).rows).toEqual([{ status: 'pending' }])
+  })
+
+  it('a member\'s preview or scan of a domain with no record is refused before anything is fetched, authored or charged; with a record on file it is served (B3c tenancy audit, MAJOR 3)', async () => {
+    session.user = MEMBER
+    pages.fetched.length = 0
+    const pv = await post(preview, 'preview', { domain: 'fresh.test' })
+    expect(pv.status).toBe(403)
+    expect(await pv.json()).toEqual({ kind: 'operator-only', message: FIRST_RECORD_NEEDS_OPERATOR })
+    expect(pages.fetched).toEqual([])
+    Object.assign(process.env, { COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'test-key-never-used' })
+    const fetchSpy = vi.fn(async () => {
+      throw new Error('the test never reaches a network')
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    const text = await (await post(scan, 'scan', { domain: 'fresh.test' })).text()
+    const err = /^event: error\ndata: (.*)$/m.exec(text)
+    expect(JSON.parse(err![1]!)).toEqual({ kind: 'operator-only', message: FIRST_RECORD_NEEDS_OPERATOR })
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE host = 'fresh.test'`)).rows).toEqual([{ n: 0 }])
+    // With the owner's record on file the member's preview reads it: rung 0, nothing fetched or authored.
+    await storeOf(ONE).documents.put('category-record', 'fresh.test', RECORD, 0)
+    const again = await post(preview, 'preview', { domain: 'fresh.test' })
+    expect(again.status).toBe(200)
+    expect(pages.fetched).toEqual([])
   })
 
   it('a correction that loses the version race is a 409 read-again, nothing of it lands, and read again it applies (B3c item 7)', async () => {

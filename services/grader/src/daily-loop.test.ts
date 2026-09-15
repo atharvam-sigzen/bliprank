@@ -9,7 +9,7 @@ import { listCycles } from './cycles.js'
 import { dailyCapUsd, dailyLedgerFile, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, setTracked } from './due.js'
-import { kvLedgerStores } from './ledger-stores.js'
+import { kvLedgerStores, ledgerStores, type LedgerStores } from './ledger-stores.js'
 import { recordCategory } from './resolve-category.js'
 import type { ScanResult } from './scan.js'
 
@@ -255,10 +255,17 @@ describe('the tick lock and the daily ledger live in the store\'s ledgers, and e
     return { held, go }
   }
 
-  it('on KV: a second tick is refused while the first holds the lease; the lease is released after; nothing is written to disk', async () => {
+  // Both backends: the deployment's KV over the in-memory double, and a machine's files under their lock file (B3c cost review).
+  const backends: readonly (readonly [string, () => LedgerStores])[] = [
+    ['KV', () => kvLedgerStores(new MemoryKV())],
+    ['files', () => ledgerStores(dir, ONE)],
+  ]
+
+  for (const [name, mk] of backends) {
+  it(`on ${name}: a second tick is refused while the first holds the lease, and the lease is released after`, async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
-    const ledgers = kvLedgerStores(new MemoryKV())
+    const ledgers = mk()
     const { held, go } = blocked()
     const first = runTick(
       { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture', ledgers },
@@ -266,7 +273,7 @@ describe('the tick lock and the daily ledger live in the store\'s ledgers, and e
     )
     await until(async () => (await ledgers.doc('tick-lock.json').read()) !== null)
     const second = await runTick({ dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture', ledgers }, { collect: async () => { throw new Error('must not be called') }, now: () => T0 })
-    expect(second).toMatchObject({ refuse: expect.stringContaining('another tick holds the tick-lock.json ledger in Upstash') })
+    expect(second).toMatchObject({ refuse: expect.stringContaining('another tick holds') })
     go()
     const outcome = await first
     if ('refuse' in outcome) throw new Error(outcome.refuse)
@@ -276,17 +283,19 @@ describe('the tick lock and the daily ledger live in the store\'s ledgers, and e
     const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
     expect(day).toMatchObject({ spentUsd: expect.closeTo(0.8, 6), calls: 170 })
     expect(Object.values(day.domains).map((d) => d.status)).toEqual(['scanned', 'scanned'])
-    expect(existsSync(dailyLedgerFile(dir))).toBe(false)
-    expect(existsSync(join(dir, 'tick-lock.json'))).toBe(false)
+    // On KV nothing of the ledgers touches the disk; on files no lock file is left behind.
+    expect(existsSync(dailyLedgerFile(dir))).toBe(name === 'files')
+    expect(existsSync(join(dir, 'tick-lock.json.lock'))).toBe(false)
+    expect(existsSync(join(dir, 'daily-spend.json.lock'))).toBe(false)
   })
 
-  it('two ticks that overlap (a stale lease reclaimed) book against ONE stored total: the host the first has in flight is refused to the second, the cap admits one cycle in all, and the day never exceeds it', async () => {
+  it(`on ${name}: two ticks that overlap (a stale lease reclaimed) book against ONE stored total: the host the first has in flight is refused to the second, the cap admits one cycle in all, and the day never exceeds it`, async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
     // The hard ceiling is exactly one cycle's expected cost with headroom, so the two ticks compete for one admission.
     const cycle = 17 * PER_PROMPT
     const env = { ...ONE, COLLECTION_BUDGET_USD_DAILY: String(cycle * RETRY_HEADROOM + 1e-6) }
-    const ledgers = kvLedgerStores(new MemoryKV())
+    const ledgers = mk()
     const { held, go } = blocked()
     const first = runTick(
       { dataDir: dir, env, day: '2026-09-07', apply: true, mode: 'fixture', ledgers },
@@ -318,6 +327,7 @@ describe('the tick lock and the daily ledger live in the store\'s ledgers, and e
     expect(day.spentUsd).toBeLessThanOrEqual(day.capUsd + 1e-9)
     expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
   })
+  }
 
   it('a live gate refusal gives its reservation back, so the next domain is not charged for it', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
