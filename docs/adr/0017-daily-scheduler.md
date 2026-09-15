@@ -524,3 +524,23 @@ Verification, without spending: `domain-ceiling.test.ts` (two workspaces on
 one ledger take their own two cycles of one host, a machine's ledger keeps its
 bare-host history), `session-store.test.ts` (through `/api/scan`: Two's two
 cycles of a host do not refuse One, and Two is refused on its own).
+
+**Addendum, 2026-09-15 (MVP_PLAN B6, recorded by C1 / ADR-0018).** The
+oversight session's spend decision on the consequence above, which the owner
+may overrule: **accepted for the MVP.** Re-keying the ceiling per workspace
+(B3d item 1) removed the only per-host bound on hand-started spend across
+the deployment, and any member may open first cycles on any number of new
+hosts, each with a fresh per-workspace ceiling. That is accepted because the
+burst cap on new domains a day (`GRADER_MAX_NEW_SCANS_PER_DAY`,
+deployment-wide), the per-visitor throttle, the provider's live quota read
+before every scan, and the lifetime ledger every attempt is charged to still
+bound the day and the total, and none of them is a per-tenant fairness
+device — the real per-workspace bound is entitlement. So D2 must gate hosts
+per workspace by plan: `ws_put_cycle` and `ws_file_request` refuse a host
+beyond the plan's tracked-host count, the way migration 0001 gates
+`score_rows` on `workspace_subscriptions`; and until D2 lands,
+`GRADER_MAX_NEW_SCANS_PER_DAY` is the operator's lever on hand-started
+spend. The loop's bounds are unchanged by this and by ADR-0018: a loop job
+runs under the daily cap, the tick lease and the daily-ledger fold; a
+hand-started cycle runs under none of those three and under the bounds this
+amendment lists.
