@@ -360,7 +360,8 @@ describe('the request itself', () => {
 describe('⚠️ EVERY ATTEMPT IS CHARGED TO A DOLLAR LEDGER BEFORE IT IS MADE (R3)', () => {
   it('the ledger is named from the data dir, priced and capped from the environment, free by default', () => {
     const c = bankAuthorConfig({ BANK_AUTHOR_CAP_USD: '2', BANK_AUTHOR_USD_PER_CALL: '0.004' } as NodeJS.ProcessEnv, () => 'k', DIR)!
-    expect(c.ledger).toEqual({ file: authorLedgerFile(DIR), capUsd: 2, usdPerCall: 0.004 })
+    expect(c.ledger).toMatchObject({ file: authorLedgerFile(DIR), capUsd: 2, usdPerCall: 0.004 })
+    expect(c.ledger.stores?.backend).toBe('file')
     const d = bankAuthorConfig({} as NodeJS.ProcessEnv, () => 'k', DIR)!
     expect(d.ledger.usdPerCall).toBe(0)
     expect(d.ledger.capUsd).toBe(5)

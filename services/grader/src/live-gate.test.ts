@@ -90,8 +90,8 @@ describe('a scan is refused unless BOTH limits allow it', () => {
 
   it('refuses a NEW domain once the day is spent, but never a repeat', async () => {
     const c = cfg({ maxNewPerDay: 2, callsPerEngine: 17 })
-    recordScan('one.com', c, NOW)
-    recordScan('two.com', c, NOW)
+    await recordScan('one.com', c, NOW)
+    await recordScan('two.com', c, NOW)
 
     const fresh = await checkGate('three.com', c, 'k', NOW, fetchOK())
     expect(fresh.ok).toBe(false)
@@ -105,8 +105,8 @@ describe('a scan is refused unless BOTH limits allow it', () => {
 
   it('the cap is per UTC day and yesterday does not count against today', async () => {
     const c = cfg({ maxNewPerDay: 1, callsPerEngine: 17 })
-    recordScan('one.com', c, new Date('2026-08-24T23:00:00Z'))
-    expect(scannedToday(c, NOW)).toEqual([])
+    await recordScan('one.com', c, new Date('2026-08-24T23:00:00Z'))
+    expect(await scannedToday(c, NOW)).toEqual([])
     expect((await checkGate('new.com', c, 'k', NOW, fetchOK())).ok).toBe(true)
   })
 
@@ -146,16 +146,16 @@ describe('a scan is refused unless BOTH limits allow it', () => {
 })
 
 describe('the ledger records only what actually spent', () => {
-  it('appends once per domain per day and is idempotent', () => {
+  it('appends once per domain per day and is idempotent', async () => {
     const c = cfg()
-    recordScan('a.com', c, NOW)
-    recordScan('a.com', c, NOW)
-    recordScan('b.com', c, NOW)
-    expect(scannedToday(c, NOW)).toEqual(['a.com', 'b.com'])
+    await recordScan('a.com', c, NOW)
+    await recordScan('a.com', c, NOW)
+    await recordScan('b.com', c, NOW)
+    expect(await scannedToday(c, NOW)).toEqual(['a.com', 'b.com'])
     expect(JSON.parse(readFileSync(c.ledgerFile, 'utf8'))['2026-08-25']).toEqual(['a.com', 'b.com'])
   })
 
-  it('is configurable, because a demo and a quiet week want different numbers', () => {
+  it('is configurable, because a demo and a quiet week want different numbers', async () => {
     const c = defaultGateConfig('/tmp/x', { GRADER_MAX_NEW_SCANS_PER_DAY: '5', GRADER_PROMPTS_PER_SCAN: '9' } as unknown as NodeJS.ProcessEnv)
     expect([c.maxNewPerDay, c.callsPerEngine]).toEqual([5, 9])
   })
@@ -318,7 +318,7 @@ describe('running out of quota mid-demo', () => {
 
   it('a domain already scanned today still passes the burst cap and is served from cache', async () => {
     const c = cfg({ maxNewPerDay: 1, callsPerEngine: 17 })
-    recordScan('first.com', c, NOW)
+    await recordScan('first.com', c, NOW)
     // Re-showing a domain must never be refused: that path spends nothing and is
     // exactly what a presenter does when they want the result back on screen.
     expect((await checkGate('first.com', c, 'k', NOW, fetchOK())).ok).toBe(true)

@@ -90,7 +90,10 @@ CREATE UNIQUE INDEX schema_migrations_one_per_number ON schema_migrations ((left
 ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schema_migrations FORCE  ROW LEVEL SECURITY;
 CREATE POLICY schema_migrations_owner ON schema_migrations FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-INSERT INTO schema_migrations (name) VALUES ('0000_init'), ('0001_tenancy_identity'), ('0002_tenancy_context');
+-- This file's own row goes in FIRST, with the backfill: under a second file
+-- with this number the unique index refuses it here, before anything below
+-- runs, whether or not that file remembered its BEGIN.
+INSERT INTO schema_migrations (name) VALUES ('0000_init'), ('0001_tenancy_identity'), ('0002_tenancy_context'), ('0003_accounts_identity');
 
 -- ---------------------------------------------------------------------------
 -- 1. Accounts: the auth identity and the kind
@@ -269,7 +272,5 @@ GRANT EXECUTE ON FUNCTION workspaces_of(uuid)              TO app_rw;
 
 -- The migration owner is not left a standing member of the writing role.
 DO $$ BEGIN EXECUTE format('REVOKE svc_onboard FROM %I', current_user); END $$;
-
-INSERT INTO schema_migrations (name) VALUES ('0003_accounts_identity');
 
 COMMIT;

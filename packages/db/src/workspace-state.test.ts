@@ -180,6 +180,18 @@ describe('documents: version N+1 is the database\'s, history is rows, nothing is
     ])
   })
 
+  it('an expected version that is not the current one is refused; the current one, and none given, are accepted (B3b)', async () => {
+    await inWorkspace(WS1, async (q) => {
+      expect(await q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":1}', 0) AS v`)).toEqual([{ v: 1 }])
+      // A second "first decision" for the same host: refused, so write-once holds under the lock.
+      await expect(q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":2}', 0)`)).rejects.toThrow(/at version 1, not 0/)
+      // A correction decided against version 1 lands; one decided against a version that no longer is the current one does not.
+      expect(await q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":3}', 1) AS v`)).toEqual([{ v: 2 }])
+      await expect(q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":4}', 1)`)).rejects.toThrow(/at version 2, not 1/)
+      expect(await q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":5}') AS v`)).toEqual([{ v: 3 }])
+    })
+  })
+
   it('an unknown kind, a non-object body and a body over 64 KiB are refused', async () => {
     await inWorkspace(WS1, async (q) => {
       await expect(q(`SELECT ws_put_document('notes', 'acme.example', '{}')`)).rejects.toThrow(/check constraint/)

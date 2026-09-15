@@ -163,9 +163,14 @@ async function uncovered(): Promise<string[]> {
           FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
          WHERE ns.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
            AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
-           -- partitions are exercised through their parent, which owns the case
-           AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid)
-           AND (has_any_column_privilege('app_rw', c.oid, 'SELECT') OR has_any_column_privilege('public', c.oid, 'SELECT'))
+           -- partitions are exercised through their parent, which owns the case (an INHERITS child is its own relation)
+           AND NOT c.relispartition
+           -- readable by PUBLIC, by app_rw, by a login role that is a member of app_rw, or by a group any of those inherits
+           AND (has_any_column_privilege('public', c.oid, 'SELECT')
+                OR EXISTS (SELECT 1 FROM pg_roles r
+                            WHERE r.rolname NOT LIKE 'pg\\_%' AND NOT r.rolsuper
+                              AND EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'))
+                              AND has_any_column_privilege(r.oid, c.oid, 'SELECT')))
          ORDER BY 1`)
     ).rows as { rel: string }[]
   ).map((r) => r.rel)
@@ -299,7 +304,8 @@ describe('the shared relation is genuinely shared, and stays that way', () => {
 
 describe('the guard bites: a readable relation that no case covers is caught, whatever its policy says (B3r item 3)', () => {
   afterAll(async () => {
-    await db.exec(`DROP TABLE IF EXISTS leaky_open, leaky_wrapped, leaky_required; DROP FUNCTION IF EXISTS ws_wrap()`)
+    await db.exec(`DROP TABLE IF EXISTS leaky_open, leaky_wrapped, leaky_required, leaky_login, leaky_group; DROP FUNCTION IF EXISTS ws_wrap();
+                   DROP ROLE IF EXISTS web_prod; REVOKE reporting_grp FROM app_rw; DROP ROLE IF EXISTS reporting_grp`)
   })
 
   it('a USING (true) table the tenant can read is uncovered', async () => {
@@ -323,6 +329,24 @@ describe('the guard bites: a readable relation that no case covers is caught, wh
       CREATE POLICY wrapped ON leaky_wrapped FOR SELECT USING (workspace_id = ws_wrap())`)
     // The old derivation (qual LIKE '%current_workspace_id%') would not have listed this relation at all.
     expect(await uncovered()).toContain('public.leaky_wrapped')
+  })
+
+  it('a grant to the LOGIN role that is a member of app_rw, or to a group app_rw inherits, is the tenant\'s reach too (B3r audit, MAJOR)', async () => {
+    await db.exec(`
+      CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod;
+      CREATE ROLE reporting_grp NOLOGIN; GRANT reporting_grp TO app_rw;
+      CREATE TABLE leaky_login (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_login ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_login FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_login TO web_prod;
+      CREATE POLICY open ON leaky_login FOR SELECT TO web_prod USING (true);
+      CREATE TABLE leaky_group (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_group ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_group FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_group TO reporting_grp;
+      CREATE POLICY open ON leaky_group FOR SELECT TO reporting_grp USING (true)`)
+    // Named only app_rw, the derivation listed neither; both are reachable from a tenant session.
+    const missing = await uncovered()
+    expect(missing).toContain('public.leaky_login')
+    expect(missing).toContain('public.leaky_group')
   })
 
   it('ws_required() is not the tenant role to call: a policy through it fails closed rather than scoping (B3r item 2)', async () => {

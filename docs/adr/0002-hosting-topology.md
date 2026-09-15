@@ -186,3 +186,53 @@ The hosting table's `apps/public → Cloudflare Pages` row and the paragraph
 2026-08-18 decision and stay as its record. `CLAUDE.md` §6.1,
 `docs/ARCHITECTURE.md` §6.5, `docs/COST-MODEL.md` and `README.md` carry the
 current row.
+
+## Amendment 2 — one store per deployment: the session's workspace, and the ledgers beside it
+
+**Status:** Accepted (`docs/MVP_PLAN.md` B3b) · **Date:** 2026-09-15 · **Phase:** P3
+
+### The decision
+
+A deployment of `apps/public` has exactly one workspace store and one place
+its ledgers live, and both are decided by configuration, never by fallback:
+
+| Configuration | Workspace state | Ledgers | Who |
+|---|---|---|---|
+| Identity configured (the eight variables of CLAUDE.md §7) | Postgres, through a workspace token the server mints for the signed-in account's one workspace (`sessionWorkspaceStore`: one `withWorkspace` transaction per call) | Upstash, when the six answer-store variables are set (`ledgerStores`) | the verified session |
+| Identity off, one machine | this machine's `services/grader/data-live` files (`fileWorkspaceStore`) | this machine's files | the machine |
+| Identity off, a fleet runtime (`VERCEL` and the other markers `detectMultiInstanceRuntime` reads) | **refused** (503) | **refused** | nobody |
+| Ledgers on a fleet with no Upstash | — | **refused** at `ledgerStores` | — |
+
+Every route that reads or writes a cycle, a record, an override, a prompt set
+or a request (`/api/cycles`, `/api/answers`, `/api/gaps`, `/api/category`,
+`/api/competitors`, `/api/custom-prompts`, `/api/scan`, `/api/preview`)
+opens `workspaceAccess()` first and uses only what it returns. The workspace
+is derived from the session and from nothing else: a body or query field that
+names a workspace or an account is a field nothing reads. An account with no
+workspace is told to create one; an account with several (an agency) is
+refused until Stage D1 builds the portfolio, rather than silently given one.
+
+### Consequences
+
+* **On the deployment the Grader needs a sign-in.** The free preview and
+  scan of the reference deployment wrote and read one machine's disk; with
+  identity on they write and read the session's workspace, and without a
+  session they answer 401. A public, anonymous preview is a product decision
+  for Stage D, not something this amendment quietly keeps.
+* **`GRADER_DATA_DIR` must be writable on the function host** (`/tmp/grader`
+  on Vercel): the runner still writes `latest.json`, `run.lock` and its
+  dead-letter file there, and the bank author writes generated banks there.
+  Generated banks on a deployment are therefore per instance until they move
+  to the database (not in scope here; `prompt_banks` exists for it).
+* **The count ledgers are documents under a lock** (`ledger-doc.ts`: a
+  `setnx` key with a short TTL on KV, the process on a file); the dollar caps
+  are the collector's atomic `KvSpendLedger` on KV and `Budget` on a file,
+  with the per-run allowance of ADR-0017 kept on both (`withRunAllowance`).
+* **The file store and the Postgres store are never authoritative at once.**
+  Their version sequences are independent, so a correction applied through
+  one is invisible to the other's write-once check (the 0004 audit, Q6). The
+  CLIs stay on the file store for the machine they run on.
+* The document writer takes an expected version (`ws_put_document(…,
+  p_expect_version)`), so a first decision is written once under the
+  workspace lock and a correction never lands on a version it did not read:
+  the upgrade path the resolver's own file-lock note named.

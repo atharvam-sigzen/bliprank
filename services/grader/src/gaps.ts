@@ -31,10 +31,13 @@
  */
 
 import { auditSite, type AeoReport } from './aeo-audit.js'
-import { latestCycle, readCycle, type CycleResult } from './cycles.js'
+import type { CycleResult } from './cycles.js'
 import { fetchSiteHtml, type FetchSiteOptions } from './fetch-site.js'
-import { allBanks, readCategoryRecord } from './resolve-category.js'
+import { allBanks } from './resolve-category.js'
 import { basisOf, promptsFor } from './scan.js'
+import { categoryRecordIn } from './store/documents.js'
+import { fileWorkspaceStore } from './store/file-store.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 
 export interface GapReport extends AeoReport {
   /** The category the cycle was measured against — the bank the prompts came from. */
@@ -55,18 +58,21 @@ export interface GapReportOptions {
   /** Passed through to `fetchSiteHtml`. Tests inject `fetchImpl` and `resolve`. */
   readonly fetch?: FetchSiteOptions
   readonly now?: () => Date
+  /** The deployment's store; this machine's files when absent (MVP_PLAN B3b). */
+  readonly store?: WorkspaceStore
 }
 
 type StoredShape = CycleResult & { readonly category?: string; readonly comparisonBasis?: string }
 
 export async function gapReportFor(dataDir: string, domain: string, opts: GapReportOptions = {}): Promise<GapReport | { readonly refuse: string }> {
-  const cycle = opts.day ? readCycle<StoredShape>(dataDir, domain, opts.day) : latestCycle<StoredShape>(dataDir, domain)
+  const store = opts.store ?? fileWorkspaceStore(dataDir)
+  const cycle = opts.day ? await store.cycles.read(domain, opts.day) : await store.cycles.latest(domain)
   if (!cycle) return { refuse: opts.day ? `no stored cycle of ${domain} for ${opts.day}` : `no stored result for ${domain}` }
 
   // The cycle's own category, exactly as `answers.ts` reads it: the prompts on
   // the report must be the prompts behind the number, not today's record's.
-  const stored = cycle.result
-  const slug = typeof stored.category === 'string' && stored.category ? stored.category : readCategoryRecord(dataDir, domain)?.slug
+  const stored = cycle.result as unknown as StoredShape
+  const slug = typeof stored.category === 'string' && stored.category ? stored.category : (await categoryRecordIn(store, domain))?.slug
   if (!slug) return { refuse: `${domain}: neither the stored result nor a category record names the category it was measured against` }
   const bank = allBanks(dataDir).find((b) => b.category === slug)
   if (!bank) return { refuse: `${domain}: no bank for category ${slug}` }

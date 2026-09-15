@@ -164,9 +164,17 @@ export interface ResolvedCategory {
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
 }
 
+/** Where a domain's category record is read and first written: this machine's file by default, a workspace store on the deployment (MVP_PLAN B3b). */
+export interface CategoryRecordStore {
+  read(host: string): Promise<CategoryRecord | null>
+  /** Write-once: an existing record is returned unchanged. */
+  write(record: NewCategoryRecord): Promise<CategoryRecord>
+}
+
 export interface ResolveDeps {
-  /** Where records and generated banks live. Same dir the gate ledgers use. */
+  /** Where generated banks live (and the records, when `records` is absent). Same dir the gate ledgers use. */
   readonly dataDir: string
+  readonly records?: CategoryRecordStore
   /**
    * Which model authors a bank, and where it lives.
    *
@@ -769,9 +777,10 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   const taxonomy = allCategories(deps.dataDir)
   const bankFor = (slug: string): PromptBank | undefined => banks.find((b) => b.category === slug)
   const categoryFor = (slug: string): CategoryDef | undefined => taxonomy.find((c) => c.slug === slug)
+  const records: CategoryRecordStore = deps.records ?? { read: async (h) => readCategoryRecord(deps.dataDir, h), write: async (r) => recordCategory(deps.dataDir, r) }
 
-  const fallbackResult = (reason: 'unclassified' | 'ambiguous', detail: string, candidates: readonly string[]): ResolvedCategory => {
-    const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: detail, decidedAt, generated: false })
+  const fallbackResult = async (reason: 'unclassified' | 'ambiguous', detail: string, candidates: readonly string[]): Promise<ResolvedCategory> => {
+    const record = await records.write({ host, slug: FALLBACK_SLUG, source: 'fallback', evidence: detail, decidedAt, generated: false })
     return {
       record,
       bank: bankFor(record.slug)!,
@@ -792,14 +801,14 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
    */
   let siteBrandName: string | undefined
 
-  const settle = (slug: string, source: CategorySource, evidence: string, generated = false): ResolvedCategory | null => {
+  const settle = async (slug: string, source: CategorySource, evidence: string, generated = false): Promise<ResolvedCategory | null> => {
     const bank = bankFor(slug)
     const category = categoryFor(slug)
     // A slug with no bank is a wiring fault, not a user outcome — the same
     // refusal scan.ts makes. Falling through to the fallback here is correct and
     // is NOT recorded, so the next scan re-derives once the wiring is fixed.
     if (!bank || !category) return null
-    const record = recordCategory(deps.dataDir, { host, slug, source, evidence, decidedAt, generated, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
+    const record = await records.write({ host, slug, source, evidence, decidedAt, generated, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
     const resolvedBank = bankFor(record.slug)
     const resolvedCategory = categoryFor(record.slug)
     if (!resolvedBank || !resolvedCategory) return null
@@ -811,7 +820,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // RUNG 0. Already decided. Nothing is fetched, nothing is generated, nothing
   // moves. This is the guarantee, and it is checked before anything else can
   // cost time or money.
-  const existing = readCategoryRecord(deps.dataDir, host)
+  const existing = await records.read(host)
   if (existing) {
     const bank = bankFor(existing.slug)
     const category = categoryFor(existing.slug)
@@ -831,7 +840,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // RUNGS 1 AND 2. Free and deterministic, so always first.
   const byDomain = classifyDomain(host, banks, taxonomy)
   if (byDomain.status === 'classified') {
-    const settled = settle(byDomain.slug, byDomain.signal, byDomain.evidence)
+    const settled = await settle(byDomain.slug, byDomain.signal, byDomain.evidence)
     if (settled) {
       log(`category: ${host} -> ${byDomain.slug} (${byDomain.signal}: ${byDomain.evidence})`)
       return settled
@@ -843,7 +852,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     // content would resolve it by picking whichever product the homepage
     // happens to feature this quarter. Recorded as ambiguous so it stays that
     // way, and carried into the result so the page can say which three.
-    const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byDomain.evidence, decidedAt, generated: false })
+    const record = await records.write({ host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byDomain.evidence, decidedAt, generated: false })
     log(`category: ${host} -> fallback (ambiguous across ${byDomain.candidates.join(', ')})`)
     return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: false, fallback: { reason: 'ambiguous', detail: byDomain.evidence, candidates: byDomain.candidates } }
   }
@@ -875,14 +884,14 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
 
   const byContent = classifyContent(text, taxonomy)
   if (byContent.status === 'classified') {
-    const settled = settle(byContent.slug, 'site-content', byContent.evidence)
+    const settled = await settle(byContent.slug, 'site-content', byContent.evidence)
     if (settled) {
       log(`category: ${host} -> ${byContent.slug} (site-content: ${byContent.evidence})`)
       return settled
     }
   }
   if (byContent.status === 'ambiguous') {
-    const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byContent.evidence, decidedAt, generated: false })
+    const record = await records.write({ host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byContent.evidence, decidedAt, generated: false })
     log(`category: ${host} -> fallback (page content ambiguous: ${byContent.evidence})`)
     return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: false, fallback: { reason: 'ambiguous', detail: byContent.evidence, candidates: byContent.candidates } }
   }
@@ -933,7 +942,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // written — the domain joins the reviewed bank rather than a duplicate of it.
   const already = taxonomy.find((c) => c.slug === slug)
   if (already) {
-    const settled = settle(slug, 'site-content', `the homepage describes ${already.displayName}`)
+    const settled = await settle(slug, 'site-content', `the homepage describes ${already.displayName}`)
     if (settled) {
       log(`category: ${host} -> ${slug} (authoring named an existing category)`)
       return settled
@@ -952,7 +961,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // artefacts, and a reader looking at a surprising bank two years from now
   // should be able to see which produced it. Same discipline as R8's
   // `algo_version` travelling with a metric.
-  const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
+  const record = await records.write({ host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
   log(`category: ${host} -> ${slug} (generated by ${candidate.model}: ${candidate.displayName}, ${candidate.prompts.length} prompts, no competitors)`)
   return { record, bank: written.bank, category: written.category, fromRecord: false }
 }

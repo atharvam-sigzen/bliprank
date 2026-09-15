@@ -43,64 +43,64 @@ describe('the client IP is read only from the header the named proxy sets', () =
     })
   const env = (proxy?: string) => ({ ...(proxy === undefined ? {} : { TRUSTED_PROXY: proxy }) }) as NodeJS.ProcessEnv
 
-  it('⚠️ with no trusted proxy, NO header is read: every caller is one bucket', () => {
+  it('⚠️ with no trusted proxy, NO header is read: every caller is one bucket', async () => {
     expect(extractClientIp(everything(), env())).toBe(DIRECT)
     expect(extractClientIp(new Headers(), env())).toBe(DIRECT)
   })
 
-  it('a misspelt or unknown proxy name fails closed, not open', () => {
+  it('a misspelt or unknown proxy name fails closed, not open', async () => {
     expect(extractClientIp(everything(), env('cloudfare'))).toBe(DIRECT)
     expect(extractClientIp(everything(), env('nginx'))).toBe(DIRECT)
   })
 
-  it('behind Cloudflare only cf-connecting-ip counts', () => {
+  it('behind Cloudflare only cf-connecting-ip counts', async () => {
     expect(extractClientIp(everything(), env('cloudflare'))).toBe('203.0.113.195')
     const without = everything()
     without.delete('cf-connecting-ip')
     expect(extractClientIp(without, env('cloudflare'))).toBe(DIRECT)
   })
 
-  it('behind Vercel only x-vercel-forwarded-for counts, first entry', () => {
+  it('behind Vercel only x-vercel-forwarded-for counts, first entry', async () => {
     expect(extractClientIp(everything(), env('vercel'))).toBe('198.51.100.42')
     const without = everything()
     without.delete('x-vercel-forwarded-for')
     expect(extractClientIp(without, env('vercel'))).toBe(DIRECT)
   })
 
-  it('a trusted header that is not an IP address is treated as absent', () => {
+  it('a trusted header that is not an IP address is treated as absent', async () => {
     expect(extractClientIp(new Headers({ 'cf-connecting-ip': 'not-an-ip' }), env('cloudflare'))).toBe(DIRECT)
     expect(extractClientIp(new Headers({ 'cf-connecting-ip': '' }), env('cloudflare'))).toBe(DIRECT)
     expect(extractClientIp(new Headers({ 'cf-connecting-ip': '2001:db8::1' }), env('cloudflare'))).toBe('2001:db8::1')
   })
 
-  it('accepts a Request object directly', () => {
+  it('accepts a Request object directly', async () => {
     const req = new Request('http://localhost/api/scan', { headers: { 'cf-connecting-ip': '198.51.100.77' } })
     expect(extractClientIp(req, env('cloudflare'))).toBe('198.51.100.77')
   })
 })
 
 describe('per-visitor throttle window and limit logic', () => {
-  it('allows scans under the limit and tracks remaining quota', () => {
+  it('allows scans under the limit and tracks remaining quota', async () => {
     const cfg = createCfg({ maxScansPerHour: 3 })
     const ip = '198.51.100.1'
 
-    expect(checkVisitorThrottle(ip, cfg, NOW)).toEqual({ ok: true, remaining: 3, limit: 3 })
+    expect(await checkVisitorThrottle(ip, cfg, NOW)).toEqual({ ok: true, remaining: 3, limit: 3 })
 
-    recordVisitorScan(ip, cfg, NOW)
-    expect(checkVisitorThrottle(ip, cfg, NOW)).toEqual({ ok: true, remaining: 2, limit: 3 })
+    await recordVisitorScan(ip, cfg, NOW)
+    expect(await checkVisitorThrottle(ip, cfg, NOW)).toEqual({ ok: true, remaining: 2, limit: 3 })
 
-    recordVisitorScan(ip, cfg, NOW)
-    expect(checkVisitorThrottle(ip, cfg, NOW)).toEqual({ ok: true, remaining: 1, limit: 3 })
+    await recordVisitorScan(ip, cfg, NOW)
+    expect(await checkVisitorThrottle(ip, cfg, NOW)).toEqual({ ok: true, remaining: 1, limit: 3 })
   })
 
-  it('refuses once the limit is exhausted and explains why honestly', () => {
+  it('refuses once the limit is exhausted and explains why honestly', async () => {
     const cfg = createCfg({ maxScansPerHour: 2, windowMs: 3600_000 })
     const ip = '198.51.100.2'
 
-    recordVisitorScan(ip, cfg, NOW)
-    recordVisitorScan(ip, cfg, new Date(NOW.getTime() + 10 * 60_000))
+    await recordVisitorScan(ip, cfg, NOW)
+    await recordVisitorScan(ip, cfg, new Date(NOW.getTime() + 10 * 60_000))
 
-    const verdict = checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 15 * 60_000))
+    const verdict = await checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 15 * 60_000))
     expect(verdict.ok).toBe(false)
     if (!verdict.ok) {
       expect(verdict.reason).toBe('visitor-rate-limit')
@@ -115,42 +115,42 @@ describe('per-visitor throttle window and limit logic', () => {
     }
   })
 
-  it('resets as scans age out of the rolling window', () => {
+  it('resets as scans age out of the rolling window', async () => {
     const cfg = createCfg({ maxScansPerHour: 2, windowMs: 3600_000 })
     const ip = '198.51.100.3'
 
     // First scan at T=0
-    recordVisitorScan(ip, cfg, NOW)
+    await recordVisitorScan(ip, cfg, NOW)
     // Second scan at T=30m
-    recordVisitorScan(ip, cfg, new Date(NOW.getTime() + 30 * 60_000))
+    await recordVisitorScan(ip, cfg, new Date(NOW.getTime() + 30 * 60_000))
 
     // At T=45m: both inside window -> blocked
-    expect(checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 45 * 60_000)).ok).toBe(false)
+    expect((await checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 45 * 60_000))).ok).toBe(false)
 
     // At T=65m: first scan (at T=0) has rolled off, second scan (at T=30m) is still active -> allowed (1 active)
-    const at65m = checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 65 * 60_000))
+    const at65m = await checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 65 * 60_000))
     expect(at65m).toEqual({ ok: true, remaining: 1, limit: 2 })
 
     // At T=95m: second scan (at T=30m) has also rolled off -> fully open (2 remaining)
-    const at95m = checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 95 * 60_000))
+    const at95m = await checkVisitorThrottle(ip, cfg, new Date(NOW.getTime() + 95 * 60_000))
     expect(at95m).toEqual({ ok: true, remaining: 2, limit: 2 })
   })
 
-  it('keeps visitor IP tallies isolated from each other', () => {
+  it('keeps visitor IP tallies isolated from each other', async () => {
     const cfg = createCfg({ maxScansPerHour: 1 })
     const ipA = '192.0.2.10'
     const ipB = '192.0.2.20'
 
-    recordVisitorScan(ipA, cfg, NOW)
-    expect(checkVisitorThrottle(ipA, cfg, NOW).ok).toBe(false)
-    expect(checkVisitorThrottle(ipB, cfg, NOW).ok).toBe(true)
+    await recordVisitorScan(ipA, cfg, NOW)
+    expect((await checkVisitorThrottle(ipA, cfg, NOW)).ok).toBe(false)
+    expect((await checkVisitorThrottle(ipB, cfg, NOW)).ok).toBe(true)
   })
 
-  it('FAILS CLOSED on a corrupt ledger file', () => {
+  it('FAILS CLOSED on a corrupt ledger file', async () => {
     const cfg = createCfg({ maxScansPerHour: 3 })
     writeFileSync(cfg.ledgerFile, '{ corrupt json')
 
-    const verdict = checkVisitorThrottle('127.0.0.1', cfg, NOW)
+    const verdict = await checkVisitorThrottle('127.0.0.1', cfg, NOW)
     expect(verdict.ok).toBe(false)
     if (!verdict.ok) {
       expect(verdict.reason).toBe('visitor-rate-limit')
@@ -158,7 +158,7 @@ describe('per-visitor throttle window and limit logic', () => {
     }
   })
 
-  it('is configurable via environment variables', () => {
+  it('is configurable via environment variables', async () => {
     const custom = defaultVisitorThrottleConfig('/tmp', {
       GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR: '5',
       GRADER_VISITOR_WINDOW_MS: '1800000',
@@ -169,31 +169,31 @@ describe('per-visitor throttle window and limit logic', () => {
 })
 
 describe('visitor throttle persistence and isolation from global ledger', () => {
-  it('persists timestamps in the visitor ledger file', () => {
+  it('persists timestamps in the visitor ledger file', async () => {
     const cfg = createCfg({ maxScansPerHour: 3 })
     const ip = '198.51.100.5'
 
-    recordVisitorScan(ip, cfg, NOW)
+    await recordVisitorScan(ip, cfg, NOW)
     expect(existsSync(cfg.ledgerFile)).toBe(true)
 
     const raw = JSON.parse(readFileSync(cfg.ledgerFile, 'utf8')) as Record<string, number[]>
     expect(raw[ip]).toEqual([NOW.getTime()])
   })
 
-  it('refusal never writes to the visitor ledger or touches the shared gate ledger', () => {
+  it('refusal never writes to the visitor ledger or touches the shared gate ledger', async () => {
     const dir = tempDir()
     const cfg = defaultVisitorThrottleConfig(dir, {} as NodeJS.ProcessEnv)
     const ip = '198.51.100.9'
 
     // Fill the limit
     for (let i = 0; i < cfg.maxScansPerHour; i++) {
-      recordVisitorScan(ip, cfg, NOW)
+      await recordVisitorScan(ip, cfg, NOW)
     }
 
     const beforeStats = readFileSync(cfg.ledgerFile, 'utf8')
 
     // Check throttle while full: refused
-    const verdict = checkVisitorThrottle(ip, cfg, NOW)
+    const verdict = await checkVisitorThrottle(ip, cfg, NOW)
     expect(verdict.ok).toBe(false)
 
     // Ledger file must be unchanged

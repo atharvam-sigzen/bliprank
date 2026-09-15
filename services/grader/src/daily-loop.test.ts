@@ -19,13 +19,13 @@ import type { ScanResult } from './scan.js'
 
 let dir: string
 const PER_PROMPT = 0.007 * 3 + 0.008 + 0.005 // pay-as-you-go, one prompt on five engines
-beforeEach(() => {
+beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-loop-'))
   recordCategory(dir, { host: 'acme.test', slug: 'crm-software', source: 'site-content', evidence: 'x', decidedAt: '2026-08-01', generated: false })
   recordCategory(dir, { host: 'beta.test', slug: 'crm-software', source: 'site-content', evidence: 'x', decidedAt: '2026-08-01', generated: false })
   recordCategory(dir, { host: 'pipedrive.com', slug: 'crm-software', source: 'leader-domain', evidence: 'x', decidedAt: '2026-08-01', generated: false })
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(async () => rmSync(dir, { recursive: true, force: true }))
 
 const scanned = (host: string, day: string, spentUsd: number, calls: number): ScanResult & { run: { spentUsd: number } } =>
   ({
@@ -45,7 +45,7 @@ const scanned = (host: string, day: string, spentUsd: number, calls: number): Sc
   }) as unknown as ScanResult & { run: { spentUsd: number } }
 
 describe('the cap is a formula over the tracked set', () => {
-  it('is zero with nobody tracked, is every tracked domain’s expected cost with headroom, and moves as domains are tracked and untracked', () => {
+  it('is zero with nobody tracked, is every tracked domain’s expected cost with headroom, and moves as domains are tracked and untracked', async () => {
     expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBe(0)
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 6)
@@ -56,7 +56,7 @@ describe('the cap is a formula over the tracked set', () => {
     expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo(19 * PER_PROMPT * RETRY_HEADROOM, 6)
   })
 
-  it('is bounded above by the hard ceiling the owner names, and the ceiling must be a positive number to count', () => {
+  it('is bounded above by the hard ceiling the owner names, and the ceiling must be a positive number to count', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
     const list = dueToday(dir, {}, '2026-09-07')
@@ -76,7 +76,7 @@ describe('the loop, with a fake collector', () => {
     const dry = await runTick({ dataDir: dir, env: {}, day: '2026-09-07', apply: false, mode: 'fixture' })
     if ('refuse' in dry) throw new Error(dry.refuse)
     expect(dry.ran).toEqual([])
-    expect(readDailyLedger(dir)).toEqual({})
+    expect(await readDailyLedger(dir)).toEqual({})
 
     const collected: string[] = []
     const applied = await runTick(
@@ -90,7 +90,7 @@ describe('the loop, with a fake collector', () => {
       ['beta.test', 'scanned', 0.41, 85],
     ])
     expect(applied.spentAfter).toBeCloseTo(0.82, 6)
-    const ledger = readDailyLedger(dir)['2026-09-07']!
+    const ledger = (await readDailyLedger(dir))['2026-09-07']!
     expect(ledger).toMatchObject({ capUsd: applied.capUsd, spentUsd: 0.82, calls: 170 })
     expect(Object.keys(ledger.domains)).toEqual(['acme.test', 'beta.test'])
     expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
@@ -141,7 +141,7 @@ describe('the loop, with a fake collector', () => {
       ['acme.test', 'failed'],
       ['beta.test', 'scanne'],
     ])
-    expect(readDailyLedger(dir)['2026-09-07']!.domains['acme.test']!.spentUsd).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 6)
+    expect((await readDailyLedger(dir))['2026-09-07']!.domains['acme.test']!.spentUsd).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 6)
   })
 })
 
@@ -201,7 +201,7 @@ describe('fail closed', () => {
     expect(await live({ ...armed, COLLECTION_BUDGET_USD_DAILY: '2' })).toMatchObject({ refuse: expect.stringContaining('exhausted') })
     writeFileSync(join(dir, 'ledger.json'), JSON.stringify({ capUsd: 5, spentUsd: 4.9, calls: 700, byEngine: {}, updatedAt: 'x' }))
     expect(await live({ ...armed, COLLECTION_BUDGET_USD_DAILY: '2' })).toMatchObject({ refuse: expect.stringContaining('less than today') })
-    expect(readDailyLedger(dir)).toEqual({})
+    expect(await readDailyLedger(dir)).toEqual({})
   })
 
   it('one tick at a time: a second tick over the same store is refused while the lock is held', async () => {

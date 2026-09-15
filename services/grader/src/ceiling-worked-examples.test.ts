@@ -26,51 +26,51 @@ let dir: string
 let cfg: DomainCeilingConfig
 const at = (d: string) => new Date(`${d}T09:00:00.000Z`)
 const PER_PROMPT = 0.007 * 3 + 0.008 + 0.005
-beforeEach(() => {
+beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-worked-'))
   cfg = { maxCyclesPerMonth: 2, ledgerFile: join(dir, 'domain-ceiling.json') }
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(async () => rmSync(dir, { recursive: true, force: true }))
 
 /** A hand-started cycle as the route runs it: refuse on the count, else run, then book the cycle with its realised calls. */
-function manualCycle(day: string, cells: number, realised: number): 'allowed' | 'refused' {
-  const v = checkDomainCeiling('acme.test', cfg, at(day))
+async function manualCycle(day: string, cells: number, realised: number): Promise<'allowed' | 'refused'> {
+  const v = await checkDomainCeiling('acme.test', cfg, at(day))
   if (!v.ok) return 'refused'
   expect(runAllowanceFor(cells)).toBeGreaterThanOrEqual(realised) // the run itself would have been stopped at the allowance
-  recordDomainCycle('acme.test', realised, cfg, at(day))
+  await recordDomainCycle('acme.test', realised, cfg, at(day))
   return 'allowed'
 }
 
 describe('A · the prompt set shrinks mid-month', () => {
-  it('a domain that took its two hand-started cycles is refused a third on the count, not on a limit its own change of set moved; the refusal names cycles', () => {
-    expect(manualCycle('2026-09-01', 160, 160)).toBe('allowed')
-    expect(manualCycle('2026-09-08', 160, 160)).toBe('allowed')
+  it('a domain that took its two hand-started cycles is refused a third on the count, not on a limit its own change of set moved; the refusal names cycles', async () => {
+    expect(await manualCycle('2026-09-01', 160, 160)).toBe('allowed')
+    expect(await manualCycle('2026-09-08', 160, 160)).toBe('allowed')
     // The customer clears the set; the next hand-started cycle would be 85 cells.
-    const third = checkDomainCeiling('acme.test', cfg, at('2026-09-15'))
+    const third = await checkDomainCeiling('acme.test', cfg, at('2026-09-15'))
     expect(third.ok).toBe(false)
     if (third.ok) return
     expect(third.message).toContain('has already started 2 of its 2 hand-started cycles')
     expect(third.message).toContain('320 provider requests')
     // Under the old, call-denominated ceiling this read "used 320 + 85 > 204": a refusal caused by the set change.
     // Now it is the same refusal the domain would have met at 85 cells all month: two cycles, then October.
-    expect(cyclesThisMonth('acme.test', cfg, at('2026-09-22'))).toEqual({ cycles: 2, calls: 320 })
-    expect(checkDomainCeiling('acme.test', cfg, at('2026-10-01')).ok).toBe(true)
+    expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-22'))).toEqual({ cycles: 2, calls: 320 })
+    expect((await checkDomainCeiling('acme.test', cfg, at('2026-10-01'))).ok).toBe(true)
   })
 })
 
 describe('B · the prompt set grows mid-month', () => {
-  it('two hand-started cycles are the month; adding 15 prompts does not unlock a third, so the over-collection of 330 calls for $2.24 cannot happen', () => {
-    expect(manualCycle('2026-09-01', 85, 85)).toBe('allowed')
-    expect(manualCycle('2026-09-08', 85, 85)).toBe('allowed')
-    expect(manualCycle('2026-09-12', 85, 85)).toBe('refused')
+  it('two hand-started cycles are the month; adding 15 prompts does not unlock a third, so the over-collection of 330 calls for $2.24 cannot happen', async () => {
+    expect(await manualCycle('2026-09-01', 85, 85)).toBe('allowed')
+    expect(await manualCycle('2026-09-08', 85, 85)).toBe('allowed')
+    expect(await manualCycle('2026-09-12', 85, 85)).toBe('refused')
     // The customer adds 15 own prompts: a cycle is now 160 cells. Under the old ceiling this raised the limit to 384 and admitted a third cycle.
-    expect(manualCycle('2026-09-15', 160, 160)).toBe('refused')
-    expect(cyclesThisMonth('acme.test', cfg, at('2026-09-15'))).toEqual({ cycles: 2, calls: 170 })
+    expect(await manualCycle('2026-09-15', 160, 160)).toBe('refused')
+    expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-15'))).toEqual({ cycles: 2, calls: 170 })
     // What the month cost: the designed two cycles, 170 calls, not 330.
     expect(170 * PER_PROMPT / ENGINES.length).toBeCloseTo(1.156, 3)
   })
 
-  it('a bigger set changes what one cycle may realise, through the allowance, never how many cycles a month allows', () => {
+  it('a bigger set changes what one cycle may realise, through the allowance, never how many cycles a month allows', async () => {
     expect(runAllowanceFor(85)).toBe(102)
     expect(runAllowanceFor(160)).toBe(192)
     // A run of 160 cells that retries every cell once would need 320 attempts; the allowance stops it at 192.
@@ -128,11 +128,11 @@ describe('C · a daily loop for a whole month', () => {
     expect(new Set(allowances)).toEqual(new Set([102]))
     // Under the old ceiling the third day was `not due: ceiling` (170 + 85 > 204). The manual ledger was never written by the loop: the file does not exist.
     expect(existsSync(cfg.ledgerFile)).toBe(false)
-    expect(cyclesThisMonth('acme.test', cfg, at('2026-09-30'))).toEqual({ cycles: 0, calls: 0 })
+    expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-30'))).toEqual({ cycles: 0, calls: 0 })
     // Thirty days of ledger, each its own cap.
-    expect(Object.keys(readDailyLedger(dir))).toHaveLength(30)
+    expect(Object.keys(await readDailyLedger(dir))).toHaveLength(30)
     // A hand-started cycle in the same month is still bounded by the manual ceiling, on its own count.
-    expect(checkDomainCeiling('acme.test', cfg, at('2026-09-30'))).toMatchObject({ ok: true, cycles: 0 })
+    expect(await checkDomainCeiling('acme.test', cfg, at('2026-09-30'))).toMatchObject({ ok: true, cycles: 0 })
   })
 
   it('a retry storm inside one run is stopped at the allowance by the real runner, offline, with the ledger left clean', async () => {

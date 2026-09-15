@@ -59,7 +59,10 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, statS
 import { join } from 'node:path'
 import type { OwnPlan } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
-import { writeCycle, type CycleResult } from './cycles.js'
+import { ledgerStores, type LedgerStores } from './ledger-stores.js'
+import { cycleInputOf } from './store/documents.js'
+import { fileWorkspaceStore } from './store/file-store.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, type DueDomain, type DueList } from './due.js'
 import { checkGate, defaultGateConfig, ledgerCapUsd, recordScan, type GateVerdict } from './live-gate.js'
@@ -80,18 +83,19 @@ export interface DailyLedgerDay {
 type DailyLedger = Record<string, DailyLedgerDay>
 
 export const dailyLedgerFile = (dataDir: string): string => join(dataDir, 'daily-spend.json')
+const DAILY_LEDGER = 'daily-spend.json'
 
 /** Read the ledger. Missing is empty; corrupt is an ERROR, because a loop that reads a corrupt ledger as zero spends the day twice. */
-export function readDailyLedger(dataDir: string): DailyLedger {
-  const f = dailyLedgerFile(dataDir)
-  if (!existsSync(f)) return {}
+export async function readDailyLedger(dataDir: string, ledgers?: LedgerStores): Promise<DailyLedger> {
+  const f = ledgers?.backend === 'kv' ? `the ${DAILY_LEDGER} ledger in Upstash` : dailyLedgerFile(dataDir)
   let parsed: unknown
   try {
-    parsed = JSON.parse(readFileSync(f, 'utf8'))
+    parsed = await (ledgers ?? ledgerStores(dataDir, process.env)).doc(DAILY_LEDGER).read()
   } catch (e) {
     throw new Error(`${f} is not readable JSON (${(e as Error).message}); the loop refuses to run until a person repairs it`)
   }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error(`${f} is not a ledger; the loop refuses to run until a person repairs it`)
+  if (parsed === null) return {}
+  if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${f} is not a ledger; the loop refuses to run until a person repairs it`)
   const out: DailyLedger = {}
   for (const [day, v] of Object.entries(parsed as Record<string, unknown>)) {
     if (typeof v !== 'object' || v === null) throw new Error(`${f}: day ${day} is not a ledger entry`)
@@ -102,10 +106,7 @@ export function readDailyLedger(dataDir: string): DailyLedger {
   return out
 }
 
-function writeDailyLedger(dataDir: string, ledger: DailyLedger): void {
-  mkdirSync(dataDir, { recursive: true })
-  writeFileSync(dailyLedgerFile(dataDir), JSON.stringify(ledger, null, 2) + '\n')
-}
+const writeDailyLedger = (ledgers: LedgerStores, ledger: DailyLedger): Promise<DailyLedger> => ledgers.doc(DAILY_LEDGER).update(() => ledger)
 
 // ---------------------------------------------------------------- the tick
 
@@ -143,7 +144,7 @@ export function hardCeilingUsd(env: NodeJS.ProcessEnv): number | null {
 }
 
 /** The day's cap: the formula, bounded above by the hard ceiling when one is set. */
-export const dailyCapUsd = (list: DueList, env: NodeJS.ProcessEnv = {}): number => {
+export const dailyCapUsd = (list: DueList, env: NodeJS.ProcessEnv = process.env): number => {
   const hard = hardCeilingUsd(env)
   const formula = formulaCapUsd(list)
   return hard === null ? formula : Math.min(formula, hard)
@@ -190,13 +191,28 @@ function runnerLedger(dataDir: string): { readonly capUsd: number; readonly spen
   }
 }
 
+/** The runner ledger's figures when it lives in KV: the lifetime total against the configured cap; KV holds no exhausted mark. */
+async function kvRunnerLedger(ledgers: LedgerStores, capUsd: number): Promise<{ readonly capUsd: number; readonly spentUsd: number; readonly exhaustedAt?: string }> {
+  return { capUsd, spentUsd: await ledgers.spend('ledger.json', capUsd, () => 0).spentUsd() }
+}
+
 /**
  * Run one tick. Dry by default: the due list, the cap, and what would run.
  * With `apply`, the gates below, then each due domain in order, each booked
  * before the next starts.
  */
 export async function runTick(
-  opts: { readonly dataDir: string; readonly env: NodeJS.ProcessEnv; readonly day?: string; readonly apply: boolean; readonly mode: TickMode; readonly root?: string },
+  opts: {
+    readonly dataDir: string
+    readonly env: NodeJS.ProcessEnv
+    readonly day?: string
+    readonly apply: boolean
+    readonly mode: TickMode
+    readonly root?: string
+    /** The deployment's ledgers and workspace store; this machine's files when absent (MVP_PLAN B3b). */
+    readonly ledgers?: LedgerStores
+    readonly store?: WorkspaceStore
+  },
   deps: TickDeps = {},
 ): Promise<TickOutcome | { readonly refuse: string; readonly list?: DueList }> {
   const now = deps.now ?? (() => new Date())
@@ -206,9 +222,11 @@ export async function runTick(
   const list = dueToday(opts.dataDir, opts.env, day)
   if (list.config) return { refuse: list.config, list }
   const capUsd = dailyCapUsd(list, opts.env)
+  const ledgers = opts.ledgers ?? ledgerStores(opts.dataDir, opts.env)
+  const store = opts.store ?? fileWorkspaceStore(opts.dataDir)
 
   // The ledger is read before anything else, so a corrupt one refuses the tick before a cell is asked.
-  const ledger = readDailyLedger(opts.dataDir)
+  const ledger = await readDailyLedger(opts.dataDir, ledgers)
   const today: DailyLedgerDay = ledger[day] ?? { capUsd, spentUsd: 0, calls: 0, domains: {} }
   const spentBefore = today.spentUsd
 
@@ -232,9 +250,11 @@ export async function runTick(
     // A live tick runs for today. A named day would buy cells under another date bucket and a fresh cap; that is a re-collection, not a tick.
     if (day !== today0) return { refuse: `a live tick runs for today (${today0}); --day ${day} is for the dry list`, list }
     // The runner's lifetime ledger must have room for the day, or every run stops at its first cell and the loop ticks daily to no effect.
-    const rl = runnerLedger(opts.dataDir)
-    if (rl?.exhaustedAt) return { refuse: `the runner's ledger ${join(opts.dataDir, 'ledger.json')} is exhausted (since ${rl.exhaustedAt}); raise its cap deliberately by editing the file before a tick can run`, list }
-    if (rl && rl.capUsd - rl.spentUsd < capUsd) return { refuse: `the runner's ledger ${join(opts.dataDir, 'ledger.json')} has $${(rl.capUsd - rl.spentUsd).toFixed(3)} left of its $${rl.capUsd.toFixed(2)} lifetime cap, less than today's $${capUsd.toFixed(3)}; raise it deliberately by editing the file`, list }
+    // On the file backend the file is read without opening it (opening can lower its cap); in KV the ledger's own figure is asked for.
+    const rl = ledgers.backend === 'file' ? runnerLedger(opts.dataDir) : await kvRunnerLedger(ledgers, ledgerCapUsd(opts.dataDir, env))
+    const where = ledgers.backend === 'file' ? join(opts.dataDir, 'ledger.json') : 'the runner ledger in Upstash'
+    if (rl?.exhaustedAt) return { refuse: `the runner's ledger ${where} is exhausted (since ${rl.exhaustedAt}); raise its cap deliberately by editing the file before a tick can run`, list }
+    if (rl && rl.capUsd - rl.spentUsd < capUsd) return { refuse: `the runner's ledger ${where} has $${(rl.capUsd - rl.spentUsd).toFixed(3)} left of its $${rl.capUsd.toFixed(2)} lifetime cap, less than today's $${capUsd.toFixed(3)}; raise it deliberately`, list }
   }
   if (capUsd <= 0) return { day, mode: opts.mode, capUsd, spentBefore, spentAfter: spentBefore, ran: [], refused: list.due.map((d) => ({ host: d.host, reason: 'the day\'s cap is zero: nobody is tracked' })), list }
 
@@ -247,8 +267,8 @@ export async function runTick(
   }
 
   async function runDue(): Promise<TickOutcome> {
-  const gateCfg = defaultGateConfig(opts.dataDir, opts.env)
-  const collect = deps.collect ?? defaultCollect(opts)
+  const gateCfg = defaultGateConfig(opts.dataDir, opts.env, ledgers)
+  const collect = deps.collect ?? defaultCollect({ dataDir: opts.dataDir, env: opts.env, ledgers, store })
   const gate = deps.gate ?? ((domain, needed, key, at) => checkGate(domain, { ...gateCfg, callsPerEngine: needed / ENGINES.length }, key, at))
   const ran: { host: string; status: string; spentUsd: number; calls: number }[] = []
   const refused: { host: string; reason: string }[] = []
@@ -291,10 +311,13 @@ export async function runTick(
       spent = typeof result.run?.spentUsd === 'number' && Number.isFinite(result.run.spentUsd) ? result.run.spentUsd : expected
       calls = 'counts' in result ? result.counts.providerCalls : 0
       if (result.status === 'scanned') {
-        const filed = writeCycle(opts.dataDir, result as unknown as CycleResult)
-        if ('refuse' in filed) log(`  ${d.host}: not filed: ${filed.refuse}`)
+        try {
+          await store.cycles.put(cycleInputOf(result))
+        } catch (e) {
+          log(`  ${d.host}: not filed: ${(e as Error).message}`)
+        }
       }
-      if (result.status === 'scanned' || result.status === 'no-answers') recordScan(d.host, gateCfg, now())
+      if (result.status === 'scanned' || result.status === 'no-answers') await recordScan(d.host, gateCfg, now())
     } catch (e) {
       const msg = (e as Error).message
       // Refused before any call, provably: the runner's own lock said another scan holds the store. Nothing was spent, so nothing is booked.
@@ -310,18 +333,18 @@ export async function runTick(
       calls: current.calls + calls,
       domains: { ...current.domains, [d.host]: { spentUsd: spent, calls, status, at: now().toISOString() } },
     }
-    writeDailyLedger(opts.dataDir, { ...ledger, [day]: current })
+    await writeDailyLedger(ledgers, { ...ledger, [day]: current })
     ran.push({ host: d.host, status, spentUsd: spent, calls })
   }
-  if (ran.length === 0 && !ledger[day]) writeDailyLedger(opts.dataDir, { ...ledger, [day]: current })
+  if (ran.length === 0 && !ledger[day]) await writeDailyLedger(ledgers, { ...ledger, [day]: current })
   return { day, mode: opts.mode, capUsd, spentBefore, spentAfter: current.spentUsd, ran, refused, list }
   }
 }
 
 /** The real collector: `runGrader` through its own lock, ledger and rate budget. The per-run cap is the store's own, never lowered here. */
-function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.ProcessEnv }): NonNullable<TickDeps['collect']> {
+function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.ProcessEnv; readonly ledgers: LedgerStores; readonly store: WorkspaceStore }): NonNullable<TickDeps['collect']> {
   return async (d, o) => {
-    const gate = defaultGateConfig(opts.dataDir, opts.env)
+    const gate = defaultGateConfig(opts.dataDir, opts.env, opts.ledgers)
     const options: RunnerOptions = {
       domain: d.host,
       plan: o.plan,
@@ -335,6 +358,8 @@ function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.P
       dataDir: opts.dataDir,
       outFile: join(opts.dataDir, 'latest.json'),
       log: () => {},
+      ledgers: opts.ledgers,
+      store: opts.store,
     }
     return runGrader(options)
   }

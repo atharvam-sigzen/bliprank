@@ -51,11 +51,13 @@ import { AnswerIndex, r2KeyFor } from '@bliprank/collector'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { PUBLISHER_REGISTRY } from '@bliprank/taxonomy'
 import { answerStores } from './answer-stores.js'
-import { allBanks, readCategoryRecord } from './resolve-category.js'
-import { latestCycle, readCycle } from './cycles.js'
+import { allBanks } from './resolve-category.js'
 import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scorer'
 import type { Citation } from '@bliprank/contracts'
-import { competitorsFor } from './competitor-overrides.js'
+import { competitorsIn } from './competitor-overrides.js'
+import { categoryRecordIn } from './store/documents.js'
+import { fileWorkspaceStore } from './store/file-store.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 import { basisOf, cellsFor, customCellsFor, subjectFor } from './scan.js'
 
 /**
@@ -142,10 +144,12 @@ async function inBatches<T, R>(items: readonly T[], limit: number, fn: (item: T)
   return out
 }
 
-export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay?: string): Promise<ScoredCycle | { readonly refuse: string }> {
+export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay?: string, store: WorkspaceStore = fileWorkspaceStore(dataDir)): Promise<ScoredCycle | { readonly refuse: string }> {
   // One cycle's evidence, by day (ADR-0013). The latest when no day is asked
-  // for, which is what every reader before cycles existed was reading.
-  const cycle = cycleDay ? readCycle(dataDir, domain, cycleDay) : latestCycle(dataDir, domain)
+  // for, which is what every reader before cycles existed was reading. The
+  // store is the deployment's (Postgres, this workspace) or this machine's
+  // files; the raw answers come from the answer store either way (R4).
+  const cycle = cycleDay ? await store.cycles.read(domain, cycleDay) : await store.cycles.latest(domain)
   if (!cycle) return { refuse: cycleDay ? `no stored cycle of ${domain} for ${cycleDay}` : `no stored result for ${domain}` }
   const stored = cycle.result as { run?: { day?: string }; collectedAt?: string; comparisonBasis?: string; category?: string }
 
@@ -159,7 +163,7 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   // with the client's basis check still passing because the basis string is
   // copied from the file. Found by the ADR-0013 review. The record is consulted
   // only for a file too old to name its category.
-  const record = readCategoryRecord(dataDir, domain)
+  const record = await categoryRecordIn(store, domain)
   const slug = typeof stored.category === 'string' && stored.category ? stored.category : record?.slug
   if (!slug) return { refuse: `${domain}: neither the stored result nor a category record names the category it was measured against` }
   const bank = allBanks(dataDir).find((b) => b.category === slug)
@@ -182,7 +186,7 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   // The competitor set THIS cycle was measured against: the category's, or
   // the per-domain override at the version its basis records (ADR-0016). An
   // override the store no longer holds is a refusal, never today's set.
-  const cs = competitorsFor(dataDir, domain, bank, subject.id, basis.set ?? null)
+  const cs = await competitorsIn(store, dataDir, domain, bank, subject.id, basis.set ?? null)
   if (!cs) return { refuse: `${domain}: this cycle was measured against competitor set ${basis.set}, which the store no longer holds` }
   if (cs.missing.length) return { refuse: `${domain}: this cycle's competitor set included ${cs.missing.join(', ')}, which this build no longer holds` }
   const competitors = cs.competitors.filter((b) => b.id !== subject.id)
@@ -254,8 +258,8 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
  *
  * Reads only. No provider call, no model call, and no path here can collect.
  */
-export async function readScanAnswers(dataDir: string, domain: string, cycleDay?: string): Promise<ScanAnswers | { readonly refuse: string }> {
-  const got = await scoreStoredCycle(dataDir, domain, cycleDay)
+export async function readScanAnswers(dataDir: string, domain: string, cycleDay?: string, store?: WorkspaceStore): Promise<ScanAnswers | { readonly refuse: string }> {
+  const got = await scoreStoredCycle(dataDir, domain, cycleDay, store)
   if ('refuse' in got) return got
   return {
     domain: got.domain,

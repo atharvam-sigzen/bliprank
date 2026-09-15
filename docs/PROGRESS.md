@@ -1327,6 +1327,60 @@ and `packages/db/src/client.ts` (tenancy); `answer-stores.ts` wired into
 the scan runner (spend control); the numbering clash with
 `fix/tenancy-deploy-gate`'s unmerged 0003.
 
+**B3r — the oversight tenancy review of B2/B3a** (`fc439f6`, 2026-09-10;
+its own audit fixed in the B3b commit). Four confirmed findings, each with
+the failing case it catches: 0003 runs in one transaction, and
+`migrations.test.ts` applies a file statement by statement as psql does,
+cut after its GRANT, to prove the owner is left in no writing group;
+`ws_required()` is executable by the writers only, so a policy written
+through it raises for the tenant instead of returning rows; the deploy
+check and the isolation test derive their subject from everything a tenant
+session can read (any schema, any relation kind, `with_check` read for
+writes) minus the one shared name, so `USING (true)`, a wrapper policy, an
+open `WITH CHECK` and a view with no policy each fail both gates; and
+`schema_migrations`, created in 0003 with a unique index on the four-digit
+number, makes two files under one number impossible in any database, with
+the ordered list derived from the directory and the deploy check asserting
+the record is gapless. Its tenancy audit found one MAJOR — the derivations
+named `app_rw` literally, and production's tenant is a login role that is a
+MEMBER of `app_rw`, so a policy or grant on that role, or on a group
+`app_rw` inherits, was invisible — fixed by walking `pg_has_role(…,
+'MEMBER')` from every non-superuser member of `app_rw` in all three
+derivations, with the login-role and inherited-group cases added; and the
+record is now written first in each file. Cost review: null result.
+
+**B3b — the routes onto the store, the ledgers off disk** (2026-09-15,
+ADR-0002 Amendment 2). `apps/public/lib/workspace-access.ts` is the one
+way a route reaches workspace state: with identity configured, the
+Supabase session names the person, `workspaces_of` names the account's
+one workspace, the server mints a token for it and every store call opens
+its own `withWorkspace` transaction (`sessionWorkspaceStore`); a request
+that names a workspace or an account in its body or query changes nothing,
+and the end-to-end test on PGlite proves it for every route, the scan
+stream included. With identity off on a machine it is the file store
+(`fileWorkspaceStore`, the same interface over today's layout, reading
+through the modules' own validated readers); on a fleet runtime with
+identity off it is refused. An account with no workspace is told to create
+one; an agency with several is refused until Stage D1 builds the
+portfolio. The three request validators are pure decisions with a file twin
+for the CLIs and a store twin for the routes; the resolver takes a record
+store, and the document writer takes an expected version so a first
+decision is written once under the workspace lock. The ledgers: a
+`LedgerDoc` (a file, or a KV value under a `setnx` lock) carries the four
+count ledgers and the daily loop's day; the dollar caps are `Budget` on a
+file and the collector's `KvSpendLedger` on KV with the per-run allowance
+of ADR-0017 kept on both; `ledgerStores` chooses Upstash when the six
+answer-store variables are set, files on a machine, and refuses a fleet
+with neither. **Consequences to know:** on the deployment the Grader now
+needs a sign-in; `GRADER_DATA_DIR` must be writable there; generated banks
+are still files and so per instance on a deployment. `pnpm test`,
+`pnpm typecheck` and the apps/public build green.
+
+⚠️ HUMAN REVIEW REQUIRED: `workspace-access.ts`, `ws_put_document(…,
+p_expect_version)` in 0004, the three role-walking derivations (tenancy);
+`ledger-doc.ts`, `ledger-stores.ts`, the spend ledger in `run.ts`, the
+charge in `bank-author.ts`, the four ledger modules (spend control).
+
 ---
 
 ## 3. Tools and services, and why

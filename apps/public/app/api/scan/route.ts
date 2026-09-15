@@ -1,18 +1,19 @@
 import { normaliseHost } from '@bliprank/taxonomy'
 import { SCAN_FAILED } from '@/lib/route-errors'
-import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { checkGate, defaultGateConfig, ledgerCapUsd, recordScan, utcDay } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCycle, runAllowanceFor } from '../../../../../services/grader/src/domain-ceiling.js'
-import { latestCycle, writeCycle, type CycleResult } from '../../../../../services/grader/src/cycles.js'
-import { readCustomPromptSet } from '../../../../../services/grader/src/custom-prompts.js'
 import { loadApiKey, readFlag } from '../../../../../services/grader/src/load-key.js'
-import { allBanks, readCategoryRecord } from '../../../../../services/grader/src/resolve-category.js'
+import { allBanks } from '../../../../../services/grader/src/resolve-category.js'
 import { basisOf, promptsFor } from '../../../../../services/grader/src/scan.js'
 import { runGrader } from '../../../../../services/grader/src/run.js'
+import { categoryRecordIn, customPromptsIn, cycleInputOf } from '../../../../../services/grader/src/store/documents.js'
+import type { WorkspaceStore } from '../../../../../services/grader/src/store/pg-store.js'
 import { measuresCurrentCategory } from '@/lib/scan-result'
+import { ROOT } from '@/lib/data-dir'
+import { workspaceAccess } from '@/lib/workspace-access'
 import {
   checkVisitorThrottle,
   defaultVisitorThrottleConfig,
@@ -69,21 +70,11 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 
-const resolveRoot = (): string => {
-  let curr = process.cwd()
-  while (curr && curr !== dirname(curr)) {
-    if (existsSync(join(curr, 'services', 'grader'))) return curr
-    curr = dirname(curr)
-  }
-  return join(process.cwd(), '..', '..')
-}
-const ROOT = resolveRoot()
 /**
  * The data directory, resolved per request so a test can point this route at a
  * scratch directory through `GRADER_DATA_DIR` instead of writing ledgers and
  * results into the machine's real `data-live`.
  */
-const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(ROOT, 'services', 'grader', 'data-live')
 
 /**
  * Both flags, resolved the same way the API key is: environment first, then the
@@ -137,22 +128,21 @@ const resolveFlags = (env: NodeJS.ProcessEnv) => {
  * what cannot be checked would re-spend on shape drift alone — refusing to
  * guess in the safe direction, the same rule `runInfoOf` follows for cost.
  */
-function cached(data: string, domain: string): unknown | null {
-  const latest = latestCycle(data, domain)
+async function cached(store: WorkspaceStore, domain: string): Promise<unknown | null> {
+  const latest = await store.cycles.latest(domain)
   if (!latest) return null
-  // The record, not a re-derivation: `recordCategory` refuses to overwrite, so
-  // a record only ever changes by a deliberate act against the file. That makes
+  // The record, not a re-derivation: a first decision is written once, so a
+  // record only ever changes by a deliberate act against the store. That makes
   // the comparison stable rather than a source of surprise re-spending.
   //
   // The decision itself is a pure function in lib/scan-result.ts, where it can
   // be tested without a filesystem — this line is the IO around it.
-  const record = readCategoryRecord(data, domain)
+  const record = await categoryRecordIn(store, domain)
   return measuresCurrentCategory(latest.result, record?.slug ?? null) ? latest.result : null
 }
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
-  const DATA = dataDir(env)
   const visitorIp = extractClientIp(req, env)
   const body = (await req.json().catch(() => ({}))) as { domain?: string; cycle?: string }
   const domain = normaliseHost(String(body.domain ?? ''))
@@ -190,6 +180,16 @@ export async function POST(req: Request): Promise<Response> {
           return done(c)
         }
 
+        // THE WORKSPACE IS THE SESSION'S (MVP_PLAN B3b): the cycle this scan
+        // files, the record it runs under and the ledgers it books against
+        // are the store the session's token scopes. No session, no scan.
+        const access = await workspaceAccess(env)
+        if (!access.ok) {
+          send(c, 'error', { kind: 'access', message: access.message })
+          return done(c)
+        }
+        const { store, ledgers, dataDir: DATA } = access
+
         const now = new Date()
         const today = utcDay(now)
 
@@ -198,7 +198,7 @@ export async function POST(req: Request): Promise<Response> {
         // (needing 0) and the quota gate (remaining < 0 is never true) and then
         // run the WHOLE bank, because the runner drops a falsy maxPrompts. Found
         // by the ADR-0013 second review. Refused here, where it costs nothing.
-        const cfg = defaultGateConfig(DATA, env)
+        const cfg = defaultGateConfig(DATA, env, ledgers)
         if (!Number.isInteger(cfg.callsPerEngine) || cfg.callsPerEngine <= 0) {
           send(c, 'error', {
             kind: 'config',
@@ -211,7 +211,7 @@ export async function POST(req: Request): Promise<Response> {
           // 1. CACHE FIRST. A repeat of the same domain must never re-spend
           //    quota — with 50 requests a month and 17 per engine per scan, one
           //    accidental re-submit is a sixth of the month.
-          const hit = cached(DATA, domain)
+          const hit = await cached(store, domain)
           if (hit) {
             send(c, 'cached', { domain })
             send(c, 'result', hit)
@@ -230,9 +230,9 @@ export async function POST(req: Request): Promise<Response> {
           //    Without one, collecting would mean deciding a category today,
           //    which would make the two cycles measurements of different
           //    things. Refused rather than re-derived.
-          const prior = latestCycle<CycleResult & { comparisonBasis?: string }>(DATA, domain)
+          const prior = await store.cycles.latest(domain)
           if (prior) {
-            const record = readCategoryRecord(DATA, domain)
+            const record = await categoryRecordIn(store, domain)
             if (!record) {
               send(c, 'error', {
                 kind: 'no-record',
@@ -263,7 +263,7 @@ export async function POST(req: Request): Promise<Response> {
             //    version is deliberately NOT checked: a promoted competitor set
             //    is a deliberate act, and refusing every cycle after it would
             //    freeze the domain.
-            const was = basisOf(prior.result.comparisonBasis ?? '')
+            const was = basisOf(prior.comparisonBasis)
             const willAsk = promptsFor(bank, cfg.callsPerEngine).length
             const wasEngines = was.engines ? [...was.engines].sort().join(',') : undefined
             const willUse = [...ENGINES].sort().join(',')
@@ -313,8 +313,8 @@ export async function POST(req: Request): Promise<Response> {
         // 2. PER-VISITOR THROTTLE. Checked before checkGate so that a throttled
         //    visitor never touches the provider-quota check or the shared daily
         //    burst cap. Rejection here costs nothing and touches no shared state.
-        const visitorCfg = defaultVisitorThrottleConfig(DATA, env)
-        const visitorVerdict = checkVisitorThrottle(visitorIp, visitorCfg, now)
+        const visitorCfg = defaultVisitorThrottleConfig(DATA, env, ledgers)
+        const visitorVerdict = await checkVisitorThrottle(visitorIp, visitorCfg, now)
         if (!visitorVerdict.ok) {
           send(c, 'error', { kind: visitorVerdict.reason, message: visitorVerdict.message })
           return done(c)
@@ -328,10 +328,10 @@ export async function POST(req: Request): Promise<Response> {
         //    Denominated in hand-started CYCLES (ADR-0017): a change to the
         //    domain's prompt set changes what a cycle costs, never how many it
         //    gets. The cycle's cells size the per-run allowance below instead.
-        const customCount = readCustomPromptSet(DATA, domain)?.prompts.length ?? 0
+        const customCount = (await customPromptsIn(store, domain))?.prompts.length ?? 0
         const cellsThisCycle = (cfg.callsPerEngine + customCount) * ENGINES.length
-        const ceilingCfg = defaultDomainCeilingConfig(DATA, env)
-        const ceiling = checkDomainCeiling(domain, ceilingCfg, now)
+        const ceilingCfg = defaultDomainCeilingConfig(DATA, env, ledgers)
+        const ceiling = await checkDomainCeiling(domain, ceilingCfg, now)
         if (!ceiling.ok) {
           send(c, 'error', { kind: ceiling.reason, message: ceiling.message })
           return done(c)
@@ -380,9 +380,14 @@ export async function POST(req: Request): Promise<Response> {
           // silently get a worse classification than one that did not. For a
           // new cycle it is a no-op by construction: the record exists, or the
           // request was refused above.
-          author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA) ?? undefined,
+          author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA, ledgers) ?? undefined,
           dataDir: DATA,
           outFile: join(DATA, 'latest.json'),
+          // The session's store and the deployment's ledgers, so the record a
+          // first scan writes and the cap every attempt is charged to are the
+          // workspace's and the deployment's, never one instance's disk.
+          store,
+          ledgers,
           // Progress is streamed to the client through `onProgress` below, so a
           // second copy on stdout would be noise. The resolver's own log is lost
           // with it, and that is acceptable HERE and only here: by the time a
@@ -403,13 +408,13 @@ export async function POST(req: Request): Promise<Response> {
         //    made, including on a failed scan: a scan that burned 40 requests
         //    and returned nothing still burned 40 requests.
         if (result.status === 'scanned' || result.status === 'no-answers') {
-          recordScan(domain, cfg, now)
-          recordVisitorScan(visitorIp, visitorCfg, now)
+          await recordScan(domain, cfg, now)
+          await recordVisitorScan(visitorIp, visitorCfg, now)
         }
         //    A cycle that reached the provider is one hand-started cycle
         //    against the month's count, with the calls it realised beside it.
         if ('counts' in result && result.counts.providerCalls > 0) {
-          recordDomainCycle(domain, result.counts.providerCalls, ceilingCfg, now)
+          await recordDomainCycle(domain, result.counts.providerCalls, ceilingCfg, now)
         }
 
         // 6. FILE THE CYCLE. The envelope, not a bare result: what is written
@@ -425,8 +430,11 @@ export async function POST(req: Request): Promise<Response> {
         //    same cycle. A result with no day is not filed, and that is
         //    reported rather than silently dropped.
         if (result.status === 'scanned') {
-          const filed = writeCycle(DATA, result)
-          if ('refuse' in filed) send(c, 'stage', { stage: `not filed: ${filed.refuse}` })
+          try {
+            await store.cycles.put(cycleInputOf(result))
+          } catch (e) {
+            send(c, 'stage', { stage: `not filed: ${(e as Error).message}` })
+          }
         }
 
         send(c, 'result', result)

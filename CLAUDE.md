@@ -264,7 +264,8 @@ OPENWEBNINJA_API_KEY=
 ANTHROPIC_API_KEY=
 DATABASE_URL=
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET=
-UPSTASH_REDIS_REST_URL= UPSTASH_REDIS_REST_TOKEN=
+UPSTASH_REDIS_REST_URL= UPSTASH_REDIS_REST_TOKEN=   # all six or none; with all six the ledgers live in Upstash too (ADR-0002 Amendment 2)
+GRADER_DATA_DIR=                   # the grader's writable directory; unset = services/grader/data-live. On a function host set it to a writable path (/tmp/grader)
 STRIPE_SECRET_KEY= RAZORPAY_KEY_ID= RAZORPAY_KEY_SECRET=
 COLLECTION_BUDGET_USD_DAILY=      # hard daily ceiling, read by the daily loop (ADR-0017); a live tick refuses without it
 COLLECTION_ENABLED=                # see below: ON in agent sessions by decision, OFF everywhere else
@@ -450,9 +451,30 @@ tests; the cost review found the orchestrator re-bought a cell when a blob
 read failed, fixed in collect-cell.ts. ⚠️ HUMAN REVIEW: migrations 0003 and
 0004, `collect-cell.ts` (retry logic), `packages/db/src/client.ts` (tenancy),
 `answer-stores.ts` wiring in the runner (spend control). **Numbering clash
-to resolve at merge:** `fix/tenancy-deploy-gate` holds an unmerged
-`0003_tenancy_exposure_manifest.sql`. Not done: B3b (the file modules onto
-the store interface, the routes through a workspace token, the spend
-ledgers off disk) and B4 (operator corrections); `/account` says so.
+resolved by mechanism (B3r, 2026-09-15):** `schema_migrations` is created
+in 0003 with a unique index on the four-digit number, every file from 0003
+on records itself first, the test helper derives the ordered list from the
+directory, and the deploy check asserts the record is gapless; when
+`fix/tenancy-deploy-gate` merges its `0003_tenancy_exposure_manifest.sql`
+is renumbered 0005. The oversight review's other three findings (0003 in
+one transaction; `ws_required()` for the writers only; the two standing
+gates assert the inverse over everything a tenant session can read, with
+`with_check`) are built with failing cases. **B3b (2026-09-15, ADR-0002
+Amendment 2):** every route that touches workspace state goes through
+`apps/public/lib/workspace-access.ts`: identity on ⇒ the session's ONE
+workspace through a minted token (an agency with several is refused until
+D1); identity off on a machine ⇒ the file store; a fleet runtime with
+identity off ⇒ 503. The file modules' decisions are pure functions with a
+file twin (the CLIs) and a store twin (the routes, the runner). The
+ledgers live in Upstash when the six answer-store variables are set, in
+files on a machine, and are refused on a fleet with neither
+(`ledger-stores.ts`); the count ledgers are documents under a lock, the
+dollar caps the collector's atomic ledger with the per-run allowance kept.
+**On the deployment the Grader now needs a sign-in**, and `GRADER_DATA_DIR`
+must be a writable directory there (`/tmp/grader`). ⚠️ HUMAN REVIEW:
+`workspace-access.ts`, `ws_put_document(…, p_expect_version)`, the three
+role-walking derivations (tenancy); `ledger-doc.ts`, `ledger-stores.ts`,
+the spend ledger in `run.ts` and `bank-author.ts` (spend control). Not
+done: B4 (operator corrections inside the workspace); `/account` says so.
 
 Update this section at every phase transition. It is the first thing a new session reads.

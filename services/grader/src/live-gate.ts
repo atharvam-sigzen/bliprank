@@ -19,7 +19,9 @@
  * is the thing that catches the accident before the truth has to.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
+import type { LedgerStores } from './ledger-stores.js'
 import { dirname, join } from 'node:path'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 
@@ -194,6 +196,8 @@ export interface GateConfig {
   /** Calls one scan will draw from EVERY engine — prompts x runs. */
   readonly callsPerEngine: number
   readonly ledgerFile: string
+  /** Where the ledger lives; the file at `ledgerFile` when absent (MVP_PLAN B3b). */
+  readonly ledger?: LedgerDoc
   readonly engines: readonly EngineId[]
 }
 
@@ -207,9 +211,11 @@ interface Ledger {
   [utcDay: string]: string[]
 }
 
-const readLedger = (f: string): Ledger => {
+const docOf = (cfg: GateConfig): LedgerDoc => cfg.ledger ?? fileLedgerDoc(cfg.ledgerFile)
+const shapeLedger = (raw: unknown): Ledger => (typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Ledger) : {})
+const readLedger = async (cfg: GateConfig): Promise<Ledger> => {
   try {
-    return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as Ledger) : {}
+    return shapeLedger(await docOf(cfg).read())
   } catch {
     // A corrupt ledger must not open the gate. Treat it as "today is unknown",
     // which the burst cap then reads as a full day already spent.
@@ -220,8 +226,8 @@ const readLedger = (f: string): Ledger => {
 export const utcDay = (now: Date): string => now.toISOString().slice(0, 10)
 
 /** Domains already scanned live today, in order. */
-export function scannedToday(cfg: GateConfig, now: Date): readonly string[] {
-  const l = readLedger(cfg.ledgerFile)
+export async function scannedToday(cfg: GateConfig, now: Date): Promise<readonly string[]> {
+  const l = await readLedger(cfg)
   if ('__corrupt' in l) return Array.from({ length: cfg.maxNewPerDay }, (_, i) => `unknown-${i}`)
   return l[utcDay(now)] ?? []
 }
@@ -239,7 +245,7 @@ export async function checkGate(
   now: Date = new Date(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<GateVerdict> {
-  const today = scannedToday(cfg, now)
+  const today = await scannedToday(cfg, now)
   if (!today.includes(domain) && today.length >= cfg.maxNewPerDay) {
     return {
       ok: false,
@@ -282,17 +288,18 @@ export async function checkGate(
 }
 
 /** Record a domain as collected today. Called only after a scan actually spends. */
-export function recordScan(domain: string, cfg: GateConfig, now: Date = new Date()): void {
-  const l = readLedger(cfg.ledgerFile)
-  const day = utcDay(now)
-  const list = ('__corrupt' in l ? {} : l)[day] ?? []
-  if (!list.includes(domain)) list.push(domain)
-  const next: Ledger = { ...('__corrupt' in l ? {} : l), [day]: list }
-  mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
-  writeFileSync(cfg.ledgerFile, JSON.stringify(next, null, 2) + '\n')
+export async function recordScan(domain: string, cfg: GateConfig, now: Date = new Date()): Promise<void> {
+  await docOf(cfg).update((raw) => {
+    const l: Ledger = raw === CORRUPT ? {} : shapeLedger(raw)
+    const day = utcDay(now)
+    const list = [...(l[day] ?? [])]
+    if (!list.includes(domain)) list.push(domain)
+    const next: Ledger = { ...l, [day]: list }
+    return next
+  })
 }
 
-export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): GateConfig => ({
+export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env, ledgers?: LedgerStores): GateConfig => ({
   /*
    * Raised from 2 on 2026-08-25, deliberately, and it is now a RUNAWAY BACKSTOP
    * rather than the operating limit.
@@ -308,5 +315,6 @@ export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = proc
   maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 12),
   callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? DEFAULT_PROMPTS_PER_SCAN),
   ledgerFile: join(dataDir, 'live-cap.json'),
+  ...(ledgers ? { ledger: ledgers.doc('live-cap.json') } : {}),
   engines: [...ENGINES],
 })

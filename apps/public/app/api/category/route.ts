@@ -1,8 +1,7 @@
 import { normaliseHost } from '@bliprank/taxonomy'
-import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { allPending, consequencesOf, fileCategoryRequest, pendingRequest, requestsFor } from '../../../../../services/grader/src/category-requests.js'
-import { allCategories, readCategoryRecord, readGeneratedBanks } from '../../../../../services/grader/src/resolve-category.js'
+import { consequencesOf, fileCategoryRequestIn, type CategoryRequest } from '../../../../../services/grader/src/category-requests.js'
+import { allCategories, readGeneratedBanks } from '../../../../../services/grader/src/resolve-category.js'
+import { categoryRecordIn } from '../../../../../services/grader/src/store/documents.js'
 import {
   DEFAULT_VISITOR_WINDOW_MS,
   checkVisitorThrottle,
@@ -12,78 +11,86 @@ import {
 } from '../../../../../services/grader/src/visitor-throttle.js'
 import { FALLBACK_SLUG } from '@bliprank/taxonomy'
 import type { CategoryStatus } from '../../../lib/category-request'
+import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
  * A domain's recorded category, its history, and the request to change it.
  * ADR-0016, decisions 2 and 5.
  *
- * On the deployment (Vercel, ADR-0002 Amendment 1) this route exists; its
- * store is one machine's disk until MVP_PLAN B3, so a domain with no record
- * here is a 404 and the surface says corrections are filed where the record is.
+ * THE WORKSPACE IS THE SESSION'S (MVP_PLAN B3b): the record, the pending
+ * request and the history are read from, and a request is filed into, the
+ * store the session's token scopes. Nothing in the request names a
+ * workspace; the domain names a subject inside it.
  *
  * ⚠️ NOTHING HERE WRITES THE RECORD. GET reads it. POST files a REQUEST, which
- * the record shows as pending and which changes no measurement until
- * `pnpm grader:correct` applies it. There is no identity in the product, so a
- * route that applied a correction would let anyone relabel anyone's domain
- * (the audit that shaped ADR-0016). What POST can do is bounded twice: by a
+ * the record shows as pending and which changes no measurement until an
+ * operator applies it (`pnpm grader:correct` on a machine; the workspace's
+ * own apply route is MVP_PLAN B4). What POST can do is bounded twice: by a
  * per-visitor allowance on its own ledger, and by the store's own rule of one
  * pending request per domain, so a loop of "visitors" can at most keep
  * replacing one sentence.
  *
  * GET is bounded to domains with a record (404 otherwise) and is not
- * throttled: it is one JSON read, and a ledger keyed by a caller-written
- * header would cost more per request than the read it guarded, and grow with
- * every name the caller invented.
+ * throttled: it is one read, and a ledger keyed by a caller-written header
+ * would cost more per request than the read it guarded, and grow with every
+ * name the caller invented.
  *
  * ⚠️ WHAT GET DOES NOT SAY. A pending request's REASON is 500 characters of
  * anonymous text. Printing it on the domain's public record would let anyone
  * post a sentence on anyone's page; so the record says a correction to X was
  * requested on a date and not applied, and no more. The filer sees their own
- * words in the outcome; the operator sees them in `pnpm grader:correct`.
+ * words in the outcome; the operator sees them when applying.
  */
 
 export const dynamic = 'force-dynamic'
-// Two JSON reads and one small write; the plan default (300s) is a runaway ceiling, not a need.
+// Two reads and one small write; the plan default (300s) is a runaway ceiling, not a need.
 export const maxDuration = 30
-
-const resolveRoot = (): string => {
-  let curr = process.cwd()
-  while (curr && curr !== dirname(curr)) {
-    if (existsSync(join(curr, 'services', 'grader'))) return curr
-    curr = dirname(curr)
-  }
-  return join(process.cwd(), '..', '..')
-}
-const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(resolveRoot(), 'services', 'grader', 'data-live')
 
 const DEFAULT_MAX_REQUESTS_PER_VISITOR_PER_HOUR = 5
 /** Filings against ONE domain an hour, across every visitor. One pending request exists at a time; this bounds how often it can be rewritten. */
 const DEFAULT_MAX_REQUESTS_PER_DOMAIN_PER_HOUR = 6
 
-const fileCfg = (data: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+type Access = WorkspaceAccess & { ok: true }
+const fileCfg = (access: Access, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_CATEGORY_REQUESTS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_REQUESTS_PER_VISITOR_PER_HOUR),
   windowMs: DEFAULT_VISITOR_WINDOW_MS,
-  ledgerFile: join(data, 'category-request-throttle.json'),
+  ledgerFile: `${access.dataDir}/category-request-throttle.json`,
+  ledger: access.ledgers.doc('category-request-throttle.json'),
 })
-const domainCfg = (data: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+const domainCfg = (access: Access, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_CATEGORY_REQUESTS_PER_DOMAIN_PER_HOUR'] ?? DEFAULT_MAX_REQUESTS_PER_DOMAIN_PER_HOUR),
   windowMs: DEFAULT_VISITOR_WINDOW_MS,
-  ledgerFile: join(data, 'category-request-domain-cap.json'),
+  ledgerFile: `${access.dataDir}/category-request-domain-cap.json`,
+  ledger: access.ledgers.doc('category-request-domain-cap.json'),
 })
-
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
+/** A stored request in the shape the modules define, host and all. */
+type RequestBody = { readonly slug: string; readonly reason: string }
+const requestOf = (r: { readonly host: string; readonly body: RequestBody; readonly requestedAt: string; readonly status: CategoryRequest['status']; readonly resolvedAt: string | null; readonly note: string | null }) => ({
+  host: r.host,
+  slug: r.body.slug,
+  reason: r.body.reason,
+  requestedAt: r.requestedAt,
+  status: r.status,
+  ...(r.resolvedAt ? { resolvedAt: r.resolvedAt } : {}),
+  ...(r.note ? { note: r.note } : {}),
+})
+
 export async function GET(req: Request): Promise<Response> {
   const env = process.env
-  const data = dataDir(env)
   const domain = normaliseHost(new URL(req.url).searchParams.get('domain') ?? '')
   if (!domain) return json({ kind: 'input', message: 'Pass ?domain=example.com' }, 400)
 
+  const access = await workspaceAccess(env)
+  if (!access.ok) return json({ kind: 'access', message: access.message }, access.status)
+  const { store, dataDir: data } = access
+
   // Bounded to recorded domains BEFORE the ledger: an unknown name costs nobody a slot.
-  const record = readCategoryRecord(data, domain)
-  if (!record) return json({ kind: 'no-record', message: `${domain} has no category on record on this machine. A first scan decides one; there is nothing to correct until then.` }, 404)
+  const record = await categoryRecordIn(store, domain)
+  if (!record) return json({ kind: 'no-record', message: `${domain} has no category on record in this workspace. A first scan decides one; there is nothing to correct until then.` }, 404)
 
   const names = new Map(allCategories(data).map((c) => [c.slug, c]))
   const name = (slug: string) => names.get(slug)?.displayName ?? slug
@@ -91,8 +98,8 @@ export async function GET(req: Request): Promise<Response> {
   const generatedSlugs = new Set(readGeneratedBanks(data).map((g) => g.bank.category))
   // Each correction's target is the slug of the record that carries it.
   const chain = [...(record.superseded ?? []), record]
-  const pending = pendingRequest(data, domain)
-  const c = consequencesOf(data, domain, env)
+  const pending = await store.requests.pending<RequestBody>('category', domain)
+  const c = consequencesOf(data, domain, env, (await store.cycles.list(domain)).length)
   const body: CategoryStatus = {
     domain,
     record: {
@@ -105,8 +112,9 @@ export async function GET(req: Request): Promise<Response> {
     },
     // The general bank is what a domain gets when no category fits; it is not a category to choose, and the store refuses it.
     categories: [...names.values()].filter((k) => k.slug !== FALLBACK_SLUG).map((k) => ({ slug: k.slug, name: k.displayName, generated: generatedSlugs.has(k.slug) })).sort((a, b) => a.name.localeCompare(b.name)),
-    pending: pending ? { slug: pending.slug, name: name(pending.slug), requestedAt: pending.requestedAt } : null,
-    history: requestsFor(data, domain)
+    pending: pending ? { slug: pending.body.slug, name: name(pending.body.slug), requestedAt: pending.requestedAt } : null,
+    history: (await store.requests.forHost<RequestBody>('category', domain))
+      .map(requestOf)
       .filter((r): r is typeof r & { status: 'applied' | 'declined' } => r.status !== 'pending')
       .map((r) => ({ slug: r.slug, status: r.status, requestedAt: r.requestedAt, resolvedAt: r.resolvedAt ?? '', note: r.note ?? '' })),
     nextCycle: { prompts: c.prompts, engines: c.engines, cells: c.cells, usd: c.usd, plan: c.plan, earlierCycles: c.earlierCycles },
@@ -116,7 +124,6 @@ export async function GET(req: Request): Promise<Response> {
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
-  const data = dataDir(env)
   const raw = (await req.json().catch(() => ({}))) as { domain?: unknown; slug?: unknown; reason?: unknown }
   const domain = normaliseHost(String(raw.domain ?? ''))
   if (!domain) return json({ kind: 'input', message: 'Pass the domain the record is about.' }, 400)
@@ -124,25 +131,29 @@ export async function POST(req: Request): Promise<Response> {
   const reason = typeof raw.reason === 'string' ? raw.reason : ''
   if (!slug) return json({ kind: 'input', message: 'Choose the category you think is right.' }, 400)
 
+  const access = await workspaceAccess(env)
+  if (!access.ok) return json({ kind: 'access', message: access.message }, access.status)
+  const { store, dataDir: data } = access
+
   // No record: nothing to correct, and no slot spent finding that out.
-  if (!readCategoryRecord(data, domain)) return json({ kind: 'no-record', message: `${domain} has no category on record on this machine, so there is nothing to correct yet.` }, 404)
+  if (!(await categoryRecordIn(store, domain))) return json({ kind: 'no-record', message: `${domain} has no category on record in this workspace, so there is nothing to correct yet.` }, 404)
 
   const now = new Date()
-  const perDomain = domainCfg(data, env)
-  const domainVerdict = checkVisitorThrottle(domain, perDomain, now)
+  const perDomain = domainCfg(access, env)
+  const domainVerdict = await checkVisitorThrottle(domain, perDomain, now)
   if (!domainVerdict.ok) return json({ kind: 'rate-limit', message: `Requests about ${domain} have been filed ${perDomain.maxScansPerHour} times in the last hour. The pending one stands; try again later.` }, 429)
-  const cfg = fileCfg(data, env)
+  const cfg = fileCfg(access, env)
   const ip = extractClientIp(req, env)
-  const verdict = checkVisitorThrottle(ip, cfg, now)
+  const verdict = await checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
-  const filed = fileCategoryRequest(data, { host: domain, slug, reason })
+  const filed = await fileCategoryRequestIn(store, data, { host: domain, slug, reason })
   if ('refuse' in filed) {
     const status = filed.kind === 'input' ? 400 : filed.kind === 'same-category' ? 409 : 422
     return json({ kind: filed.kind, message: filed.refuse }, status)
   }
   // Booked after a successful filing: a refusal wrote nothing and costs nothing.
-  recordVisitorScan(domain, perDomain, now)
-  recordVisitorScan(ip, cfg, now)
-  return json({ request: filed, pendingAcrossStore: allPending(data).length })
+  await recordVisitorScan(domain, perDomain, now)
+  await recordVisitorScan(ip, cfg, now)
+  return json({ request: filed, pendingAcrossStore: (await store.requests.allPending('category')).length })
 }

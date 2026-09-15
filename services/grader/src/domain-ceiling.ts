@@ -51,7 +51,8 @@
  * refuse scans the provider would happily serve, and permit scans it would not.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
+import type { LedgerStores } from './ledger-stores.js'
 import { dirname, join } from 'node:path'
 import { ENGINES } from '@bliprank/contracts'
 import { DEFAULT_PROMPTS_PER_SCAN } from './live-gate.js'
@@ -87,6 +88,8 @@ export const runAllowanceFor = (cellsPerCycle: number): number => Math.ceil(cell
 export interface DomainCeilingConfig {
   readonly maxCyclesPerMonth: number
   readonly ledgerFile: string
+  /** Where the ledger lives; the file at `ledgerFile` when absent (MVP_PLAN B3b). */
+  readonly ledger?: LedgerDoc
   /** Cells one cycle drew when a pre-split ledger (a bare call count) was written; how many cycles that count implies. Defaults to the default cycle size. */
   readonly legacyCellsPerCycle?: number
 }
@@ -119,12 +122,11 @@ export function resetDate(now: Date): string {
   return next.toISOString().slice(0, 10)
 }
 
-const readLedger = (f: string): Ledger | { readonly __corrupt: true } => {
+const docOf = (cfg: DomainCeilingConfig): LedgerDoc => cfg.ledger ?? fileLedgerDoc(cfg.ledgerFile)
+const shapeLedger = (parsed: unknown): Ledger => (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed) ? {} : (parsed as Ledger))
+const readLedger = async (cfg: DomainCeilingConfig): Promise<Ledger | { readonly __corrupt: true }> => {
   try {
-    if (!existsSync(f)) return {}
-    const parsed: unknown = JSON.parse(readFileSync(f, 'utf8'))
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {}
-    return parsed as Ledger
+    return shapeLedger(await docOf(cfg).read())
   } catch {
     /*
      * FAIL CLOSED, and it is a different failure from the other ledgers'.
@@ -152,8 +154,8 @@ const shape = (v: Entry | number | undefined, cellsPerCycle: number): Entry => {
 }
 
 /** Hand-started cycles this domain has run this month, and the calls they realised. */
-export function cyclesThisMonth(domain: string, cfg: DomainCeilingConfig, now: Date = new Date()): Entry {
-  const l = readLedger(cfg.ledgerFile)
+export async function cyclesThisMonth(domain: string, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<Entry> {
+  const l = await readLedger(cfg)
   if ('__corrupt' in l) return { cycles: cfg.maxCyclesPerMonth, calls: 0 }
   return shape(l[utcMonth(now)]?.[domain], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
 }
@@ -162,8 +164,8 @@ export function cyclesThisMonth(domain: string, cfg: DomainCeilingConfig, now: D
  * May this domain be hand-collected again this month? Checked BEFORE the
  * scan; a domain at its count is refused outright rather than half-collected.
  */
-export function checkDomainCeiling(domain: string, cfg: DomainCeilingConfig, now: Date = new Date()): CeilingVerdict {
-  const used = cyclesThisMonth(domain, cfg, now)
+export async function checkDomainCeiling(domain: string, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<CeilingVerdict> {
+  const used = await cyclesThisMonth(domain, cfg, now)
   if (used.cycles >= cfg.maxCyclesPerMonth) {
     return {
       ok: false,
@@ -183,15 +185,16 @@ export function checkDomainCeiling(domain: string, cfg: DomainCeilingConfig, now
  * and consumed no allowance, so the caller records only when `providerCalls`
  * is positive. Only the current month is kept.
  */
-export function recordDomainCycle(domain: string, calls: number, cfg: DomainCeilingConfig, now: Date = new Date()): void {
+export async function recordDomainCycle(domain: string, calls: number, cfg: DomainCeilingConfig, now: Date = new Date()): Promise<void> {
   if (!domain || !Number.isFinite(calls) || calls <= 0) return
-  const l = readLedger(cfg.ledgerFile)
-  const month = utcMonth(now)
-  const current = ('__corrupt' in l ? {} : l)[month] ?? {}
-  const was = shape(current[domain], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
-  const next: Ledger = { [month]: { ...current, [domain]: { cycles: was.cycles + 1, calls: was.calls + calls } } }
-  mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
-  writeFileSync(cfg.ledgerFile, JSON.stringify(next, null, 2) + '\n')
+  await docOf(cfg).update((raw) => {
+    const l: Ledger = raw === CORRUPT ? {} : shapeLedger(raw)
+    const month = utcMonth(now)
+    const current = l[month] ?? {}
+    const was = shape(current[domain], cfg.legacyCellsPerCycle ?? DEFAULT_CELLS_PER_CYCLE)
+    const next: Ledger = { [month]: { ...current, [domain]: { cycles: was.cycles + 1, calls: was.calls + calls } } }
+    return next
+  })
 }
 
 /**
@@ -201,7 +204,7 @@ export function recordDomainCycle(domain: string, calls: number, cfg: DomainCeil
  * set it meant a number of calls, and silently reading it as nothing would
  * give them two cycles with no word said.
  */
-export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): DomainCeilingConfig => {
+export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env, ledgers?: LedgerStores): DomainCeilingConfig => {
   const old = env['GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH']
   if (old !== undefined && old !== '') {
     throw new Error(`GRADER_MAX_CALLS_PER_DOMAIN_PER_MONTH=${old} is no longer read: the per-domain ceiling counts hand-started cycles since 2026-09-07 (ADR-0017). Unset it, and set GRADER_MAX_CYCLES_PER_DOMAIN_PER_MONTH to a number of cycles if two is not right.`)
@@ -211,6 +214,7 @@ export const defaultDomainCeilingConfig = (dataDir: string, env: NodeJS.ProcessE
   return {
     maxCyclesPerMonth: Number.isInteger(explicit) && explicit > 0 ? explicit : CYCLES_PER_MONTH,
     ledgerFile: join(dataDir, 'domain-ceiling.json'),
+    ...(ledgers ? { ledger: ledgers.doc('domain-ceiling.json') } : {}),
     legacyCellsPerCycle: Number.isFinite(prompts) && prompts > 0 ? prompts * ENGINES.length : DEFAULT_CELLS_PER_CYCLE,
   }
 }

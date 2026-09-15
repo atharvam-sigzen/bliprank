@@ -168,7 +168,7 @@ BEGIN
     -- 0003: onboarding, owned by svc_onboard, app_rw only
     'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
     -- 0004: workspace state writers, owned by svc_onboard, workspace from the verified context
-    'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb)',
+    'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb,integer)',
     'ws_file_request(text,text,jsonb,timestamp with time zone)',
     'ws_resolve_request(text,text,timestamp with time zone,text,text,text)'
   ]);
@@ -236,28 +236,44 @@ END $do$;
 -- were never examined. A substring is still not a scope — the behavioural
 -- proof is tenant-isolation.test.ts, whose subject is derived the same way —
 -- but a policy that cannot even name the context is refused at deploy.
-\echo 'checking every relation the tenant role can read is shared by declaration or scoped by every policy it meets...'
+--
+-- THE TENANT IS NOT THE NAME app_rw. Production connects as a login role that
+-- is a MEMBER of app_rw (CLAUDE.md §7), created at deploy time outside any
+-- migration, and app_rw may itself be granted a group. A grant or a policy
+-- naming either side of that membership edge reaches a tenant session and
+-- named only app_rw in this derivation, so it was invisible (B3r tenancy
+-- audit, MAJOR). The subject is therefore every role a tenant session can act
+-- as: app_rw, every role that is a member of it, and everything any of those
+-- inherits — the same pg_has_role(…, 'MEMBER') edge assert_role_exclusivity
+-- walks.
+\echo 'checking every relation a tenant session can read is shared by declaration or scoped by every policy it meets...'
 DO $do$
 DECLARE bad text;
 BEGIN
+  CREATE TEMP TABLE tenant_roles ON COMMIT DROP AS
+    SELECT r.oid, r.rolname FROM pg_roles r
+     WHERE r.rolname NOT LIKE 'pg\_%' AND NOT r.rolsuper
+       AND EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'));
   SELECT string_agg(rel || ' (' || why || ')', '; ' ORDER BY rel) INTO bad FROM (
     SELECT ns.nspname || '.' || c.relname AS rel,
            CASE
              WHEN NOT EXISTS (SELECT 1 FROM pg_policies p
                                WHERE p.schemaname = ns.nspname AND p.tablename = c.relname
-                                 AND p.cmd IN ('SELECT', 'ALL') AND (p.roles = '{public}' OR 'app_rw' = ANY (p.roles)))
+                                 AND p.cmd IN ('SELECT', 'ALL')
+                                 AND (p.roles = '{public}' OR EXISTS (SELECT 1 FROM unnest(p.roles) pr JOIN tenant_roles t ON t.rolname = pr)))
                THEN 'no read policy for the tenant role'
              ELSE (SELECT string_agg('policy ' || p.policyname || ' does not scope on current_workspace_id', ', ' ORDER BY p.policyname)
                      FROM pg_policies p
                     WHERE p.schemaname = ns.nspname AND p.tablename = c.relname
-                      AND (p.roles = '{public}' OR 'app_rw' = ANY (p.roles))
+                      AND (p.roles = '{public}' OR EXISTS (SELECT 1 FROM unnest(p.roles) pr JOIN tenant_roles t ON t.rolname = pr))
                       AND ((p.cmd IN ('SELECT', 'ALL', 'UPDATE', 'DELETE') AND coalesce(p.qual, '') NOT LIKE '%current_workspace_id%')
                         OR (p.cmd IN ('INSERT', 'ALL', 'UPDATE') AND coalesce(p.with_check, p.qual, '') NOT LIKE '%current_workspace_id%')))
            END AS why
       FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
      WHERE ns.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
        AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
-       AND (has_any_column_privilege('app_rw', c.oid, 'SELECT') OR has_any_column_privilege('public', c.oid, 'SELECT'))
+       AND (has_any_column_privilege('public', c.oid, 'SELECT')
+            OR EXISTS (SELECT 1 FROM tenant_roles t WHERE has_any_column_privilege(t.oid, c.oid, 'SELECT')))
        -- the shared-corpus allowlist: read in full by every tenant, by decision
        AND ns.nspname || '.' || c.relname <> ALL (ARRAY['public.prompt_banks'])
   ) x WHERE why IS NOT NULL;

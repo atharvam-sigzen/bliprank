@@ -19,7 +19,8 @@
  * cached results are answered before this check is reached.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
+import type { LedgerStores } from './ledger-stores.js'
 import { isIP } from 'node:net'
 import { dirname, join } from 'node:path'
 
@@ -33,6 +34,8 @@ export interface VisitorThrottleConfig {
   readonly windowMs: number
   /** Path to the JSON ledger file. */
   readonly ledgerFile: string
+  /** Where the ledger lives; the file at `ledgerFile` when absent (MVP_PLAN B3b). */
+  readonly ledger?: LedgerDoc
 }
 
 export type VisitorVerdict =
@@ -50,9 +53,11 @@ interface VisitorLedger {
   [ip: string]: number[]
 }
 
-const readLedger = (f: string): VisitorLedger => {
+const docOf = (cfg: VisitorThrottleConfig): LedgerDoc => cfg.ledger ?? fileLedgerDoc(cfg.ledgerFile)
+const shapeLedger = (raw: unknown): VisitorLedger => (typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as VisitorLedger) : {})
+const readLedger = async (cfg: VisitorThrottleConfig): Promise<VisitorLedger> => {
   try {
-    return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as VisitorLedger) : {}
+    return shapeLedger(await docOf(cfg).read())
   } catch {
     // A corrupt ledger fails closed: treat as unknown/full rather than ignoring.
     return { __corrupt: [] } as unknown as VisitorLedger
@@ -102,12 +107,12 @@ export function extractClientIp(headersOrReq: Headers | Request, env: NodeJS.Pro
 }
 
 /** Timestamps of live scans within the rolling window for this visitor IP. */
-export function visitorScansInWindow(
+export async function visitorScansInWindow(
   ip: string,
   cfg: VisitorThrottleConfig,
   now: Date = new Date(),
-): readonly number[] {
-  const l = readLedger(cfg.ledgerFile)
+): Promise<readonly number[]> {
+  const l = await readLedger(cfg)
   if ('__corrupt' in l) {
     return Array.from({ length: cfg.maxScansPerHour }, () => now.getTime())
   }
@@ -122,12 +127,12 @@ export function visitorScansInWindow(
  * Runs before `checkGate`: a refused request returns an honest explanation,
  * costs nothing, and does not touch the shared global ledger.
  */
-export function checkVisitorThrottle(
+export async function checkVisitorThrottle(
   ip: string,
   cfg: VisitorThrottleConfig,
   now: Date = new Date(),
-): VisitorVerdict {
-  const active = visitorScansInWindow(ip, cfg, now)
+): Promise<VisitorVerdict> {
+  const active = await visitorScansInWindow(ip, cfg, now)
   if (active.length >= cfg.maxScansPerHour) {
     const oldest = Math.min(...active)
     const resetMs = Math.max(0, oldest + cfg.windowMs - now.getTime())
@@ -150,26 +155,28 @@ export function checkVisitorThrottle(
 }
 
 /** Record a successful or attempted spend by this visitor IP in the rolling window. */
-export function recordVisitorScan(
+export async function recordVisitorScan(
   ip: string,
   cfg: VisitorThrottleConfig,
   now: Date = new Date(),
-): void {
-  const l = readLedger(cfg.ledgerFile)
-  const base: VisitorLedger = '__corrupt' in l ? {} : l
-  const cutoff = now.getTime() - cfg.windowMs
-  const current = (base[ip] ?? []).filter((t) => typeof t === 'number' && t > cutoff)
-  current.push(now.getTime())
-  const next: VisitorLedger = { ...base, [ip]: current }
-  mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
-  writeFileSync(cfg.ledgerFile, JSON.stringify(next, null, 2) + '\n')
+): Promise<void> {
+  await docOf(cfg).update((raw) => {
+    const base: VisitorLedger = raw === CORRUPT ? {} : shapeLedger(raw)
+    const cutoff = now.getTime() - cfg.windowMs
+    const current = (base[ip] ?? []).filter((t) => typeof t === 'number' && t > cutoff)
+    current.push(now.getTime())
+    const next: VisitorLedger = { ...base, [ip]: current }
+    return next
+  })
 }
 
 export const defaultVisitorThrottleConfig = (
   dataDir: string,
   env: NodeJS.ProcessEnv = process.env,
+  ledgers?: LedgerStores,
 ): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_SCANS_PER_VISITOR_PER_HOUR),
   windowMs: Number(env['GRADER_VISITOR_WINDOW_MS'] ?? DEFAULT_VISITOR_WINDOW_MS),
   ledgerFile: join(dataDir, 'visitor-throttle.json'),
+  ...(ledgers ? { ledger: ledgers.doc('visitor-throttle.json') } : {}),
 })

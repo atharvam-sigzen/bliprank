@@ -49,11 +49,15 @@ import { answerStores } from './answer-stores.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
 import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.js'
 import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
-import { competitorsFor } from './competitor-overrides.js'
+import { competitorsIn } from './competitor-overrides.js'
 import { customPromptsAt, readCustomPromptSet } from './custom-prompts.js'
+import { ledgerStores, type LedgerStores } from './ledger-stores.js'
+import { categoryRecordIn, customPromptsAtIn, customPromptsIn, recordsIn } from './store/documents.js'
+import { fileWorkspaceStore } from './store/file-store.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 import { runAllowanceFor } from './domain-ceiling.js'
 import type { CategoryResolution } from './scan.js'
-import { allBanks, allCategories, resolveCategory, readCategoryRecord, type CategoryRecord } from './resolve-category.js'
+import { allBanks, allCategories, resolveCategory, type CategoryRecord } from './resolve-category.js'
 import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
 
 /** Provider ceiling for one API key, shared across engines. */
@@ -104,6 +108,10 @@ export interface RunnerOptions {
    * says otherwise. Absent means unbounded within the ledger's cap.
    */
   readonly runAllowanceCalls?: number
+  /** The deployment's workspace store (records, overrides, prompt sets); this machine's files when absent (MVP_PLAN B3b). */
+  readonly store?: WorkspaceStore
+  /** Where the spend ledger lives; this machine's files when absent (MVP_PLAN B3b, R3). */
+  readonly ledgers?: LedgerStores
 }
 
 export function parseArgs(
@@ -305,8 +313,12 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // of $1 therefore blocked every live scan afterwards, which is a fixture
     // run breaking live collection while spending nothing. Found by doing
     // exactly that during a lock test.
-    const ledgerFile = join(o.dataDir, offline ? `ledger.${o.mode}.json` : 'ledger.json')
-    const budget = new Budget(ledgerFile, o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]), () => new Date(), o.runAllowanceCalls)
+    const ledgers = o.ledgers ?? ledgerStores(o.dataDir, process.env)
+    const store = o.store ?? fileWorkspaceStore(o.dataDir)
+    const spendLedger = ledgers.spend(offline ? `ledger.${o.mode}.json` : 'ledger.json', o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]), {
+      ...(o.runAllowanceCalls !== undefined ? { runAllowanceCalls: o.runAllowanceCalls } : {}),
+      engines: o.engines,
+    })
     // THE LEDGER IS CUMULATIVE FOR THE DATA DIR, THIS RUN IS NOT.
     //
     // `Budget` loads the existing ledger off disk and only ever adds to it, so
@@ -315,7 +327,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // its own cost, and growing with every later run - and /api/scan then
     // cached that figure as the domain's own. The delta is the only per-scan
     // number the ledger can honestly yield.
-    const spentBefore = budget.state.spentUsd
+    const spentBefore = await spendLedger.spentUsd()
 
     // Share one key's ceiling across the engines in play, then take a fraction
     // of it — the published per-engine ceilings sum to more than one key allows.
@@ -365,7 +377,9 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
       index: new AnswerIndex(stores.kv),
       blob,
       rateBudget: LocalRateBudget.forSingleProcess(buckets, { iUnderstandThisBudgetIsPerProcess: true, reason, env: declared }),
-      budget: LocalSpendLedger.forSingleProcess(budget, { iUnderstandThisCapIsPerProcess: true, reason, env: declared }),
+      // The ledger the deployment reaches: a file behind `Budget` here, atomic
+      // KV counters there; charge-before-attempt either way (ledger-stores.ts).
+      budget: spendLedger,
       deadLetter,
       owner: `grader-local-${process.pid}`,
     })
@@ -394,11 +408,11 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
      * homepage GET and the author stay live-only. With no record, an offline
      * run classifies from the host alone, as it always did.
      */
-    const fromRecord = (domain: string, record: CategoryRecord, bank: PromptBank, fallback?: CategoryResolution['fallback']): CategoryResolution => {
+    const fromRecord = async (domain: string, record: CategoryRecord, bank: PromptBank, fallback?: CategoryResolution['fallback']): Promise<CategoryResolution> => {
       // The domain's competitor override: the one in force, or the one pinned
       // by `competitorSet`, so the scan measures against the set the record
       // page shows (or a stored cycle recorded) and stamps its version.
-      const cs = competitorsFor(o.dataDir, domain, bank, subjectFor(domain, bank, record.brandName).spec.id, o.competitorSet)
+      const cs = await competitorsIn(store, o.dataDir, domain, bank, subjectFor(domain, bank, record.brandName).spec.id, o.competitorSet)
       if (!cs) throw new Error(`${domain}: competitor set ${o.competitorSet} is not on record; a measurement under another set is a different measurement`)
       if (cs.missing.length) throw new Error(`${domain}: the competitor set includes ${cs.missing.join(', ')}, which this build no longer holds`)
       return {
@@ -411,13 +425,14 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
         ...(cs.set !== undefined ? { competitorSet: { version: cs.set, competitors: cs.competitors } } : {}),
       }
     }
-    const offlineRecord = o.mode !== 'live' ? readCategoryRecord(o.dataDir, o.domain) : null
+    const offlineRecord = o.mode !== 'live' ? await categoryRecordIn(store, o.domain) : null
     const offlineBank = offlineRecord ? allBanks(o.dataDir).find((b) => b.category === offlineRecord.slug) : undefined
     const resolver =
       o.mode === 'live'
         ? async (domain: string) => {
             const r = await resolveCategory(domain, {
               dataDir: o.dataDir,
+              records: recordsIn(store),
               author: o.author,
               log: o.log,
             })
@@ -431,7 +446,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // The customer's own prompts: the set in force, or the version pinned by
     // a re-derivation. Read beside the scan, so what is asked is what the record
     // page shows, and a pinned version the store lost fails rather than drifts.
-    const customSet = o.customPrompts === null ? null : o.customPrompts === undefined ? readCustomPromptSet(o.dataDir, o.domain) : customPromptsAt(o.dataDir, o.domain, o.customPrompts)
+    const customSet = o.customPrompts === null ? null : o.customPrompts === undefined ? await customPromptsIn(store, o.domain) : await customPromptsAtIn(store, o.domain, o.customPrompts)
     if (o.customPrompts !== undefined && o.customPrompts !== null && !customSet) throw new Error(`${o.domain}: custom prompt set ${o.customPrompts} is not on record; a measurement under another set is a different measurement`)
     const result = await runScan(
       {
@@ -462,13 +477,13 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
       },
     )
 
-    const spentThisRun = budget.state.spentUsd - spentBefore
+    const spentThisRun = (await spendLedger.spentUsd()) - spentBefore
     const run: GraderRun = { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spentThisRun, capUsd: o.capUsd, at: new Date().toISOString() }
     const envelope = { ...result, run }
     writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
     // Cumulative here, deliberately: "of the cap" is a statement about the cap,
     // which is per data dir and not per scan.
-    o.log(`\nspent $${budget.state.spentUsd.toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${'size' in blob ? `${(blob as { size: number }).size} stored cells` : `cells stored in ${stores.backend}`} · wrote ${o.outFile}`)
+    o.log(`\nspent ${(await spendLedger.spentUsd()).toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${'size' in blob ? `${(blob as { size: number }).size} stored cells` : `cells stored in ${stores.backend}`} · wrote ${o.outFile}`)
     return envelope
   } finally {
     if (existsSync(lock)) unlinkSync(lock)

@@ -52,6 +52,10 @@
 -- (2026-09-10 tenancy audit, m7). check-deploy.sql asserts the property too.
 BEGIN;
 
+-- The migration record first (0003, section 0): a second file under this
+-- number fails here, before anything below runs.
+INSERT INTO schema_migrations (name) VALUES ('0004_workspace_state');
+
 -- ---------------------------------------------------------------------------
 -- 1. Tables
 -- ---------------------------------------------------------------------------
@@ -169,7 +173,14 @@ END $$;
 
 -- The next version of a document, computed here so a caller cannot choose
 -- one: N+1 over what the workspace already holds for that kind and host.
-CREATE OR REPLACE FUNCTION ws_put_document(p_kind text, p_host text, p_body jsonb) RETURNS integer
+--
+-- p_expect_version (B3b): the version the caller read before deciding, or
+-- 0 for "none yet". Checked under the workspace lock, so two first decisions
+-- for one host cannot both land as versions 1 and 2 (the resolver's
+-- write-once rule), and a correction decided against version N cannot land
+-- on top of a version N+1 somebody else wrote meanwhile. NULL skips the
+-- check, for a caller that has its own.
+CREATE OR REPLACE FUNCTION ws_put_document(p_kind text, p_host text, p_body jsonb, p_expect_version integer DEFAULT NULL) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   ws   uuid := ws_required();
@@ -188,6 +199,10 @@ BEGIN
   PERFORM 1 FROM workspaces w WHERE w.id = ws FOR UPDATE;
   SELECT coalesce(max(d.version), 0) + 1 INTO next_version FROM workspace_documents d
    WHERE d.workspace_id = ws AND d.kind = p_kind AND d.host = p_host;
+  IF p_expect_version IS NOT NULL AND next_version - 1 <> p_expect_version THEN
+    RAISE EXCEPTION 'workspace: % for % is at version %, not %; read it again before deciding', p_kind, p_host, next_version - 1, p_expect_version
+      USING ERRCODE = 'check_violation';
+  END IF;
   INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, p_kind, p_host, next_version, p_body);
   RETURN next_version;
 END $$;
@@ -237,13 +252,13 @@ END $$;
 
 ALTER FUNCTION ws_required()                                            OWNER TO auth_verifier;
 ALTER FUNCTION ws_put_cycle(text, date, text, text, jsonb)              OWNER TO svc_onboard;
-ALTER FUNCTION ws_put_document(text, text, jsonb)                       OWNER TO svc_onboard;
+ALTER FUNCTION ws_put_document(text, text, jsonb, integer)              OWNER TO svc_onboard;
 ALTER FUNCTION ws_file_request(text, text, jsonb, timestamptz)          OWNER TO svc_onboard;
 ALTER FUNCTION ws_resolve_request(text, text, timestamptz, text, text, text) OWNER TO svc_onboard;
 
 REVOKE ALL ON FUNCTION ws_required()                                            FROM PUBLIC;
 REVOKE ALL ON FUNCTION ws_put_cycle(text, date, text, text, jsonb)              FROM PUBLIC;
-REVOKE ALL ON FUNCTION ws_put_document(text, text, jsonb)                       FROM PUBLIC;
+REVOKE ALL ON FUNCTION ws_put_document(text, text, jsonb, integer)              FROM PUBLIC;
 REVOKE ALL ON FUNCTION ws_file_request(text, text, jsonb, timestamptz)          FROM PUBLIC;
 REVOKE ALL ON FUNCTION ws_resolve_request(text, text, timestamptz, text, text, text) FROM PUBLIC;
 -- ws_required() is read by the four writers, which run as svc_onboard, and by
@@ -254,12 +269,10 @@ REVOKE ALL ON FUNCTION ws_resolve_request(text, text, timestamptz, text, text, t
 -- 2026-09-10, B3r item 2).
 GRANT EXECUTE ON FUNCTION ws_required()                                            TO svc_onboard;
 GRANT EXECUTE ON FUNCTION ws_put_cycle(text, date, text, text, jsonb)              TO app_rw;
-GRANT EXECUTE ON FUNCTION ws_put_document(text, text, jsonb)                       TO app_rw;
+GRANT EXECUTE ON FUNCTION ws_put_document(text, text, jsonb, integer)              TO app_rw;
 GRANT EXECUTE ON FUNCTION ws_file_request(text, text, jsonb, timestamptz)          TO app_rw;
 GRANT EXECUTE ON FUNCTION ws_resolve_request(text, text, timestamptz, text, text, text) TO app_rw;
 
 DO $$ BEGIN EXECUTE format('REVOKE svc_onboard FROM %I', current_user); END $$;
-
-INSERT INTO schema_migrations (name) VALUES ('0004_workspace_state');
 
 COMMIT;

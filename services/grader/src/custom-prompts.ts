@@ -34,8 +34,10 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { normalisePrompt } from '@bliprank/contracts'
 import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
-import { normaliseHost } from '@bliprank/taxonomy'
-import { allBanks, namesTrackedBrand, plainText, readCategoryRecord, trackedBrands, withRecordLock } from './resolve-category.js'
+import { normaliseHost, type PromptBank } from '@bliprank/taxonomy'
+import { allBanks, namesTrackedBrand, plainText, readCategoryRecord, trackedBrands, withRecordLock, type CategoryRecord } from './resolve-category.js'
+import { categoryRecordIn, customPromptsIn } from './store/documents.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 
 /**
  * Custom prompts per domain in this build: a constant with no plan behind it.
@@ -117,7 +119,15 @@ export type PromptRefusal = { readonly refuse: string; readonly kind: 'input' | 
  * normalised list (trimmed, control characters out, case-insensitive
  * duplicates dropped) or a refusal that names the prompt and the brand.
  */
-export function checkCustomPrompts(dataDir: string, domain: string, prompts: readonly unknown[], reason: string): { readonly host: string; readonly prompts: readonly string[]; readonly reason: string } | PromptRefusal {
+export type CheckedPrompts = { readonly host: string; readonly prompts: readonly string[]; readonly reason: string }
+
+export function checkCustomPrompts(dataDir: string, domain: string, prompts: readonly unknown[], reason: string): CheckedPrompts | PromptRefusal {
+  const host = normaliseHost(domain)
+  return checkCustomPromptsWith(domain, prompts, reason, host ? readCategoryRecord(dataDir, host) : null, allBanks(dataDir))
+}
+
+/** THE DECISION, pure: the prompts against the record the store holds and the banks this build has (MVP_PLAN B3b). */
+export function checkCustomPromptsWith(domain: string, prompts: readonly unknown[], reason: string, record: CategoryRecord | null, banks: readonly PromptBank[]): CheckedPrompts | PromptRefusal {
   const host = normaliseHost(domain)
   if (!host) return { refuse: 'not a domain', kind: 'input' }
   const why = plainText(reason)
@@ -126,9 +136,8 @@ export function checkCustomPrompts(dataDir: string, domain: string, prompts: rea
   if (!Array.isArray(prompts) || prompts.some((p) => typeof p !== 'string')) return { refuse: 'prompts are a list of sentences', kind: 'input' }
   // Bounded before any work: an unauthenticated filing must not make the store fold and match a thousand strings.
   if (prompts.length > MAX_CUSTOM_PROMPTS * 4) return { refuse: `${prompts.length} prompts is far over the ${MAX_CUSTOM_PROMPTS} this build allows per domain`, kind: 'too-many' }
-  const record = readCategoryRecord(dataDir, host)
   if (!record) return { refuse: `${host} has no category on record, so there is no cycle for its prompts to join. A first scan decides one.`, kind: 'no-record' }
-  const bank = allBanks(dataDir).find((b) => b.category === record.slug)
+  const bank = banks.find((b) => b.category === record.slug)
   const curated = new Set((bank?.prompts ?? []).map((p) => normalisePrompt(p.text)))
 
   const seen = new Set<string>()
@@ -155,7 +164,7 @@ export function checkCustomPrompts(dataDir: string, domain: string, prompts: rea
   const forms = domainBrandForms(host, record.brandName)
   const subject: BrandSpec = { id: 'subject', name: forms.name, aliases: forms.aliases, squashedAliases: forms.squashedAliases, domains: [host] }
   const squashedForms = [...new Set([...forms.squashedAliases, ...forms.aliases.map(squash)])].filter((f) => f.length >= 4)
-  const tracked = trackedBrands(allBanks(dataDir))
+  const tracked = trackedBrands(banks)
   for (const p of list) {
     const namesSubject = findMentions(normaliseForMatch(p), subject) !== null || squashedForms.some((f) => squash(p).includes(f))
     if (namesSubject) return { refuse: `"${p}" names ${forms.name}, your own brand. A prompt that names you guarantees a mention and measures our phrasing, not the engines' habit; ask the question without the name.`, kind: 'names-brand' }
@@ -266,6 +275,17 @@ export function filePromptRequest(dataDir: string, req: { readonly host: string;
     writeFileSync(requestsFile(dataDir), JSON.stringify(store, null, 2) + '\n')
     return request
   })
+}
+
+/** The same filing through a `WorkspaceStore` (MVP_PLAN B3b). */
+export async function filePromptRequestIn(store: WorkspaceStore, dataDir: string, req: { readonly host: string; readonly prompts: readonly unknown[]; readonly reason: string; readonly at?: string }): Promise<PromptRequest | PromptRefusal> {
+  const host = normaliseHost(req.host)
+  const checked = checkCustomPromptsWith(req.host, req.prompts, req.reason, host ? await categoryRecordIn(store, host) : null, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  if (checked.prompts.length === 0 && !(await customPromptsIn(store, checked.host))) return { refuse: 'nothing to ask for: no prompts, and no set in force to clear', kind: 'no-change' }
+  const request: PromptRequest = { host: checked.host, prompts: checked.prompts, reason: checked.reason, requestedAt: req.at ?? new Date().toISOString(), status: 'pending' }
+  await store.requests.file('custom-prompts', checked.host, { prompts: checked.prompts, reason: checked.reason }, request.requestedAt)
+  return request
 }
 
 export function resolvePromptRequest(

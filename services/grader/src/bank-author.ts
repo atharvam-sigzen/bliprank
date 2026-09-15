@@ -67,6 +67,8 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
+import { basename, dirname } from 'node:path'
+import { fileCapUsd, ledgerStores, type LedgerStores } from './ledger-stores.js'
 import { join } from 'node:path'
 import Anthropic from '@anthropic-ai/sdk'
 import { Budget } from '@bliprank/collector'
@@ -132,6 +134,8 @@ export interface AuthorLedger {
   readonly file: string
   readonly capUsd: number
   readonly usdPerCall: number
+  /** Where the ledger lives: Upstash on the deployment, the file otherwise (ledger-stores.ts, MVP_PLAN B3b). Resolved from the file's directory when absent. */
+  readonly stores?: LedgerStores
 }
 export const DEFAULT_BANK_AUTHOR_CAP_USD = 5
 export const DEFAULT_BANK_AUTHOR_USD_PER_CALL = 0
@@ -144,17 +148,12 @@ export const authorLedgerFile = (dataDir: string): string => join(dataDir, 'bank
  * does for the collector's ledger: `Budget` refuses to RAISE a cap from code,
  * so a ledger a person raised by hand is not written back down by a default.
  */
-function chargeAttempt(ledger: AuthorLedger, model: string): void {
-  let capUsd = ledger.capUsd
-  if (existsSync(ledger.file)) {
-    try {
-      const stored = (JSON.parse(readFileSync(ledger.file, 'utf8')) as { capUsd?: unknown }).capUsd
-      if (typeof stored === 'number' && Number.isFinite(stored) && stored > 0) capUsd = stored
-    } catch {
-      // Unreadable: `Budget` will throw on it below, which is the right outcome.
-    }
-  }
-  new Budget(ledger.file, capUsd, () => ledger.usdPerCall).charge(model)
+async function chargeAttempt(ledger: AuthorLedger, model: string): Promise<void> {
+  // A file's own cap wins over the configured one; an unreadable file is
+  // `Budget`'s to refuse. In KV the configured cap is the cap.
+  const stores = ledger.stores ?? ledgerStores(dirname(ledger.file), process.env)
+  const capUsd = (stores.backend === 'file' ? fileCapUsd(ledger.file) : null) ?? ledger.capUsd
+  await stores.spend(basename(ledger.file), capUsd, () => ledger.usdPerCall).charge(model)
 }
 
 export type BankAuthorProvider = 'openai-compatible' | 'anthropic'
@@ -199,7 +198,7 @@ export interface GeneratedBank {
  * `readKey` is passed in rather than imported so this stays free of the dotenv
  * loader's file IO and can be exercised without one.
  */
-export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string) => string | undefined, dataDir: string): BankAuthorConfig | null {
+export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string) => string | undefined, dataDir: string, ledgers?: LedgerStores): BankAuthorConfig | null {
   const provider = (env['BANK_AUTHOR_PROVIDER'] ?? 'openai-compatible') as BankAuthorProvider
   // Explicit key first, then the conventional name for whichever provider is
   // selected. Two names rather than one because a machine may legitimately hold
@@ -253,6 +252,7 @@ export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string)
       file: authorLedgerFile(dataDir),
       capUsd: Number(env['BANK_AUTHOR_CAP_USD'] ?? DEFAULT_BANK_AUTHOR_CAP_USD),
       usdPerCall,
+      stores: ledgers ?? ledgerStores(dataDir, env),
     },
   }
 }
@@ -420,7 +420,7 @@ export async function askText(
 ): Promise<string> {
   const doFetch = opts.fetchImpl ?? fetch
   // Charged first. A refusal here is a thrown BudgetExceeded, and no request follows it.
-  chargeAttempt(config.ledger, model)
+  await chargeAttempt(config.ledger, model)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), config.timeoutMs)
   try {
@@ -487,7 +487,7 @@ const askOpenAiCompatible = (input: GenerateInput, model: string): Promise<strin
  */
 async function askAnthropic(input: GenerateInput, model: string): Promise<string> {
   // The same ledger as the OpenAI-compatible path: no provider is unmetered.
-  chargeAttempt(input.config.ledger, model)
+  await chargeAttempt(input.config.ledger, model)
   const client = new Anthropic({ apiKey: input.config.apiKey, timeout: input.config.timeoutMs })
   const response = await client.messages.create({
     model,

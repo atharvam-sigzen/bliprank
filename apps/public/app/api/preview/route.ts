@@ -1,13 +1,16 @@
-import { existsSync, mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import { ENGINES } from '@bliprank/contracts'
 import { classifyDomain, normaliseHost } from '@bliprank/taxonomy'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
 import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/src/scan.js'
-import { allBanks, allCategories, readCategoryRecord, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
-import { competitorsFor } from '../../../../../services/grader/src/competitor-overrides.js'
+import { allBanks, allCategories, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
+import { competitorsIn } from '../../../../../services/grader/src/competitor-overrides.js'
+import { categoryRecordIn, recordsIn } from '../../../../../services/grader/src/store/documents.js'
+import type { WorkspaceStore } from '../../../../../services/grader/src/store/pg-store.js'
+import { ROOT } from '@/lib/data-dir'
+import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
 import { PREVIEW_FAILED } from '@/lib/route-errors'
 import {
@@ -88,33 +91,25 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 
-const resolveRoot = (): string => {
-  let curr = process.cwd()
-  while (curr && curr !== dirname(curr)) {
-    if (existsSync(join(curr, 'services', 'grader'))) return curr
-    curr = dirname(curr)
-  }
-  return join(process.cwd(), '..', '..')
-}
-const ROOT = resolveRoot()
-/** Per request, so a test can point the route at a scratch directory through `GRADER_DATA_DIR`. */
-const dataDir = (env: NodeJS.ProcessEnv): string => env['GRADER_DATA_DIR'] || join(ROOT, 'services', 'grader', 'data-live')
 
 
-const previewThrottleConfig = (DATA: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+type Access = WorkspaceAccess & { ok: true }
+const previewThrottleConfig = (access: Access, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_PREVIEWS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_PREVIEWS_PER_HOUR),
   windowMs: Number(env['GRADER_VISITOR_WINDOW_MS'] ?? 60 * 60 * 1000),
   // A DIFFERENT FILE from the scan throttle's. Sharing one would mean three
   // previews used up the hour's three scans, so the feature that exists to make
   // scanning safer would instead make it impossible.
-  ledgerFile: join(DATA, 'preview-throttle.json'),
+  ledgerFile: `${access.dataDir}/preview-throttle.json`,
+  ledger: access.ledgers.doc('preview-throttle.json'),
 })
 
 /** The same rolling-window machinery under one shared key: the bound that does not care who asked. */
-const globalCapConfig = (DATA: string, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+const globalCapConfig = (access: Access, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_COSTING_PREVIEWS_PER_HOUR'] ?? DEFAULT_MAX_COSTING_PREVIEWS_PER_HOUR),
   windowMs: DEFAULT_VISITOR_WINDOW_MS,
-  ledgerFile: join(DATA, 'preview-global-cap.json'),
+  ledgerFile: `${access.dataDir}/preview-global-cap.json`,
+  ledger: access.ledgers.doc('preview-global-cap.json'),
 })
 const GLOBAL_KEY = '*'
 
@@ -124,8 +119,8 @@ const GLOBAL_KEY = '*'
  * outbound; everything else reaches the homepage and, failing that, the
  * author. Decided the way `resolveCategory` decides it, from the same inputs.
  */
-const wouldCost = (DATA: string, domain: string): boolean =>
-  readCategoryRecord(DATA, domain) === null && classifyDomain(domain, allBanks(DATA), allCategories(DATA)).status !== 'classified'
+const wouldCost = async (store: WorkspaceStore, DATA: string, domain: string): Promise<boolean> =>
+  (await categoryRecordIn(store, domain)) === null && classifyDomain(domain, allBanks(DATA), allCategories(DATA)).status !== 'classified'
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
@@ -136,11 +131,15 @@ export async function POST(req: Request): Promise<Response> {
   const domain = normaliseHost(String(raw ?? ''))
   if (!domain) return json({ kind: 'input', message: 'Enter a domain, for example pipedrive.com' }, 400)
 
-  const DATA = dataDir(env)
+  // THE WORKSPACE IS THE SESSION'S (MVP_PLAN B3b): the record a preview
+  // reads, and the one it writes on a first look, are the session's store.
+  const access = await workspaceAccess(env)
+  if (!access.ok) return json({ kind: 'access', message: access.message }, access.status)
+  const { store, ledgers, dataDir: DATA } = access
   const now = new Date()
-  const cfg = previewThrottleConfig(DATA, env)
+  const cfg = previewThrottleConfig(access, env)
   const visitorIp = extractClientIp(req, env)
-  const verdict = checkVisitorThrottle(visitorIp, cfg, now)
+  const verdict = await checkVisitorThrottle(visitorIp, cfg, now)
   if (!verdict.ok) {
     return json(
       {
@@ -155,10 +154,10 @@ export async function POST(req: Request): Promise<Response> {
   // THE BOUND THAT DOES NOT TRUST THE CALLER. Only for a preview that would
   // actually fetch or author; a recorded or host-classified domain is free and
   // passes untouched, so an exhausted cap never stops the ordinary path.
-  const costs = wouldCost(DATA, domain)
-  const global = globalCapConfig(DATA, env)
+  const costs = await wouldCost(store, DATA, domain)
+  const global = globalCapConfig(access, env)
   if (costs) {
-    const capVerdict = checkVisitorThrottle(GLOBAL_KEY, global, now)
+    const capVerdict = await checkVisitorThrottle(GLOBAL_KEY, global, now)
     if (!capVerdict.ok) {
       return json(
         {
@@ -177,18 +176,19 @@ export async function POST(req: Request): Promise<Response> {
   // afterwards would let a burst of concurrent requests all pass the check and
   // then all spend. The scan route counts after for the opposite and equally
   // correct reason: there, a refusal genuinely spends nothing.
-  recordVisitorScan(visitorIp, cfg, now)
-  if (costs) recordVisitorScan(GLOBAL_KEY, global, now)
+  await recordVisitorScan(visitorIp, cfg, now)
+  if (costs) await recordVisitorScan(GLOBAL_KEY, global, now)
 
   if (costs) inFlight += 1
   try {
     const resolved = await resolveCategory(domain, {
       dataDir: DATA,
+      records: recordsIn(store),
       // Model, provider and key all from the environment — ADR-0009 Amendment 1.
       // `loadApiKey` is passed as the reader so the author's key comes out of the
       // same repo-root `.env.local` as every other secret, with the same
       // precedence and the same CRLF handling.
-      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA) ?? undefined,
+      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA, ledgers) ?? undefined,
       /*
        * TO THE SERVER CONSOLE, NOT SWALLOWED.
        *
@@ -206,13 +206,13 @@ export async function POST(req: Request): Promise<Response> {
       log: (m) => console.warn(`[preview] ${m}`),
     })
 
-    const gate = defaultGateConfig(DATA, env)
+    const gate = defaultGateConfig(DATA, env, ledgers)
     // The same filter and the same slice `runScan` applies, so what is shown is
     // what runs. Deriving it a second way here is how a preview drifts from the
     // scan it previews and becomes worse than no preview at all.
     const unprompted = resolved.bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
 
-    const competitorSet = competitorsFor(DATA, domain, resolved.bank, subjectFor(domain, resolved.bank, resolved.record.brandName).spec.id) ?? { competitors: [], missing: [] }
+    const competitorSet = (await competitorsIn(store, DATA, domain, resolved.bank, subjectFor(domain, resolved.bank, resolved.record.brandName).spec.id)) ?? { competitors: [], missing: [] }
     const body: PreviewResponse = {
       domain,
       category: resolved.bank.category,

@@ -1,4 +1,4 @@
-import type { Db } from '@bliprank/db/client'
+import { withWorkspace, type Db } from '@bliprank/db/client'
 
 /**
  * THE WORKSPACE STORE — the grader's per-domain state, read and written
@@ -82,8 +82,13 @@ export interface WorkspaceStore {
   readonly documents: {
     latest<T>(kind: DocumentKind, host: string): Promise<Versioned<T> | null>
     at<T>(kind: DocumentKind, host: string, version: number): Promise<Versioned<T> | null>
-    /** the new version number; the database chooses it */
-    put<T extends object>(kind: DocumentKind, host: string, body: T): Promise<number>
+    /**
+     * The new version number; the database chooses it. `expectVersion` is the
+     * version the caller read before deciding (0 for none): a write against
+     * any other current version is refused, so a first decision is written
+     * once and a correction never lands on a version it did not see.
+     */
+    put<T extends object>(kind: DocumentKind, host: string, body: T, expectVersion?: number): Promise<number>
   }
   readonly requests: {
     pending<T>(kind: RequestKind, host: string): Promise<StoredRequest<T> | null>
@@ -197,8 +202,8 @@ export function pgWorkspaceStore(db: Db): WorkspaceStore {
         const got = await versioned<T>(kind, host, version)
         return got && got.version === version ? got : null
       },
-      async put(kind, host, body) {
-        const [row] = await db.query<{ v: number }>('SELECT ws_put_document($1, $2, $3::jsonb) AS v', [kind, host, JSON.stringify(body)])
+      async put(kind, host, body, expectVersion) {
+        const [row] = await db.query<{ v: number }>('SELECT ws_put_document($1, $2, $3::jsonb, $4::int) AS v', [kind, host, JSON.stringify(body), expectVersion ?? null])
         return row!.v
       },
     },
@@ -223,6 +228,37 @@ export function pgWorkspaceStore(db: Db): WorkspaceStore {
         const [row] = await db.query<{ r: boolean }>('SELECT ws_resolve_request($1, $2, $3::timestamptz, $4, $5, $6) AS r', [kind, host, expectRequestedAt, outcome.status, outcome.by, outcome.note ?? null])
         return row!.r
       },
+    },
+  }
+}
+
+/**
+ * The same store for a caller that holds a token but not a transaction: every
+ * call opens its own `withWorkspace` transaction on `db` and presents the
+ * token. What a route and the runner need — a scan runs for a minute and must
+ * not hold a database transaction open while it waits on a provider — and the
+ * token still decides the workspace on every call (MVP_PLAN B3b).
+ */
+export function sessionWorkspaceStore(db: Db, token: string): WorkspaceStore {
+  const run = <T,>(fn: (s: WorkspaceStore) => Promise<T>): Promise<T> => withWorkspace(db, token, (tx) => fn(pgWorkspaceStore(tx)))
+  return {
+    cycles: {
+      put: (c) => run((s) => s.cycles.put(c)),
+      list: (host) => run((s) => s.cycles.list(host)),
+      latest: (host) => run((s) => s.cycles.latest(host)),
+      read: (host, day) => run((s) => s.cycles.read(host, day)),
+    },
+    documents: {
+      latest: (kind, host) => run((s) => s.documents.latest(kind, host)),
+      at: (kind, host, version) => run((s) => s.documents.at(kind, host, version)),
+      put: (kind, host, body, expectVersion) => run((s) => s.documents.put(kind, host, body, expectVersion)),
+    },
+    requests: {
+      pending: (kind, host) => run((s) => s.requests.pending(kind, host)),
+      forHost: (kind, host) => run((s) => s.requests.forHost(kind, host)),
+      allPending: (kind) => run((s) => s.requests.allPending(kind)),
+      file: (kind, host, body, requestedAt) => run((s) => s.requests.file(kind, host, body, requestedAt)),
+      resolve: (kind, host, expect, outcome) => run((s) => s.requests.resolve(kind, host, expect, outcome)),
     },
   }
 }

@@ -287,6 +287,27 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     // A view is a relation too; the old sweeps looked at tables only.
     await d4.exec(`CREATE VIEW everyone AS SELECT id, email FROM accounts; GRANT SELECT ON everyone TO app_rw`)
     await expect(check(d4)).rejects.toThrow(/public\.everyone \(no read policy for the tenant role\)/)
+
+    // THE FINDING (B3r audit, MAJOR): production's tenant is a login role that
+    // is a member of app_rw, and app_rw may inherit a group. A policy or grant
+    // naming either passed a derivation that named only app_rw, and the
+    // tenant then read every workspace's documents.
+    const d5 = await healthy()
+    await d5.exec(`CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod;
+                   CREATE POLICY wide_docs ON workspace_documents FOR SELECT TO web_prod USING (true)`)
+    await expect(check(d5)).rejects.toThrow(/workspace_documents \(policy wide_docs does not scope/)
+
+    const d6 = await healthy()
+    await d6.exec(`CREATE ROLE reporting_grp NOLOGIN; GRANT reporting_grp TO app_rw;
+                   CREATE TABLE leak_grp (workspace_id uuid); ALTER TABLE leak_grp ENABLE ROW LEVEL SECURITY; ALTER TABLE leak_grp FORCE ROW LEVEL SECURITY;
+                   GRANT SELECT ON leak_grp TO reporting_grp; CREATE POLICY open ON leak_grp FOR SELECT TO reporting_grp USING (true)`)
+    await expect(check(d6)).rejects.toThrow(/public\.leak_grp \(policy open does not scope/)
+
+    const d7 = await healthy()
+    await d7.exec(`CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod;
+                   CREATE TABLE leak_login (workspace_id uuid); ALTER TABLE leak_login ENABLE ROW LEVEL SECURITY; ALTER TABLE leak_login FORCE ROW LEVEL SECURITY;
+                   GRANT SELECT ON leak_login TO web_prod`)
+    await expect(check(d7)).rejects.toThrow(/public\.leak_login \(no read policy for the tenant role\)/)
   })
 
   it('a table that loses FORCE RLS is caught', async () => {

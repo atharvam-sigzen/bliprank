@@ -159,7 +159,10 @@ describe('the standing sweep that catches the next migration', () => {
       SELECT DISTINCT c.relname FROM pg_class c
       JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname='public' AND c.relkind IN ('r','p')
-        AND has_any_column_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
+        AND (has_any_column_privilege('public', c.oid, 'SELECT') OR EXISTS (SELECT 1 FROM pg_roles r
+              WHERE r.rolname NOT LIKE 'pg\\_%' AND NOT r.rolsuper
+                AND EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'))
+                AND has_any_column_privilege(r.oid, c.oid, 'SELECT')))`)).rows as { relname: string }[]
     const badly: string[] = []
     for (const { relname } of readable) {
       if (SHARED.has(relname)) continue
@@ -171,7 +174,8 @@ describe('the standing sweep that catches the next migration', () => {
       const pols = (await db.query(`
         SELECT cmd, qual, with_check FROM pg_policies
         WHERE schemaname='public' AND tablename=$1
-          AND (roles = '{public}' OR 'app_rw' = ANY(roles))`, [relname])).rows as { cmd: string; qual: string | null; with_check: string | null }[]
+          AND (roles = '{public}' OR EXISTS (SELECT 1 FROM unnest(roles) pr JOIN pg_roles r ON r.rolname = pr
+                 WHERE EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'))))`, [relname])).rows as { cmd: string; qual: string | null; with_check: string | null }[]
       const scopes = (expr: string | null) => (expr ?? '').includes('current_workspace_id')
       const scoped =
         pols.some((p) => p.cmd === 'SELECT' || p.cmd === 'ALL') &&
@@ -192,7 +196,7 @@ describe('the standing sweep that catches the next migration', () => {
     const DECLARED = new Set([
       'current_workspace_id()', 'current_account_id()', 'set_workspace_jwt(text)',
       'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
-      'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb)',
+      'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb,integer)',
       'ws_file_request(text,text,jsonb,timestamp with time zone)',
       'ws_resolve_request(text,text,timestamp with time zone,text,text,text)',
     ])

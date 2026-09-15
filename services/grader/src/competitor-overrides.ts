@@ -49,8 +49,10 @@ import { join } from 'node:path'
 import { squash, type BrandSpec } from '@bliprank/scorer'
 import { normaliseHost, type Leader, type PromptBank } from '@bliprank/taxonomy'
 import { ids, overridesFile, readOverride, readOverrides, overrideAt, type CompetitorOverride } from './override-store.js'
-import { allBanks, plainText, readCategoryRecord, withRecordLock } from './resolve-category.js'
+import { allBanks, plainText, readCategoryRecord, withRecordLock, type CategoryRecord } from './resolve-category.js'
 import { leadersOf, subjectFor } from './scan.js'
+import { categoryRecordIn, overrideAtIn, overrideIn } from './store/documents.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 
 export type { CompetitorOverride, SupersededOverride } from './override-store.js'
 export { isLeaderId, overrideAt, readOverride, readOverrides } from './override-store.js'
@@ -59,8 +61,12 @@ const requestsFile = (dataDir: string): string => join(dataDir, 'competitor-requ
 
 /** Every leader of every bank this build holds, by id, with the bank it comes from. The only source an include may draw on. */
 export function reviewedLeaders(dataDir: string): ReadonlyMap<string, Leader & { readonly bank: string }> {
+  return reviewedOf(allBanks(dataDir))
+}
+/** The same map over a bank list already in hand. */
+export function reviewedOf(banks: readonly PromptBank[]): ReadonlyMap<string, Leader & { readonly bank: string }> {
   const out = new Map<string, Leader & { readonly bank: string }>()
-  for (const bank of allBanks(dataDir)) for (const l of bank.leaders) if (!out.has(l.id)) out.set(l.id, { ...l, bank: bank.category })
+  for (const bank of banks) for (const l of bank.leaders) if (!out.has(l.id)) out.set(l.id, { ...l, bank: bank.category })
   return out
 }
 
@@ -123,15 +129,22 @@ export type OverrideRefusal = { readonly refuse: string; readonly kind: 'input' 
  * writer (an operator's apply), so the two cannot disagree about what is
  * allowed. Returns the normalised lists, or a refusal with a kind.
  */
-export function checkOverride(dataDir: string, req: Omit<OverrideRequest, 'by' | 'at'>): { readonly host: string; readonly exclude: readonly string[]; readonly include: readonly string[]; readonly reason: string; readonly bank: PromptBank; readonly subjectId: string } | OverrideRefusal {
+export type CheckedOverride = { readonly host: string; readonly exclude: readonly string[]; readonly include: readonly string[]; readonly reason: string; readonly bank: PromptBank; readonly subjectId: string }
+
+export function checkOverride(dataDir: string, req: Omit<OverrideRequest, 'by' | 'at'>): CheckedOverride | OverrideRefusal {
+  const host = normaliseHost(req.host)
+  return checkOverrideWith(req, host ? readCategoryRecord(dataDir, host) : null, allBanks(dataDir))
+}
+
+/** THE DECISION, pure: the request against the record the store holds and the banks this build has (MVP_PLAN B3b). */
+export function checkOverrideWith(req: Omit<OverrideRequest, 'by' | 'at'>, record: CategoryRecord | null, banks: readonly PromptBank[]): CheckedOverride | OverrideRefusal {
   const host = normaliseHost(req.host)
   if (!host) return { refuse: 'not a domain', kind: 'input' }
   const reason = plainText(req.reason)
   if (reason.length < 10) return { refuse: 'say why, in at least ten characters: it is read by the person who applies it', kind: 'input' }
   if (reason.length > 500) return { refuse: 'keep the reason under 500 characters', kind: 'input' }
-  const record = readCategoryRecord(dataDir, host)
   if (!record) return { refuse: `${host} has no category on record, so it has no competitor set to adjust. A first scan decides one.`, kind: 'no-record' }
-  const bank = allBanks(dataDir).find((b) => b.category === record.slug)
+  const bank = banks.find((b) => b.category === record.slug)
   if (!bank) return { refuse: `no bank for ${record.slug} in this build`, kind: 'no-record' }
   const subject = subjectFor(host, bank, record.brandName).spec
   const subjectId = subject.id
@@ -140,7 +153,7 @@ export function checkOverride(dataDir: string, req: Omit<OverrideRequest, 'by' |
   if (exclude.length !== new Set(req.exclude).size || include.length !== new Set(req.include).size) return { refuse: 'a competitor is chosen from the list, not typed', kind: 'input' }
   if (exclude.includes(subjectId) || include.includes(subjectId)) return { refuse: `${host} is the subject of its own measurement and cannot be its own competitor, nor excluded from being one`, kind: 'subject' }
   const category = new Set(leadersOf(bank).map((l) => l.id))
-  const reviewed = reviewedLeaders(dataDir)
+  const reviewed = reviewedOf(banks)
   for (const id of exclude) if (!category.has(id)) return { refuse: `${id} is not in ${record.slug}'s competitor set, so there is nothing to exclude`, kind: 'unknown-competitor' }
   for (const id of include) {
     if (category.has(id)) return { refuse: `${id} is already in ${record.slug}'s competitor set`, kind: 'unknown-competitor' }
@@ -267,6 +280,31 @@ export function fileCompetitorRequest(dataDir: string, req: Omit<OverrideRequest
     writeFileSync(requestsFile(dataDir), JSON.stringify(store, null, 2) + '\n')
     return request
   })
+}
+
+/** The same filing through a `WorkspaceStore` (MVP_PLAN B3b). */
+export async function fileCompetitorRequestIn(store: WorkspaceStore, dataDir: string, req: Omit<OverrideRequest, 'by'>): Promise<CompetitorRequest | OverrideRefusal> {
+  const host = normaliseHost(req.host)
+  const checked = checkOverrideWith(req, host ? await categoryRecordIn(store, host) : null, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  if (checked.exclude.length === 0 && checked.include.length === 0 && !(await overrideIn(store, checked.host))) return { refuse: 'nothing to ask for: no exclusions and no inclusions, and no override in force to clear', kind: 'no-change' }
+  const request: CompetitorRequest = { host: checked.host, exclude: checked.exclude, include: checked.include, reason: checked.reason, requestedAt: req.at ?? new Date().toISOString(), status: 'pending' }
+  await store.requests.file('competitors', checked.host, { exclude: checked.exclude, include: checked.include, reason: checked.reason }, request.requestedAt)
+  return request
+}
+
+/** `competitorsFor` over a `WorkspaceStore`: the override in force, none, or the version a stored cycle names (MVP_PLAN B3b). */
+export async function competitorsIn(store: WorkspaceStore, dataDir: string, domain: string, bank: PromptBank, subjectId: string, version?: number | null): Promise<{ readonly set?: number; readonly competitors: readonly BrandSpec[]; readonly missing: readonly string[] } | null> {
+  const reviewed = reviewedLeaders(dataDir)
+  if (version === null) return { ...effectiveCompetitors(bank, null, reviewed, subjectId) }
+  const host = normaliseHost(domain)
+  if (version === undefined) {
+    const o = host ? await overrideIn(store, host) : null
+    return { ...(o ? { set: o.version } : {}), ...effectiveCompetitors(bank, o, reviewed, subjectId) }
+  }
+  const o = host ? await overrideAtIn(store, host, version) : null
+  if (!o) return null
+  return { set: version, ...effectiveCompetitors(bank, o, reviewed, subjectId) }
 }
 
 export function resolveCompetitorRequest(

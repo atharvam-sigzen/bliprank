@@ -66,7 +66,7 @@ let dir: string
 let ipCounter = 0
 const originalEnv = { ...process.env }
 
-beforeEach(() => {
+beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'bliprank-cycles-route-'))
   graderCalls.length = 0
   gateVerdict = { ok: true, quota: [] }
@@ -79,7 +79,7 @@ beforeEach(() => {
   // nothing else on every later scan.
   recordCategory(dir, { host: DOMAIN, slug: 'crm-software', source: 'leader-domain', evidence: DOMAIN, decidedAt: '2026-09-01T00:00:00.000Z', generated: false })
 })
-afterEach(() => {
+afterEach(async () => {
   process.env = { ...originalEnv }
   rmSync(dir, { recursive: true, force: true })
 })
@@ -236,7 +236,7 @@ describe('what refuses a second cycle, before anything could spend', () => {
   it('the per-domain ceiling applies to a second cycle exactly as to a first', async () => {
     writeCycle(dir, firstCycle('2026-09-01'))
     const ceilingCfg = defaultDomainCeilingConfig(dir, process.env)
-    for (let i = 0; i < ceilingCfg.maxCyclesPerMonth; i++) recordDomainCycle(DOMAIN, 85, ceilingCfg, new Date())
+    for (let i = 0; i < ceilingCfg.maxCyclesPerMonth; i++) await recordDomainCycle(DOMAIN, 85, ceilingCfg, new Date())
     const events = await post({ domain: DOMAIN, cycle: 'new' })
     const err = events.find((e) => e.event === 'error')!.data
     expect(err['kind']).toBe('domain-ceiling')

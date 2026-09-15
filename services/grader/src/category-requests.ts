@@ -23,10 +23,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PRICE_USD_PER_CALL, type OwnPlan } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
-import { FALLBACK_SLUG, normaliseHost } from '@bliprank/taxonomy'
+import { FALLBACK_SLUG, normaliseHost, type PromptBank } from '@bliprank/taxonomy'
 import { listCycles } from './cycles.js'
 import { defaultGateConfig } from './live-gate.js'
-import { allBanks, plainText, readCategoryRecord, withRecordLock } from './resolve-category.js'
+import { allBanks, plainText, readCategoryRecord, withRecordLock, type CategoryRecord } from './resolve-category.js'
+import { categoryRecordIn } from './store/documents.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 
 export type RequestStatus = 'pending' | 'applied' | 'declined'
 
@@ -122,7 +124,20 @@ export function allPending(dataDir: string): readonly CategoryRequest[] {
  * The reason is bounded both ways: too short says nothing, too long is a
  * store-filling vector.
  */
-export function fileCategoryRequest(dataDir: string, req: { readonly host: string; readonly slug: string; readonly reason: string; readonly at?: string }): CategoryRequest | RequestRefusal {
+export interface CategoryRequestInput {
+  readonly host: string
+  readonly slug: string
+  readonly reason: string
+  readonly at?: string
+}
+
+/**
+ * THE DECISION, pure: the input against the record the store holds and the
+ * banks this build has. Both filers below call it and then write to their
+ * own store, so the rule is one rule whichever store a deployment runs on
+ * (MVP_PLAN B3b).
+ */
+export function checkCategoryRequest(req: CategoryRequestInput, record: CategoryRecord | null, banks: readonly PromptBank[]): { readonly host: string; readonly slug: string; readonly reason: string } | RequestRefusal {
   const host = normaliseHost(req.host)
   if (!host) return { refuse: 'not a domain', kind: 'input' }
   const slug = req.slug.trim()
@@ -130,12 +145,17 @@ export function fileCategoryRequest(dataDir: string, req: { readonly host: strin
   const reason = plainText(req.reason)
   if (reason.length < REASON_MIN) return { refuse: `say why, in at least ${REASON_MIN} characters: it is read by the person who applies it`, kind: 'input' }
   if (reason.length > REASON_MAX) return { refuse: `keep the reason under ${REASON_MAX} characters`, kind: 'input' }
-  const record = readCategoryRecord(dataDir, host)
   if (!record) return { refuse: `${host} has no category on record yet. A first scan decides one; there is nothing to correct until then.`, kind: 'no-record' }
   if (record.slug === slug) return { refuse: `${host} is already recorded as ${slug}`, kind: 'same-category' }
   if (slug === FALLBACK_SLUG) return { refuse: 'the general bank is what a domain gets when no category fits; a correction names a category', kind: 'unknown-category' }
-  if (!allBanks(dataDir).some((b) => b.category === slug)) return { refuse: `${slug} is not a category this build can measure`, kind: 'unknown-category' }
+  if (!banks.some((b) => b.category === slug)) return { refuse: `${slug} is not a category this build can measure`, kind: 'unknown-category' }
+  return { host, slug, reason }
+}
 
+export function fileCategoryRequest(dataDir: string, req: CategoryRequestInput): CategoryRequest | RequestRefusal {
+  const checked = checkCategoryRequest(req, normaliseHost(req.host) ? readCategoryRecord(dataDir, req.host) : null, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const { host, slug, reason } = checked
   return withRecordLock(dataDir, () => {
     const store = readRequests(dataDir)
     const request: CategoryRequest = { host, slug, reason, requestedAt: req.at ?? new Date().toISOString(), status: 'pending' }
@@ -144,6 +164,16 @@ export function fileCategoryRequest(dataDir: string, req: { readonly host: strin
     writeRequests(dataDir, store)
     return request
   })
+}
+
+/** The same filing through a `WorkspaceStore`: the record from the store, the banks from this build, the request into the store. */
+export async function fileCategoryRequestIn(store: WorkspaceStore, dataDir: string, req: CategoryRequestInput): Promise<CategoryRequest | RequestRefusal> {
+  const host = normaliseHost(req.host)
+  const checked = checkCategoryRequest(req, host ? await categoryRecordIn(store, host) : null, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const request: CategoryRequest = { host: checked.host, slug: checked.slug, reason: checked.reason, requestedAt: req.at ?? new Date().toISOString(), status: 'pending' }
+  await store.requests.file('category', checked.host, { slug: checked.slug, reason: checked.reason }, request.requestedAt)
+  return request
 }
 
 /**
@@ -193,11 +223,11 @@ export interface Consequences {
  * before anything is applied. Pay-as-you-go when the plan is unset, the
  * dearest, so the stated cost is never an underestimate.
  */
-export function consequencesOf(dataDir: string, domain: string, env: NodeJS.ProcessEnv): Consequences {
+export function consequencesOf(dataDir: string, domain: string, env: NodeJS.ProcessEnv, earlierCycles: number = listCycles(dataDir, domain).length): Consequences {
   const gate = defaultGateConfig(dataDir, env)
   const engines = gate.engines.length > 0 ? gate.engines : ENGINES
   const planRaw = env['OPENWEBNINJA_PLAN']
   const plan: OwnPlan = planRaw === 'pro' || planRaw === 'ultra' || planRaw === 'mega' ? planRaw : 'payg'
   const perPrompt = engines.reduce((n, e) => n + PRICE_USD_PER_CALL[plan][e], 0)
-  return { earlierCycles: listCycles(dataDir, domain).length, prompts: gate.callsPerEngine, engines: engines.length, cells: gate.callsPerEngine * engines.length, plan, usd: perPrompt * gate.callsPerEngine }
+  return { earlierCycles, prompts: gate.callsPerEngine, engines: engines.length, cells: gate.callsPerEngine * engines.length, plan, usd: perPrompt * gate.callsPerEngine }
 }

@@ -28,7 +28,7 @@ const getGraderDataDir = (): string => {
 describe('POST /api/scan per-visitor throttling', () => {
   const originalEnv = { ...process.env }
 
-  afterEach(() => {
+  afterEach(async () => {
     process.env = { ...originalEnv }
   })
 
@@ -68,8 +68,8 @@ describe('POST /api/scan per-visitor throttling', () => {
 
     // Pre-populate 2 scans for this IP
     const now = new Date()
-    recordVisitorScan(visitorIp, vCfg, now)
-    recordVisitorScan(visitorIp, vCfg, now)
+    await recordVisitorScan(visitorIp, vCfg, now)
+    await recordVisitorScan(visitorIp, vCfg, now)
 
     process.env['COLLECTION_ENABLED'] = 'true'
     process.env['GRADER_LIVE_SCAN'] = 'true'
@@ -107,7 +107,7 @@ describe('POST /api/scan per-visitor throttling', () => {
     const vCfg = defaultVisitorThrottleConfig(rootData, { GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR: '1' } as unknown as NodeJS.ProcessEnv)
 
     // Pre-populate limit
-    recordVisitorScan(visitorIp, vCfg, new Date())
+    await recordVisitorScan(visitorIp, vCfg, new Date())
 
     const req = new Request('http://localhost:3001/api/scan', {
       method: 'POST',
