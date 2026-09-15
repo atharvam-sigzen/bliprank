@@ -457,7 +457,8 @@ in 0003 with a unique index on the four-digit number, every file from 0003
 on records itself first, the test helper derives the ordered list from the
 directory, and the deploy check asserts the record is gapless; when
 `fix/tenancy-deploy-gate` merges its `0003_tenancy_exposure_manifest.sql`
-is renumbered 0005. The oversight review's other three findings (0003 in
+is renumbered 0006 (0005 is B3c's role claim, 2026-09-15). The oversight
+review's other three findings (0003 in
 one transaction; `ws_required()` for the writers only; the two standing
 gates assert the inverse over everything a tenant session can read, with
 `with_check`) are built with failing cases. **B3b (2026-09-15, ADR-0002
@@ -480,9 +481,40 @@ the spend ledger in `run.ts` and `bank-author.ts` (spend control).
 workspace: a POST on `/api/category`, `/api/competitors` or
 `/api/custom-prompts` from an owner or admin applies (version N+1 through
 the store, history kept, the matching pending request marked applied);
-a member, or the file store, files a request; the CLIs stay. Stage B is
-complete; the next session takes Stage C (the daily schedule, C1's ADR)
-or Stage D1 (the agency portfolio, which `workspaceAccess` refuses until
-it exists).
+a member, or the file store, files a request; the CLIs stay.
+**B3c (2026-09-15, the oversight reviews of B3b/B4, eight items, four
+commits):** the burst-cap refusal names no host; the gap-report cap is
+keyed by workspace; the tick lock is a lease in the store's ledger
+document and every daily-ledger write folds into the stored value
+(admission and booking are one exclusive write; a host in flight is
+refused); the file ledgers open ONLY for a declared
+`COLLECTOR_TOPOLOGY=single-process` (a fleet by marker or declaration, or
+an undeclared runtime, is refused without Upstash; the CLIs declare for
+themselves when nothing is declared; a route reads the declaration from
+the environment or the repo-root `.env.local` and never supplies it, so
+**a machine running the Grader now needs the variable**); the store's cap
+file is read on the file backend only; an unreadable quota is a fixed
+sentence with the cause logged; the 409 read-again path is tested; and,
+human-owned, migration `0005_workspace_role_claim.sql`: the workspace
+token carries `role`, the verifier checks it against `workspace_members`
+and stamps it, and `ws_put_document` and `ws_resolve_request` refuse
+unless the stamped role is owner or admin. ⚠️ HUMAN REVIEW: migration
+0005, `token.ts`, `workspace-access.ts` (tenancy); `daily-loop.ts`,
+`ledger-stores.ts`, `ledgerCapUsd` (spend control). One consequence for
+the reviewer: a member's session cannot write a first category record, so
+the preview and scan routes refuse its request for an unrecorded domain
+before anything runs (`recordsFirst`; recorded in 0005's header). The
+`cost-sentinel` and `tenancy-auditor` reviews of B3c are fixed in the
+follow-up commit: the file-backed ledger document writes under an
+exclusive lock file; the deploy check derives that every definer writer of
+workspace state uses `ws_required()` and every writer of a decision reads
+`current_workspace_role()`; the migrations test cuts after every GRANT.
+**Open for the owner, not changed:** the per-domain cycle ceiling and the
+burst cap's repeat exemption are keyed by bare host on the deployment-wide
+ledger (`domain-ceiling.ts`, `live-gate.ts`), a cross-workspace bound and a
+one-bit oracle; re-keying by workspace changes what ADR-0017 bounds against
+the shared provider quota. Stage B is complete; the next session takes
+Stage C (the daily schedule, C1's ADR) or Stage D1 (the agency portfolio,
+which `workspaceAccess` refuses until it exists).
 
 Update this section at every phase transition. It is the first thing a new session reads.
