@@ -411,6 +411,69 @@ describe('a filing is the filer\'s: a member replaces only its own pending reque
   })
 })
 
+describe('set_workspace, the owner-only maintenance path, stamps the owner, else an admin, else a member (B3d item 5, migration 0005)', () => {
+  const WS3 = '00000000-0000-4000-8000-000000000003' // an admin and a member
+  const WS4 = '00000000-0000-4000-8000-000000000004' // a member alone
+  const WS5 = '00000000-0000-4000-8000-000000000005' // nobody
+  const U6 = '00000000-0000-4000-8000-0000000000f6'
+  const U7 = '00000000-0000-4000-8000-0000000000f7'
+  const U8 = '00000000-0000-4000-8000-0000000000f8'
+  beforeAll(async () => {
+    await db.exec(`SET ROLE svc_onboard`)
+    await db.exec(`
+      INSERT INTO accounts (id,email) VALUES ('${U6}','f@three.test'), ('${U7}','g@three.test'), ('${U8}','h@four.test');
+      INSERT INTO workspaces (id,name) VALUES ('${WS3}','Three'), ('${WS4}','Four'), ('${WS5}','Five');
+      INSERT INTO workspace_members (workspace_id,account_id,role) VALUES ('${WS3}','${U6}','admin'), ('${WS3}','${U7}','member'), ('${WS4}','${U8}','member');
+    `)
+    await db.exec(`RESET ROLE`)
+  })
+  /** As the migration owner, in one transaction rolled back afterwards: what set_workspace stamped. */
+  const stamped = async (ws: string): Promise<unknown> => {
+    await db.exec('BEGIN')
+    try {
+      await db.query(`SELECT set_workspace($1)`, [ws])
+      return (await db.query(`SELECT current_account_id()::text AS account, current_workspace_role() AS role`)).rows[0]
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('DELETE FROM auth_tenant_context')
+    }
+  }
+
+  it('an owner over an admin over a member, whatever the account ids order, and the stamped account is the one current_account_id() answers', async () => {
+    // WS1 holds the owner U1, the admin U4 and the members U3 and U5: the owner, not the lowest id.
+    expect(await stamped(WS1)).toEqual({ account: U1, role: 'owner' })
+    expect(await stamped(WS3)).toEqual({ account: U6, role: 'admin' })
+    expect(await stamped(WS4)).toEqual({ account: U8, role: 'member' })
+  })
+
+  it('a workspace with nobody raises and stamps nothing', async () => {
+    await db.exec('BEGIN')
+    try {
+      await expect(db.query(`SELECT set_workspace($1)`, [WS5])).rejects.toThrow(/has no members, so there is no account to stamp/)
+    } finally {
+      await db.exec('ROLLBACK')
+      await db.exec('DELETE FROM auth_tenant_context')
+    }
+    expect((await db.query(`SELECT count(*)::int AS n FROM auth_tenant_context`)).rows).toEqual([{ n: 0 }])
+  })
+
+  it('a member-only workspace\'s maintenance session is refused a decision exactly as the member would be, and may still write a first record (0005 header, 0006)', async () => {
+    // Two transactions: a refused call aborts the one it ran in.
+    const maintenance = async <T,>(fn: () => Promise<T>): Promise<T> => {
+      await db.exec('BEGIN')
+      try {
+        await db.query(`SELECT set_workspace($1)`, [WS4])
+        return await fn()
+      } finally {
+        await db.exec('ROLLBACK')
+        await db.exec('DELETE FROM auth_tenant_context')
+      }
+    }
+    await maintenance(() => expect(db.query(`SELECT ws_put_document('competitor-override', 'four.example', '{"exclude":[]}', 0)`)).rejects.toThrow(/only an owner or admin applies a decision; this session is member/))
+    expect(await maintenance(async () => (await db.query(`SELECT ws_put_document('category-record', 'four.example', '{"slug":"crm"}', 0) AS v`)).rows)).toEqual([{ v: 1 }])
+  })
+})
+
 describe('the migration leaves the model as it found it', () => {
   it('the four writers are definer-owned and executable by the tenant role only, ws_required by the writers only, and the owner is not left in svc_onboard', async () => {
     const rows = (await db.query(`
