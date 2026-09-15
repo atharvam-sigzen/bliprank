@@ -6,9 +6,10 @@ import { MemoryKV } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { applyCustomPrompts } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
-import { dailyCapUsd, dailyLedgerFile, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
+import { dailyCapUsd, dailyLedgerFile, formulaCapUsd, hardCeilingUsd, isTickJob, loopModeOf, readDailyLedger, rotateByDay, runDomainJob, runFanOut, runTick, tickDeduplicationId, type DomainJob } from './daily-loop.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
-import { dueToday, setTracked } from './due.js'
+import { dueToday, readTracked, setTracked } from './due.js'
+import { fileWorkspaceStore } from './store/file-store.js'
 import { kvLedgerStores, ledgerStores, type LedgerStores } from './ledger-stores.js'
 import { recordCategory } from './resolve-category.js'
 import type { ScanResult } from './scan.js'
@@ -366,5 +367,244 @@ describe('the loop through the real runner, offline', () => {
     if ('refuse' in second) throw new Error(second.refuse)
     expect(second.ran).toEqual([])
     expect(second.list.notDue[0]).toMatchObject({ host: 'pipedrive.com', reason: 'cycle-today' })
+  })
+})
+
+describe('the loop as two signed jobs (ADR-0018 D3, D4): the fan-out decides the day, a domain job runs one host, over the KV double and over files', () => {
+  const T = new Date('2026-09-07T06:00:00.000Z')
+  const backends: readonly (readonly [string, () => LedgerStores])[] = [
+    ['KV', () => kvLedgerStores(new MemoryKV())],
+    ['files', () => ledgerStores(dir, ONE)],
+  ]
+  /** On files the tracked document IS the file setTracked wrote; on KV the deployment's document has to hold the same list. */
+  const trackedInto = async (ledgers: LedgerStores) => {
+    if (ledgers.backend === 'kv') await ledgers.doc('tracked.json').update(() => readTracked(dir))
+  }
+  const fanOut = (ledgers: LedgerStores, published: { job: DomainJob; dedup: string }[], env: NodeJS.ProcessEnv = ONE, mode: 'live' | 'fixture' = 'fixture', at = T) =>
+    runFanOut(
+      { dataDir: dir, env, ledgers, mode, day: '2026-09-07', root: dir, storeFor: async () => fileWorkspaceStore(dir), publish: async (job, o) => void published.push({ job, dedup: o.deduplicationId }) },
+      { now: () => at },
+    )
+
+  it('the job shapes: the two bodies and nothing else; the deduplication id names the day, the workspace and the host; the mode is armed, fixture or off', () => {
+    expect(isTickJob({ v: 1, kind: 'fan-out' })).toBe(true)
+    const job = { v: 1, kind: 'domain', day: '2026-09-07', workspaceId: 'ws-1', host: 'acme.test' }
+    expect(isTickJob(job)).toBe(true)
+    for (const bad of [null, [], {}, { v: 2, kind: 'fan-out' }, { v: 1, kind: 'collect' }, { ...job, day: '7 Sep' }, { ...job, workspaceId: '' }, { ...job, host: undefined }]) expect(isTickJob(bad)).toBe(false)
+    expect(tickDeduplicationId(job as DomainJob)).toBe('tick:2026-09-07:ws-1:acme.test')
+    expect(loopModeOf({ GRADER_DAILY_LOOP: 'armed' })).toBe('live')
+    expect(loopModeOf({ GRADER_DAILY_LOOP: 'fixture' })).toBe('fixture')
+    expect(loopModeOf({ GRADER_DAILY_LOOP: 'true' })).toBeNull()
+    expect(loopModeOf({})).toBeNull()
+  })
+
+  for (const [name, mk] of backends) {
+    it(`on ${name}: the fan-out opens the day with its cap BEFORE publishing one domain job per due domain, closes the mark with the count, releases the lease, and a second fan-out publishes nothing`, async () => {
+      setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+      setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+      const ledgers = mk()
+      await trackedInto(ledgers)
+      const published: { job: DomainJob; dedup: string }[] = []
+      // The publish sees the day already opened: a job delivered at once finds the cap it reserves under.
+      const seenAtPublish: unknown[] = []
+      const first = await runFanOut(
+        {
+          dataDir: dir,
+          env: ONE,
+          ledgers,
+          mode: 'fixture',
+          day: '2026-09-07',
+          storeFor: async () => fileWorkspaceStore(dir),
+          publish: async (job, o) => {
+            seenAtPublish.push((await readDailyLedger(dir, ledgers))['2026-09-07']?.fanOut)
+            published.push({ job, dedup: o.deduplicationId })
+          },
+        },
+        { now: () => T },
+      )
+      if (first.outcome !== 'fanned-out') throw new Error(JSON.stringify(first))
+      expect(first).toMatchObject({ published: 2, failed: 0, refusedEntries: [] })
+      expect(first.capUsd).toBeCloseTo(34 * PER_PROMPT * RETRY_HEADROOM, 6)
+      expect(published.map((p) => p.dedup).sort()).toEqual(['tick:2026-09-07:local:acme.test', 'tick:2026-09-07:local:beta.test'])
+      expect(published.find((p) => p.job.host === 'acme.test')!.job).toEqual({ v: 1, kind: 'domain', day: '2026-09-07', workspaceId: 'local', host: 'acme.test' })
+      expect(seenAtPublish).toEqual([
+        { startedAt: T.toISOString(), publishedAt: null, published: 0, failed: 0 },
+        { startedAt: T.toISOString(), publishedAt: null, published: 0, failed: 0 },
+      ])
+      const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+      expect(day).toMatchObject({ spentUsd: 0, calls: 0, domains: {}, fanOut: { startedAt: T.toISOString(), publishedAt: T.toISOString(), published: 2, failed: 0 } })
+      expect(day.capUsd).toBeCloseTo(first.capUsd, 9)
+      expect(await ledgers.doc('tick-lock.json').read()).toBeNull()
+      // Again, later the same day: the closed mark refuses a second publish.
+      const again = await fanOut(ledgers, published, ONE, 'fixture', new Date(T.getTime() + 3600_000))
+      expect(again).toMatchObject({ outcome: 'already-fanned-out', day: '2026-09-07', fanOut: { published: 2 } })
+      expect(published).toHaveLength(2)
+    })
+
+    it(`on ${name}: a domain job needs the fan-out's day, runs today only, reserves under the STORED cap, runs the per-domain path, files and settles; its retry is refused with nothing collected; a second host beyond the cap is refused`, async () => {
+      setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+      setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+      // A hard ceiling of exactly one cycle with headroom, so the two domain jobs compete for one admission.
+      const env = { ...ONE, COLLECTION_BUDGET_USD_DAILY: String(17 * PER_PROMPT * RETRY_HEADROOM + 1e-6) }
+      const ledgers = mk()
+      await trackedInto(ledgers)
+      const store = fileWorkspaceStore(dir)
+      const acme: DomainJob = { v: 1, kind: 'domain', day: '2026-09-07', workspaceId: 'local', host: 'acme.test' }
+      const beta: DomainJob = { ...acme, host: 'beta.test' }
+      const collected: string[] = []
+      const run = (job: DomainJob, at = T) =>
+        runDomainJob({ dataDir: dir, env, ledgers, store, job, mode: 'fixture' }, { collect: async (d, o) => (collected.push(d.host), scanned(d.host, o.day, 0.41, 85)), now: () => at })
+      // Before any fan-out: refused, nothing collected, nothing booked.
+      expect(await run(acme)).toMatchObject({ outcome: 'no-fan-out' })
+      expect(await readDailyLedger(dir, ledgers)).toEqual({})
+      const published: { job: DomainJob; dedup: string }[] = []
+      const fo = await fanOut(ledgers, published, env)
+      expect(fo).toMatchObject({ outcome: 'fanned-out', published: 2 })
+      // Another day than today: refused before the ledger is touched.
+      expect(await run({ ...acme, day: '2026-09-06' })).toMatchObject({ outcome: 'day-passed' })
+      expect(await run(acme, new Date('2026-09-08T00:00:01.000Z'))).toMatchObject({ outcome: 'day-passed' })
+      expect(collected).toEqual([])
+      // The job: reserved under the stored cap, collected, filed, settled.
+      const ran = await run(acme)
+      expect(ran).toMatchObject({ outcome: 'ran', run: { host: 'acme.test', status: 'scanned', spentUsd: 0.41, calls: 85 } })
+      expect(collected).toEqual(['acme.test'])
+      expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
+      let day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+      expect(day.domains['acme.test']).toMatchObject({ status: 'scanned', spentUsd: 0.41, calls: 85 })
+      expect(day.spentUsd).toBeCloseTo(0.41, 6)
+      expect(day.fanOut).toMatchObject({ published: 2 })
+      // The retry of a job that ran: the store holds today's cycle, so it is not due; nothing collected.
+      expect(await run(acme)).toMatchObject({ outcome: 'not-due', refuse: expect.stringContaining('cycle-today') })
+      expect(collected).toEqual(['acme.test'])
+      // The second host: the cap the fan-out stored has one cycle's room and acme.test realised most of it — refused, nothing collected, and the refusal left no line.
+      expect(await run(beta)).toMatchObject({ outcome: 'daily-cap' })
+      expect(collected).toEqual(['acme.test'])
+      day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+      expect(Object.keys(day.domains)).toEqual(['acme.test'])
+      expect(day.spentUsd).toBeLessThanOrEqual(day.capUsd + 1e-9)
+    })
+
+    it(`on ${name}: a job whose collector threw is settled at the expected cost and its retry is already-booked, so a transport that retries cannot make it spend twice`, async () => {
+      setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+      const ledgers = mk()
+      await trackedInto(ledgers)
+      const store = fileWorkspaceStore(dir)
+      const acme: DomainJob = { v: 1, kind: 'domain', day: '2026-09-07', workspaceId: 'local', host: 'acme.test' }
+      await fanOut(ledgers, [])
+      let attempts = 0
+      const run = () => runDomainJob({ dataDir: dir, env: ONE, ledgers, store, job: acme, mode: 'fixture' }, { collect: async () => (attempts++, Promise.reject(new Error('socket hung up'))), now: () => T })
+      const first = await run()
+      expect(first).toMatchObject({ outcome: 'ran', run: { host: 'acme.test', status: expect.stringContaining('failed: socket hung up') } })
+      expect(first.outcome === 'ran' ? first.run.spentUsd : NaN).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 6)
+      expect(attempts).toBe(1)
+      // No cycle was filed, so the host is still "due" by the store — and the ledger's line refuses it anyway.
+      expect(await run()).toMatchObject({ outcome: 'already-booked', refuse: expect.stringContaining('already booked for 2026-09-07') })
+      expect(attempts).toBe(1)
+      const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+      expect(Object.keys(day.domains)).toEqual(['acme.test'])
+    })
+  }
+
+  it('two workspaces tracking the SAME host each get their own line, reservation and cycle: the second is not refused by the first (the line is keyed by workspace and host, bare host on a machine)', async () => {
+    const other = mkdtempSync(join(tmpdir(), 'bliprank-loop-other-'))
+    try {
+      recordCategory(other, { host: 'acme.test', slug: 'crm-software', source: 'site-content', evidence: 'x', decidedAt: '2026-08-01', generated: false })
+      const ledgers = kvLedgerStores(new MemoryKV())
+      await ledgers.doc('tracked.json').update(() => [
+        { host: 'acme.test', since: 's', by: 'a1', reason: 'r', workspaceId: 'ws-1', role: 'owner' },
+        { host: 'acme.test', since: 's', by: 'a2', reason: 'r', workspaceId: 'ws-2', role: 'owner' },
+      ])
+      const stores: Record<string, ReturnType<typeof fileWorkspaceStore>> = { 'ws-1': fileWorkspaceStore(dir), 'ws-2': fileWorkspaceStore(other) }
+      const published: { job: DomainJob; dedup: string }[] = []
+      const fo = await runFanOut(
+        { dataDir: dir, env: ONE, ledgers, mode: 'fixture', day: '2026-09-07', storeFor: async (e) => stores[e.workspaceId!]!, publish: async (job, o) => void published.push({ job, dedup: o.deduplicationId }) },
+        { now: () => T },
+      )
+      expect(fo).toMatchObject({ outcome: 'fanned-out', published: 2 })
+      expect(published.map((p) => p.dedup).sort()).toEqual(['tick:2026-09-07:ws-1:acme.test', 'tick:2026-09-07:ws-2:acme.test'])
+      for (const { job } of published) {
+        const out = await runDomainJob({ dataDir: dir, env: ONE, ledgers, store: stores[job.workspaceId]!, job, mode: 'fixture' }, { collect: async (d, o) => scanned(d.host, o.day, 0.41, 85), now: () => T })
+        expect(out).toMatchObject({ outcome: 'ran', run: { host: 'acme.test', status: 'scanned' } })
+      }
+      const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+      expect(Object.keys(day.domains).sort()).toEqual(['ws-1:acme.test', 'ws-2:acme.test'])
+      expect(day.spentUsd).toBeCloseTo(0.82, 6)
+      expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
+      expect(listCycles(other, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
+    } finally {
+      rmSync(other, { recursive: true, force: true })
+    }
+  })
+
+  it('the publish order rotates with the day, so under a cap that binds no entry is always last (C2 tenancy review)', () => {
+    const items = ['a', 'b', 'c']
+    const a = rotateByDay(items, '2026-09-07')
+    const b = rotateByDay(items, '2026-09-08')
+    const c = rotateByDay(items, '2026-09-09')
+    expect([...a].sort()).toEqual(items)
+    expect(new Set([a[0], b[0], c[0]]).size).toBe(3)
+    expect(rotateByDay(items, '2026-09-10')).toEqual(a)
+    expect(rotateByDay(['only'], '2026-09-07')).toEqual(['only'])
+    expect(rotateByDay([], '2026-09-07')).toEqual([])
+  })
+
+  it('a domain job QStash refused to take is counted on the mark as failed, so an under-published day is visible in the ledger (C2 cost review)', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+    const ledgers = kvLedgerStores(new MemoryKV())
+    await trackedInto(ledgers)
+    const out = await runFanOut(
+      { dataDir: dir, env: ONE, ledgers, mode: 'fixture', day: '2026-09-07', storeFor: async () => fileWorkspaceStore(dir), publish: async (job) => { if (job.host === 'beta.test') throw new Error('QStash rejected the request: HTTP 429 daily message limit') } },
+      { now: () => T },
+    )
+    expect(out).toMatchObject({ outcome: 'fanned-out', published: 1, failed: 1 })
+    expect((await readDailyLedger(dir, ledgers))['2026-09-07']!.fanOut).toMatchObject({ published: 1, failed: 1 })
+  })
+
+  it('a fan-out that died between opening the day and closing it is re-run by the next (the open mark is not a closed one), and its republished jobs are safe because a job refuses a host already booked', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    const ledgers = kvLedgerStores(new MemoryKV())
+    await trackedInto(ledgers)
+    const cap = dailyCapUsd(dueToday(dir, {}, '2026-09-07'))
+    await ledgers.doc('daily-spend.json').update(() => ({ '2026-09-07': { capUsd: cap, spentUsd: 0, calls: 0, domains: {}, fanOut: { startedAt: T.toISOString(), publishedAt: null, published: 0 } } }))
+    const published: { job: DomainJob; dedup: string }[] = []
+    const again = await fanOut(ledgers, published, ONE, 'fixture', new Date(T.getTime() + 60_000))
+    expect(again).toMatchObject({ outcome: 'fanned-out', published: 1 })
+    const day = (await readDailyLedger(dir, ledgers))['2026-09-07']!
+    expect(day.fanOut).toEqual({ startedAt: T.toISOString(), publishedAt: new Date(T.getTime() + 60_000).toISOString(), published: 1, failed: 0 })
+  })
+
+  it('a live fan-out refuses when not armed, before the lease and before any publish; an entry whose store cannot be opened is reported and not published; a fan-out while another holds the lease is lease-held', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
+    const ledgers = kvLedgerStores(new MemoryKV())
+    await trackedInto(ledgers)
+    const published: { job: DomainJob; dedup: string }[] = []
+    expect(await fanOut(ledgers, published, ONE, 'live')).toMatchObject({ outcome: 'not-armed', refuse: expect.stringContaining('not armed') })
+    expect(await fanOut(ledgers, published, { ...ONE, GRADER_DAILY_LOOP: 'armed' }, 'live')).toMatchObject({ outcome: 'refused', refuse: expect.stringContaining('live collection is off') })
+    expect(published).toEqual([])
+    expect(await readDailyLedger(dir, ledgers)).toEqual({})
+    expect(await ledgers.doc('tick-lock.json').read()).toBeNull()
+    // An entry the caller cannot open a store for (on the deployment: an account no longer a member) is reported, and the rest run.
+    const partial = await runFanOut(
+      {
+        dataDir: dir,
+        env: ONE,
+        ledgers,
+        mode: 'fixture',
+        day: '2026-09-07',
+        storeFor: async (e) => (e.host === 'beta.test' ? { refuse: 'auth: account is not a member of that workspace' } : fileWorkspaceStore(dir)),
+        publish: async (job, o) => void published.push({ job, dedup: o.deduplicationId }),
+      },
+      { now: () => T },
+    )
+    expect(partial).toMatchObject({ outcome: 'fanned-out', published: 1, refusedEntries: [{ host: 'beta.test', workspaceId: 'local', reason: expect.stringContaining('not a member') }] })
+    expect(published.map((p) => p.job.host)).toEqual(['acme.test'])
+    // The lease, held by someone else and fresh: refused, nothing published, the day untouched.
+    const other = kvLedgerStores(new MemoryKV())
+    await trackedInto(other)
+    await other.doc('tick-lock.json').update(() => ({ holder: 'someone-else', pid: 1, at: T.toISOString() }))
+    expect(await fanOut(other, published)).toMatchObject({ outcome: 'lease-held' })
+    expect(await readDailyLedger(dir, other)).toEqual({})
   })
 })

@@ -59,8 +59,8 @@ describe('the deployment (ADR-0002 Amendment 1, MVP_PLAN B1)', () => {
     .split('\n')
     .filter((p) => p.endsWith('/route.ts'))
 
-  it('finds the eleven route handlers (eight of the Grader, three of identity since B2)', () => {
-    expect(routes).toHaveLength(11)
+  it('finds the twelve route handlers (eight of the Grader, three of identity since B2, the tick since C2)', () => {
+    expect(routes).toHaveLength(12)
   })
 
   it('no route claims to be absent on the deployment', () => {

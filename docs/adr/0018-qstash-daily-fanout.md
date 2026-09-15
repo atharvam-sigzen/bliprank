@@ -157,8 +157,8 @@ workspace's store for the job's `workspaceId` (D6). Then **reserve** under
 the day's cap in one exclusive write against the daily ledger, in the
 job-shaped form: the day must already carry the fan-out's entry (no fan-out
 today ⇒ `200 { outcome: "no-fan-out" }`; a domain job is only ever valid
-after the fan-out booked the day), and **any line for this host today,
-running or settled in any status, refuses the job**:
+after the fan-out booked the day), and **any line for this host in this
+workspace today, running or settled in any status, refuses the job**:
 `200 { outcome: "already-booked" }`, nothing collected, nothing charged.
 This is the idempotency on retry. QStash retries every non-2xx and every
 timeout, and a retry re-enters this route with the same body; the host's
@@ -315,7 +315,9 @@ per-workspace ceiling already is.
    retried after a `503`).
 2. **The day's ledger**: the fan-out mark refuses a second fan-out for the
    day after the window; the host's line refuses a second domain job for the
-   day at any time.
+   day at any time. The line is keyed as the per-domain ceiling is keyed
+   (`${workspaceId}:${host}`, the bare host on a machine), so two workspaces
+   tracking one host each get their own line and their own daily cycle.
 3. **The store**: `ws_put_cycle` on the same host, day, version and basis is
    an upsert of the same measurement, and `dueToday` lists a host with a
    cycle today as `cycle-today`.
@@ -340,6 +342,55 @@ Each holds without the others.
   the route's `maxDuration` to 800 s in the route file and nowhere else
   (ADR-0002 Amendment 1). The fan-out is unaffected by either.
 
+## Reviews of the build (C2, 2026-09-15)
+
+`cost-sentinel` found no path where a QStash retry re-enters collection
+after a spend and no way for fixture mode to reach a provider; it corrected
+the message headroom above and had the fan-out mark record `failed`
+publishes. `tenancy-auditor` found no blocker, traced the signed bytes to
+`ws_put_cycle` without a crossing, and had the day's ledger line keyed by
+workspace and host; six minors were fixed in the same commit (the job token
+lives 600 s; an entry whose account is not an id is refused before minting;
+the result file follows the store's shape; the fan-out's answer to QStash
+carries counts, the hosts go to the server log; the publish order rotates
+with the day; the named test gaps are closed).
+
+**Left to the owner, recorded here.**
+
+- *Fairness under a binding cap.* The cap is one deployment-wide figure and
+  admission is first come, so a small workspace behind a large one can be
+  refused `daily-cap` every day and nothing tells it. Rotating the publish
+  order (`rotateByDay`) is fairness in expectation only. A share of the cap
+  per workspace is entitlement, D2's question.
+- *The tracked document is the authorising record and lives outside the
+  database.* Harmless while nothing on the deployment writes it; C3 must take
+  the workspace, the account and the role from the verified session and from
+  nothing in a body, or move the list into a workspace-scoped table. That
+  table is also the first step of a loop service identity: a `loop` claim
+  the verifier checks against a workspace-scoped grant row rather than
+  `workspace_members`, its own signing key with a short lifetime, a stamped
+  role no decision writer accepts, an actor column on `workspace_cycles`, and
+  the matching additions to `check-deploy.sql`.
+- *The burst cap under the loop.* `GRADER_MAX_NEW_SCANS_PER_DAY` (default 12)
+  counts distinct hosts scanned today across the deployment, and a tracked
+  host is new every day, so a tracked set wider than the cap has jobs refused
+  `burst-cap` daily, in delivery order. Arming therefore includes setting the
+  cap above the tracked set plus hand-started headroom, or deciding that loop
+  jobs bypass the new-domain cap because the daily cap is their bound — a
+  spend-control decision, not made here.
+- *A role change after tracking stops that domain.* The entry's role is a
+  snapshot and migration 0005 requires equality, so a promotion strands the
+  entry as a demotion does, fail-closed and silent but for the job's `refused`
+  outcome. The service identity above removes the dependence on the person.
+- *No actor on a loop-filed cycle.* `workspace_cycles` records no actor, so a
+  loop's cycle and the tracker's own hand-started one are indistinguishable.
+  A migration, human-owned.
+- *The KV ledger lock is a TTL lease without fencing* (B3c, human-owned): a
+  round trip stalled past ten seconds between the read and the write could
+  let a second writer's whole-document write land last. The store's
+  `cycle-today` guard covers a run that filed; a run that spent and did not
+  file could be re-collected by the retry. A compare-and-set write closes it.
+
 ## Consequences
 
 - Point 6 becomes a matter of two acts by the owner (register, arm) once
@@ -351,8 +402,16 @@ Each holds without the others.
   has a file twin and a store twin as every module of B3b has.
 - Every domain job is its own invocation with its own 300 s, so the
   tracked set can grow without a tick outgrowing its function; the cost is
-  one QStash message per due domain per day plus one for the fan-out, which
-  the free plan's 1,000 a day covers to about 900 tracked domains.
+  one QStash message per due domain per day plus one for the fan-out, and
+  "each delivery attempt counts as one message", so with two retries a day
+  can take up to three messages per domain. The free plan's 1,000 a day is
+  therefore about 300 tracked domains with no margin assumed, not 900 (C2
+  cost review); a fan-out that QStash refuses past the cap leaves that host
+  unrun with no reservation and no spend, and the day's mark records the
+  count as `failed` so the under-collection is in the ledger rather than in
+  one invocation's response. Pay as you go removes the message cap; QStash's
+  per-message price is not in the table above and is small beside the
+  provider spend the jobs gate.
 - The deployment learns four new variables and the record's tracked list
   moves from a file a person edits with a CLI to a ledger document a route
   will write (C3).

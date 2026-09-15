@@ -312,6 +312,31 @@ BANK_AUTHOR_CAP_USD=              # default 5. Every model attempt is charged to
 BANK_AUTHOR_USD_PER_CALL=         # default 0 for :free slugs (the ledger still counts attempts). A model or fallback that is not :free is REFUSED at configuration until this is set (R3).
 ```
 
+**The daily tick's transport (ADR-0018, MVP_PLAN C2).** QStash calls
+`/api/tick` once a day; the route verifies the `Upstash-Signature` before it
+reads anything, then runs the loop's two jobs (the fan-out, and one domain job
+per due domain). Without the two signing keys and `SITE_URL` the route answers
+503 and reads nothing; without `QSTASH_TOKEN` a fan-out is 503. The token is
+read from the process environment only, never from a dotenv file: whoever
+holds it can make an armed deployment run daily.
+
+```
+QSTASH_TOKEN=                      # the fan-out publishes domain jobs with it; pnpm grader:schedule registers with it. Shell only.
+QSTASH_CURRENT_SIGNING_KEY=        # the route verifies deliveries with these two; both are accepted during a key roll
+QSTASH_NEXT_SIGNING_KEY=
+GRADER_TICK_CRON=                  # optional, default "15 6 * * *" (UTC; a CRON_TZ= prefix is refused, the day is UTC)
+GRADER_DAILY_LOOP=                 # armed = live; fixture = offline, honoured only with identity off; anything else = every verified job answers "not armed" and does nothing
+```
+
+`SITE_URL` is the destination (`${SITE_URL}/api/tick`), so the URL QStash signs
+is the one the route verifies against. **Two acts, both the owner's, neither a
+session's:** `pnpm grader:schedule -- --register` from a shell holding the
+token (the pre-spend hook blocks `--register` and `--resume` in a session), and
+`GRADER_DAILY_LOOP=armed` on the deployment. Registering alone spends nothing:
+every delivery is answered "not armed" until the variable is set. The
+deployment's tracked list is the `tracked.json` ledger document in Upstash and
+has no write path until C3, so a fan-out there publishes nothing yet.
+
 **⚠️ Whichever model answers, the competitor rule holds.** It is not the schema:
 `parseCandidate` reads three keys and ignores every other one, `leaders: []` is
 constructed in our code, and a stored bank that has acquired leaders is dropped
@@ -551,5 +576,54 @@ cycle only this machine holds, so it fails on a clean checkout and would
 fail in CI. Stage B is complete; the next session takes Stage C (the daily
 schedule, C1's ADR) or Stage D1 (the agency portfolio, which
 `workspaceAccess` refuses until it exists).
+
+**B5 (2026-09-15, `ebbc36d`):** the suite is clean-checkout safe. The scan
+and preview route tests run over scratch data directories; the two guarded
+tests that read whatever data the machine holds resolve it through the app's
+resolver and `services/grader/src/data-dir.ts`; `build-env.test.ts` asserts
+no test names the live directory. Verified in a clean worktree (131 files,
+1797 tests) and by CI run 34963093487, the branch's first green run. **CI is
+the gate from here.**
+**C1 (2026-09-15, `57d93c9`, ADR-0018 Proposed):** the daily loop on the
+function host is two signed jobs on `/api/tick`: a scheduled fan-out that
+decides the day under the tick lease (the tracked list, the due list per
+workspace, the cap, the day's entry in the ledger) and publishes one domain
+job per due domain; and a domain job that runs the loop's per-domain path
+for one host in one workspace, idempotent on retry through the day's ledger
+line. One invocation cannot run the day (Vercel Hobby 300 s, Pro 800 s,
+streamed responses counted; docs 2026-08-24). Every QStash fact is quoted
+with its fetch date. ADR-0017 Amendment 2 carries the B6 spend decision. A
+job opens the workspace through a token minted for the account that
+switched the domain on, re-verified by the database (⚠️ tenancy).
+**C2 (2026-09-15, built, NOT REGISTERED, NOT ARMED, NO CREDENTIAL):**
+`QStashClient` gains `publishJson`, schedule ids and list/pause/resume/
+delete; `due.ts` is the pure `decideDue` with the file twin `dueToday` and
+the store twin `dueTodayIn`, and the tracked list reads as the ledger
+document `tracked.json` (`readTrackedIn`); `daily-loop.ts` exports
+`liveGates`, `runFanOut` and `runDomainJob` over the same per-domain path
+`runTick` uses, with the job-shaped reservation that refuses a line already
+booked today and the day's cap and fan-out mark written before a job is
+published; `apps/public/app/api/tick/route.ts` with `lib/tick.ts` (verify,
+shape, the mode from the environment, the stores, the job; 401/400/503 only
+where nothing was spent); `pnpm grader:schedule` (print by default;
+`--register`, `--list`, `--pause`, `--resume`, `--remove`); the pre-spend
+hook blocks `--register` and `--resume`. Tested offline end to end: fixture
+mode through the real route and the real runner over the file store, and
+armed over PGlite with the runner and the quota gate mocked, the cycle
+landing in the entry's workspace and a non-member entry refused at the
+database. **The deployment's tracked list has no write path yet (C3)**, so a
+fan-out there publishes nothing. Both reviews ran and are fixed in the same
+commit (no blocker; the day's ledger line is keyed per workspace, the mark
+records failed publishes, the job token lives 600 s, the publish order
+rotates); the owner's items are in ADR-0018 "Reviews of the build": the cap
+is one figure admitted first come, the tracked document authorises
+cross-workspace collection from outside the database (C3's rule: the
+session, never a body), and the burst cap counts every tracked host as new
+each day, so arming includes raising `GRADER_MAX_NEW_SCANS_PER_DAY` above the
+tracked set or deciding loop jobs bypass it. ⚠️ HUMAN REVIEW REQUIRED: spend control
+(`daily-loop.ts`: `reserveJob`, `openDay`/`closeDay`, `liveGates`,
+`runAdmitted`; `.claude/hooks/pre-spend.sh`; `schedule.ts`) and tenancy
+(`lib/tick.ts` `jobStoreFor`). **C2 is not complete until reviewed.** The
+next session takes the review findings, then C3.
 
 Update this section at every phase transition. It is the first thing a new session reads.

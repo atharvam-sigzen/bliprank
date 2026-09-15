@@ -42,6 +42,9 @@ OFFLINE="--(fixture|stub)$END"
 # The daily loop spends only with --live on the same command; the dry list and --fixture are free.
 TICK="grader:tick$END|(tsx|node)[^;&|]*(^|/)tick\.ts$END"
 LIVE="--live$END"
+# The one QStash schedule (ADR-0018 D8): registering or resuming it makes an armed deployment run daily. Printing, listing, pausing and removing are free.
+SCHEDULE="grader:schedule$END|(tsx|node)[^;&|]*(^|/)schedule\.ts$END"
+ARM="--(register|resume)$END"
 
 block() {
   echo "BLOCKED by pre-spend hook (CLAUDE.md rule R3): '$1' can issue paid provider or model calls, and an agent session may not spend. Use --fixture / fixtures, or ask the human to run it from their own shell." >&2
@@ -56,5 +59,6 @@ while IFS= read -r SEG; do
   done
   if echo "$SEG" | grep -Eq -- "$SCAN" && ! echo "$SEG" | grep -Eq -- "$OFFLINE"; then block "$SEG"; fi
   if echo "$SEG" | grep -Eq -- "$TICK" && echo "$SEG" | grep -Eq -- "$LIVE"; then block "$SEG"; fi
+  if echo "$SEG" | grep -Eq -- "$SCHEDULE" && echo "$SEG" | grep -Eq -- "$ARM"; then block "$SEG"; fi
 done < <(printf '%s\n' "$CMD" | sed -E 's/(&&|\|\||;|\|)/\n/g')
 exit 0

@@ -26,6 +26,7 @@
     "grader:competitors": "tsx services/grader/src/competitors.ts",
     "grader:prompts": "tsx services/grader/src/prompts.ts",
     "grader:tick": "tsx services/grader/src/tick.ts",
+    "grader:schedule": "tsx services/grader/src/schedule.ts",
     "grader:track": "tsx services/grader/src/tick.ts track"
   },
   "devDependencies": {

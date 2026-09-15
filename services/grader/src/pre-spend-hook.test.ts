@@ -28,6 +28,15 @@ import { beforeAll, describe, expect, it } from 'vitest'
  * hook and answers a line per case, spawned asynchronously in beforeAll, so
  * the loop is never blocked and the file takes seconds. The hook still reads
  * exactly the JSON Claude Code sends it, one command per invocation.
+ *
+ * ⚠️ A FEW DRIVERS SIDE BY SIDE, NOT ONE (C2, 2026-09-15). Under the full
+ * suite's load one bash start-up on Windows is about three seconds, so one
+ * driver walking 41 cases in sequence took longer than the 120 s this hook
+ * allows and the file failed on time alone with every case unrun (the seven
+ * schedule cases of ADR-0018 pushed the 34 of B3d over). The cases are now
+ * dealt across up to four drivers spawned together, each still asynchronous
+ * and each still running the real hook once per case, so the wall time is a
+ * quarter and the worker is still never blocked.
  */
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const HOOK = join(ROOT, '.claude', 'hooks', 'pre-spend.sh').replace(/\\/g, '/')
@@ -46,6 +55,10 @@ const BLOCKED = [
   // A free segment does not launder a spending one on the same line.
   'pnpm grader:scan -- --fixture && pnpm grader:scan -- --domain acme.com',
   'pnpm test; pnpm grader:tick -- --apply --live',
+  // The one QStash schedule (ADR-0018 D8): registering or resuming it is what makes an armed deployment run daily.
+  'pnpm grader:schedule -- --register',
+  'pnpm grader:schedule -- --resume',
+  'tsx services/grader/src/schedule.ts --register',
   // The three bypasses the cost-sentinel review ran against the first version
   // (2026-09-09): a shell character right after the name, and a relative path.
   'X=$(pnpm grader:diagnose)',
@@ -63,6 +76,10 @@ const ALLOWED = [
   'pnpm grader:tick -- --day 2026-09-04',
   'pnpm grader:tick -- --apply --fixture',
   'pnpm grader:track -- --domain acme.com --on --reason "paying customer"',
+  'pnpm grader:schedule',
+  'pnpm grader:schedule -- --list',
+  'pnpm grader:schedule -- --pause',
+  'pnpm grader:schedule -- --remove',
   'pnpm grader:rescore -- --all',
   'pnpm grader:answers -- --domain acme.com',
   'pnpm test',
@@ -98,8 +115,8 @@ interface Verdict {
   readonly stderr: string
 }
 
-/** The hook's verdict per case, or null when bash or jq is absent on this machine. */
-function runAll(commands: readonly string[]): Promise<ReadonlyMap<string, Verdict> | null> {
+/** One driver over one chunk of the cases: the map of verdicts, or null when bash or jq is absent on this machine. */
+function runChunk(commands: readonly string[]): Promise<ReadonlyMap<string, Verdict> | null> {
   return new Promise((resolve, reject) => {
     const child = spawn('bash', ['-c', DRIVER], {
       // The exact condition the hook used to stand down under.
@@ -125,6 +142,18 @@ function runAll(commands: readonly string[]): Promise<ReadonlyMap<string, Verdic
     })
     child.stdin.end(commands.map((command) => JSON.stringify({ tool_name: 'Bash', tool_input: { command } })).join('\n') + '\n')
   })
+}
+
+/** Every case's verdict, the cases dealt across up to four concurrent drivers; null when any driver found bash or jq absent. */
+async function runAll(commands: readonly string[]): Promise<ReadonlyMap<string, Verdict> | null> {
+  const drivers = Math.max(1, Math.min(4, commands.length))
+  const chunks: string[][] = Array.from({ length: drivers }, () => [])
+  commands.forEach((c, i) => chunks[i % drivers]!.push(c))
+  const maps = await Promise.all(chunks.map(runChunk))
+  if (maps.some((m) => m === null)) return null
+  const all = new Map<string, Verdict>()
+  for (const m of maps) for (const [k, v] of m!) all.set(k, v)
+  return all
 }
 
 let verdicts: ReadonlyMap<string, Verdict> | null = null
