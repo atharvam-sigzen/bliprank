@@ -115,23 +115,12 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
  * ws_put_document and ws_resolve_request refuse a session that is not an
  * owner or admin, so a route that wrote a document without this gate would
  * be refused by the database rather than write as a member (B3c item 8).
+ * The one write that is not a decision is version 1 of a category record,
+ * the precondition of a measurement: since migration 0006 any member's
+ * preview or scan records it (B3d item 2), so no route asks anything about
+ * the role before resolving a category.
  */
 export const applies = (access: WorkspaceAccess & { ok: true }): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')
-
-/**
- * MAY THIS SESSION WRITE A FIRST CATEGORY RECORD? On the Postgres store a
- * first record goes through ws_put_document, which since migration 0005
- * refuses a member; on a machine's file store everyone records. The preview
- * and scan routes ask this BEFORE resolving a category for a domain with no
- * record, because the resolver may author a bank (a model call, charged to
- * the author's ledger before it is made) and only then write the record —
- * a member would have paid for a record it cannot write (B3c tenancy audit,
- * MAJOR 3). Whether a member should be allowed a first record at all is the
- * human question 0005's header records; this keeps the app and the database
- * saying the same thing until it is decided.
- */
-export const recordsFirst = (access: WorkspaceAccess & { ok: true }): boolean => access.backend !== 'postgres' || applies(access)
-export const FIRST_RECORD_NEEDS_OPERATOR = "This domain has no category on record in this workspace yet, and recording one is an owner's or admin's act. Ask them to run its first scan. Nothing was fetched, collected or charged."
 
 /** The message the store raises when a write names a version that is no longer the current one: the caller reads again. */
 export const isStaleVersion = (e: unknown): boolean => /read it again before deciding/.test(e instanceof Error ? e.message : String(e))

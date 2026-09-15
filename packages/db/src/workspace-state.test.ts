@@ -304,25 +304,31 @@ describe('the role travels in the token, is verified against membership, and the
     expect(await inWorkspace(null, (q) => q(`SELECT current_workspace_role() AS r`))).toEqual([{ r: null }])
   })
 
-  it('a member\'s token cannot apply, with no application gate in the way: ws_put_document and ws_resolve_request refuse; filing a request and a cycle still work', async () => {
+  it('a member\'s token writes the first category record and nothing else that decides: version 2, any other kind, and resolving a request refuse; filing a request and a cycle still work (0005, narrowed by 0006)', async () => {
     await inWorkspace(
       WS1,
       async (q) => {
-        await expect(q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"crm"}', 0)`)).rejects.toThrow(/only an owner or admin applies a decision; this session is member/)
+        // A first category record is a measurement's precondition, not a decision (B3d item 2).
+        expect(await q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"crm"}', 0) AS v`)).toEqual([{ v: 1 }])
+        // A correction of it, a first competitor override, a first prompt set: decisions, refused.
+        await expect(q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"erp"}', 1)`)).rejects.toThrow(/only an owner or admin applies a decision; this session is member/)
         await expect(q(`SELECT ws_put_document('competitor-override', 'role.example', '{"exclude":[]}', 0)`)).rejects.toThrow(/only an owner or admin/)
+        await expect(q(`SELECT ws_put_document('custom-prompts', 'role.example', '{"prompts":[]}', 0)`)).rejects.toThrow(/only an owner or admin/)
         await q(`SELECT ws_file_request('category', 'role.example', '{"slug":"erp","reason":"asked"}', $1)`, [T])
         await expect(q(`SELECT ws_resolve_request('category', 'role.example', $1, 'applied', 'member', null)`, [T])).rejects.toThrow(/only an owner or admin/)
         await q(`SELECT ws_put_cycle('role.example', '2026-09-15', 'det-3', 'b', $1)`, [{ ...RESULT, domain: 'role.example' }])
       },
       MEMBER,
     )
-    expect(await inWorkspace(WS1, (q) => q(`SELECT count(*)::int AS n FROM workspace_documents WHERE host = 'role.example'`))).toEqual([{ n: 0 }])
+    expect(await inWorkspace(WS1, (q) => q(`SELECT kind, version FROM workspace_documents WHERE host = 'role.example'`))).toEqual([{ kind: 'category-record', version: 1 }])
     expect(await inWorkspace(WS1, (q) => q(`SELECT status FROM workspace_requests WHERE host = 'role.example'`))).toEqual([{ status: 'pending' }])
     expect(await inWorkspace(WS1, (q) => q(`SELECT count(*)::int AS n FROM workspace_cycles WHERE host = 'role.example'`))).toEqual([{ n: 1 }])
+    // The version rule is checked first, so a second "first record" is refused as a version, not as a role, and write-once holds for members too.
+    await inWorkspace(WS1, (q) => expect(q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"erp"}', 0)`)).rejects.toThrow(/at version 1, not 0/), MEMBER)
   })
 
-  it('an admin applies as an owner does, and resolves the request the member filed', async () => {
-    expect(await inWorkspace(WS1, (q) => q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"crm"}', 0) AS v`), ADMIN)).toEqual([{ v: 1 }])
+  it('an admin applies as an owner does: the correction the member could not write, and the request the member filed', async () => {
+    expect(await inWorkspace(WS1, (q) => q(`SELECT ws_put_document('category-record', 'role.example', '{"slug":"erp"}', 1) AS v`), ADMIN)).toEqual([{ v: 2 }])
     expect(await inWorkspace(WS1, (q) => q(`SELECT ws_resolve_request('category', 'role.example', $1, 'declined', 'admin', 'no') AS r`, [T]), ADMIN)).toEqual([{ r: true }])
     expect(await inWorkspace(WS1, (q) => q(`SELECT status, resolved_by FROM workspace_requests WHERE host = 'role.example'`))).toEqual([{ status: 'declined', resolved_by: 'admin' }])
   })
