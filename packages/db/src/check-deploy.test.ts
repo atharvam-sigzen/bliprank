@@ -228,7 +228,8 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
 
   it('an undeclared SECURITY DEFINER function reachable by the tenant role is caught (2026-09-10 audit)', async () => {
     const d = await healthy()
-    await d.exec(`CREATE FUNCTION peek_everything() RETURNS SETOF accounts LANGUAGE sql SECURITY DEFINER AS $$ SELECT * FROM accounts $$`)
+    // Pinned, so the only fault the gate can name is the one this case is about (the pin has its own case below).
+    await d.exec(`CREATE FUNCTION peek_everything() RETURNS SETOF accounts LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$ SELECT * FROM accounts $$`)
     await d.exec(`GRANT EXECUTE ON FUNCTION peek_everything() TO app_rw`)
     await expect(check(d)).rejects.toThrow(/undeclared SECURITY DEFINER functions .*peek_everything\(\)/)
   })
@@ -363,6 +364,96 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
         'ws_put_dynamic(text,jsonb)',
       )
       await expect(check(d)).rejects.toThrow(/dynamic SQL against workspace state.*ws_put_dynamic/)
+    })
+
+    // The shapes the B3d tenancy audit (2026-09-15, MAJOR 1) found the widened
+    // derivation still missed; each failed against it before it was widened again.
+    it('MERGE INTO workspace_documents without the role check', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_merge_document(p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN MERGE INTO workspace_documents d USING (SELECT ws AS w) s ON d.workspace_id = s.w AND d.host = p_host AND d.kind = 'category-record' AND d.version = 1
+                 WHEN MATCHED THEN UPDATE SET body = p_body
+                 WHEN NOT MATCHED THEN INSERT (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$`,
+        'ws_merge_document(text,jsonb)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_merge_document/)
+    })
+
+    it('UPDATE ONLY, TRUNCATE and COPY are writes too', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_only_document(p_host text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN UPDATE ONLY workspace_documents SET written_at = now() WHERE workspace_id = ws AND host = p_host; END $fn$`,
+        'ws_only_document(text)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_only_document/)
+      const d2 = await healthy()
+      await asOnboard(d2, `CREATE FUNCTION ws_truncate_all() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$ BEGIN TRUNCATE workspace_requests; END $fn$`, 'ws_truncate_all()')
+      await expect(check(d2)).rejects.toThrow(/without ws_required\(\).*ws_truncate_all/)
+      const d3 = await healthy()
+      await asOnboard(d3, `CREATE FUNCTION ws_copy_in() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$ BEGIN COPY workspace_cycles FROM '/tmp/cycles.csv'; END $fn$`, 'ws_copy_in()')
+      await expect(check(d3)).rejects.toThrow(/without ws_required\(\).*ws_copy_in/)
+    })
+
+    it('an INSERT into workspace_requests whose ON CONFLICT lands a status is a decision', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_upsert_applied(p_kind text, p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN INSERT INTO workspace_requests (id, workspace_id, kind, host, body) VALUES (gen_random_uuid(), ws, p_kind, p_host, p_body)
+                 ON CONFLICT (id) DO UPDATE SET status = 'applied', resolved_at = now(); END $fn$`,
+        'ws_upsert_applied(text,text,jsonb)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_upsert_applied/)
+    })
+
+    it('a SECURITY INVOKER helper that writes runs as whoever calls it, which from a definer is svc_onboard: held to the same rules', async () => {
+      const d = await healthy()
+      await d.exec(`CREATE FUNCTION ws_helper_write(p_ws uuid, p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
+           BEGIN INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (p_ws, 'category-record', p_host, 1, p_body); END $fn$;
+         REVOKE ALL ON FUNCTION ws_helper_write(uuid, text, jsonb) FROM PUBLIC`)
+      await expect(check(d)).rejects.toThrow(/without ws_required\(\).*ws_helper_write/)
+    })
+
+    it('an updatable view over workspace state is a door the derivation cannot see through, and is refused', async () => {
+      const d = await healthy()
+      await d.exec(`CREATE VIEW records AS SELECT workspace_id, kind, host, version, body, written_at FROM workspace_documents WHERE kind = 'category-record'`)
+      await expect(check(d)).rejects.toThrow(/updatable view over workspace state.*records/)
+    })
+
+    it('a definer that does not pin its search_path resolves the checks it names to whatever the caller put first', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_unpinned(p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $fn$
+           DECLARE ws uuid := ws_required(); r text := current_workspace_role();
+           BEGIN INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$`,
+        'ws_unpinned(text,jsonb)',
+      )
+      await expect(check(d)).rejects.toThrow(/do not pin search_path.*ws_unpinned/)
+    })
+
+    it('ws_put_document\'s role exemption is pinned to exactly version 1 of a category record (0006)', async () => {
+      const d = await healthy()
+      // 0006's body with the version clause dropped: a member would then overwrite every correction.
+      await d.exec(`CREATE OR REPLACE FUNCTION ws_put_document(p_kind text, p_host text, p_body jsonb, p_expect_version integer) RETURNS integer
+        LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+        DECLARE ws uuid := ws_required(); role text := current_workspace_role(); next_version integer;
+        BEGIN
+          PERFORM 1 FROM workspaces w WHERE w.id = ws FOR UPDATE;
+          SELECT coalesce(max(d.version), 0) + 1 INTO next_version FROM workspace_documents d WHERE d.workspace_id = ws AND d.kind = p_kind AND d.host = p_host;
+          IF next_version - 1 <> p_expect_version THEN RAISE EXCEPTION 'workspace: read it again before deciding'; END IF;
+          IF NOT (p_kind = 'category-record') AND coalesce(role, '') NOT IN ('owner', 'admin') THEN RAISE EXCEPTION 'workspace: only an owner or admin applies a decision'; END IF;
+          INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, p_kind, p_host, next_version, p_body);
+          RETURN next_version;
+        END $fn$`)
+      await expect(check(d)).rejects.toThrow(/ws_put_document exempts from the role check something other than version 1 of a category record/)
     })
 
     it('a definer owned by any other role is held to the same rules', async () => {

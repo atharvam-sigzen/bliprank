@@ -44,6 +44,13 @@ DECLARE
   id    uuid;
 BEGIN
   IF jsonb_typeof(p_body) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'workspace: a request must be an object'; END IF;
+  -- Filings in one workspace are serialised on its row, as document writes
+  -- are (0004): two accounts filing a first request at once otherwise both
+  -- pass the check below and the loser hits the one-pending index with an
+  -- error the routes do not translate (B3d tenancy audit, MINOR 5). The
+  -- unique violation is still handled, with the same refusal, for a filing
+  -- that reaches the index by any other path.
+  PERFORM 1 FROM workspaces w WHERE w.id = ws FOR UPDATE;
   -- B3d item 4: the pending request that stands may be replaced by the
   -- account that filed it, or by an owner or admin; a row that names no
   -- filer (from before 0007) only by an owner or admin.
@@ -55,9 +62,14 @@ BEGIN
       USING ERRCODE = 'insufficient_privilege';
   END IF;
   DELETE FROM workspace_requests r WHERE r.workspace_id = ws AND r.kind = p_kind AND r.host = p_host AND r.status = 'pending';
-  INSERT INTO workspace_requests (workspace_id, kind, host, body, requested_at, filed_by)
-  VALUES (ws, p_kind, p_host, p_body, coalesce(p_requested_at, now()), me)
-  RETURNING workspace_requests.id INTO id;
+  BEGIN
+    INSERT INTO workspace_requests (workspace_id, kind, host, body, requested_at, filed_by)
+    VALUES (ws, p_kind, p_host, p_body, coalesce(p_requested_at, now()), me)
+    RETURNING workspace_requests.id INTO id;
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'workspace: a pending % request for % was filed by another account; an owner or admin can replace it', p_kind, p_host
+      USING ERRCODE = 'insufficient_privilege';
+  END;
   -- The file store kept twenty resolved requests per host; so does this (0004, audit m6).
   DELETE FROM workspace_requests r
    WHERE r.workspace_id = ws AND r.kind = p_kind AND r.host = p_host AND r.status <> 'pending'

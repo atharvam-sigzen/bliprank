@@ -334,7 +334,11 @@ export async function POST(req: Request): Promise<Response> {
         const customCount = (await customPromptsIn(store, domain))?.prompts.length ?? 0
         const cellsThisCycle = (cfg.callsPerEngine + customCount) * ENGINES.length
         //    Keyed by THIS workspace and the host (B3d item 1): admission is
-        //    the workspace's, the money is everyone's through the daily cap.
+        //    the workspace's. The money stays bounded for everyone by what a
+        //    hand-started scan meets here — the burst cap on new domains, the
+        //    provider's live quota below, the per-run allowance, and the
+        //    lifetime ledger every attempt is charged to — never by the daily
+        //    cap, which is the loop's alone (ADR-0017 Amendment 2).
         const ceilingCfg = defaultDomainCeilingConfig(DATA, env, ledgers)
         const ceilingSubject = { workspaceId: access.workspaceId, host: domain }
         const ceiling = await checkDomainCeiling(ceilingSubject, ceilingCfg, now)

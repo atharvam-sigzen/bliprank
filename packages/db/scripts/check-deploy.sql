@@ -161,38 +161,86 @@ END $do$;
 -- Filing a request and filing a cycle are not decisions. A substring is not
 -- a semantics; the behavioural proof is workspace-state.test.ts, but a
 -- writer that cannot even name the check is refused at deploy.
-\echo 'checking every definer that touches workspace state: no dynamic SQL, its workspace from the context, and the role for a decision...'
+--
+-- Widened after the B3d tenancy audit (2026-09-15, MAJOR 1 and MINORs 2, 3):
+-- every FUNCTION in a non-catalog schema, definer or not, since an invoker
+-- helper called from a definer runs as svc_onboard; MERGE, ONLY, TRUNCATE
+-- and COPY are writes; an INSERT or MERGE that can land a status (an ON
+-- CONFLICT that sets it, a column list that names it, a MERGE into
+-- requests) is a decision; an updatable view over the three tables is a
+-- door the source of no function names, and is refused; the three tables
+-- must exist, so a rename cannot empty the check; every definer in public
+-- pins search_path, or the checks it names resolve to whatever the caller
+-- put first; and ws_put_document's one exemption from the role check is
+-- pinned to its text, so a CREATE OR REPLACE that widened it fails here.
+\echo 'checking every function that touches workspace state: no dynamic SQL, its workspace from the context, the role for a decision, no writable view, every definer pinned...'
 DO $do$
 DECLARE
-  dynamic text;
-  bad     text;
+  bad  text;
   -- the three state tables, schema-qualified or quoted or neither, as whole words
   tbl  constant text := '(public\.)?"?workspace_(cycles|documents|requests)\M"?';
   doc  constant text := '(public\.)?"?workspace_documents\M"?';
   req  constant text := '(public\.)?"?workspace_requests\M"?';
-  verb constant text := '(insert\s+into|update|delete\s+from)\s+';
+  verb constant text := '(insert\s+into|update|delete\s+from|merge\s+into|truncate(\s+table)?|copy)\s+(only\s+)?';
+  src  text;
 BEGIN
-  SELECT string_agg(sig, ', ' ORDER BY sig) INTO dynamic FROM (
+  IF to_regclass('public.workspace_cycles') IS NULL OR to_regclass('public.workspace_documents') IS NULL OR to_regclass('public.workspace_requests') IS NULL THEN
+    RAISE EXCEPTION 'the workspace state tables this derivation covers are missing: renamed or dropped without updating check-deploy.sql';
+  END IF;
+
+  SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
     SELECT p.oid::regprocedure::text AS sig
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-     WHERE p.prosecdef AND n.nspname = 'public'
+     WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
        AND p.prosrc ~* 'workspace_(cycles|documents|requests)'
        AND p.prosrc ~* '\mexecute\M'
   ) f;
-  IF dynamic IS NOT NULL THEN
-    RAISE EXCEPTION 'definer functions running dynamic SQL against workspace state cannot be derived from and are refused: %', dynamic;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'functions running dynamic SQL against workspace state cannot be derived from and are refused: %', bad;
   END IF;
+
+  SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
+    SELECT p.oid::regprocedure::text AS sig
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+       AND p.prosrc ~* (verb || tbl)
+       AND (p.prosrc NOT LIKE '%ws_required()%'
+            OR (p.prosrc ~* (verb || doc
+                             || '|(update|merge\s+into)\s+(only\s+)?' || req
+                             || '|insert\s+into\s+(only\s+)?' || req || '\s*\([^)]*\mstatus\M'
+                             || '|on\s+conflict[^;]*\mstatus\M')
+                AND p.prosrc NOT LIKE '%current_workspace_role()%'))
+  ) f;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'functions writing workspace state without ws_required() or, for a decision, current_workspace_role(): %', bad;
+  END IF;
+
+  SELECT string_agg(c.oid::regclass::text, ', ' ORDER BY 1) INTO bad
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE c.relkind = 'v' AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+     AND pg_relation_is_updatable(c.oid, true) <> 0
+     AND EXISTS (SELECT 1 FROM pg_rewrite r
+                   JOIN pg_depend d ON d.classid = 'pg_rewrite'::regclass AND d.objid = r.oid AND d.refclassid = 'pg_class'::regclass
+                   JOIN pg_class t ON t.oid = d.refobjid
+                  WHERE r.ev_class = c.oid AND t.relnamespace = 'public'::regnamespace
+                    AND t.relname IN ('workspace_cycles', 'workspace_documents', 'workspace_requests'));
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'an updatable view over workspace state is a door no function names, and is refused: %', bad;
+  END IF;
+
   SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
     SELECT p.oid::regprocedure::text AS sig
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE p.prosecdef AND n.nspname = 'public'
-       AND p.prosrc ~* (verb || tbl)
-       AND (p.prosrc NOT LIKE '%ws_required()%'
-            OR (p.prosrc ~* (verb || doc || '|update\s+' || req || '|insert\s+into\s+' || req || '\s*\([^)]*\mstatus\M')
-                AND p.prosrc NOT LIKE '%current_workspace_role()%'))
+       AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig, '{}')) AS c WHERE c ~ '^search_path=\s*public\s*,\s*pg_temp\s*$')
   ) f;
   IF bad IS NOT NULL THEN
-    RAISE EXCEPTION 'definer writers of workspace state without ws_required() or, for a decision, current_workspace_role(): %', bad;
+    RAISE EXCEPTION 'SECURITY DEFINER functions in public that do not pin search_path to public, pg_temp: %', bad;
+  END IF;
+
+  SELECT p.prosrc INTO src FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.oid::regprocedure::text = 'ws_put_document(text,text,jsonb,integer)';
+  IF src IS NULL OR src !~ $re$IF NOT \(p_kind = 'category-record' AND next_version = 1\) AND coalesce\(role, ''\) NOT IN \('owner', 'admin'\) THEN$re$ THEN
+    RAISE EXCEPTION 'ws_put_document exempts from the role check something other than version 1 of a category record (migration 0006), or is missing';
   END IF;
 END $do$;
 

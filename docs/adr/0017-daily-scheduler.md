@@ -477,21 +477,48 @@ one-bit oracle that someone else on the deployment scans that host.
 **The bound statement, amended.** A host's hand-started cycles per month are
 counted PER WORKSPACE: the ledger key is `${workspaceId}:${host}`
 (`ceilingKey`), and `checkDomainCeiling` and `recordDomainCycle` take the
-workspace and the host together. What is still bounded for everyone at once
-is the money: the daily cap of decision 2 and the per-run allowance, both of
-which sit under the provider's shared quota and neither of which changed. On
-a machine with identity off the workspace is `local` and the key is the bare
-host, which is what the file has always held, so a machine's month is
-unchanged.
+workspace and the host together. On a machine with identity off the
+workspace is `local` and the key is the bare host, which is what the file
+has always held, so a machine's month is unchanged.
+
+What still bounds a hand-started cycle for everyone at once (corrected after
+the cost-sentinel review of 2026-09-15, which found the first wording wrong):
+NOT the daily cap of decision 2, which only the loop reads and books
+(`daily-loop.ts`; `/api/scan` never touches `daily-spend.json`), but four
+things a hand-started scan meets on the deployment: the burst cap on NEW
+domains a day (`live-gate.ts`, deployment-wide by design), the provider's own
+remaining quota read live before every scan (the gate refuses when the
+account is short, whoever asks), the per-run allowance that bounds one
+cycle's realised calls, and the lifetime spend ledger every attempt is
+charged to before it is made (`ledgerCapUsd`, `ledger.json` on a machine,
+the `spend:ledger` total in Upstash on the deployment). So N workspaces each
+taking their two cycles a month of one host is bounded in dollars, by the
+lifetime cap and the provider's quota, and by nothing that scales with the
+number of workspaces. ⚠️ FOR THE OWNER: re-keying removed the one bound
+that made monthly hand-started spend self-limiting per host across the
+deployment; at pay-as-you-go prices a hundred workspaces each taking two
+cycles of one host is about $116 a month with no refusal until the lifetime
+cap binds. If hand-started spend needs an aggregate ceiling that scales with
+workspaces, it is a spend cap (per deployment or per plan), not a per-host
+cycle count — the recurring budget this ADR's "open, for later" section
+already describes.
 
 **The burst cap's repeat exemption stays keyed by the bare host, and that is
-accepted.** `live-gate.ts` lets a host already scanned today by anyone pass
-the day's new-domain cap, so a caller at the cap can learn that a host was
-scanned today by someone. It only ever ADMITS on another workspace's activity,
-never refuses on it, and what it admits is served from the day's cache without
-a provider call; the leak is the existence of a cache entry, which the cached
-answer itself reveals. Recorded as accepted rather than re-keyed, because
-re-keying would refuse a free, cached re-show.
+accepted, with one qualification.** `live-gate.ts` lets a host already
+scanned today by anyone pass the day's new-domain cap, so a caller at the cap
+can learn that a host was scanned today by someone. It only ever ADMITS on
+another workspace's activity, never refuses on it. For the curated bank's
+cells what it admits is served from the day's cache without a provider call,
+because the cache key (R6) is workspace-agnostic; the leak is the existence
+of a cache entry, which the cached answer itself reveals. The qualification
+(cost-sentinel, 2026-09-15): a workspace's own custom prompts (ADR-0016) are
+its own cells, never asked by the first scan, so a repeat with custom prompts
+does buy those cells on a day the new-domain cap was full — bounded by the
+workspace's ceiling, the per-run allowance and the lifetime ledger, not by
+the burst cap. Recorded as accepted rather than re-keyed, because re-keying
+would refuse the free, cached re-show; sizing the exemption by whether THIS
+cycle's cells are cached, rather than by the host, is the change if that
+qualification ever matters.
 
 Verification, without spending: `domain-ceiling.test.ts` (two workspaces on
 one ledger take their own two cycles of one host, a machine's ledger keeps its
