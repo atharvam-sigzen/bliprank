@@ -6,6 +6,15 @@
 -- or `pnpm --filter @bliprank/db db:check`. Any assertion below raises, psql
 -- exits non-zero, and the deploy fails.
 --
+-- THE DEPLOY ROLE MUST BE A MEMBER OF `deploy_check`:
+--
+--   GRANT deploy_check TO <the role that runs this>;
+--
+-- and it must NOT need to be a superuser, a member of auth_verifier, or hold
+-- BYPASSRLS. That was the previous contradiction: the gate read
+-- auth_signing_keys directly, which FORCEs RLS, so the only posture in which it
+-- passed was one that waived its own most important assertion.
+--
 -- WHY THIS EXISTS. Migration 0000 asserted role exclusivity in the test suite,
 -- which proves it about a fixture database and nothing whatsoever about the
 -- database customers are on. Login roles are created at deploy time, outside
@@ -13,31 +22,38 @@
 -- runs where the roles actually are. A bad GRANT should fail the deploy, not
 -- sit undetected until it is a breach.
 --
--- ===========================================================================
--- THIS FILE IS INCOMPLETE, DELIBERATELY, AND IS TRACKED. See ADR-0007.
--- ===========================================================================
+-- THE GATE IS CLOSED (ADR-0007; closed on main 2026-09-09, merged into this
+-- lineage 2026-09-15 as migration 0008). Four independent audits found four
+-- BLOCKERs in the expanded version of this file, and three were the same bug:
+-- an assertion that names an ARRANGEMENT — a proxy, a role list, `pg_has_role`
+-- USAGE, `rolcanlogin`, a function-name list, a relkind list, a grantee name,
+-- the schema, the policy command. Each round enumerated more shapes and each
+-- audit found a shape not enumerated. Proving "no unsafe configuration exists"
+-- by listing unsafe configurations is unbounded by construction.
 --
--- Four independent audits found four BLOCKERs in the expanded version of this
--- file, and three were the same bug: an assertion that names an ARRANGEMENT — a
--- proxy, a role list, `pg_has_role` USAGE, `rolcanlogin`, a function-name list,
--- a relkind list, a grantee name, the schema, the policy command. Each round
--- enumerated more shapes and each audit found a shape not enumerated. Proving
--- "no unsafe configuration exists" by listing unsafe configurations is unbounded
--- by construction, and rounds 5, 6 and 7 each found that the previous round's
--- fix had opened the next hole.
+-- So the file holds TWO derivations, and neither is a list of unsafe shapes:
 --
--- The replacement — derive every RLS-relevant object from pg_class, pg_inherits,
--- pg_policies and real ownership, and require each one found to prove coverage —
--- is REQUIRED WORK WITH A DEADLINE: it must be closed before gate G1, because
--- PHASES.md's standing suite item 3 runs the RLS suite at every gate. The
--- existing attempt lives on `fix/tenancy-deploy-gate` (migration 0003 plus
--- deploy-check.test.ts) and is NOT merged. Do not treat its absence as a
--- finished gate, and do not re-expand this file by hand in the meantime.
+--   * the exposure manifest (`tenancy_exposure_faults()`, migration 0008)
+--     inverts the question for every privilege: everything a non-trusted role
+--     can reach — every schema, every relkind, every verb, every sequence,
+--     every SECURITY DEFINER function — must be DECLARED in
+--     `tenancy_exposure_manifest` with a disposition. Reachable-and-undeclared
+--     is the failure condition, so a new schema, object kind, verb or grantee
+--     fails by default instead of needing to be predicted;
+--   * the inverse over what the tenant can READ (B3r item 3, at the foot):
+--     every relation any role a tenant session can act as may SELECT is on the
+--     shared allowlist or carries a read policy that scopes on the context in
+--     the expression that governs its verb, `with_check` included — a second
+--     witness that starts from reachability and never from a declaration, so a
+--     declaration that lies is still refused;
 --
--- WHAT REMAINS BELOW is the part that holds without that derivation: role
--- exclusivity, the RLS sweep over pg_class, and the context mechanism itself.
+-- plus the derivation over definer BODIES (every function that writes
+-- workspace state takes its workspace from the context and, for a decision,
+-- reads the role), the migration record, and the parts that genuinely are
+-- about specific named things: role attributes, the context mechanism itself,
+-- and the signing keys.
 --
--- The other half of the guarantee is behavioural and DOES ship, in
+-- The other half of the guarantee is behavioural and lives in
 -- `packages/db/src/tenant-isolation.test.ts`: two seeded tenants, real reads and
 -- writes across every scoped relation, asserting the row sets are disjoint. A
 -- policy that merely MENTIONS current_workspace_id passes any catalog check and
@@ -47,8 +63,29 @@
 \echo 'checking role exclusivity, RLS-bypassing roles, and superusers...'
 SELECT assert_role_exclusivity();
 
+-- Membership in a predefined role confers power that never appears in a table
+-- ACL, so no amount of privilege derivation can see it. pg_execute_server_program
+-- is arbitrary command execution as the database OS user; REPLICATION streams
+-- the WAL, on which RLS is never consulted.
+\echo 'checking no role holds server-level powers...'
+SELECT assert_role_powers();
+
+\echo 'checking every reachable object is declared in the exposure manifest...'
+DO $do$
+DECLARE faults text;
+BEGIN
+  SELECT string_agg(format('[%s] %s', kind, detail), E'\n  ' ORDER BY kind, detail)
+    INTO faults FROM tenancy_exposure_faults();
+  IF faults IS NOT NULL THEN
+    RAISE EXCEPTION E'tenancy exposure faults:\n  %', faults;
+  END IF;
+END $do$;
+
 -- Every table in public must have RLS enabled AND forced. ENABLE alone does not
--- bind the table owner, and migrations run as the owner.
+-- bind the table owner, and migrations run as the owner. The manifest holds
+-- the same obligation over every DESCENDANT of a scoped declaration, in any
+-- schema (`scoped-without-forced-rls`); this sweep is kept as the second line
+-- for a public table nobody declared and nobody can yet reach.
 \echo 'checking FORCE ROW LEVEL SECURITY on every table...'
 DO $do$
 DECLARE bad text;
@@ -98,7 +135,13 @@ END $do$;
 -- kind. This assertion was true, and it certified something it did not prove.
 --
 -- It is kept because revoking that EXECUTE is still correct. The assertion that
--- actually closes the hole is the bare-GUC one further down.
+-- actually closes the hole is the bare-GUC one further down. And since the
+-- manifest runs first, this arrangement is now caught there as
+-- `[definer-function-exposed] set_workspace(uuid) is executable by app_rw`
+-- before this line is reached (measured at main's merge, 2026-09-09): the
+-- manifest DERIVED a fault nobody enumerated, which is ADR-0007's thesis
+-- demonstrated. Known-redundant, kept as the second line for the case where a
+-- declaration lies.
 \echo 'checking the tenant role cannot call the unverified setter...'
 DO $do$
 BEGIN
@@ -125,6 +168,31 @@ BEGIN
   SELECT current_account_id() INTO got;
   IF got IS NOT NULL THEN
     RAISE EXCEPTION 'current_account_id() honoured a GUC';
+  END IF;
+END $do$;
+
+-- Signing keys, read through a definer helper that returns counts.
+--
+-- Reading the table directly was a contradiction: it FORCEs RLS with a single
+-- TO auth_verifier policy — the point of the design — so a non-superuser
+-- deployer saw zero rows and the gate failed with "no live row", which is the
+-- opposite of what was wrong. The only way to make it pass was to deploy with
+-- BYPASSRLS and excuse that role, waiving the most important assertion here.
+-- `auth_key_health()` (migration 0008) returns counts only; no secret material
+-- crosses the boundary.
+\echo 'checking every live signing key is fully configured...'
+DO $do$
+DECLARE h record;
+BEGIN
+  SELECT * INTO h FROM auth_key_health();
+  IF NOT h.constraint_present THEN
+    RAISE EXCEPTION 'the auth_signing_keys_live_is_configured constraint has been dropped; live keys are unconstrained';
+  END IF;
+  IF h.misconfigured > 0 THEN
+    RAISE EXCEPTION '% live signing key(s) are not fully configured and will verify tokens. Retire or rotate them.', h.misconfigured;
+  END IF;
+  IF h.live_keys = 0 THEN
+    RAISE EXCEPTION 'no live row in auth_signing_keys: no tenant can establish a session. A key carried over from before migration 0002 needs issuer, audience and a >=32 char secret — rotate it.';
   END IF;
 END $do$;
 
@@ -253,6 +321,15 @@ END $do$;
 -- every reachable definer function must be declared, and one that is not
 -- fails the deploy. The declared list is the arrangement; the derivation is
 -- the property.
+--
+-- The manifest's `definer-function-exposed` sweep (0008) holds the SAME list,
+-- over every role there is — login roles and PUBLIC included, not only the
+-- three application groups named here — and runs first, so an undeclared
+-- definer is named there before this line is reached. Two copies of one list
+-- cannot drift silently: a definer added to one and not the other fails the
+-- healthy database here or there. Kept as the second line (a merge is the
+-- easiest place in the world to lose an assertion); consolidating the two into
+-- one declaration is a follow-up for the tenancy owner, not a merge decision.
 \echo 'checking every SECURITY DEFINER function an application role may execute is declared...'
 DO $do$
 DECLARE bad text;
@@ -302,20 +379,34 @@ END $do$;
 
 -- The migration record (0003, section 0). One row per applied file, a unique
 -- index on the four-digit number, and no gap: a database that skipped a file,
--- or applied a second file under a number it already holds (the unmerged
--- 0003_tenancy_exposure_manifest, if it were applied without renumbering),
--- fails here. The list on disk is the migrations directory; the record is its
--- applied prefix, and packages/db/src/migrations.test.ts asserts the two agree
--- on a full apply (MVP_PLAN B3r, item 4).
+-- or applied a second file under a number it already holds, fails here. (The
+-- exposure manifest arrived on main as a second 0003; it is 0008 in this
+-- lineage, and the index is what made applying it under the old number
+-- impossible rather than merely noticed.) The list on disk is the migrations
+-- directory; the record is its applied prefix, and
+-- packages/db/src/migrations.test.ts asserts the two agree on a full apply
+-- (MVP_PLAN B3r, item 4).
+--
+-- The record is read through migration_record() (0008), not the table: the
+-- table is FORCE RLS with one policy naming the migration owner and no grant to
+-- anyone else, and the deploy principal is a member of deploy_check that owns
+-- nothing. Read directly, that principal got `permission denied for table
+-- schema_migrations` and could not run the gate at all (measured, C0 audit);
+-- read through the definer it can, and an empty record is refused rather than
+-- passed over.
 \echo 'checking the migration record is present, indexed by number and gapless...'
 DO $do$
-DECLARE bad text;
+DECLARE bad text; n integer;
 BEGIN
   IF to_regclass('public.schema_migrations') IS NULL THEN
     RAISE EXCEPTION 'schema_migrations is missing: migration 0003 was never applied here, or the record was dropped';
   END IF;
+  SELECT count(*) INTO n FROM migration_record();
+  IF n = 0 THEN
+    RAISE EXCEPTION 'the migration record is empty: migration_record() returned no rows, so either nothing was applied or this principal cannot read the record';
+  END IF;
   SELECT string_agg(name, ', ' ORDER BY name) INTO bad
-    FROM (SELECT name, left(name, 4)::int AS num, row_number() OVER (ORDER BY name) - 1 AS expected FROM schema_migrations) s
+    FROM (SELECT name, left(name, 4)::int AS num, row_number() OVER (ORDER BY name) - 1 AS expected FROM migration_record()) s
    WHERE num <> expected;
   IF bad IS NOT NULL THEN
     RAISE EXCEPTION 'the migration record is not 0000..N with one file per number; out of sequence at: %', bad;
@@ -348,6 +439,14 @@ END $do$;
 -- as: app_rw, every role that is a member of it, and everything any of those
 -- inherits — the same pg_has_role(…, 'MEMBER') edge assert_role_exclusivity
 -- walks.
+--
+-- A VIEW the tenant can read is refused here, security_invoker or not: it
+-- carries no policy of its own, so nothing in the catalog says its rows are
+-- scoped. The manifest accepts a DECLARED security_invoker view
+-- (`scoped-view-not-invoker` is the fault for the other kind); this inverse
+-- does not yet, and fails closed. Teaching it that an invoker view inherits
+-- its base tables' scoping is a decision for the tenancy owner, recorded at
+-- the merge (2026-09-15), not made here.
 \echo 'checking every relation a tenant session can read is shared by declaration or scoped by every policy it meets...'
 DO $do$
 DECLARE bad text;
@@ -376,7 +475,9 @@ BEGIN
        AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
        AND (has_any_column_privilege('public', c.oid, 'SELECT')
             OR EXISTS (SELECT 1 FROM tenant_roles t WHERE has_any_column_privilege(t.oid, c.oid, 'SELECT')))
-       -- the shared-corpus allowlist: read in full by every tenant, by decision
+       -- the shared-corpus allowlist: read in full by every tenant, by decision.
+       -- The manifest declares the same relation `shared` with its column list;
+       -- tenant-isolation.test.ts holds the two allowlists to each other.
        AND ns.nspname || '.' || c.relname <> ALL (ARRAY['public.prompt_banks'])
   ) x WHERE why IS NOT NULL;
   IF bad IS NOT NULL THEN
@@ -384,22 +485,17 @@ BEGIN
   END IF;
 END $do$;
 
--- DELIBERATELY ABSENT, and moving with the gate rather than being reimplemented
--- here (ADR-0007):
+-- Say what was waived. A deliberate decision that leaves no trace in the
+-- artefact recording it is not a deliberate decision.
+-- READ THIS LINE IN THE DEPLOY LOG. `(none)` is the expected output in
+-- production. Anything else is a role that reads every tenant's rows, and is
+-- either a decision recorded under docs/runbooks/deploying-the-database.md §1
+-- or a decision nobody made. There is no third case.
 --
---   * the exposure manifest — every reachable object must be declared, so a new
---     schema, relkind, verb or grantee fails by default instead of needing to
---     have been predicted;
---   * assert_role_powers() — predefined-role membership (pg_execute_server_program,
---     pg_read_all_data, pg_maintain, pg_signal_backend) and REPLICATION, none of
---     which appears in any table ACL;
---   * live signing key health. The 0001-era version of this read
---     auth_signing_keys directly, which after 0002 FORCEs RLS with a single
---     TO auth_verifier policy — so a non-superuser deployer saw zero rows and the
---     gate failed with "no live row", the opposite of what was wrong. The only
---     way to make it pass was to deploy with BYPASSRLS and excuse that role,
---     waiving this file's most important assertion. It needs auth_key_health(),
---     which is in migration 0003. Until that merges, a deploy with no live key
---     fails at the first login attempt rather than here.
+-- The exception this allowlist silences offers naming a role as one of its two
+-- remedies, and at 2am that is much easier than removing the attribute. The
+-- runbook exists for that moment.
+\echo 'RLS-bypass roles excused by bliprank.rls_bypass_allowed:'
+SELECT coalesce(nullif(coalesce(current_setting('bliprank.rls_bypass_allowed', true), ''), ''), '(none)') AS excused;
 
-\echo 'deploy checks passed (PARTIAL GATE — see ADR-0007; must be closed before G1).'
+\echo 'deploy checks passed.'

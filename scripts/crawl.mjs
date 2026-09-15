@@ -87,7 +87,7 @@ const CANNED_PREVIEW = {
 }
 
 /**
- * Submit a domain on the Grader and harvest what the resulting screen offers.
+ * Submit a domain on the Grader and harvest every screen the flow reaches.
  *
  * ⚠️ THE WAIT IS ON THE CONDITION, NOT ON A SELECTOR APPEARING.
  *
@@ -99,69 +99,114 @@ const CANNED_PREVIEW = {
  * one extra second and the "Open in dashboard" button is there. A gate that
  * reports phantom failures gets its failures ignored, which is worse than not
  * having the gate.
+ *
+ * ⚠️ THE FLOW IS TWO STEPS NOW, AND THIS GATE WENT RED WHEN IT BECAME TWO.
+ *
+ * `2179a54` made EVERY domain preview first, including the ones this build ships
+ * a record for. Before it, a bundled domain went straight from the form to its
+ * result; this function submitted, harvested, and found "Open in dashboard"
+ * there. After it, submitting lands on the PREVIEW — which offers "Run this
+ * scan", not "Open in dashboard" — so the harvest stopped one screen short and
+ * the three dashboard routes were reported unreachable by every persona.
+ * Nothing was wrong with the product: the crawl was one product change behind,
+ * which is the second time this gate has cried wolf and the second reason to
+ * distrust a gate that reports phantom failures.
+ *
+ * So: harvest the preview, then CONFIRM, then harvest the result. Both are real
+ * screens a person sees and both carry links, so both are audited rather than
+ * the second one being treated as the only one that counts.
+ *
+ * ⚠️ CONFIRMING STILL SPENDS NOTHING. `startScan` serves a committed record from
+ * the build for a bundled domain and never calls /api/scan; for anything else
+ * /api/scan is aborted at the browser level a few lines above. The confirm click
+ * is safe for both, and for the unbundled case it simply lands on the refusal,
+ * which is itself a state worth knowing renders.
  */
 async function harvestGraderState(page, domain, label, from, reached, queue, edges) {
+  const take = async (stage) => {
+    for (const h of await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href))) {
+      const k = normalise(h)
+      if (k) {
+        edges.push({ from: `${from} (${label} · ${stage})`, to: k })
+        if (!reached.has(k)) queue.push(k)
+      }
+    }
+    // Buttons that navigate (the handoff) count as clickable too.
+    const buttons = await page.evaluate(() => [...document.querySelectorAll('button')].map((b) => b.textContent?.trim() ?? ''))
+    if (buttons.some((b) => /open in dashboard/i.test(b))) {
+      edges.push({ from: `${from} (${label} · ${stage})`, to: `${PUB}/dashboard` })
+      if (!reached.has(`${PUB}/dashboard`)) queue.push(`${PUB}/dashboard`)
+    }
+    return buttons
+  }
+
+  /*
+   * Settled means the form is GONE and something that replaces it is on screen.
+   *
+   * Waiting on a selector appearing was the original bug here: it resolved while
+   * neither the record nor an alert was present, so every run harvested the
+   * still-submitting form. The condition is the thing to wait for, not a symptom
+   * of it.
+   */
+  const settle = () =>
+    page
+      .waitForFunction(
+        () => {
+          const submitting = document.querySelectorAll('button[type=submit]').length > 0
+          const arrived =
+            document.querySelector('.record__domain') !== null ||
+            document.querySelector('[role=alert]') !== null ||
+            [...document.querySelectorAll('button')].some((b) =>
+              /run this scan|open in dashboard|check a(nother)? different|check another/i.test(b.textContent ?? ''),
+            )
+          return !submitting && arrived
+        },
+        { timeout: 15000 },
+      )
+      .catch(() => {})
+
   await page.goto(`${PUB}/`, { waitUntil: 'networkidle' }).catch(() => {})
   const input = await page.$('#domain')
   if (!input) return
   await input.fill(domain)
   await page.click('button[type=submit]').catch(() => {})
+  await settle()
 
-  // Settled means: the form is gone AND something that replaces it is on screen.
-  await page
-    .waitForFunction(
-      () => {
-        const submitting = [...document.querySelectorAll('button[type=submit]')].length > 0
-        const arrived =
-          document.querySelector('.record__domain') !== null ||
-          document.querySelector('[role=alert]') !== null ||
-          [...document.querySelectorAll('button')].some((b) => /run this scan|open in dashboard|check a(nother)? different|check another/i.test(b.textContent ?? ''))
-        return !submitting && arrived
-      },
-      { timeout: 15000 },
-    )
-    .catch(() => {})
+  // The preview is a real screen with real links; it is harvested, not skipped.
+  const onPreview = await take('preview')
 
   /*
    * THE PREVIEW IS NOT THE END OF THE FLOW. Since 2179a54 every domain, the
    * bundled ones included, stops at a preview whose headline is `.record__domain`
-   * and whose only way forward is "Run this scan". Harvesting there found the
-   * preview's three links and reported /dashboard unreachable by click, for a
-   * day, while the button that reaches it sat unpressed on the screen. So the
-   * button is pressed, exactly as a person would, and the wait runs again for
-   * the states a scan actually ends in: a rail, a refusal, or the handoff.
-   * Nothing is collected by pressing it: the bundled domain is served from the
-   * build, and any other request to /api/scan is aborted by this crawl's guard.
+   * and whose only way forward is "Run this scan". Harvesting there alone found
+   * the preview's links and reported /dashboard unreachable by click while the
+   * button that reaches it sat unpressed on the screen (both lines of this
+   * repository fixed that independently; merged 2026-09-15). So the button is
+   * pressed, exactly as a person would, and the wait runs again for the states
+   * a scan actually ends in: a rail, a refusal, or the handoff. Only when the
+   * preview actually offered it: a domain refused outright never reaches this,
+   * and clicking a button that is not there would fail silently and look like
+   * the flow was followed. Nothing is collected by pressing it: the bundled
+   * domain is served from the build, and any other request to /api/scan is
+   * aborted by this crawl's guard.
    */
-  const confirm = await page.$('.record__action.btn--primary')
-  if (confirm && !(await page.$('section.record .rail, section.record--refused'))) {
-    await confirm.click().catch(() => {})
-    await page
-      .waitForFunction(
-        () =>
-          document.querySelector('section.record .rail') !== null ||
-          document.querySelector('section.record--refused') !== null ||
-          [...document.querySelectorAll('button')].some((b) => /open in dashboard/i.test(b.textContent ?? '')),
-        { timeout: 15000 },
-      )
-      .catch(() => {})
-  }
+  if (!onPreview.some((b) => /run this scan/i.test(b))) return
+  if (await page.$('section.record .rail, section.record--refused')) return
 
-  for (const h of await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href))) {
-    const k = normalise(h)
-    if (k) {
-      edges.push({ from: `${from} (${label})`, to: k })
-      if (!reached.has(k)) queue.push(k)
-    }
-  }
+  await page.click('button:has-text("Run this scan")').catch(() => {})
+  await page
+    .waitForFunction(
+      () =>
+        document.querySelector('section.record .rail') !== null ||
+        document.querySelector('section.record--refused') !== null ||
+        [...document.querySelectorAll('button')].some((b) => /open in dashboard|check another/i.test(b.textContent ?? '')),
+      { timeout: 20000 },
+    )
+    .catch(() => {})
 
-  // Buttons that navigate (the handoff) count as clickable too.
-  const buttons = await page.evaluate(() => [...document.querySelectorAll('button')].map((b) => b.textContent?.trim() ?? ''))
-  if (buttons.some((b) => /open in dashboard/i.test(b))) {
-    edges.push({ from: `${from} (${label})`, to: `${PUB}/dashboard` })
-    if (!reached.has(`${PUB}/dashboard`)) queue.push(`${PUB}/dashboard`)
-  }
+  await take('result')
 }
+
 
 async function crawlPersona(browser, name, seed) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })

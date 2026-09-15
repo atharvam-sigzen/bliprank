@@ -71,7 +71,7 @@ describe('the migration lineage is one ordered list', () => {
     try {
       const rows = await pg.query<{ name: string }>(`SELECT name FROM schema_migrations ORDER BY name`)
       expect(rows.rows.map((r) => r.name)).toEqual(MIGRATIONS.map((f) => f.replace(/\.sql$/, '')))
-      // fix/tenancy-deploy-gate's unmerged file, applied without renumbering: refused before it changes anything.
+      // main's manifest under the number it carried there (it is 0008 in this lineage since C0): refused before it changes anything.
       await expect(pg.query(`INSERT INTO schema_migrations (name) VALUES ('0003_tenancy_exposure_manifest')`)).rejects.toThrow(
         /schema_migrations_one_per_number/,
       )

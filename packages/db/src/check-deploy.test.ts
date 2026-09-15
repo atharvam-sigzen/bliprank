@@ -21,11 +21,25 @@
  * no failing case is indistinguishable from one that does nothing. That rule was
  * violated three times, and each time the untested assertion was the broken one.
  *
- * SCOPE. `check-deploy.sql` is deliberately PARTIAL — see ADR-0007. This file
- * covers only what it currently asserts. The exposure manifest,
- * `assert_role_powers()` and signing-key health are on `fix/tenancy-deploy-gate`
- * together with the 78 failing cases that exercise them; that work is required
- * before G1. Do not re-expand the gate here without bringing its cases.
+ * SCOPE. `check-deploy.sql` WAS deliberately partial (ADR-0007); the gate
+ * closed on main on 2026-09-09 and reached this lineage on 2026-09-15 (MVP_PLAN
+ * C0) as migration 0008, the exposure manifest. This file and
+ * `deploy-check.test.ts` both survive that merge and neither supersedes the
+ * other: this one holds the failing cases for the lineage's own derivations
+ * (the definer-body rules, the read inverse, the migration record, the owner's
+ * memberships) and the setter assertion; that one holds the 78 cases for the
+ * manifest, `assert_role_powers()` and signing-key health. Same subject,
+ * different angles.
+ *
+ * ONE SECTION AT A TIME, WHERE THE MANIFEST WOULD SPEAK FIRST. The manifest
+ * runs early and refuses most of the databases below before the assertion a
+ * case is about is reached (an undeclared table is `undeclared-exposure`
+ * before it is "no read policy"; a helper definer is `definer-function-exposed`
+ * before its body is read). A test that pinned the gate's first message would
+ * then be a test of the manifest, and the derivation it was written to prove
+ * would be proven by nothing. So `only(d, label)` runs the one section the
+ * `\echo` line names, and `refusedBy` asserts both: the section bites with its
+ * own message, and the gate as a whole refuses the database.
  */
 
 import { readFileSync } from 'node:fs'
@@ -36,10 +50,23 @@ import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 /** psql meta-commands are not SQL; PGlite runs the rest verbatim. */
-const CHECK = readFileSync(new URL('../scripts/check-deploy.sql', import.meta.url), 'utf8')
-  .split('\n')
+const RAW = readFileSync(new URL('../scripts/check-deploy.sql', import.meta.url), 'utf8')
+const CHECK = RAW.split('\n')
   .filter((l) => !l.trimStart().startsWith('\\'))
   .join('\n')
+
+/** One assertion of the gate on its own: the SQL between the `\echo` line that starts with `label` and the next `\echo`. */
+function section(label: string): string {
+  const lines = RAW.split('\n')
+  const start = lines.findIndex((l) => l.startsWith(`\\echo '${label}`))
+  expect(start, `no gate section starts with "${label}"`).toBeGreaterThan(-1)
+  const next = lines.findIndex((l, i) => i > start && l.startsWith('\\echo'))
+  return lines.slice(start + 1, next === -1 ? lines.length : next).join('\n')
+}
+const WRITERS = 'checking every function that touches workspace state'
+const DECLARED = 'checking every SECURITY DEFINER function an application role may execute is declared'
+const READ = 'checking every relation a tenant session can read'
+const MANIFEST = 'checking every reachable object is declared in the exposure manifest'
 
 const WS1 = '00000000-0000-4000-8000-000000000001'
 const USER1 = '00000000-0000-4000-8000-0000000000f1'
@@ -86,6 +113,12 @@ async function healthy(): Promise<PGlite> {
 }
 
 const check = (d: PGlite) => d.exec(CHECK)
+const only = (d: PGlite, label: string) => d.exec(section(label))
+/** The named section refuses the database with its own message, and so does the gate as a whole. */
+async function refusedBy(d: PGlite, label: string, message: RegExp): Promise<void> {
+  await expect(only(d, label)).rejects.toThrow(message)
+  await expect(check(d)).rejects.toThrow()
+}
 
 describe('the migration must apply to the database production actually has', () => {
   it('0002 applies to a database that ran 0001 in service, with a key already in it', async () => {
@@ -222,8 +255,20 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     // The assertion this exercises certified a proxy and is kept with a
     // correction, not deleted — revoking that EXECUTE is still correct, it just
     // never was what closed the hole.
+    //
+    // >>> MEASURED AT THE MERGE, 2026-09-09 <<<
+    //
+    // This is now caught by the EXPOSURE MANIFEST, which runs before the
+    // hand-written assertion and reports
+    // `[definer-function-exposed] set_workspace(uuid) is executable by app_rw`.
+    // That is ADR-0007's whole thesis demonstrated: the manifest DERIVED the
+    // fault from the catalog without anyone having enumerated this arrangement.
+    //
+    // The expectation is therefore on the PROPERTY — the database is refused and
+    // the refusal names the function — not on which layer worded it. Pinning the
+    // old string made this test a test of the message.
     await d.exec(`GRANT EXECUTE ON FUNCTION set_workspace(uuid) TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/app_rw has EXECUTE on set_workspace/)
+    await expect(check(d)).rejects.toThrow(/set_workspace/)
   })
 
   it('an undeclared SECURITY DEFINER function reachable by the tenant role is caught (2026-09-10 audit)', async () => {
@@ -231,7 +276,20 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     // Pinned, so the only fault the gate can name is the one this case is about (the pin has its own case below).
     await d.exec(`CREATE FUNCTION peek_everything() RETURNS SETOF accounts LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$ SELECT * FROM accounts $$`)
     await d.exec(`GRANT EXECUTE ON FUNCTION peek_everything() TO app_rw`)
-    await expect(check(d)).rejects.toThrow(/undeclared SECURITY DEFINER functions .*peek_everything\(\)/)
+    await refusedBy(d, DECLARED, /undeclared SECURITY DEFINER functions .*peek_everything\(\)/)
+    // The gate names it too, through the manifest that runs first.
+    await expect(check(d)).rejects.toThrow(/definer-function-exposed\] peek_everything\(\)/)
+
+    // WHAT THE MERGE ADDED (C0, 2026-09-15). This block asks three application
+    // groups by name; production's tenant is a LOGIN role that is a member of
+    // app_rw, and a grant made to that role directly was invisible here. The
+    // manifest's sweep asks every role there is, so the gate refuses it.
+    const d2 = await healthy()
+    await d2.exec(`CREATE FUNCTION peek_everything() RETURNS SETOF accounts LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$ SELECT * FROM accounts $$;
+                   ALTER FUNCTION peek_everything() OWNER TO auth_verifier; REVOKE ALL ON FUNCTION peek_everything() FROM PUBLIC;
+                   CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod; GRANT EXECUTE ON FUNCTION peek_everything() TO web_prod`)
+    await expect(only(d2, DECLARED)).resolves.toBeDefined()
+    await expect(check(d2)).rejects.toThrow(/definer-function-exposed\] peek_everything\(\) is executable by web_prod/)
   })
 
   it('a migration owner left a member of a writing group is caught (2026-09-10 audit, m7)', async () => {
@@ -300,7 +358,10 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
   // that derivation before it was widened (run and recorded 2026-09-15).
   describe('the derivation over definer writers covers every form of write (B3d item 3)', () => {
     // Not reachable by any application role, so the allowlist assertion above
-    // does not catch it first: only the writer derivation can.
+    // does not catch it first: only the writer derivation can. (The manifest,
+    // which runs before both, refuses a definer its owner can execute unless it
+    // is declared, so each case runs the writer section alone and then lets
+    // the whole gate refuse the database for whichever reason comes first.)
     const asOnboard = async (d: PGlite, sql: string, sig: string) => {
       await d.exec(sql)
       await d.exec(`ALTER FUNCTION ${sig} OWNER TO svc_onboard; REVOKE ALL ON FUNCTION ${sig} FROM PUBLIC`)
@@ -315,7 +376,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN UPDATE workspace_documents SET written_at = now() WHERE workspace_id = ws AND host = p_host; END $fn$`,
         'ws_touch_document(text)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_touch_document/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_touch_document/)
     })
 
     it('a DELETE of workspace_documents without the role check', async () => {
@@ -327,7 +388,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN DELETE FROM workspace_documents WHERE workspace_id = ws AND host = p_host; END $fn$`,
         'ws_forget_document(text)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_forget_document/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_forget_document/)
     })
 
     it('an INSERT into workspace_requests that lands a status, without the role check', async () => {
@@ -339,7 +400,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN INSERT INTO workspace_requests (workspace_id, kind, host, body, status, resolved_at) VALUES (ws, p_kind, p_host, p_body, 'applied', now()); END $fn$`,
         'ws_file_applied(text,text,jsonb)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_file_applied/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_file_applied/)
     })
 
     it('a schema-qualified table name', async () => {
@@ -351,7 +412,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN INSERT INTO public.workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$`,
         'ws_put_qualified(text,jsonb)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_put_qualified/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_put_qualified/)
     })
 
     it('dynamic SQL against workspace state is refused outright, even with both checks in the body', async () => {
@@ -363,7 +424,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN EXECUTE format('INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (%L, %L, %L, 1, %L)', ws, 'category-record', p_host, p_body); END $fn$`,
         'ws_put_dynamic(text,jsonb)',
       )
-      await expect(check(d)).rejects.toThrow(/dynamic SQL against workspace state.*ws_put_dynamic/)
+      await refusedBy(d, WRITERS, /dynamic SQL against workspace state.*ws_put_dynamic/)
     })
 
     // The shapes the B3d tenancy audit (2026-09-15, MAJOR 1) found the widened
@@ -379,7 +440,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
                  WHEN NOT MATCHED THEN INSERT (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$`,
         'ws_merge_document(text,jsonb)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_merge_document/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_merge_document/)
     })
 
     it('UPDATE ONLY, TRUNCATE and COPY are writes too', async () => {
@@ -391,13 +452,13 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN UPDATE ONLY workspace_documents SET written_at = now() WHERE workspace_id = ws AND host = p_host; END $fn$`,
         'ws_only_document(text)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_only_document/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_only_document/)
       const d2 = await healthy()
       await asOnboard(d2, `CREATE FUNCTION ws_truncate_all() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$ BEGIN TRUNCATE workspace_requests; END $fn$`, 'ws_truncate_all()')
-      await expect(check(d2)).rejects.toThrow(/without ws_required\(\).*ws_truncate_all/)
+      await refusedBy(d2, WRITERS, /without ws_required\(\).*ws_truncate_all/)
       const d3 = await healthy()
       await asOnboard(d3, `CREATE FUNCTION ws_copy_in() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$ BEGIN COPY workspace_cycles FROM '/tmp/cycles.csv'; END $fn$`, 'ws_copy_in()')
-      await expect(check(d3)).rejects.toThrow(/without ws_required\(\).*ws_copy_in/)
+      await refusedBy(d3, WRITERS, /without ws_required\(\).*ws_copy_in/)
     })
 
     it('an INSERT into workspace_requests whose ON CONFLICT lands a status is a decision', async () => {
@@ -410,7 +471,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
                  ON CONFLICT (id) DO UPDATE SET status = 'applied', resolved_at = now(); END $fn$`,
         'ws_upsert_applied(text,text,jsonb)',
       )
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_upsert_applied/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_upsert_applied/)
     })
 
     it('a SECURITY INVOKER helper that writes runs as whoever calls it, which from a definer is svc_onboard: held to the same rules', async () => {
@@ -418,13 +479,13 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
       await d.exec(`CREATE FUNCTION ws_helper_write(p_ws uuid, p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
            BEGIN INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (p_ws, 'category-record', p_host, 1, p_body); END $fn$;
          REVOKE ALL ON FUNCTION ws_helper_write(uuid, text, jsonb) FROM PUBLIC`)
-      await expect(check(d)).rejects.toThrow(/without ws_required\(\).*ws_helper_write/)
+      await refusedBy(d, WRITERS, /without ws_required\(\).*ws_helper_write/)
     })
 
     it('an updatable view over workspace state is a door the derivation cannot see through, and is refused', async () => {
       const d = await healthy()
       await d.exec(`CREATE VIEW records AS SELECT workspace_id, kind, host, version, body, written_at FROM workspace_documents WHERE kind = 'category-record'`)
-      await expect(check(d)).rejects.toThrow(/updatable view over workspace state.*records/)
+      await refusedBy(d, WRITERS, /updatable view over workspace state.*records/)
     })
 
     it('a definer that does not pin its search_path resolves the checks it names to whatever the caller put first', async () => {
@@ -436,7 +497,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            BEGIN INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$`,
         'ws_unpinned(text,jsonb)',
       )
-      await expect(check(d)).rejects.toThrow(/do not pin search_path.*ws_unpinned/)
+      await refusedBy(d, WRITERS, /do not pin search_path.*ws_unpinned/)
     })
 
     it('ws_put_document\'s role exemption is pinned to exactly version 1 of a category record (0006)', async () => {
@@ -453,7 +514,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
           INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, p_kind, p_host, next_version, p_body);
           RETURN next_version;
         END $fn$`)
-      await expect(check(d)).rejects.toThrow(/ws_put_document exempts from the role check something other than version 1 of a category record/)
+      await refusedBy(d, WRITERS, /ws_put_document exempts from the role check something other than version 1 of a category record/)
     })
 
     it('a definer owned by any other role is held to the same rules', async () => {
@@ -463,21 +524,24 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
            DECLARE ws uuid := ws_required();
            BEGIN INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$;
          REVOKE ALL ON FUNCTION ws_put_as_owner(text, jsonb) FROM PUBLIC`)
-      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_put_as_owner/)
+      await refusedBy(d, WRITERS, /current_workspace_role\(\): .*ws_put_as_owner/)
     })
   })
 
   it('a tenant-readable relation with an open policy, a wrapper policy, an open WITH CHECK, or no read policy is caught (B3r item 3)', async () => {
+    // Each database here is also `undeclared-exposure` to the manifest, which
+    // runs first; the read inverse is proven on its own section so that a
+    // declaration that lies is still refused by something that never read it.
     const d = await healthy()
     await d.exec(`CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;
                   GRANT SELECT ON leaky TO app_rw; CREATE POLICY open ON leaky FOR SELECT USING (true)`)
-    await expect(check(d)).rejects.toThrow(/public\.leaky \(policy open does not scope on current_workspace_id\)/)
+    await refusedBy(d, READ, /public\.leaky \(policy open does not scope on current_workspace_id\)/)
 
     const d2 = await healthy()
     await d2.exec(`CREATE FUNCTION ws_wrap() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT current_workspace_id() $$;
                    CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;
                    GRANT SELECT ON leaky TO app_rw; CREATE POLICY wrapped ON leaky FOR SELECT USING (workspace_id = ws_wrap())`)
-    await expect(check(d2)).rejects.toThrow(/policy wrapped does not scope/)
+    await refusedBy(d2, READ, /policy wrapped does not scope/)
 
     const d3 = await healthy()
     // qual is scoped; the write side is open. Reading qual alone passed this.
@@ -485,12 +549,12 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
                    GRANT SELECT, INSERT ON leaky TO app_rw;
                    CREATE POLICY r ON leaky FOR SELECT USING (workspace_id = current_workspace_id());
                    CREATE POLICY w ON leaky FOR INSERT WITH CHECK (true)`)
-    await expect(check(d3)).rejects.toThrow(/policy w does not scope/)
+    await refusedBy(d3, READ, /policy w does not scope/)
 
     const d4 = await healthy()
     // A view is a relation too; the old sweeps looked at tables only.
     await d4.exec(`CREATE VIEW everyone AS SELECT id, email FROM accounts; GRANT SELECT ON everyone TO app_rw`)
-    await expect(check(d4)).rejects.toThrow(/public\.everyone \(no read policy for the tenant role\)/)
+    await refusedBy(d4, READ, /public\.everyone \(no read policy for the tenant role\)/)
 
     // THE FINDING (B3r audit, MAJOR): production's tenant is a login role that
     // is a member of app_rw, and app_rw may inherit a group. A policy or grant
@@ -499,25 +563,39 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     const d5 = await healthy()
     await d5.exec(`CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod;
                    CREATE POLICY wide_docs ON workspace_documents FOR SELECT TO web_prod USING (true)`)
-    await expect(check(d5)).rejects.toThrow(/workspace_documents \(policy wide_docs does not scope/)
+    await refusedBy(d5, READ, /workspace_documents \(policy wide_docs does not scope/)
 
     const d6 = await healthy()
     await d6.exec(`CREATE ROLE reporting_grp NOLOGIN; GRANT reporting_grp TO app_rw;
                    CREATE TABLE leak_grp (workspace_id uuid); ALTER TABLE leak_grp ENABLE ROW LEVEL SECURITY; ALTER TABLE leak_grp FORCE ROW LEVEL SECURITY;
                    GRANT SELECT ON leak_grp TO reporting_grp; CREATE POLICY open ON leak_grp FOR SELECT TO reporting_grp USING (true)`)
-    await expect(check(d6)).rejects.toThrow(/public\.leak_grp \(policy open does not scope/)
+    await refusedBy(d6, READ, /public\.leak_grp \(policy open does not scope/)
 
     const d7 = await healthy()
     await d7.exec(`CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod;
                    CREATE TABLE leak_login (workspace_id uuid); ALTER TABLE leak_login ENABLE ROW LEVEL SECURITY; ALTER TABLE leak_login FORCE ROW LEVEL SECURITY;
                    GRANT SELECT ON leak_login TO web_prod`)
-    await expect(check(d7)).rejects.toThrow(/public\.leak_login \(no read policy for the tenant role\)/)
+    await refusedBy(d7, READ, /public\.leak_login \(no read policy for the tenant role\)/)
   })
 
   it('a table that loses FORCE RLS is caught', async () => {
     const d = await healthy()
+    /*
+     * >>> MEASURED AT THE MERGE, 2026-09-09, AND AGAIN AT C0, 2026-09-15 <<<
+     *
+     * The hand-written pg_class sweep raises `RLS is not forced on: %`. On main
+     * the manifest replaced it; in this lineage the sweep is KEPT as the second
+     * line, and the manifest still speaks first: `[scoped-without-forced-rls]
+     * public.score_rows inherits a scoped declaration but does not FORCE row
+     * level security`. Note what the manifest adds: INHERITS. It knows
+     * score_rows is scoped because the declaration propagated down the
+     * partition tree (audit 6); the sweep only knows RLS is off.
+     *
+     * The unsafe database is refused either way, and each line is proven alone.
+     */
     await d.exec(`ALTER TABLE score_rows NO FORCE ROW LEVEL SECURITY`)
-    await expect(check(d)).rejects.toThrow(/RLS is not forced on: .*score_rows/)
+    await expect(check(d)).rejects.toThrow(/scoped-without-forced-rls[^]*score_rows/)
+    await expect(only(d, 'checking FORCE ROW LEVEL SECURITY on every table')).rejects.toThrow(/RLS is not forced on: .*score_rows/)
   })
 
   it('a context reader that stops being SECURITY DEFINER is caught, and so is a missing one', async () => {

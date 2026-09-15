@@ -5,14 +5,14 @@
 -- HUMAN-OWNED (CLAUDE.md §4: RLS policies and the tenancy model). Written by an
 -- agent session; ⚠️ HUMAN REVIEW REQUIRED before it is applied anywhere.
 --
--- NUMBERING. `fix/tenancy-deploy-gate` carries an unmerged
+-- NUMBERING. main closed the tenancy deploy gate as a second
 -- 0003_tenancy_exposure_manifest.sql (ADR-0007). Two files cannot share a
--- number in one lineage: that file is renumbered 0005 when it merges, records
--- itself in schema_migrations as every file from here on does, and must
--- declare the three functions below. The record (section 0) is what makes
--- two files with one number impossible rather than merely noticed: the
--- second INSERT fails on the number's unique index before the file changes
--- anything (MVP_PLAN B3r, item 4).
+-- number in one lineage: that file is 0008 here (C0, 2026-09-15), records
+-- itself in schema_migrations as every file from here on does, and declares
+-- the three functions below. The record (section 0) is what makes two files
+-- with one number impossible rather than merely noticed: the second INSERT
+-- fails on the number's unique index before the file changes anything
+-- (MVP_PLAN B3r, item 4).
 --
 -- ONE TRANSACTION. Section 3 grants the migration owner svc_onboard to
 -- transfer function ownership and revokes it at the end; a failure between

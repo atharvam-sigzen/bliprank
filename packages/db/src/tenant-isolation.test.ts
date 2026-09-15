@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS SEPARATELY FROM THE CATALOG CHECKS.
  *
- * The deploy-time gate asserts things ABOUT the
+ * `check-deploy.sql` and `tenancy_exposure_faults()` assert things ABOUT the
  * configuration: that a relation is declared, that RLS is forced, that a policy
  * mentions `current_workspace_id`. Every one of those is a proxy for the thing
  * customers actually pay for, which is that tenant A's rows never appear in
@@ -28,7 +28,10 @@
  * do not intersect, unless it is on the shared allowlist by decision. The
  * subject is derived from what app_rw can SELECT, never from what a policy
  * says, so a new readable relation fails the first test below until a case is
- * written for it — a `USING (true)` policy included.
+ * written for it — a `USING (true)` policy included. The exposure manifest
+ * (migration 0008) declares the same surface for the deploy gate, and the seam
+ * test below holds the two derivations to each other: what a tenant can read
+ * is exactly what the manifest declares scoped or shared.
  */
 
 import { createHmac } from 'node:crypto'
@@ -183,6 +186,62 @@ describe('every relation the tenant role can read has a disjointness case here, 
   it('nothing the tenant can read is left unexercised', async () => {
     expect(await uncovered()).toEqual([])
   })
+
+  /*
+   * TWO DERIVATIONS OF ONE SURFACE, AND THE MERGE IS WHY THERE ARE TWO.
+   *
+   * This file derives the subject from REACHABILITY: everything the tenant role
+   * can read (`uncovered()` above). The deploy gate derives it from the
+   * DECLARATION: migration 0008's exposure manifest, which `tenancy_exposure_faults()`
+   * holds every reachable privilege to. Each catches something the other cannot:
+   * reachability sees a readable relation nobody declared; the manifest sees a
+   * relation declared scoped whose policy is a lie, or one declared shared that
+   * has quietly grown a tenant column. (`main` derived this file's subject from
+   * pg_policies before the merge of 2026-09-15; the reachability inverse is a
+   * superset of that, so the pg_policies derivation is kept only as the seam's
+   * second witness below.)
+   */
+  it('the manifest declares nothing scoped that this file does not exercise', async () => {
+    const COVERED = new Set(CASES.map(([r]) => r))
+    const declared = (
+      (await db.query(`SELECT DISTINCT relation FROM tenancy_exposure_manifest WHERE disposition = 'scoped' ORDER BY 1`))
+        .rows as { relation: string }[]
+    ).map((r) => r.relation)
+    // Partitions are exercised through their parent; everything else must have
+    // its own case. A new scoped relation fails here until one is written.
+    const missing = declared.filter((r) => !COVERED.has(r) && !r.startsWith('score_rows_'))
+    expect(missing).toEqual([])
+  })
+
+  it('the manifest, the catalog and reachability agree about what is scoped and what is shared', async () => {
+    // The seam. A declaration the catalog does not support, a policy the
+    // manifest does not know about, or a readable relation the manifest never
+    // declared, means one of the derivations is describing a database that
+    // does not exist.
+    const rows = (await db.query(`SELECT DISTINCT schema_name || '.' || relation AS rel, disposition FROM tenancy_exposure_manifest WHERE disposition IN ('scoped', 'shared')`))
+      .rows as { rel: string; disposition: string }[]
+    const declaredScoped = rows.filter((r) => r.disposition === 'scoped').map((r) => r.rel)
+    const declaredShared = rows.filter((r) => r.disposition === 'shared').map((r) => r.rel)
+    // What a tenant can read is exactly what is declared scoped or shared: the
+    // gate's declaration and this file's reachability describe one surface.
+    const readable = new Set([...SHARED, ...CASES.map(([r]) => (r.includes('.') ? r : `public.${r}`))])
+    expect(await uncovered()).toEqual([])
+    expect([...readable].sort()).toEqual([...declaredScoped, ...declaredShared].sort())
+    expect(declaredShared.sort()).toEqual([...SHARED].sort())
+    // And the catalog's own witness: every policy that consults the tenant
+    // context sits on a relation the manifest declares scoped, and every scoped
+    // declaration has such a policy (partitions through their parent).
+    const catalog = (
+      (
+        await db.query(`
+          SELECT DISTINCT p.schemaname || '.' || p.tablename AS rel FROM pg_policies p
+           WHERE coalesce(p.qual, '') LIKE '%current_workspace_id%'
+             AND has_any_column_privilege('app_rw', (quote_ident(p.schemaname) || '.' || quote_ident(p.tablename))::regclass, 'SELECT')`)
+      ).rows as { rel: string }[]
+    ).map((r) => r.rel)
+    const norm = (xs: readonly string[]) => [...new Set(xs.map((r) => (r.startsWith('public.score_rows_') ? 'public.score_rows' : r)))].sort()
+    expect(norm(catalog)).toEqual(norm(declaredScoped))
+  })
 })
 
 describe('two real tenants, disjoint row sets', () => {
@@ -296,10 +355,18 @@ describe('the shared relation is genuinely shared, and stays that way', () => {
     expect(one.length).toBeGreaterThan(0)
   })
 
-  // The case asserting that prompt_banks stops being shared the moment it gains
-  // a workspace column lives with the deploy gate, on fix/tenancy-deploy-gate:
-  // `shared-columns-changed` is a fault kind of tenancy_exposure_faults(), which
-  // does not merge here (ADR-0007).
+  it('it stops being shared the moment it can carry a tenant identity — with or without a foreign key', async () => {
+    // The FK test alone was evaded by exactly the mistake its own comment named:
+    // `workspace_id uuid` with no REFERENCES clause, holding two tenants'
+    // private banks, passing every assertion.
+    await db.exec(`ALTER TABLE prompt_banks ADD COLUMN workspace_id uuid`)
+    try {
+      const faults = (await db.query(`SELECT kind, detail FROM tenancy_exposure_faults()`)).rows as { kind: string }[]
+      expect(faults.map((f) => f.kind)).toContain('shared-columns-changed')
+    } finally {
+      await db.exec(`ALTER TABLE prompt_banks DROP COLUMN workspace_id`)
+    }
+  })
 })
 
 describe('the guard bites: a readable relation that no case covers is caught, whatever its policy says (B3r item 3)', () => {

@@ -84,7 +84,7 @@ packages/stats        Wilson, DiD, sampling. Pure functions. HUMAN-OWNED.
 packages/taxonomy     Categories, prompt banks, content classifier, publisher registry
 packages/db           Drizzle schema, migrations, RLS policies, partitions
 packages/contracts    Shared types + the Engine Adapter interface
-docs/                 ARCHITECTURE.md, PHASES.md, METHODOLOGY.md, PRODUCT_GOAL.md, MVP_PLAN.md, adr/
+docs/                 ARCHITECTURE.md, PHASES.md, METHODOLOGY.md, PRODUCT_GOAL.md, MVP_PLAN.md, adr/, runbooks/
 ```
 
 ---
@@ -480,10 +480,9 @@ read failed, fixed in collect-cell.ts. ⚠️ HUMAN REVIEW: migrations 0003 and
 resolved by mechanism (B3r, 2026-09-15):** `schema_migrations` is created
 in 0003 with a unique index on the four-digit number, every file from 0003
 on records itself first, the test helper derives the ordered list from the
-directory, and the deploy check asserts the record is gapless; when
-`fix/tenancy-deploy-gate` merges its `0003_tenancy_exposure_manifest.sql`
-is renumbered 0008 (0005 is B3c's role claim, 0006 and 0007 are B3d's
-member writes, all 2026-09-15). The oversight review's other three
+directory, and the deploy check asserts the record is gapless; main's
+`0003_tenancy_exposure_manifest.sql` became 0008 at C0 (0005 is B3c's role
+claim, 0006 and 0007 are B3d's member writes, all 2026-09-15). The oversight review's other three
 findings (0003 in
 one transaction; `ws_required()` for the writers only; the two standing
 gates assert the inverse over everything a tenant session can read, with
@@ -625,5 +624,52 @@ tracked set or deciding loop jobs bypass it. ⚠️ HUMAN REVIEW REQUIRED: spend
 `runAdmitted`; `.claude/hooks/pre-spend.sh`; `schedule.ts`) and tenancy
 (`lib/tick.ts` `jobStoreFor`). **C2 is not complete until reviewed.** The
 next session takes the review findings, then C3.
+
+**⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
+allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS
+assertion — the one assertion no policy can substitute for, because a role with
+BYPASSRLS reads every tenant's rows and appears in no table ACL. It exists for
+the test harness (PGlite's session user is a superuser). The gate prints its
+contents on every run; `(none)` is the expected output. Standing operational
+item with no completion date: `docs/runbooks/deploying-the-database.md` §1.
+
+**Tenancy deploy gate CLOSED (2026-09-09 on main; in this lineage at C0,
+2026-09-15), ADR-0007.** Its hard prerequisite for G1, stalled 16 days on a
+branch that was never even pushed. The exposure manifest, `assert_role_powers()`
+and `auth_key_health()` all execute now; `check-deploy.sql` no longer ends with
+"PARTIAL GATE". **C0 renumbered main's manifest to 0008** (the record's number
+index made a second 0003 impossible): it records itself first and runs in one
+transaction like every file from 0003 on; the three 0004 state tables and their
+service writes are declared; the SECURITY DEFINER owner rule names the trusted
+service roles (B2's writers are owned by svc_onboard by design) instead of
+auth_verifier alone; the tenant-callable definer list is the twelve
+`check-deploy.sql` declares (two copies of one list, either stale fails the
+healthy database; consolidating them is a follow-up for the tenancy owner);
+`migration_record()` lets main's non-owner deploy principal read the record
+(it got permission denied before, so the gate could not run as that principal);
+and, from the merge's tenancy audit, a `service` row names its grantee and the
+sweep matches on it, so a grant to the wrong service role on the state tables
+is refused. Every derivation the branch had is kept, and the merged
+gate runs the manifest first; where it now speaks before a branch assertion,
+that assertion's test runs its section alone (`only`, `refusedBy`) so each
+line is proven on its own. The branch's read inverse refuses any
+tenant-readable VIEW, security_invoker or not; the manifest accepts a declared
+invoker view; the stricter refusal stands and the rule for invoker views is
+the tenancy owner's decision. Suites kept: `check-deploy.test.ts` (38) and
+`deploy-check.test.ts` (77, main's, re-run against the merged gate); neither
+is a superset of the other. ⚠️ HUMAN REVIEW: migration 0008 and
+`check-deploy.sql` (tenancy).
+
+**A deadline pinned to a gate is not a deadline here.** ADR-0007 chose "before
+G1" over "before launch" because G1 has a date and launch does not. No gate has
+ever been run — G0 unrun, G1 never attempted, G2 NOT RUN, G3 blocked — so it
+never came due, and two phases of work landed on top of an open security gate.
+Anything given a deadline from now on gets a date, not a milestone.
+
+**main's note that four `scan-result.test.ts` cases fail there** (the
+`data-live:sigzen.com*` cases, comparing the bundled record against whatever
+sigzen result the machine holds) does not apply to this lineage: B5 made the
+suite clean-checkout safe and the file passes here (17 tests, full run at C0,
+2026-09-15, 134 files green).
 
 Update this section at every phase transition. It is the first thing a new session reads.
