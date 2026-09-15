@@ -269,7 +269,16 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
                     setFiling(true)
                     const r = await filePromptSet(domain, custom, reason)
                     setFiling(false)
-                    setFiled(r.ok ? { ok: true, message: `Filed ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'} as a request. Nothing changes until a person applies it.` } : { ok: false, message: r.message })
+                    setFiled(
+                      r.ok
+                        ? {
+                            ok: true,
+                            message: r.applied
+                              ? `Applied ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'}. The next cycle asks them beside the curated bank, as a second measurement on its own basis.`
+                              : `Filed ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'} as a request. Nothing changes until a person applies it.`,
+                          }
+                        : { ok: false, message: r.message },
+                    )
                     if (r.ok) setReload((n) => n + 1)
                   }}
                 >

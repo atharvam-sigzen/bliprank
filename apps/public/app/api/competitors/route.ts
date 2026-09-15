@@ -1,5 +1,5 @@
 import { normaliseHost } from '@bliprank/taxonomy'
-import { competitorsIn, fileCompetitorRequestIn, reviewedLeaders } from '../../../../../services/grader/src/competitor-overrides.js'
+import { applyOverrideIn, competitorsIn, fileCompetitorRequestIn, reviewedLeaders } from '../../../../../services/grader/src/competitor-overrides.js'
 import { allBanks, allCategories } from '../../../../../services/grader/src/resolve-category.js'
 import { leadersOf, subjectFor } from '../../../../../services/grader/src/scan.js'
 import { categoryRecordIn, overrideIn } from '../../../../../services/grader/src/store/documents.js'
@@ -115,6 +115,22 @@ export async function POST(req: Request): Promise<Response> {
   const verdict = await checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
+  if (applies(access)) {
+    const written = await applyOverrideIn(store, data, { host: domain, exclude, include, reason, by: access.who })
+    if ('refuse' in written) {
+      const status = written.kind === 'input' || written.kind === 'no-change' ? 400 : written.kind === 'no-record' ? 404 : 422
+      return json({ kind: written.kind, message: written.refuse }, status)
+    }
+    const pending = await store.requests.pending<RequestBody>('competitors', domain)
+    const sameLists = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i])
+    if (pending && sameLists(pending.body.exclude, written.exclude) && sameLists(pending.body.include, written.include)) {
+      await store.requests.resolve('competitors', domain, pending.requestedAt, { status: 'applied', by: access.who })
+    }
+    await recordVisitorScan(domain, perDomain, now)
+    await recordVisitorScan(ip, cfg, now)
+    return json({ applied: true, version: written.version, request: { host: domain, exclude: written.exclude, include: written.include, reason: written.reason, requestedAt: written.at, status: 'applied' } })
+  }
+
   const filed = await fileCompetitorRequestIn(store, data, { host: domain, exclude, include, reason })
   if ('refuse' in filed) {
     const status = filed.kind === 'input' || filed.kind === 'no-change' ? 400 : filed.kind === 'no-record' ? 404 : 422
@@ -124,3 +140,6 @@ export async function POST(req: Request): Promise<Response> {
   await recordVisitorScan(ip, cfg, now)
   return json({ request: filed, pendingAcrossStore: (await store.requests.allPending('competitors')).length })
 }
+
+/** An owner or admin of a workspace on the Postgres store applies; everyone else files (MVP_PLAN B4). */
+const applies = (access: Access): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')

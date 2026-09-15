@@ -116,7 +116,8 @@ export async function loadCategoryStatus(domain: string, fetchImpl: typeof fetch
   return status ? { ok: true, status } : { ok: false, kind: 'failed', message: 'The category service answered with something that is not a status.' }
 }
 
-export type FileResult = { readonly ok: true; readonly slug: string; readonly requestedAt: string } | { readonly ok: false; readonly message: string }
+/** `applied` is present when the session applied the correction itself (an owner or admin, MVP_PLAN B4); absent when it was filed for a person to apply. */
+export type FileResult = { readonly ok: true; readonly slug: string; readonly requestedAt: string; readonly applied?: true } | { readonly ok: false; readonly message: string }
 
 export async function fileCorrection(domain: string, slug: string, reason: string, fetchImpl: typeof fetch = fetch): Promise<FileResult> {
   let res: Response
@@ -125,7 +126,7 @@ export async function fileCorrection(domain: string, slug: string, reason: strin
   } catch (e) {
     return { ok: false, message: `Could not reach the category service: ${(e as Error).message}` }
   }
-  let body: { message?: unknown; request?: { slug?: unknown; requestedAt?: unknown } } = {}
+  let body: { message?: unknown; applied?: unknown; request?: { slug?: unknown; requestedAt?: unknown } } = {}
   try {
     body = (await res.json()) as typeof body
   } catch {
@@ -133,5 +134,5 @@ export async function fileCorrection(domain: string, slug: string, reason: strin
   }
   if (!res.ok) return { ok: false, message: String(body.message ?? `The category service answered ${res.status}.`) }
   const s = str(body.request?.slug)
-  return s ? { ok: true, slug: s, requestedAt: str(body.request?.requestedAt) } : { ok: false, message: 'The service did not confirm the request.' }
+  return s ? { ok: true, slug: s, requestedAt: str(body.request?.requestedAt), ...(body.applied === true ? { applied: true } : {}) } : { ok: false, message: 'The service did not confirm the request.' }
 }

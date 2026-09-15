@@ -8,15 +8,18 @@ import { sessionWorkspaceStore } from '../../../../services/grader/src/store/pg-
 import type { AuthUser } from '@/lib/auth/supabase'
 
 /**
- * END TO END ON PGLITE (MVP_PLAN B3b): request → session → token → context →
- * store → response, through the real route handlers, the real migrations and
- * the real policies. The session is the one thing faked, because it is the
- * one thing the database does not verify.
+ * END TO END ON PGLITE (MVP_PLAN B3b, B4): request → session → token →
+ * context → store → response, through the real route handlers, the real
+ * migrations and the real policies. The session is the one thing faked,
+ * because it is the one thing the database does not verify.
  *
- * Two brand accounts, two workspaces. Every route that reads or writes
- * workspace state must: refuse a request with no session; take the workspace
- * from the session alone, so a body or query naming another workspace or
- * account changes nothing; and show one account nothing of the other's.
+ * Two brand accounts with a workspace each, and a member of the first.
+ * Every route that reads or writes workspace state must: refuse a request
+ * with no session; take the workspace from the session alone, so a body or
+ * query naming another workspace or account changes nothing; show one
+ * account nothing of the other's. A member files a request; an owner
+ * applies, version N+1 with the history intact, and the request that asked
+ * for it is marked applied.
  */
 const session = vi.hoisted(() => ({ user: null as AuthUser | null }))
 vi.mock('@/lib/auth/supabase', () => ({ currentUser: async () => session.user }))
@@ -37,6 +40,7 @@ let pg: Awaited<ReturnType<typeof migratedPglite>>
 let dir: string
 const ONE: AuthUser = { id: '66666666-0000-4000-8000-000000000001', email: 'one@brand.test' }
 const TWO: AuthUser = { id: '66666666-0000-4000-8000-000000000002', email: 'two@brand.test' }
+const MEMBER: AuthUser = { id: '66666666-0000-4000-8000-000000000003', email: 'member@brand.test' }
 const ws: Record<string, { account: string; workspace: string }> = {}
 const originalEnv = { ...process.env }
 
@@ -50,6 +54,10 @@ beforeAll(async () => {
     const [row] = await app.query<{ account_id: string; workspace_id: string }>('SELECT account_id, workspace_id FROM workspaces_of($1)', [u.id])
     ws[u.id] = { account: row!.account_id, workspace: row!.workspace_id }
   }
+  // A member of One's workspace: an account with no workspace of its own, added by the onboarding role.
+  const [m] = await app.query<{ id: string }>('SELECT ensure_account($1, $2, $3) AS id', [MEMBER.id, MEMBER.email, 'brand'])
+  await pgliteDb(pg, 'svc_onboard').query('INSERT INTO workspace_members (workspace_id, account_id, role) VALUES ($1, $2, $3)', [ws[ONE.id]!.workspace, m!.id, 'member'])
+  ws[MEMBER.id] = { account: m!.id, workspace: ws[ONE.id]!.workspace }
 })
 afterAll(async () => {
   await pg.close()
@@ -97,6 +105,8 @@ const CYCLE = (day: string) => ({
   brands: [],
   run: { mode: 'live', plan: 'payg', day, engines: ['chatgpt'], capUsd: 5, at: `${day}T10:01:00.000Z` },
 })
+/** The body fields nothing reads: the workspace is the session's. */
+const naming = () => ({ workspace_id: ws[TWO.id]!.workspace, workspaceId: ws[TWO.id]!.workspace, account_id: ws[TWO.id]!.account })
 
 describe('no session: every workspace route refuses before touching anything', () => {
   it('the seven JSON routes answer 401 with one fixed sentence', async () => {
@@ -129,22 +139,16 @@ describe('no session: every workspace route refuses before touching anything', (
 })
 
 describe('request → session → token → context → store → response', () => {
-  it('a filed request lands in the session\'s workspace, whatever workspace or account the body names', async () => {
+  it('a member\'s filing lands in the session\'s workspace as a pending request, whatever workspace or account the body names', async () => {
     await storeOf(ONE).documents.put('category-record', 'acme.test', RECORD, 0)
-    session.user = ONE
-    const res = await post(categoryPost, 'category', {
-      domain: 'acme.test',
-      slug: 'hr-payroll-software',
-      reason: 'the site sells payroll software, not CRM',
-      // Fields nothing reads: the workspace is the session's.
-      workspace_id: ws[TWO.id]!.workspace,
-      workspaceId: ws[TWO.id]!.workspace,
-      account_id: ws[TWO.id]!.account,
-    })
+    session.user = MEMBER
+    const res = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'hr-payroll-software', reason: 'the site sells payroll software, not CRM', ...naming() })
     expect(res.status).toBe(200)
+    expect(((await res.json()) as { applied?: boolean }).applied).toBeUndefined()
     const rows = await pg.query<{ workspace_id: string; host: string; kind: string; status: string }>('SELECT workspace_id, host, kind, status FROM workspace_requests')
     expect(rows.rows).toEqual([{ workspace_id: ws[ONE.id]!.workspace, host: 'acme.test', kind: 'category', status: 'pending' }])
-    // GET shows it pending for One...
+    // GET shows it pending for the owner, the record untouched...
+    session.user = ONE
     const one = (await (await get(categoryGet, 'category?domain=acme.test')).json()) as { pending: { slug: string } | null; record: { version: number } }
     expect(one.pending?.slug).toBe('hr-payroll-software')
     expect(one.record.version).toBe(1)
@@ -153,6 +157,35 @@ describe('request → session → token → context → store → response', () 
     expect((await get(categoryGet, `category?domain=acme.test&workspace=${ws[ONE.id]!.workspace}`)).status).toBe(404)
     expect((await get(competitorsGet, 'competitors?domain=acme.test')).status).toBe(404)
     expect((await get(promptsGet, 'custom-prompts?domain=acme.test')).status).toBe(404)
+  })
+
+  it('the owner\'s POST applies the correction: version 2, version 1 kept, the pending request marked applied by the owner (B4)', async () => {
+    session.user = ONE
+    const res = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'hr-payroll-software', reason: 'the site sells payroll software, not CRM', ...naming() })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { applied: boolean; version: number; request: { status: string; slug: string } }
+    expect(body).toMatchObject({ applied: true, version: 2, request: { status: 'applied', slug: 'hr-payroll-software' } })
+    // Two rows for the host in One's workspace, none anywhere else; the request is resolved by the owner's account.
+    const docs = await pg.query<{ workspace_id: string; version: number; slug: string }>(`SELECT workspace_id, version, body->>'slug' AS slug FROM workspace_documents WHERE kind = 'category-record' ORDER BY version`)
+    expect(docs.rows).toEqual([
+      { workspace_id: ws[ONE.id]!.workspace, version: 1, slug: 'crm-software' },
+      { workspace_id: ws[ONE.id]!.workspace, version: 2, slug: 'hr-payroll-software' },
+    ])
+    const reqs = await pg.query<{ status: string; resolved_by: string }>(`SELECT status, resolved_by FROM workspace_requests WHERE kind = 'category'`)
+    expect(reqs.rows).toEqual([{ status: 'applied', resolved_by: ws[ONE.id]!.account }])
+    const status = (await (await get(categoryGet, 'category?domain=acme.test')).json()) as { record: { version: number; slug: string; corrections: { from: string; to: string }[] }; pending: unknown; history: { status: string }[] }
+    expect(status.record).toMatchObject({ version: 2, slug: 'hr-payroll-software', corrections: [{ from: 'crm-software', to: 'hr-payroll-software' }] })
+    expect(status.pending).toBeNull()
+    expect(status.history.map((h) => h.status)).toEqual(['applied'])
+    // The same slug again is nothing to correct: refused, and version 2 stands.
+    expect((await post(categoryPost, 'category', { domain: 'acme.test', slug: 'hr-payroll-software', reason: 'the site sells payroll software, not CRM' })).status).toBe(422)
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE kind = 'category-record'`)).rows).toEqual([{ n: 2 }])
+    // A member cannot apply: the same POST from the member files a request instead.
+    session.user = MEMBER
+    const filed = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'crm-software', reason: 'no, it really is a CRM after all' })
+    expect(filed.status).toBe(200)
+    expect(((await filed.json()) as { applied?: boolean }).applied).toBeUndefined()
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE kind = 'category-record'`)).rows).toEqual([{ n: 2 }])
   })
 
   it('cycles are listed from the session\'s workspace; a query naming another workspace is a field nothing reads', async () => {
@@ -165,25 +198,41 @@ describe('request → session → token → context → store → response', () 
     expect(((await res.json()) as { cycles: { run: { day: string } }[] }).cycles.map((c) => c.run.day)).toEqual(['2026-09-01', '2026-09-08'])
     session.user = TWO
     expect(((await (await get(cycles, 'cycles?domain=acme.test')).json()) as { cycles: { run: { day: string } }[] }).cycles.map((c) => c.run.day)).toEqual(['2026-09-03'])
-    // The evidence route reads the same cycle through the same token: Two's cycle names a category with no stored answers, so it refuses on the answers, not on access.
+    // The evidence route reads the same cycle through the same token: Two holds no 2026-09-01, so it refuses on the cycle, not on access.
     const ev = await get(answers, 'answers?domain=acme.test&day=2026-09-01')
     expect(ev.status).toBe(404)
     expect(((await ev.json()) as { message: string }).message).toContain('no stored cycle of acme.test for 2026-09-01')
   })
 
-  it('the competitor and prompt requests file into the session\'s workspace too, and the other account sees none', async () => {
-    // The record from the first case stands (one database for the file); a re-write here would be a version 2 nobody decided.
-    expect((await storeOf(ONE).documents.latest('category-record', 'acme.test'))?.version).toBe(1)
-    session.user = ONE
-    expect((await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['hubspot'], include: [], reason: 'our integration partner, not a rival', workspace_id: ws[TWO.id]!.workspace })).status).toBe(200)
-    expect((await post(promptsPost, 'custom-prompts', { domain: 'acme.test', prompts: ['which crm suits a two-person bakery'], reason: 'our buyers ask this exact question', workspace_id: ws[TWO.id]!.workspace })).status).toBe(200)
-    const rows = await pg.query<{ workspace_id: string; kind: string }>(`SELECT workspace_id, kind FROM workspace_requests WHERE kind <> 'category' ORDER BY kind`)
-    expect(rows.rows).toEqual([
-      { workspace_id: ws[ONE.id]!.workspace, kind: 'competitors' },
-      { workspace_id: ws[ONE.id]!.workspace, kind: 'custom-prompts' },
+  it('competitors and prompts: a member files, the owner applies version 1 of each and the requests are marked applied; the other account sees none (B4)', async () => {
+    session.user = MEMBER
+    // acme.test is hr-payroll-software since the correction above; gusto leads that bank.
+    expect((await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['gusto'], include: [], reason: 'our integration partner, not a rival', ...naming() })).status).toBe(200)
+    expect((await post(promptsPost, 'custom-prompts', { domain: 'acme.test', prompts: ['which payroll tool suits a two-person bakery'], reason: 'our buyers ask this exact question', ...naming() })).status).toBe(200)
+    expect((await pg.query<{ kind: string; status: string }>(`SELECT kind, status FROM workspace_requests WHERE kind <> 'category' ORDER BY kind`)).rows).toEqual([
+      { kind: 'competitors', status: 'pending' },
+      { kind: 'custom-prompts', status: 'pending' },
     ])
+    session.user = ONE
+    const o = await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['gusto'], include: [], reason: 'our integration partner, not a rival' })
+    expect(o.status).toBe(200)
+    expect(await o.json()).toMatchObject({ applied: true, version: 1, request: { status: 'applied', exclude: ['gusto'] } })
+    const p = await post(promptsPost, 'custom-prompts', { domain: 'acme.test', prompts: ['which payroll tool suits a two-person bakery'], reason: 'our buyers ask this exact question' })
+    expect(p.status).toBe(200)
+    expect(await p.json()).toMatchObject({ applied: true, version: 1 })
+    expect((await pg.query<{ kind: string; status: string; resolved_by: string }>(`SELECT kind, status, resolved_by FROM workspace_requests WHERE kind <> 'category' ORDER BY kind`)).rows).toEqual([
+      { kind: 'competitors', status: 'applied', resolved_by: ws[ONE.id]!.account },
+      { kind: 'custom-prompts', status: 'applied', resolved_by: ws[ONE.id]!.account },
+    ])
+    const comp = (await (await get(competitorsGet, 'competitors?domain=acme.test')).json()) as { set: number | null; excluded: { id: string }[] }
+    expect(comp.set).toBe(1)
+    expect(comp.excluded.map((e) => e.id)).toEqual(['gusto'])
+    // The same lists again are no change: refused, version 1 stands.
+    expect((await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['gusto'], include: [], reason: 'a different reason for the same set' })).status).toBe(400)
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_documents WHERE kind = 'competitor-override'`)).rows).toEqual([{ n: 1 }])
     session.user = TWO
-    expect((await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['hubspot'], include: [], reason: 'our integration partner, not a rival' })).status).toBe(404)
+    expect((await post(competitorsPost, 'competitors', { domain: 'acme.test', exclude: ['gusto'], include: [], reason: 'our integration partner, not a rival' })).status).toBe(404)
+    expect((await get(promptsGet, 'custom-prompts?domain=acme.test')).status).toBe(404)
   })
 
   it('a session with no account, or an account with no workspace, is refused with the route\'s own status', async () => {

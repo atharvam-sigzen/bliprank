@@ -67,7 +67,12 @@ export function CompetitorOverridesBody({ status, onFiled, file = fileCompetitor
     const r = await file(status.domain, [...out], [...added], reason)
     setSending(false)
     if (r.ok) {
-      setOutcome({ ok: true, message: 'Filed. Nothing changes until a person applies it; when one does, the next cycle measures against the new set and is not compared with the last.' })
+      setOutcome({
+        ok: true,
+        message: r.applied
+          ? 'Applied. The next cycle measures against the new set and is not compared with the last; every earlier set is kept.'
+          : 'Filed. Nothing changes until a person applies it; when one does, the next cycle measures against the new set and is not compared with the last.',
+      })
       setOpen(false)
       setReason('')
       onFiled?.()

@@ -73,6 +73,8 @@ import {
 import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
 import { readOverride } from './override-store.js'
+import { categoryRecordIn, overrideIn } from './store/documents.js'
+import type { WorkspaceStore } from './store/pg-store.js'
 import { readPromoted } from './promote-competitors.js'
 import {
   GENERATED_DISCOVERY,
@@ -367,6 +369,23 @@ export interface CategoryCorrectionRequest {
  * and not drawn (lib/cycles.ts).
  */
 export function correctCategory(dataDir: string, req: CategoryCorrectionRequest): CategoryRecord | { readonly refuse: string } {
+  const checked = checkCorrection(req, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const { host, slug } = checked
+  const overrideRefusal = correctionUnderOverride(host, readOverride(dataDir, host))
+  if (overrideRefusal) return overrideRefusal
+  return withRecordLock(dataDir, () => {
+    const store = readRecords(dataDir)
+    const existing = store[host]
+    const record = correctionOf(existing ?? null, checked, req.at ?? new Date().toISOString(), readGeneratedBanks(dataDir).some((g) => g.bank.category === slug))
+    if ('refuse' in record) return record
+    writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [host]: record }, null, 2) + '\n')
+    return record
+  })
+}
+
+/** THE DECISION'S INPUT, pure: the request against the banks this build has (MVP_PLAN B4). */
+export function checkCorrection(req: CategoryCorrectionRequest, banks: readonly PromptBank[]): { readonly host: string; readonly slug: string; readonly reason: string; readonly by: string } | { readonly refuse: string } {
   const host = normaliseHost(req.host)
   if (!host) return { refuse: `${JSON.stringify(req.host)} is not a domain` }
   const reason = plainText(req.reason)
@@ -378,38 +397,57 @@ export function correctCategory(dataDir: string, req: CategoryCorrectionRequest)
   // not a correction to a category; the surfaces would then say "we could not
   // identify a category" about a decision a person took.
   if (slug === FALLBACK_SLUG) return { refuse: `${FALLBACK_SLUG} is the absence of a category, not one to choose; a correction names a category` }
-  if (!allBanks(dataDir).some((b) => b.category === slug)) {
-    return { refuse: `no bank for ${JSON.stringify(slug)} in this build. A category this build cannot measure cannot be chosen; the choices are ${allBanks(dataDir).map((b) => b.category).join(', ')}` }
+  if (!banks.some((b) => b.category === slug)) {
+    return { refuse: `no bank for ${JSON.stringify(slug)} in this build. A category this build cannot measure cannot be chosen; the choices are ${banks.map((b) => b.category).join(', ')}` }
   }
-  // A competitor override was checked against the OLD category's set; under
-  // the new one its exclusions are no-ops and its inclusions unreviewed for
-  // this category. It is cleared first, by the same operator, on the record.
-  const override = readOverride(dataDir, host)
-  if (override) {
-    return { refuse: `${host} has a competitor override in force (set ${override.version}) that was checked against ${override.host}'s current category. Clear it first: pnpm grader:competitors -- --domain ${host} --exclude --reason "category corrected" --apply` }
+  return { host, slug, reason, by }
+}
+
+/**
+ * A competitor override was checked against the OLD category's set; under
+ * the new one its exclusions are no-ops and its inclusions unreviewed for
+ * this category. It is cleared first, by the same operator, on the record.
+ */
+export function correctionUnderOverride(host: string, override: { readonly version: number; readonly host: string } | null): { readonly refuse: string } | null {
+  if (!override) return null
+  return { refuse: `${host} has a competitor override in force (set ${override.version}) that was checked against ${override.host}'s current category. Clear it first: pnpm grader:competitors -- --domain ${host} --exclude --reason "category corrected" --apply` }
+}
+
+/** THE CORRECTED RECORD, pure: version N+1 carrying every earlier record whole and a note of who replaced it, why, and from what. */
+export function correctionOf(existing: CategoryRecord | null, c: { readonly host: string; readonly slug: string; readonly reason: string; readonly by: string }, at: string, generated: boolean): CategoryRecord | { readonly refuse: string } {
+  if (!existing) return { refuse: `${c.host} has no category record. A first scan decides one; a correction replaces a decision, not an absence.` }
+  if (c.slug === existing.slug) return { refuse: `${c.host} is already recorded as ${c.slug}; nothing to correct` }
+  const { superseded: history = [], ...prior } = existing
+  return {
+    host: c.host,
+    slug: c.slug,
+    source: 'correction',
+    evidence: `corrected from ${existing.slug} by ${c.by}: ${c.reason}`,
+    decidedAt: at,
+    generated,
+    ...(existing.brandName ? { brandName: existing.brandName } : {}),
+    version: existing.version + 1,
+    superseded: [...history, prior],
+    correction: { from: existing.slug, by: c.by, reason: c.reason, at },
   }
-  return withRecordLock(dataDir, () => {
-    const store = readRecords(dataDir)
-    const existing = store[host]
-    if (!existing) return { refuse: `${host} has no category record. A first scan decides one; a correction replaces a decision, not an absence.` }
-    if (slug === existing.slug) return { refuse: `${host} is already recorded as ${slug}; nothing to correct` }
-    const at = req.at ?? new Date().toISOString()
-    const { superseded: history = [], ...prior } = existing
-    const record: CategoryRecord = {
-      host,
-      slug,
-      source: 'correction',
-      evidence: `corrected from ${existing.slug} by ${by}: ${reason}`,
-      decidedAt: at,
-      generated: readGeneratedBanks(dataDir).some((g) => g.bank.category === slug),
-      ...(existing.brandName ? { brandName: existing.brandName } : {}),
-      version: existing.version + 1,
-      superseded: [...history, prior],
-      correction: { from: existing.slug, by, reason, at },
-    }
-    writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [host]: record }, null, 2) + '\n')
-    return record
-  })
+}
+
+/**
+ * The same correction through a `WorkspaceStore` (MVP_PLAN B4): the record
+ * and the override from the store, the decision above, the write against the
+ * version that was read, so a correction never lands on one it did not see.
+ */
+export async function correctCategoryIn(store: WorkspaceStore, dataDir: string, req: CategoryCorrectionRequest): Promise<CategoryRecord | { readonly refuse: string }> {
+  const checked = checkCorrection(req, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const overrideRefusal = correctionUnderOverride(checked.host, await overrideIn(store, checked.host))
+  if (overrideRefusal) return overrideRefusal
+  const existing = await categoryRecordIn(store, checked.host)
+  const record = correctionOf(existing, checked, req.at ?? new Date().toISOString(), readGeneratedBanks(dataDir).some((g) => g.bank.category === checked.slug))
+  if ('refuse' in record) return record
+  const { superseded: _history, ...body } = record
+  await store.documents.put('category-record', checked.host, body, existing!.version)
+  return record
 }
 
 /** Whitespace folded, control characters removed: a reason is read in a terminal and on a page, and must carry nothing but words. */

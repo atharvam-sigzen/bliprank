@@ -183,18 +183,37 @@ export function applyOverride(dataDir: string, req: OverrideRequest): Competitor
   if (!by) return { refuse: 'an override names who applied it', kind: 'input' }
   return withRecordLock(dataDir, () => {
     const store = readOverrides(dataDir)
-    const current = store[checked.host] ?? null
-    if (current && same(current.exclude, checked.exclude) && same(current.include, checked.include)) {
-      // A different reason for the same lists is not a change: a version bump would make the next cycle non-comparable for nothing.
-      return { refuse: `${checked.host}'s competitor set already stands exactly so (set ${current.version}); nothing to change. A pending request asking for this is declined, not applied.`, kind: 'no-change' } as OverrideRefusal
-    }
-    if (!current && checked.exclude.length === 0 && checked.include.length === 0) return { refuse: 'nothing to override: no exclusions and no inclusions', kind: 'no-change' } as OverrideRefusal
-    const at = req.at ?? new Date().toISOString()
-    const history = current ? [...(current.superseded ?? []), (({ superseded: _h, ...prior }) => prior)(current)] : []
-    const next: CompetitorOverride = { host: checked.host, version: (current?.version ?? 0) + 1, exclude: checked.exclude, include: checked.include, reason: checked.reason, by, at, ...(history.length ? { superseded: history } : {}) }
+    const next = nextOverride(store[checked.host] ?? null, checked, by, req.at ?? new Date().toISOString())
+    if ('refuse' in next) return next
     writeFileSync(overridesFile(dataDir), JSON.stringify({ ...store, [checked.host]: next }, null, 2) + '\n')
     return next
   })
+}
+
+/** THE NEXT OVERRIDE, pure: version N+1 over the one in force, or the refusal that nothing changed (MVP_PLAN B4). */
+export function nextOverride(current: CompetitorOverride | null, checked: CheckedOverride, by: string, at: string): CompetitorOverride | OverrideRefusal {
+  if (current && same(current.exclude, checked.exclude) && same(current.include, checked.include)) {
+    // A different reason for the same lists is not a change: a version bump would make the next cycle non-comparable for nothing.
+    return { refuse: `${checked.host}'s competitor set already stands exactly so (set ${current.version}); nothing to change. A pending request asking for this is declined, not applied.`, kind: 'no-change' }
+  }
+  if (!current && checked.exclude.length === 0 && checked.include.length === 0) return { refuse: 'nothing to override: no exclusions and no inclusions', kind: 'no-change' }
+  const history = current ? [...(current.superseded ?? []), (({ superseded: _h, ...prior }) => prior)(current)] : []
+  return { host: checked.host, version: (current?.version ?? 0) + 1, exclude: checked.exclude, include: checked.include, reason: checked.reason, by, at, ...(history.length ? { superseded: history } : {}) }
+}
+
+/** The same application through a `WorkspaceStore` (MVP_PLAN B4), written against the version that was read. */
+export async function applyOverrideIn(store: WorkspaceStore, dataDir: string, req: OverrideRequest): Promise<CompetitorOverride | OverrideRefusal> {
+  const host = normaliseHost(req.host)
+  const checked = checkOverrideWith(req, host ? await categoryRecordIn(store, host) : null, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const by = plainText(req.by)
+  if (!by) return { refuse: 'an override names who applied it', kind: 'input' }
+  const current = await overrideIn(store, checked.host)
+  const next = nextOverride(current, checked, by, req.at ?? new Date().toISOString())
+  if ('refuse' in next) return next
+  const { superseded: _history, ...body } = next
+  await store.documents.put('competitor-override', checked.host, body, current?.version ?? 0)
+  return next
 }
 
 // ---------------------------------------------------------------- requests

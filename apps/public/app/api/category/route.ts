@@ -1,6 +1,6 @@
 import { normaliseHost } from '@bliprank/taxonomy'
 import { consequencesOf, fileCategoryRequestIn, type CategoryRequest } from '../../../../../services/grader/src/category-requests.js'
-import { allCategories, readGeneratedBanks } from '../../../../../services/grader/src/resolve-category.js'
+import { allCategories, correctCategoryIn, readGeneratedBanks } from '../../../../../services/grader/src/resolve-category.js'
 import { categoryRecordIn } from '../../../../../services/grader/src/store/documents.js'
 import {
   DEFAULT_VISITOR_WINDOW_MS,
@@ -22,13 +22,15 @@ import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
  * store the session's token scopes. Nothing in the request names a
  * workspace; the domain names a subject inside it.
  *
- * ⚠️ NOTHING HERE WRITES THE RECORD. GET reads it. POST files a REQUEST, which
- * the record shows as pending and which changes no measurement until an
- * operator applies it (`pnpm grader:correct` on a machine; the workspace's
- * own apply route is MVP_PLAN B4). What POST can do is bounded twice: by a
- * per-visitor allowance on its own ledger, and by the store's own rule of one
- * pending request per domain, so a loop of "visitors" can at most keep
- * replacing one sentence.
+ * WHO WRITES THE RECORD (MVP_PLAN B4). GET reads it. POST from a workspace
+ * OWNER or ADMIN applies the correction: version N+1, every earlier record
+ * kept, the pending request that asked for it marked applied, nothing
+ * re-derived. POST from a member, or on a machine's file store, files a
+ * REQUEST, which the record shows as pending and which changes no
+ * measurement until an owner applies it here or an operator applies it with
+ * `pnpm grader:correct`. Either way POST is bounded twice: by a per-visitor
+ * allowance on its own ledger, and by the store's own rule of one pending
+ * request per domain.
  *
  * GET is bounded to domains with a record (404 otherwise) and is not
  * throttled: it is one read, and a ledger keyed by a caller-written header
@@ -147,6 +149,17 @@ export async function POST(req: Request): Promise<Response> {
   const verdict = await checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
+  if (applies(access)) {
+    const written = await correctCategoryIn(store, data, { host: domain, slug, reason, by: access.who })
+    if ('refuse' in written) return json({ kind: 'refused', message: written.refuse }, 422)
+    // The pending request that asked for exactly this is applied by it; one that asked for something else stays for a separate decision.
+    const pending = await store.requests.pending<RequestBody>('category', domain)
+    if (pending && pending.body.slug === written.slug) await store.requests.resolve('category', domain, pending.requestedAt, { status: 'applied', by: access.who })
+    await recordVisitorScan(domain, perDomain, now)
+    await recordVisitorScan(ip, cfg, now)
+    return json({ applied: true, version: written.version, request: { host: domain, slug: written.slug, reason: written.correction?.reason ?? reason, requestedAt: written.decidedAt, status: 'applied' } })
+  }
+
   const filed = await fileCategoryRequestIn(store, data, { host: domain, slug, reason })
   if ('refuse' in filed) {
     const status = filed.kind === 'input' ? 400 : filed.kind === 'same-category' ? 409 : 422
@@ -157,3 +170,6 @@ export async function POST(req: Request): Promise<Response> {
   await recordVisitorScan(ip, cfg, now)
   return json({ request: filed, pendingAcrossStore: (await store.requests.allPending('category')).length })
 }
+
+/** An owner or admin of a workspace on the Postgres store applies; everyone else files (MVP_PLAN B4). */
+const applies = (access: Access): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')

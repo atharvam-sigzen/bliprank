@@ -74,7 +74,13 @@ export function CategoryCorrectionBody({ status, onFiled, file = fileCorrection 
     const r = await file(status.domain, slug, reason)
     setSending(false)
     if (r.ok) {
-      setOutcome({ ok: true, message: `Filed: ${status.domain} should be measured as ${categories.find((c) => c.slug === r.slug)?.name ?? r.slug}. Nothing changes until a person applies it.` })
+      const name = categories.find((c) => c.slug === r.slug)?.name ?? r.slug
+      setOutcome({
+        ok: true,
+        message: r.applied
+          ? `Applied: ${status.domain} is now measured as ${name}. Every earlier record is kept; the next cycle collects under the new category and is not compared with the last.`
+          : `Filed: ${status.domain} should be measured as ${name}. Nothing changes until a person applies it.`,
+      })
       setOpen(false)
       setReason('')
       onFiled?.()

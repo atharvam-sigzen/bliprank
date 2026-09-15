@@ -1,6 +1,6 @@
 import { normaliseHost } from '@bliprank/taxonomy'
 import { ENGINES } from '@bliprank/contracts'
-import { MAX_CUSTOM_PROMPTS, PROMPT_MAX, PROMPT_MIN, filePromptRequestIn } from '../../../../../services/grader/src/custom-prompts.js'
+import { MAX_CUSTOM_PROMPTS, PROMPT_MAX, PROMPT_MIN, applyCustomPromptsIn, filePromptRequestIn } from '../../../../../services/grader/src/custom-prompts.js'
 import { promptCost } from '../../../../../services/grader/src/prompts.js'
 import { allCategories } from '../../../../../services/grader/src/resolve-category.js'
 import { categoryRecordIn, customPromptsIn } from '../../../../../services/grader/src/store/documents.js'
@@ -106,6 +106,21 @@ export async function POST(req: Request): Promise<Response> {
   const verdict = await checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
+  if (applies(access)) {
+    const written = await applyCustomPromptsIn(store, data, { host: domain, prompts: raw.prompts as string[], reason, by: access.who })
+    if ('refuse' in written) {
+      const status = written.kind === 'input' || written.kind === 'no-change' ? 400 : written.kind === 'no-record' ? 404 : 422
+      return json({ kind: written.kind, message: written.refuse }, status)
+    }
+    const pending = await store.requests.pending<RequestBody>('custom-prompts', domain)
+    if (pending && pending.body.prompts.length === written.prompts.length && pending.body.prompts.every((p, i) => p === written.prompts[i])) {
+      await store.requests.resolve('custom-prompts', domain, pending.requestedAt, { status: 'applied', by: access.who })
+    }
+    await recordVisitorScan(domain, perDomain, now)
+    await recordVisitorScan(ip, cfg, now)
+    return json({ applied: true, version: written.version, request: { host: domain, prompts: written.prompts, reason: written.reason, requestedAt: written.at, status: 'applied' } })
+  }
+
   const filed = await filePromptRequestIn(store, data, { host: domain, prompts: raw.prompts as string[], reason })
   if ('refuse' in filed) {
     const status = filed.kind === 'input' || filed.kind === 'no-change' ? 400 : filed.kind === 'no-record' ? 404 : 422
@@ -115,3 +130,6 @@ export async function POST(req: Request): Promise<Response> {
   await recordVisitorScan(ip, cfg, now)
   return json({ request: filed, pendingAcrossStore: (await store.requests.allPending('custom-prompts')).length })
 }
+
+/** An owner or admin of a workspace on the Postgres store applies; everyone else files (MVP_PLAN B4). */
+const applies = (access: Access): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')

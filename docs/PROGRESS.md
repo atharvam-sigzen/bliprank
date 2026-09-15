@@ -1381,6 +1381,18 @@ p_expect_version)` in 0004, the three role-walking derivations (tenancy);
 `ledger-doc.ts`, `ledger-stores.ts`, the spend ledger in `run.ts`, the
 charge in `bank-author.ts`, the four ledger modules (spend control).
 
+**B4 — corrections inside the workspace** (2026-09-15). The three
+correction decisions are pure functions now (`checkCorrection` +
+`correctionOf`, `nextOverride`, `nextPromptSet`), with a file twin the CLIs
+keep and a store twin (`correctCategoryIn`, `applyOverrideIn`,
+`applyCustomPromptsIn`) that writes against the version it read. The
+session's role comes back from `workspaceAccess`; a POST from an owner or
+admin on the Postgres store applies — version N+1, every earlier version
+kept, the pending request that asked for exactly this marked applied by the
+account — and answers `applied: true`; a member, or the file store, files a
+request as before. The end-to-end test drives both paths through the real
+routes on PGlite. Stage B is complete on `mvp/stage-a`.
+
 ---
 
 ## 3. Tools and services, and why

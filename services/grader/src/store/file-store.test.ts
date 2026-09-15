@@ -120,3 +120,26 @@ describe('requests', () => {
     expect(await s.requests.allPending('custom-prompts')).toEqual([])
   })
 })
+
+describe('the apply twins agree with the CLI functions (B4)', () => {
+  it('a correction, an override and a prompt set through the store read back exactly as the modules write them', async () => {
+    const { applyOverrideIn } = await import('../competitor-overrides.js')
+    const { applyCustomPromptsIn, readCustomPromptSet } = await import('../custom-prompts.js')
+    const { correctCategoryIn } = await import('../resolve-category.js')
+    recordCategory(dir, { host: 'acme.example', slug: 'crm-software', source: 'site-content', evidence: 'e', decidedAt: '2026-09-01T00:00:00.000Z', generated: false, brandName: 'Acme' })
+    const s = fileWorkspaceStore(dir)
+    const corrected = await correctCategoryIn(s, dir, { host: 'acme.example', slug: 'hr-payroll-software', reason: 'the site sells payroll, not CRM', by: 'owner', at: '2026-09-02T00:00:00.000Z' })
+    expect(corrected).toMatchObject({ version: 2, slug: 'hr-payroll-software', correction: { from: 'crm-software', by: 'owner' } })
+    expect(readCategoryRecord(dir, 'acme.example')).toEqual(corrected)
+    // The same slug again: nothing to correct, version 2 stands.
+    expect(await correctCategoryIn(s, dir, { host: 'acme.example', slug: 'hr-payroll-software', reason: 'the site sells payroll, not CRM', by: 'owner' })).toMatchObject({ refuse: expect.stringContaining('already recorded') })
+    const override = await applyOverrideIn(s, dir, { host: 'acme.example', exclude: ['gusto'], include: [], reason: 'our integration partner, not a rival', by: 'owner', at: '2026-09-03T00:00:00.000Z' })
+    expect(override).toMatchObject({ version: 1, exclude: ['gusto'] })
+    expect(readOverride(dir, 'acme.example')).toEqual(override)
+    // A correction while an override is in force is refused, as the CLI refuses it.
+    expect(await correctCategoryIn(s, dir, { host: 'acme.example', slug: 'crm-software', reason: 'back to CRM after all', by: 'owner' })).toMatchObject({ refuse: expect.stringContaining('competitor override in force') })
+    const set = await applyCustomPromptsIn(s, dir, { host: 'acme.example', prompts: ['which payroll tool suits a two-person bakery'], reason: 'our buyers ask this exact question', by: 'owner', at: '2026-09-04T00:00:00.000Z' })
+    expect(set).toMatchObject({ version: 1, prompts: ['which payroll tool suits a two-person bakery'] })
+    expect(readCustomPromptSet(dir, 'acme.example')).toEqual(set)
+  })
+})

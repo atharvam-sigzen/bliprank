@@ -33,6 +33,13 @@ import { dataDir } from './data-dir'
  * outright, so a half-configured deployment says so rather than serving one
  * instance's disk as if it were a store.
  *
+ * WHO MAY APPLY (MVP_PLAN B4). The session's role in the workspace comes back
+ * too: an owner or admin applies a correction directly (the POST on
+ * /api/category, /api/competitors, /api/custom-prompts writes version N+1
+ * and marks a matching pending request applied); a member files a request
+ * for them; on the file store everyone files, and the CLIs apply. Corrections
+ * are versioned and never re-derived on every path (PRODUCT_GOAL point 7).
+ *
  * THE LEDGERS COME WITH THE STORE, decided the same way (ledger-stores.ts):
  * Upstash when the deployment is configured for it, files on a machine,
  * refused on a fleet with neither.
@@ -50,6 +57,8 @@ export type WorkspaceAccess =
       readonly dataDir: string
       /** the account id behind the session, or `local` on the file store: who a filing or a correction is by */
       readonly who: string
+      /** the session's role in the workspace (migration 0000): owner and admin may apply a correction; a member files a request; the file store is `local` and files */
+      readonly role: 'owner' | 'admin' | 'member' | 'local'
     }
   | { readonly ok: false; readonly status: number; readonly message: string }
 
@@ -65,7 +74,7 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
   }
   if (!identity.on) {
     if (detectMultiInstanceRuntime(env)) return { ok: false, status: 503, message: NO_STORE }
-    return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local' }
+    return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local', role: 'local' }
   }
   const config = identity.config
   const db = appDb(config)
@@ -78,5 +87,5 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
   if (me.workspaces.length === 0) return { ok: false, status: 409, message: NO_WORKSPACE }
   if (me.workspaces.length > 1) return { ok: false, status: 409, message: SEVERAL_WORKSPACES }
   const token = mintWorkspaceToken(config.key, { sub: me.account.id, workspaceId: me.workspaces[0]!.id })
-  return { ok: true, backend: 'postgres', store: sessionWorkspaceStore(db, token), ledgers, dataDir: data, who: me.account.id }
+  return { ok: true, backend: 'postgres', store: sessionWorkspaceStore(db, token), ledgers, dataDir: data, who: me.account.id, role: me.workspaces[0]!.role }
 }

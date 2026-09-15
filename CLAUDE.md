@@ -474,7 +474,14 @@ dollar caps the collector's atomic ledger with the per-run allowance kept.
 must be a writable directory there (`/tmp/grader`). ⚠️ HUMAN REVIEW:
 `workspace-access.ts`, `ws_put_document(…, p_expect_version)`, the three
 role-walking derivations (tenancy); `ledger-doc.ts`, `ledger-stores.ts`,
-the spend ledger in `run.ts` and `bank-author.ts` (spend control). Not
-done: B4 (operator corrections inside the workspace); `/account` says so.
+the spend ledger in `run.ts` and `bank-author.ts` (spend control).
+**B4 (2026-09-15):** corrections are operator actions inside the
+workspace: a POST on `/api/category`, `/api/competitors` or
+`/api/custom-prompts` from an owner or admin applies (version N+1 through
+the store, history kept, the matching pending request marked applied);
+a member, or the file store, files a request; the CLIs stay. Stage B is
+complete; the next session takes Stage C (the daily schedule, C1's ADR)
+or Stage D1 (the agency portfolio, which `workspaceAccess` refuses until
+it exists).
 
 Update this section at every phase transition. It is the first thing a new session reads.

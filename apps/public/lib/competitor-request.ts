@@ -100,7 +100,8 @@ export async function loadCompetitorStatus(domain: string, fetchImpl: typeof fet
   return status ? { ok: true, status } : { ok: false, kind: 'failed', message: 'The competitor service answered with something that is not a status.' }
 }
 
-export type FileResult = { readonly ok: true; readonly requestedAt: string } | { readonly ok: false; readonly message: string }
+/** `applied` is present when the session applied the change itself (an owner or admin, MVP_PLAN B4); absent when it was filed for a person to apply. */
+export type FileResult = { readonly ok: true; readonly requestedAt: string; readonly applied?: true } | { readonly ok: false; readonly message: string }
 
 export async function fileCompetitorChange(domain: string, exclude: readonly string[], include: readonly string[], reason: string, fetchImpl: typeof fetch = fetch): Promise<FileResult> {
   let res: Response
@@ -109,7 +110,7 @@ export async function fileCompetitorChange(domain: string, exclude: readonly str
   } catch (e) {
     return { ok: false, message: `Could not reach the competitor service: ${(e as Error).message}` }
   }
-  let body: { message?: unknown; request?: { requestedAt?: unknown } } = {}
+  let body: { message?: unknown; applied?: unknown; request?: { requestedAt?: unknown } } = {}
   try {
     body = (await res.json()) as typeof body
   } catch {
@@ -117,5 +118,5 @@ export async function fileCompetitorChange(domain: string, exclude: readonly str
   }
   if (!res.ok) return { ok: false, message: String(body.message ?? `The competitor service answered ${res.status}.`) }
   const at = str(body.request?.requestedAt)
-  return at ? { ok: true, requestedAt: at } : { ok: false, message: 'The service did not confirm the request.' }
+  return at ? { ok: true, requestedAt: at, ...(body.applied === true ? { applied: true } : {}) } : { ok: false, message: 'The service did not confirm the request.' }
 }

@@ -83,7 +83,8 @@ export async function loadCustomPromptStatus(domain: string, fetchImpl: typeof f
   return status ? { ok: true, status } : { ok: false, kind: 'failed', message: 'The prompt service answered with something that is not a status.' }
 }
 
-export type FileResult = { readonly ok: true; readonly requestedAt: string; readonly prompts: readonly string[] } | { readonly ok: false; readonly message: string }
+/** `applied` is present when the session applied the set itself (an owner or admin, MVP_PLAN B4); absent when it was filed for a person to apply. */
+export type FileResult = { readonly ok: true; readonly requestedAt: string; readonly prompts: readonly string[]; readonly applied?: true } | { readonly ok: false; readonly message: string }
 
 export async function filePromptSet(domain: string, prompts: readonly string[], reason: string, fetchImpl: typeof fetch = fetch): Promise<FileResult> {
   let res: Response
@@ -92,7 +93,7 @@ export async function filePromptSet(domain: string, prompts: readonly string[], 
   } catch (e) {
     return { ok: false, message: `Could not reach the prompt service: ${(e as Error).message}` }
   }
-  let body: { message?: unknown; request?: { requestedAt?: unknown; prompts?: unknown } } = {}
+  let body: { message?: unknown; applied?: unknown; request?: { requestedAt?: unknown; prompts?: unknown } } = {}
   try {
     body = (await res.json()) as typeof body
   } catch {
@@ -100,5 +101,5 @@ export async function filePromptSet(domain: string, prompts: readonly string[], 
   }
   if (!res.ok) return { ok: false, message: String(body.message ?? `The prompt service answered ${res.status}.`) }
   const at = str(body.request?.requestedAt)
-  return at ? { ok: true, requestedAt: at, prompts: strs(body.request?.prompts) } : { ok: false, message: 'The service did not confirm the request.' }
+  return at ? { ok: true, requestedAt: at, prompts: strs(body.request?.prompts), ...(body.applied === true ? { applied: true } : {}) } : { ok: false, message: 'The service did not confirm the request.' }
 }

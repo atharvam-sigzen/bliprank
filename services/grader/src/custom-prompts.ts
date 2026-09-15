@@ -177,22 +177,43 @@ export function checkCustomPromptsWith(domain: string, prompts: readonly unknown
 const sameList = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x, i) => x === b[i])
 
 /** THE WRITER. A new set one version up, the earlier ones kept whole; an identical list is refused as no change. An empty list clears the set, and is a version too. */
-export function applyCustomPrompts(dataDir: string, req: { readonly host: string; readonly prompts: readonly string[]; readonly reason: string; readonly by: string; readonly at?: string }): CustomPromptSet | PromptRefusal {
+export type PromptSetRequest = { readonly host: string; readonly prompts: readonly string[]; readonly reason: string; readonly by: string; readonly at?: string }
+
+export function applyCustomPrompts(dataDir: string, req: PromptSetRequest): CustomPromptSet | PromptRefusal {
   const checked = checkCustomPrompts(dataDir, req.host, req.prompts, req.reason)
   if ('refuse' in checked) return checked
   const by = plainText(req.by)
   if (!by) return { refuse: 'a prompt set names who applied it', kind: 'input' }
   return withRecordLock(dataDir, () => {
     const store = readSets(dataDir)
-    const current = store[checked.host] ?? null
-    if (current && sameList(current.prompts, checked.prompts)) return { refuse: `${checked.host}'s prompts already stand exactly so (set ${current.version}); nothing to change`, kind: 'no-change' } as PromptRefusal
-    if (!current && checked.prompts.length === 0) return { refuse: 'nothing to set: no prompts, and no set in force to clear', kind: 'no-change' } as PromptRefusal
-    const at = req.at ?? new Date().toISOString()
-    const history = current ? [...(current.superseded ?? []), (({ superseded: _h, ...prior }) => prior)(current)] : []
-    const next: CustomPromptSet = { host: checked.host, version: (current?.version ?? 0) + 1, prompts: checked.prompts, reason: checked.reason, by, at, ...(history.length ? { superseded: history } : {}) }
+    const next = nextPromptSet(store[checked.host] ?? null, checked, by, req.at ?? new Date().toISOString())
+    if ('refuse' in next) return next
     writeFileSync(setsFile(dataDir), JSON.stringify({ ...store, [checked.host]: next }, null, 2) + '\n')
     return next
   })
+}
+
+/** THE NEXT SET, pure: version N+1 over the one in force, or the refusal that nothing changed (MVP_PLAN B4). */
+export function nextPromptSet(current: CustomPromptSet | null, checked: CheckedPrompts, by: string, at: string): CustomPromptSet | PromptRefusal {
+  if (current && sameList(current.prompts, checked.prompts)) return { refuse: `${checked.host}'s prompts already stand exactly so (set ${current.version}); nothing to change`, kind: 'no-change' }
+  if (!current && checked.prompts.length === 0) return { refuse: 'nothing to set: no prompts, and no set in force to clear', kind: 'no-change' }
+  const history = current ? [...(current.superseded ?? []), (({ superseded: _h, ...prior }) => prior)(current)] : []
+  return { host: checked.host, version: (current?.version ?? 0) + 1, prompts: checked.prompts, reason: checked.reason, by, at, ...(history.length ? { superseded: history } : {}) }
+}
+
+/** The same application through a `WorkspaceStore` (MVP_PLAN B4), written against the version that was read. */
+export async function applyCustomPromptsIn(store: WorkspaceStore, dataDir: string, req: PromptSetRequest): Promise<CustomPromptSet | PromptRefusal> {
+  const host = normaliseHost(req.host)
+  const checked = checkCustomPromptsWith(req.host, req.prompts, req.reason, host ? await categoryRecordIn(store, host) : null, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const by = plainText(req.by)
+  if (!by) return { refuse: 'a prompt set names who applied it', kind: 'input' }
+  const current = await customPromptsIn(store, checked.host)
+  const next = nextPromptSet(current, checked, by, req.at ?? new Date().toISOString())
+  if ('refuse' in next) return next
+  const { superseded: _history, ...body } = next
+  await store.documents.put('custom-prompts', checked.host, body, current?.version ?? 0)
+  return next
 }
 
 // ---------------------------------------------------------------- requests
