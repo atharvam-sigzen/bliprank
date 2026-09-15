@@ -1393,6 +1393,21 @@ account — and answers `applied: true`; a member, or the file store, files a
 request as before. The end-to-end test drives both paths through the real
 routes on PGlite. Stage B is complete on `mvp/stage-a`.
 
+**The B3b and B4 tenancy audits** (2026-09-15, both: no leak). B3b MAJOR:
+the per-domain ceiling's refusal named a count from a deployment-wide
+ledger, which may be another workspace's cycles of the same domain; the
+sentence now names the ceiling and the reset date only. B4 MAJOR 1: the
+apply gate was three copies in the routes and the database enforces
+membership, not role, on a write; one exported `applies()` now, and the
+real fix (a role claim in the token the definer functions check) is
+human-owned and open. B4 MAJOR 2: the per-domain correction caps were keyed
+by bare domain across workspaces; keyed by workspace now, with the
+end-to-end case. Minors fixed: a NULL expected version is refused; the
+store fallbacks refuse a fleet runtime; no result file on Postgres; a lost
+version race is a 409. Open: the CREATEROLE deployer's auto-membership on
+PG16+ (a deploy-procedure question, see the plan row). Cost review of B3b:
+null result; one bounded observation on the KV lock TTL.
+
 ---
 
 ## 3. Tools and services, and why

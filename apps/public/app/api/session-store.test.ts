@@ -235,6 +235,21 @@ describe('request → session → token → context → store → response', () 
     expect((await get(promptsGet, 'custom-prompts?domain=acme.test')).status).toBe(404)
   })
 
+  it('the per-domain cap is the workspace\'s: six corrections of one host in Two do not block One\'s owner (B4 audit, MAJOR 2)', async () => {
+    await storeOf(TWO).documents.put('category-record', 'acme.test', RECORD, 0)
+    session.user = TWO
+    // Six applied corrections of acme.test in Two (the cap's default), each a real change, then the seventh is the cap.
+    const slugs = ['hr-payroll-software', 'crm-software', 'hr-payroll-software', 'crm-software', 'hr-payroll-software', 'crm-software', 'seo-tools']
+    const statuses: number[] = []
+    for (const slug of slugs) statuses.push((await post(categoryPost, 'category', { domain: 'acme.test', slug, reason: 'a reason long enough to pass the check' })).status)
+    expect(statuses).toEqual([200, 200, 200, 200, 200, 200, 429])
+    // One is not capped by Two's activity (its member files against the same cap, keyed by One), and the 429 above named nothing of One's.
+    session.user = MEMBER
+    const res = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'seo-tools', reason: 'a reason long enough to pass the check' })
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as { request: { slug: string } }).request.slug).toBe('seo-tools')
+  })
+
   it('a session with no account, or an account with no workspace, is refused with the route\'s own status', async () => {
     session.user = { id: '66666666-0000-4000-8000-000000000009', email: 'ghost@brand.test' }
     expect((await get(cycles, 'cycles?domain=acme.test')).status).toBe(404)

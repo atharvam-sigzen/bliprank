@@ -49,8 +49,9 @@ describe('A · the prompt set shrinks mid-month', () => {
     const third = await checkDomainCeiling('acme.test', cfg, at('2026-09-15'))
     expect(third.ok).toBe(false)
     if (third.ok) return
-    expect(third.message).toContain('has already started 2 of its 2 hand-started cycles')
-    expect(third.message).toContain('320 provider requests')
+    expect(third.message).toContain('has reached its 2 hand-started cycles')
+    expect(third.message).not.toContain('320')
+    expect(third).toMatchObject({ cycles: 2, limit: 2 })
     // Under the old, call-denominated ceiling this read "used 320 + 85 > 204": a refusal caused by the set change.
     // Now it is the same refusal the domain would have met at 85 cells all month: two cycles, then October.
     expect(await cyclesThisMonth('acme.test', cfg, at('2026-09-22'))).toEqual({ cycles: 2, calls: 320 })

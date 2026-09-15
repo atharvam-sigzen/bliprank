@@ -36,7 +36,7 @@ import { fetchSiteHtml, type FetchSiteOptions } from './fetch-site.js'
 import { allBanks } from './resolve-category.js'
 import { basisOf, promptsFor } from './scan.js'
 import { categoryRecordIn } from './store/documents.js'
-import { fileWorkspaceStore } from './store/file-store.js'
+import { defaultWorkspaceStore } from './store/file-store.js'
 import type { WorkspaceStore } from './store/pg-store.js'
 
 export interface GapReport extends AeoReport {
@@ -65,7 +65,7 @@ export interface GapReportOptions {
 type StoredShape = CycleResult & { readonly category?: string; readonly comparisonBasis?: string }
 
 export async function gapReportFor(dataDir: string, domain: string, opts: GapReportOptions = {}): Promise<GapReport | { readonly refuse: string }> {
-  const store = opts.store ?? fileWorkspaceStore(dataDir)
+  const store = opts.store ?? defaultWorkspaceStore(dataDir)
   const cycle = opts.day ? await store.cycles.read(domain, opts.day) : await store.cycles.latest(domain)
   if (!cycle) return { refuse: opts.day ? `no stored cycle of ${domain} for ${opts.day}` : `no stored result for ${domain}` }
 

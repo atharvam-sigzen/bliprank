@@ -56,7 +56,7 @@ import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scor
 import type { Citation } from '@bliprank/contracts'
 import { competitorsIn } from './competitor-overrides.js'
 import { categoryRecordIn } from './store/documents.js'
-import { fileWorkspaceStore } from './store/file-store.js'
+import { defaultWorkspaceStore } from './store/file-store.js'
 import type { WorkspaceStore } from './store/pg-store.js'
 import { basisOf, cellsFor, customCellsFor, subjectFor } from './scan.js'
 
@@ -144,7 +144,7 @@ async function inBatches<T, R>(items: readonly T[], limit: number, fn: (item: T)
   return out
 }
 
-export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay?: string, store: WorkspaceStore = fileWorkspaceStore(dataDir)): Promise<ScoredCycle | { readonly refuse: string }> {
+export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay?: string, store: WorkspaceStore = defaultWorkspaceStore(dataDir)): Promise<ScoredCycle | { readonly refuse: string }> {
   // One cycle's evidence, by day (ADR-0013). The latest when no day is asked
   // for, which is what every reader before cycles existed was reading. The
   // store is the deployment's (Postgres, this workspace) or this machine's

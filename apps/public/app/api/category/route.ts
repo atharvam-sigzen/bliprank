@@ -11,7 +11,7 @@ import {
 } from '../../../../../services/grader/src/visitor-throttle.js'
 import { FALLBACK_SLUG } from '@bliprank/taxonomy'
 import type { CategoryStatus } from '../../../lib/category-request'
-import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
+import { applies, isStaleVersion, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
  * A domain's recorded category, its history, and the request to change it.
@@ -142,7 +142,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const now = new Date()
   const perDomain = domainCfg(access, env)
-  const domainVerdict = await checkVisitorThrottle(domain, perDomain, now)
+  const domainVerdict = await checkVisitorThrottle(`${access.workspaceId}:${domain}`, perDomain, now)
   if (!domainVerdict.ok) return json({ kind: 'rate-limit', message: `Requests about ${domain} have been filed ${perDomain.maxScansPerHour} times in the last hour. The pending one stands; try again later.` }, 429)
   const cfg = fileCfg(access, env)
   const ip = extractClientIp(req, env)
@@ -150,12 +150,18 @@ export async function POST(req: Request): Promise<Response> {
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
   if (applies(access)) {
-    const written = await correctCategoryIn(store, data, { host: domain, slug, reason, by: access.who })
+    let written: Awaited<ReturnType<typeof correctCategoryIn>>
+    try {
+      written = await correctCategoryIn(store, data, { host: domain, slug, reason, by: access.who })
+    } catch (e) {
+      if (isStaleVersion(e)) return json({ kind: 'read-again', message: READ_AGAIN }, 409)
+      throw e
+    }
     if ('refuse' in written) return json({ kind: 'refused', message: written.refuse }, 422)
     // The pending request that asked for exactly this is applied by it; one that asked for something else stays for a separate decision.
     const pending = await store.requests.pending<RequestBody>('category', domain)
     if (pending && pending.body.slug === written.slug) await store.requests.resolve('category', domain, pending.requestedAt, { status: 'applied', by: access.who })
-    await recordVisitorScan(domain, perDomain, now)
+    await recordVisitorScan(`${access.workspaceId}:${domain}`, perDomain, now)
     await recordVisitorScan(ip, cfg, now)
     return json({ applied: true, version: written.version, request: { host: domain, slug: written.slug, reason: written.correction?.reason ?? reason, requestedAt: written.decidedAt, status: 'applied' } })
   }
@@ -166,10 +172,8 @@ export async function POST(req: Request): Promise<Response> {
     return json({ kind: filed.kind, message: filed.refuse }, status)
   }
   // Booked after a successful filing: a refusal wrote nothing and costs nothing.
-  await recordVisitorScan(domain, perDomain, now)
+  await recordVisitorScan(`${access.workspaceId}:${domain}`, perDomain, now)
   await recordVisitorScan(ip, cfg, now)
   return json({ request: filed, pendingAcrossStore: (await store.requests.allPending('category')).length })
 }
 
-/** An owner or admin of a workspace on the Postgres store applies; everyone else files (MVP_PLAN B4). */
-const applies = (access: Access): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')

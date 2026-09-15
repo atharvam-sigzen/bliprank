@@ -178,9 +178,9 @@ END $$;
 -- 0 for "none yet". Checked under the workspace lock, so two first decisions
 -- for one host cannot both land as versions 1 and 2 (the resolver's
 -- write-once rule), and a correction decided against version N cannot land
--- on top of a version N+1 somebody else wrote meanwhile. NULL skips the
--- check, for a caller that has its own.
-CREATE OR REPLACE FUNCTION ws_put_document(p_kind text, p_host text, p_body jsonb, p_expect_version integer DEFAULT NULL) RETURNS integer
+-- on top of a version N+1 somebody else wrote meanwhile. Always: a NULL is
+-- refused, so no caller can opt out (B3b tenancy audit).
+CREATE OR REPLACE FUNCTION ws_put_document(p_kind text, p_host text, p_body jsonb, p_expect_version integer) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   ws   uuid := ws_required();
@@ -199,7 +199,8 @@ BEGIN
   PERFORM 1 FROM workspaces w WHERE w.id = ws FOR UPDATE;
   SELECT coalesce(max(d.version), 0) + 1 INTO next_version FROM workspace_documents d
    WHERE d.workspace_id = ws AND d.kind = p_kind AND d.host = p_host;
-  IF p_expect_version IS NOT NULL AND next_version - 1 <> p_expect_version THEN
+  IF p_expect_version IS NULL THEN RAISE EXCEPTION 'workspace: a document write names the version it read (0 for none)'; END IF;
+  IF next_version - 1 <> p_expect_version THEN
     RAISE EXCEPTION 'workspace: % for % is at version %, not %; read it again before deciding', p_kind, p_host, next_version - 1, p_expect_version
       USING ERRCODE = 'check_violation';
   END IF;

@@ -12,7 +12,7 @@ import {
   type VisitorThrottleConfig,
 } from '../../../../../services/grader/src/visitor-throttle.js'
 import type { CustomPromptStatus } from '../../../lib/custom-prompt-request'
-import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
+import { applies, isStaleVersion, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
  * The custom prompts a domain's cycles ask beside the curated bank, and the
@@ -100,14 +100,20 @@ export async function POST(req: Request): Promise<Response> {
 
   const now = new Date()
   const perDomain = domainCfg(access, env)
-  if (!(await checkVisitorThrottle(domain, perDomain, now)).ok) return json({ kind: 'rate-limit', message: `Prompt requests about ${domain} have been filed ${perDomain.maxScansPerHour} times in the last hour. The pending one stands; try again later.` }, 429)
+  if (!(await checkVisitorThrottle(`${access.workspaceId}:${domain}`, perDomain, now)).ok) return json({ kind: 'rate-limit', message: `Prompt requests about ${domain} have been filed ${perDomain.maxScansPerHour} times in the last hour. The pending one stands; try again later.` }, 429)
   const cfg = fileCfg(access, env)
   const ip = extractClientIp(req, env)
   const verdict = await checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
   if (applies(access)) {
-    const written = await applyCustomPromptsIn(store, data, { host: domain, prompts: raw.prompts as string[], reason, by: access.who })
+    let written: Awaited<ReturnType<typeof applyCustomPromptsIn>>
+    try {
+      written = await applyCustomPromptsIn(store, data, { host: domain, prompts: raw.prompts as string[], reason, by: access.who })
+    } catch (e) {
+      if (isStaleVersion(e)) return json({ kind: 'read-again', message: READ_AGAIN }, 409)
+      throw e
+    }
     if ('refuse' in written) {
       const status = written.kind === 'input' || written.kind === 'no-change' ? 400 : written.kind === 'no-record' ? 404 : 422
       return json({ kind: written.kind, message: written.refuse }, status)
@@ -116,7 +122,7 @@ export async function POST(req: Request): Promise<Response> {
     if (pending && pending.body.prompts.length === written.prompts.length && pending.body.prompts.every((p, i) => p === written.prompts[i])) {
       await store.requests.resolve('custom-prompts', domain, pending.requestedAt, { status: 'applied', by: access.who })
     }
-    await recordVisitorScan(domain, perDomain, now)
+    await recordVisitorScan(`${access.workspaceId}:${domain}`, perDomain, now)
     await recordVisitorScan(ip, cfg, now)
     return json({ applied: true, version: written.version, request: { host: domain, prompts: written.prompts, reason: written.reason, requestedAt: written.at, status: 'applied' } })
   }
@@ -126,10 +132,8 @@ export async function POST(req: Request): Promise<Response> {
     const status = filed.kind === 'input' || filed.kind === 'no-change' ? 400 : filed.kind === 'no-record' ? 404 : 422
     return json({ kind: filed.kind, message: filed.refuse }, status)
   }
-  await recordVisitorScan(domain, perDomain, now)
+  await recordVisitorScan(`${access.workspaceId}:${domain}`, perDomain, now)
   await recordVisitorScan(ip, cfg, now)
   return json({ request: filed, pendingAcrossStore: (await store.requests.allPending('custom-prompts')).length })
 }
 
-/** An owner or admin of a workspace on the Postgres store applies; everyone else files (MVP_PLAN B4). */
-const applies = (access: Access): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')

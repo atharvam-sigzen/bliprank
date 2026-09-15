@@ -88,7 +88,7 @@ export interface WorkspaceStore {
      * any other current version is refused, so a first decision is written
      * once and a correction never lands on a version it did not see.
      */
-    put<T extends object>(kind: DocumentKind, host: string, body: T, expectVersion?: number): Promise<number>
+    put<T extends object>(kind: DocumentKind, host: string, body: T, expectVersion: number): Promise<number>
   }
   readonly requests: {
     pending<T>(kind: RequestKind, host: string): Promise<StoredRequest<T> | null>
@@ -203,7 +203,7 @@ export function pgWorkspaceStore(db: Db): WorkspaceStore {
         return got && got.version === version ? got : null
       },
       async put(kind, host, body, expectVersion) {
-        const [row] = await db.query<{ v: number }>('SELECT ws_put_document($1, $2, $3::jsonb, $4::int) AS v', [kind, host, JSON.stringify(body), expectVersion ?? null])
+        const [row] = await db.query<{ v: number }>('SELECT ws_put_document($1, $2, $3::jsonb, $4::int) AS v', [kind, host, JSON.stringify(body), expectVersion])
         return row!.v
       },
     },

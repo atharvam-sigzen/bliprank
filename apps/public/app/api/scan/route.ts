@@ -382,7 +382,8 @@ export async function POST(req: Request): Promise<Response> {
           // request was refused above.
           author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA, ledgers) ?? undefined,
           dataDir: DATA,
-          outFile: join(DATA, 'latest.json'),
+          // The result file is the CLI's; on the deployment the store holds the cycle and the instance's disk is every workspace's.
+          ...(access.backend === 'file' ? { outFile: join(DATA, 'latest.json') } : {}),
           // The session's store and the deployment's ledgers, so the record a
           // first scan writes and the cap every attempt is charged to are the
           // workspace's and the deployment's, never one instance's disk.

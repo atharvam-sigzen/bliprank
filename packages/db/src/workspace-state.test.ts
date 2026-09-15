@@ -86,7 +86,7 @@ describe('the workspace comes from the verified context, never from the caller',
   it('with no context every writer refuses and nothing is written', async () => {
     await inWorkspace(null, async (q) => {
       await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-01', 'det-2', 'b', $1)`, [RESULT])).rejects.toThrow(/no verified tenant context/)
-      await expect(q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"crm"}')`)).rejects.toThrow(/no verified tenant context/)
+      await expect(q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"crm"}', 0)`)).rejects.toThrow(/no verified tenant context/)
       await expect(q(`SELECT ws_file_request('category', 'acme.example', '{"slug":"x"}', now())`)).rejects.toThrow(/no verified tenant context/)
       await expect(q(`SELECT ws_resolve_request('category', 'acme.example', now(), 'applied', 'op', null)`)).rejects.toThrow(/no verified tenant context/)
     })
@@ -165,14 +165,14 @@ describe('cycles: one row per (host, day, algo_version); same version re-writes,
 describe('documents: version N+1 is the database\'s, history is rows, nothing is updated or deleted', () => {
   it('each put is the next version for that kind and host, per workspace', async () => {
     const v = await inWorkspace(WS1, async (q) => [
-      await q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"crm"}') AS v`),
-      await q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"erp"}') AS v`),
-      await q(`SELECT ws_put_document('competitor-override', 'acme.example', '{"exclude":[]}') AS v`),
-      await q(`SELECT ws_put_document('category-record', 'other.example', '{"slug":"crm"}') AS v`),
+      await q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"crm"}', 0) AS v`),
+      await q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"erp"}', 1) AS v`),
+      await q(`SELECT ws_put_document('competitor-override', 'acme.example', '{"exclude":[]}', 0) AS v`),
+      await q(`SELECT ws_put_document('category-record', 'other.example', '{"slug":"crm"}', 0) AS v`),
     ])
     expect(v.flat()).toEqual([{ v: 1 }, { v: 2 }, { v: 1 }, { v: 1 }])
     // The other workspace's numbering is its own.
-    expect(await inWorkspace(WS2, (q) => q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"crm"}') AS v`))).toEqual([{ v: 1 }])
+    expect(await inWorkspace(WS2, (q) => q(`SELECT ws_put_document('category-record', 'acme.example', '{"slug":"crm"}', 0) AS v`))).toEqual([{ v: 1 }])
     expect(await inWorkspace(WS2, (q) => q(`SELECT version, body->>'slug' AS slug FROM workspace_documents WHERE host = 'acme.example' AND kind = 'category-record' ORDER BY version`))).toEqual([{ version: 1, slug: 'crm' }])
     expect(await inWorkspace(WS1, (q) => q(`SELECT version, body->>'slug' AS slug FROM workspace_documents WHERE host = 'acme.example' AND kind = 'category-record' ORDER BY version`))).toEqual([
       { version: 1, slug: 'crm' },
@@ -180,7 +180,7 @@ describe('documents: version N+1 is the database\'s, history is rows, nothing is
     ])
   })
 
-  it('an expected version that is not the current one is refused; the current one, and none given, are accepted (B3b)', async () => {
+  it('an expected version that is not the current one is refused; the current one is accepted; none given is refused (B3b)', async () => {
     await inWorkspace(WS1, async (q) => {
       expect(await q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":1}', 0) AS v`)).toEqual([{ v: 1 }])
       // A second "first decision" for the same host: refused, so write-once holds under the lock.
@@ -188,15 +188,16 @@ describe('documents: version N+1 is the database\'s, history is rows, nothing is
       // A correction decided against version 1 lands; one decided against a version that no longer is the current one does not.
       expect(await q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":3}', 1) AS v`)).toEqual([{ v: 2 }])
       await expect(q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":4}', 1)`)).rejects.toThrow(/at version 2, not 1/)
-      expect(await q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":5}') AS v`)).toEqual([{ v: 3 }])
+      // No way to opt out: a NULL is refused (B3b tenancy audit).
+      await expect(q(`SELECT ws_put_document('custom-prompts', 'expect.example', '{"a":5}', NULL)`)).rejects.toThrow(/names the version it read/)
     })
   })
 
   it('an unknown kind, a non-object body and a body over 64 KiB are refused', async () => {
     await inWorkspace(WS1, async (q) => {
-      await expect(q(`SELECT ws_put_document('notes', 'acme.example', '{}')`)).rejects.toThrow(/check constraint/)
-      await expect(q(`SELECT ws_put_document('custom-prompts', 'acme.example', '"text"')`)).rejects.toThrow(/must be an object/)
-      await expect(q(`SELECT ws_put_document('custom-prompts', 'acme.example', $1)`, [{ big: 'x'.repeat(70_000) }])).rejects.toThrow(/check constraint/)
+      await expect(q(`SELECT ws_put_document('notes', 'acme.example', '{}', 0)`)).rejects.toThrow(/check constraint/)
+      await expect(q(`SELECT ws_put_document('custom-prompts', 'acme.example', '"text"', 0)`)).rejects.toThrow(/must be an object/)
+      await expect(q(`SELECT ws_put_document('custom-prompts', 'acme.example', $1, 0)`, [{ big: 'x'.repeat(70_000) }])).rejects.toThrow(/check constraint/)
     })
   })
 
@@ -205,7 +206,7 @@ describe('documents: version N+1 is the database\'s, history is rows, nothing is
     try {
       await db.exec('SET LOCAL ROLE app_rw')
       await db.query(`SELECT set_workspace_jwt($1)`, [token(WS1, U1)])
-      await expect(db.query(`SELECT ws_put_document('category-record', 'rr.example', '{}')`)).rejects.toThrow(/not safe at REPEATABLE READ/)
+      await expect(db.query(`SELECT ws_put_document('category-record', 'rr.example', '{}', 0)`)).rejects.toThrow(/not safe at REPEATABLE READ/)
     } finally {
       await db.exec('ROLLBACK')
       await db.exec('RESET ROLE')

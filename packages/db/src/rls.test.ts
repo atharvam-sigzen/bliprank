@@ -717,7 +717,7 @@ describe('adversarial paths — a tenant must not be able to manufacture a conte
     await db.exec(`INSERT INTO auth_tenant_context (backend_pid, xact_id, workspace_id, account_id)
                    VALUES (pg_backend_pid() + 1, pg_current_xact_id(), '${WS1}', '${USER1}')`)
     await asTenant(async (q) => {
-      await expect(q(`SELECT ws_put_document('category-record', 'x.example', '{}')`)).rejects.toThrow(/no verified tenant context/)
+      await expect(q(`SELECT ws_put_document('category-record', 'x.example', '{}', 0)`)).rejects.toThrow(/no verified tenant context/)
       await expect(q(`SELECT ws_file_request('category', 'x.example', '{}', now())`)).rejects.toThrow(/no verified tenant context/)
     })
     await db.exec(`DELETE FROM auth_tenant_context WHERE backend_pid <> pg_backend_pid()`)

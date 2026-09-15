@@ -45,8 +45,10 @@ describe('the ceiling counts hand-started cycles, and records the calls each rea
     const v = await checkDomainCeiling('acme.test', cfg, SEP)
     expect(v).toMatchObject({ ok: false, reason: 'domain-ceiling', cycles: 2, limit: 2, resetsOn: '2026-10-01' })
     if (v.ok) return
-    expect(v.message).toContain('has already started 2 of its 2 hand-started cycles')
-    expect(v.message).toContain('320 provider requests')
+    expect(v.message).toContain('has reached its 2 hand-started cycles')
+    // The figures are the verdict's, never the sentence's: the ledger is deployment-wide, and a count may be another workspace's (B3b tenancy audit).
+    expect(v.message).not.toMatch(/\d+ provider requests|started \d+ of/)
+    expect(v).toMatchObject({ cycles: 2, limit: 2 })
   })
 
   it('a cycle served entirely from cache made no call and is not a cycle against the count', async () => {

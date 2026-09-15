@@ -53,7 +53,7 @@ import { competitorsIn } from './competitor-overrides.js'
 import { customPromptsAt, readCustomPromptSet } from './custom-prompts.js'
 import { ledgerStores, type LedgerStores } from './ledger-stores.js'
 import { categoryRecordIn, customPromptsAtIn, customPromptsIn, recordsIn } from './store/documents.js'
-import { fileWorkspaceStore } from './store/file-store.js'
+import { defaultWorkspaceStore } from './store/file-store.js'
 import type { WorkspaceStore } from './store/pg-store.js'
 import { runAllowanceFor } from './domain-ceiling.js'
 import type { CategoryResolution } from './scan.js'
@@ -77,7 +77,8 @@ export interface RunnerOptions {
   readonly mode: 'live' | 'fixture' | 'stub'
   readonly apiKey: string
   readonly dataDir: string
-  readonly outFile: string
+  /** The whole result as JSON on disk, for the CLI. Absent on a deployment: the workspace store holds the cycle, and an instance's disk is shared by every workspace it serves (B3b tenancy audit). */
+  readonly outFile?: string
   readonly log: (s: string) => void
   /**
    * Which model authors a bank when no category in the taxonomy fits (rung 4 of
@@ -314,7 +315,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // run breaking live collection while spending nothing. Found by doing
     // exactly that during a lock test.
     const ledgers = o.ledgers ?? ledgerStores(o.dataDir, process.env)
-    const store = o.store ?? fileWorkspaceStore(o.dataDir)
+    const store = o.store ?? defaultWorkspaceStore(o.dataDir)
     const spendLedger = ledgers.spend(offline ? `ledger.${o.mode}.json` : 'ledger.json', o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]), {
       ...(o.runAllowanceCalls !== undefined ? { runAllowanceCalls: o.runAllowanceCalls } : {}),
       engines: o.engines,
@@ -480,10 +481,10 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     const spentThisRun = (await spendLedger.spentUsd()) - spentBefore
     const run: GraderRun = { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spentThisRun, capUsd: o.capUsd, at: new Date().toISOString() }
     const envelope = { ...result, run }
-    writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
+    if (o.outFile) writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
     // Cumulative here, deliberately: "of the cap" is a statement about the cap,
     // which is per data dir and not per scan.
-    o.log(`\nspent ${(await spendLedger.spentUsd()).toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${'size' in blob ? `${(blob as { size: number }).size} stored cells` : `cells stored in ${stores.backend}`} · wrote ${o.outFile}`)
+    o.log(`\nspent ${(await spendLedger.spentUsd()).toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${'size' in blob ? `${(blob as { size: number }).size} stored cells` : `cells stored in ${stores.backend}`} ${o.outFile ? ` · wrote ${o.outFile}` : ''}`)
     return envelope
   } finally {
     if (existsSync(lock)) unlinkSync(lock)

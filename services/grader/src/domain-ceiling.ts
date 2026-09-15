@@ -170,7 +170,12 @@ export async function checkDomainCeiling(domain: string, cfg: DomainCeilingConfi
     return {
       ok: false,
       reason: 'domain-ceiling',
-      message: `${domain} has already started ${used.cycles} of its ${cfg.maxCyclesPerMonth} hand-started ${cfg.maxCyclesPerMonth === 1 ? 'cycle' : 'cycles'} this month${used.calls ? ` (${used.calls} provider requests)` : ''}. This is a per-domain ceiling on manual cycles, not the shared quota: it exists so one domain's repeated scans cannot use up everyone else's. It resets on ${resetDate(now)}. Nothing was collected and nothing was charged, and any scan already collected for this domain still loads instantly from cache.`,
+      // NO FIGURE IN THE SENTENCE. The ledger is deployment-wide (R3), so the
+      // count may be another workspace's cycles of the same domain; a caller
+      // learning "2 cycles, 320 requests" would be learning that (B3b tenancy
+      // audit, MAJOR). The verdict carries the numbers for the caller's own
+      // log; the sentence carries the ceiling and the reset date.
+      message: `${domain} has reached its ${cfg.maxCyclesPerMonth} hand-started ${cfg.maxCyclesPerMonth === 1 ? 'cycle' : 'cycles'} this month. This is a per-domain ceiling on manual cycles, not the shared quota: it exists so one domain's repeated scans cannot use up everyone else's. It resets on ${resetDate(now)}. Nothing was collected and nothing was charged, and any scan already collected for this domain still loads instantly from cache.`,
       cycles: used.cycles,
       limit: cfg.maxCyclesPerMonth,
       resetsOn: resetDate(now),

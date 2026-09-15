@@ -59,6 +59,8 @@ export type WorkspaceAccess =
       readonly who: string
       /** the session's role in the workspace (migration 0000): owner and admin may apply a correction; a member files a request; the file store is `local` and files */
       readonly role: 'owner' | 'admin' | 'member' | 'local'
+      /** the workspace the token names, or `local` on the file store: what a per-domain cap is keyed by, so one workspace's filings never count against another's (B4 tenancy audit) */
+      readonly workspaceId: string
     }
   | { readonly ok: false; readonly status: number; readonly message: string }
 
@@ -74,7 +76,7 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
   }
   if (!identity.on) {
     if (detectMultiInstanceRuntime(env)) return { ok: false, status: 503, message: NO_STORE }
-    return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local', role: 'local' }
+    return { ok: true, backend: 'file', store: fileWorkspaceStore(data), ledgers, dataDir: data, who: 'local', role: 'local', workspaceId: 'local' }
   }
   const config = identity.config
   const db = appDb(config)
@@ -87,5 +89,20 @@ export async function workspaceAccess(env: NodeJS.ProcessEnv = process.env, log:
   if (me.workspaces.length === 0) return { ok: false, status: 409, message: NO_WORKSPACE }
   if (me.workspaces.length > 1) return { ok: false, status: 409, message: SEVERAL_WORKSPACES }
   const token = mintWorkspaceToken(config.key, { sub: me.account.id, workspaceId: me.workspaces[0]!.id })
-  return { ok: true, backend: 'postgres', store: sessionWorkspaceStore(db, token), ledgers, dataDir: data, who: me.account.id, role: me.workspaces[0]!.role }
+  return { ok: true, backend: 'postgres', store: sessionWorkspaceStore(db, token), ledgers, dataDir: data, who: me.account.id, role: me.workspaces[0]!.role, workspaceId: me.workspaces[0]!.id }
 }
+
+/**
+ * WHO APPLIES A CORRECTION: an owner or admin, on the Postgres store. One
+ * gate for the three correction routes rather than a line in each (B4
+ * tenancy audit, MAJOR 1). The database enforces membership on every write
+ * (ws_required) and nothing about role; until the token carries a role claim
+ * the definer functions check (human-owned, CLAUDE.md §4), this function is
+ * the role check, and a route that writes a document without it writes as a
+ * member.
+ */
+export const applies = (access: WorkspaceAccess & { ok: true }): boolean => access.backend === 'postgres' && (access.role === 'owner' || access.role === 'admin')
+
+/** The message the store raises when a write names a version that is no longer the current one: the caller reads again. */
+export const isStaleVersion = (e: unknown): boolean => /read it again before deciding/.test(e instanceof Error ? e.message : String(e))
+export const READ_AGAIN = 'The record changed while you were deciding. Read it again and decide against what stands now.'

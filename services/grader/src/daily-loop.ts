@@ -61,7 +61,7 @@ import type { OwnPlan } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { ledgerStores, type LedgerStores } from './ledger-stores.js'
 import { cycleInputOf } from './store/documents.js'
-import { fileWorkspaceStore } from './store/file-store.js'
+import { defaultWorkspaceStore } from './store/file-store.js'
 import type { WorkspaceStore } from './store/pg-store.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, type DueDomain, type DueList } from './due.js'
@@ -223,7 +223,7 @@ export async function runTick(
   if (list.config) return { refuse: list.config, list }
   const capUsd = dailyCapUsd(list, opts.env)
   const ledgers = opts.ledgers ?? ledgerStores(opts.dataDir, opts.env)
-  const store = opts.store ?? fileWorkspaceStore(opts.dataDir)
+  const store = opts.store ?? defaultWorkspaceStore(opts.dataDir, opts.env)
 
   // The ledger is read before anything else, so a corrupt one refuses the tick before a cell is asked.
   const ledger = await readDailyLedger(opts.dataDir, ledgers)

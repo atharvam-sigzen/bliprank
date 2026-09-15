@@ -66,9 +66,9 @@ describe('cycles', () => {
 
 describe('documents', () => {
   it('versions climb, history is reassembled newest first, and `at` reads a version back with its own history', async () => {
-    const v1 = await inA((s) => s.documents.put('category-record', 'acme.example', { slug: 'crm' }))
-    const v2 = await inA((s) => s.documents.put('category-record', 'acme.example', { slug: 'erp' }))
-    const v3 = await inA((s) => s.documents.put('category-record', 'acme.example', { slug: 'hr' }))
+    const v1 = await inA((s) => s.documents.put('category-record', 'acme.example', { slug: 'crm' }, 0))
+    const v2 = await inA((s) => s.documents.put('category-record', 'acme.example', { slug: 'erp' }, 1))
+    const v3 = await inA((s) => s.documents.put('category-record', 'acme.example', { slug: 'hr' }, 2))
     expect([v1, v2, v3]).toEqual([1, 2, 3])
     const latest = await inA((s) => s.documents.latest<{ slug: string }>('category-record', 'acme.example'))
     expect(latest?.version).toBe(3)
@@ -81,8 +81,8 @@ describe('documents', () => {
   })
 
   it('kinds and workspaces are separate sequences', async () => {
-    expect(await inA((s) => s.documents.put('custom-prompts', 'acme.example', { prompts: ['x'] }))).toBe(1)
-    expect(await inB((s) => s.documents.put('category-record', 'acme.example', { slug: 'crm' }))).toBe(1)
+    expect(await inA((s) => s.documents.put('custom-prompts', 'acme.example', { prompts: ['x'] }, 0))).toBe(1)
+    expect(await inB((s) => s.documents.put('category-record', 'acme.example', { slug: 'crm' }, 0))).toBe(1)
     expect((await inB((s) => s.documents.latest('category-record', 'acme.example')))?.superseded).toEqual([])
   })
 })
