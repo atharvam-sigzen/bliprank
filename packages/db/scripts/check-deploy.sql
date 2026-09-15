@@ -142,6 +142,60 @@ EXCEPTION WHEN undefined_function OR undefined_table THEN
   RAISE EXCEPTION 'pgcrypto is not resolvable as public.digest/public.hmac; set_workspace_jwt() pins search_path=public,pg_temp and would fail at call time';
 END $do$;
 
+-- THE ROLE CHECK IS DERIVED, NOT ASSUMED (B3c tenancy audit, MAJOR 1; the
+-- holes the oversight pass named closed by B3d item 3). The allowlist below
+-- says which definer doors an application role may open; it says nothing
+-- about what their bodies enforce, so a CREATE OR REPLACE that dropped one
+-- line of ws_put_document would pass it. So this runs FIRST, and over every
+-- SECURITY DEFINER function in public — whoever owns it, whoever may call
+-- it, since an owner always may — whose body touches one of the 0004 state
+-- tables, and holds it to three rules read from its source:
+--   - dynamic SQL (EXECUTE) against those tables cannot be derived from and
+--     is refused outright, checks in the body or not;
+--   - a writer (INSERT, UPDATE or DELETE, schema-qualified or quoted or
+--     neither) takes its workspace from ws_required();
+--   - a writer of a DECISION — any write of workspace_documents, an UPDATE
+--     of workspace_requests, an INSERT into workspace_requests that names a
+--     status — reads current_workspace_role() (0005; 0006 narrows what that
+--     check refuses, not where it is read).
+-- Filing a request and filing a cycle are not decisions. A substring is not
+-- a semantics; the behavioural proof is workspace-state.test.ts, but a
+-- writer that cannot even name the check is refused at deploy.
+\echo 'checking every definer that touches workspace state: no dynamic SQL, its workspace from the context, and the role for a decision...'
+DO $do$
+DECLARE
+  dynamic text;
+  bad     text;
+  -- the three state tables, schema-qualified or quoted or neither, as whole words
+  tbl  constant text := '(public\.)?"?workspace_(cycles|documents|requests)\M"?';
+  doc  constant text := '(public\.)?"?workspace_documents\M"?';
+  req  constant text := '(public\.)?"?workspace_requests\M"?';
+  verb constant text := '(insert\s+into|update|delete\s+from)\s+';
+BEGIN
+  SELECT string_agg(sig, ', ' ORDER BY sig) INTO dynamic FROM (
+    SELECT p.oid::regprocedure::text AS sig
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE p.prosecdef AND n.nspname = 'public'
+       AND p.prosrc ~* 'workspace_(cycles|documents|requests)'
+       AND p.prosrc ~* '\mexecute\M'
+  ) f;
+  IF dynamic IS NOT NULL THEN
+    RAISE EXCEPTION 'definer functions running dynamic SQL against workspace state cannot be derived from and are refused: %', dynamic;
+  END IF;
+  SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
+    SELECT p.oid::regprocedure::text AS sig
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE p.prosecdef AND n.nspname = 'public'
+       AND p.prosrc ~* (verb || tbl)
+       AND (p.prosrc NOT LIKE '%ws_required()%'
+            OR (p.prosrc ~* (verb || doc || '|update\s+' || req || '|insert\s+into\s+' || req || '\s*\([^)]*\mstatus\M')
+                AND p.prosrc NOT LIKE '%current_workspace_role()%'))
+  ) f;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'definer writers of workspace state without ws_required() or, for a decision, current_workspace_role(): %', bad;
+  END IF;
+END $do$;
+
 -- Every SECURITY DEFINER function an application role may EXECUTE is a door
 -- through RLS: it runs as its owner, and its body is the whole of what the
 -- caller can do. The 2026-09-10 tenancy audit found that migration 0003
@@ -174,34 +228,6 @@ BEGIN
   ]);
   IF bad IS NOT NULL THEN
     RAISE EXCEPTION 'undeclared SECURITY DEFINER functions reachable by an application role: %', bad;
-  END IF;
-END $do$;
-
--- THE ROLE CHECK IS DERIVED, NOT ASSUMED (B3c tenancy audit, MAJOR 1). The
--- allowlist above says which definer doors exist; it says nothing about what
--- their bodies enforce, so a CREATE OR REPLACE that dropped one line of
--- ws_put_document would pass it. Here every SECURITY DEFINER function owned
--- by svc_onboard whose body writes one of the 0004 state tables must take
--- its workspace from ws_required(), and one that lands a DECISION — an
--- insert into workspace_documents, an update of workspace_requests — must
--- read current_workspace_role() (0005). Filing a request and filing a cycle
--- are not decisions and are not held to the role. A substring is not a
--- semantics; the behavioural proof is workspace-state.test.ts, but a writer
--- that cannot even name the check is refused at deploy.
-\echo 'checking every definer writer of workspace state takes its workspace from the context and, for a decision, reads the role...'
-DO $do$
-DECLARE bad text;
-BEGIN
-  SELECT string_agg(sig, ', ' ORDER BY sig) INTO bad FROM (
-    SELECT p.oid::regprocedure::text AS sig
-      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles o ON o.oid = p.proowner
-     WHERE p.prosecdef AND n.nspname = 'public' AND o.rolname = 'svc_onboard'
-       AND p.prosrc ~* '(insert\s+into|update|delete\s+from)\s+workspace_(cycles|documents|requests)\M'
-       AND (p.prosrc NOT LIKE '%ws_required()%'
-            OR (p.prosrc ~* '(insert\s+into\s+workspace_documents|update\s+workspace_requests)\M' AND p.prosrc NOT LIKE '%current_workspace_role()%'))
-  ) f;
-  IF bad IS NOT NULL THEN
-    RAISE EXCEPTION 'definer writers of workspace state without ws_required() or, for a decision, current_workspace_role(): %', bad;
   END IF;
 END $do$;
 

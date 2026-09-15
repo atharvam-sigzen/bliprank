@@ -293,6 +293,89 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
     await check(await healthy())
   })
 
+  // The derivation's holes named by the oversight pass on B3c (B3d item 3),
+  // one failing database each. Every case is a definer that writes workspace
+  // state in a form the first derivation did not see; each failed against
+  // that derivation before it was widened (run and recorded 2026-09-15).
+  describe('the derivation over definer writers covers every form of write (B3d item 3)', () => {
+    // Not reachable by any application role, so the allowlist assertion above
+    // does not catch it first: only the writer derivation can.
+    const asOnboard = async (d: PGlite, sql: string, sig: string) => {
+      await d.exec(sql)
+      await d.exec(`ALTER FUNCTION ${sig} OWNER TO svc_onboard; REVOKE ALL ON FUNCTION ${sig} FROM PUBLIC`)
+    }
+
+    it('an UPDATE of workspace_documents without the role check', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_touch_document(p_host text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN UPDATE workspace_documents SET written_at = now() WHERE workspace_id = ws AND host = p_host; END $fn$`,
+        'ws_touch_document(text)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_touch_document/)
+    })
+
+    it('a DELETE of workspace_documents without the role check', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_forget_document(p_host text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN DELETE FROM workspace_documents WHERE workspace_id = ws AND host = p_host; END $fn$`,
+        'ws_forget_document(text)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_forget_document/)
+    })
+
+    it('an INSERT into workspace_requests that lands a status, without the role check', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_file_applied(p_kind text, p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN INSERT INTO workspace_requests (workspace_id, kind, host, body, status, resolved_at) VALUES (ws, p_kind, p_host, p_body, 'applied', now()); END $fn$`,
+        'ws_file_applied(text,text,jsonb)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_file_applied/)
+    })
+
+    it('a schema-qualified table name', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_put_qualified(p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN INSERT INTO public.workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$`,
+        'ws_put_qualified(text,jsonb)',
+      )
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_put_qualified/)
+    })
+
+    it('dynamic SQL against workspace state is refused outright, even with both checks in the body', async () => {
+      const d = await healthy()
+      await asOnboard(
+        d,
+        `CREATE FUNCTION ws_put_dynamic(p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required(); r text := current_workspace_role();
+           BEGIN EXECUTE format('INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (%L, %L, %L, 1, %L)', ws, 'category-record', p_host, p_body); END $fn$`,
+        'ws_put_dynamic(text,jsonb)',
+      )
+      await expect(check(d)).rejects.toThrow(/dynamic SQL against workspace state.*ws_put_dynamic/)
+    })
+
+    it('a definer owned by any other role is held to the same rules', async () => {
+      const d = await healthy()
+      // Owned by the migration owner (PGlite's superuser), not svc_onboard: still a door through RLS.
+      await d.exec(`CREATE FUNCTION ws_put_as_owner(p_host text, p_body jsonb) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+           DECLARE ws uuid := ws_required();
+           BEGIN INSERT INTO workspace_documents (workspace_id, kind, host, version, body) VALUES (ws, 'category-record', p_host, 1, p_body); END $fn$;
+         REVOKE ALL ON FUNCTION ws_put_as_owner(text, jsonb) FROM PUBLIC`)
+      await expect(check(d)).rejects.toThrow(/current_workspace_role\(\): .*ws_put_as_owner/)
+    })
+  })
+
   it('a tenant-readable relation with an open policy, a wrapper policy, an open WITH CHECK, or no read policy is caught (B3r item 3)', async () => {
     const d = await healthy()
     await d.exec(`CREATE TABLE leaky (workspace_id uuid); ALTER TABLE leaky ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky FORCE ROW LEVEL SECURITY;
