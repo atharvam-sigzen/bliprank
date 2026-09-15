@@ -92,8 +92,14 @@ export async function GET(req: Request): Promise<Response> {
   // The bound that does not trust the caller: this many reads of THIS homepage
   // an hour, whoever asks. Checked first, so a loop cannot even consume its own
   // visitor allowance against a domain that is already at its cap.
+  //
+  // Keyed by the WORKSPACE and the domain, as the three correction routes key
+  // theirs: the ledger is the deployment's, so a bare domain key would let one
+  // workspace's reads of a host exhaust the cap for every other workspace that
+  // scanned the same host, and the 429 would be an oracle for it (B3c item 2).
   const perDomain = domainCapConfig(access, env)
-  const domainVerdict = await checkVisitorThrottle(domain, perDomain, now)
+  const domainKey = `${access.workspaceId}:${domain}`
+  const domainVerdict = await checkVisitorThrottle(domainKey, perDomain, now)
   if (!domainVerdict.ok) {
     return json({ message: `${domain}'s homepage has already been read ${perDomain.maxScansPerHour} times in the last hour for gap reports, and a page does not change that often. Try again later; nothing was fetched.` }, 429)
   }
@@ -105,7 +111,7 @@ export async function GET(req: Request): Promise<Response> {
 
   // Booked before the fetch, not after: a refused or failed read still made
   // the request, and an allowance that only counts successes is not one.
-  await recordVisitorScan(domain, perDomain, now)
+  await recordVisitorScan(domainKey, perDomain, now)
   await recordVisitorScan(ip, cfg, now)
 
   inFlight += 1

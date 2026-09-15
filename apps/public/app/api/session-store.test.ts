@@ -25,7 +25,23 @@ const session = vi.hoisted(() => ({ user: null as AuthUser | null }))
 vi.mock('@/lib/auth/supabase', () => ({ currentUser: async () => session.user }))
 const pgHolder = vi.hoisted(() => ({ db: null as unknown }))
 vi.mock('@/lib/auth/db', () => ({ appDb: () => pgHolder.db }))
+// The gap report's homepage read is the one thing in these routes that would
+// open a socket; it is served from here, and counted, so the cap cases below
+// exercise the ledger and never the network.
+const pages = vi.hoisted(() => ({ fetched: [] as string[] }))
+vi.mock('../../../../services/grader/src/fetch-site.js', async (importActual) => {
+  const actual = await importActual<typeof import('../../../../services/grader/src/fetch-site.js')>()
+  return {
+    ...actual,
+    fetchSiteHtml: vi.fn(async (domain: string) => {
+      pages.fetched.push(domain)
+      return { ok: true, html: '<html><head><title>Acme</title></head><body><h1>Acme CRM</h1><p>A CRM for small teams.</p></body></html>', finalUrl: `https://${domain}/`, bytes: 120, truncated: false }
+    }),
+  }
+})
 
+import { defaultGateConfig, recordScan } from '../../../../services/grader/src/live-gate.js'
+import { ledgerStores } from '../../../../services/grader/src/ledger-stores.js'
 import { GET as answers } from './answers/route'
 import { GET as categoryGet, POST as categoryPost } from './category/route'
 import { GET as competitorsGet, POST as competitorsPost } from './competitors/route'
@@ -82,6 +98,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   process.env = { ...originalEnv }
+  vi.unstubAllGlobals()
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -248,6 +265,46 @@ describe('request → session → token → context → store → response', () 
     const res = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'seo-tools', reason: 'a reason long enough to pass the check' })
     expect(res.status).toBe(200)
     expect(((await res.json()) as { request: { slug: string } }).request.slug).toBe('seo-tools')
+  })
+
+  it('the burst-cap refusal names no host another workspace scanned: the ledger is the deployment\'s, the sentence is the visitor\'s (B3c item 1)', async () => {
+    // Both collection flags on and a key present, so the scan reaches the gate;
+    // the network is stubbed shut, and the gate must refuse before it is asked.
+    Object.assign(process.env, { COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'test-key-never-used', GRADER_MAX_NEW_SCANS_PER_DAY: '1' })
+    const fetchSpy = vi.fn(async () => {
+      throw new Error('the test never reaches a network')
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    // Two's client was scanned today, on the ledger every workspace of this deployment shares.
+    const ledgers = ledgerStores(dir, process.env)
+    await recordScan('client-of-two.test', defaultGateConfig(dir, process.env, ledgers), new Date())
+    session.user = ONE
+    const text = await (await post(scan, 'scan', { domain: 'newco.test' })).text()
+    const err = /^event: error\ndata: (.*)$/m.exec(text)
+    expect(err).not.toBeNull()
+    const data = JSON.parse(err![1]!) as { kind: string; message: string }
+    expect(data.kind).toBe('burst-cap')
+    expect(data.message).toContain('has been reached')
+    expect(text).not.toContain('client-of-two.test')
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_cycles WHERE host = 'newco.test'`)).rows).toEqual([{ n: 0 }])
+  })
+
+  it('the per-domain gap-report cap is the workspace\'s: Two reading acme.test to its cap does not cap One (B3c item 2)', async () => {
+    process.env['GRADER_MAX_GAP_REPORTS_PER_DOMAIN_PER_HOUR'] = '2'
+    await storeOf(ONE).cycles.put({ host: 'acme.test', day: '2026-09-11', algoVersion: 'det-3', comparisonBasis: 'b', result: CYCLE('2026-09-11') })
+    await storeOf(TWO).cycles.put({ host: 'acme.test', day: '2026-09-12', algoVersion: 'det-3', comparisonBasis: 'b', result: CYCLE('2026-09-12') })
+    pages.fetched.length = 0
+    session.user = TWO
+    const statuses: number[] = []
+    for (let i = 0; i < 3; i++) statuses.push((await get(gaps, 'gaps?domain=acme.test')).status)
+    expect(statuses).toEqual([200, 200, 429])
+    // One's read of the same host is its own workspace's first: served, and the page is read for it.
+    session.user = ONE
+    const res = await get(gaps, 'gaps?domain=acme.test')
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as { day: string }).day).toBe('2026-09-11')
+    expect(pages.fetched).toEqual(['acme.test', 'acme.test', 'acme.test'])
   })
 
   it('a session with no account, or an account with no workspace, is refused with the route\'s own status', async () => {

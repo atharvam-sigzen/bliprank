@@ -201,6 +201,12 @@ export interface GateConfig {
   readonly engines: readonly EngineId[]
 }
 
+/**
+ * `message` is what a visitor may read. `used` is for the server log only: it
+ * is every host scanned today on a DEPLOYMENT-WIDE ledger, which on a
+ * deployment with more than one workspace is other tenants' clients
+ * (MVP_PLAN B3c item 1). It never goes in the sentence.
+ */
 export type GateVerdict =
   | { readonly ok: true; readonly quota: readonly EngineQuota[] }
   | { readonly ok: false; readonly reason: 'burst-cap'; readonly message: string; readonly used: readonly string[]; readonly limit: number }
@@ -247,10 +253,14 @@ export async function checkGate(
 ): Promise<GateVerdict> {
   const today = await scannedToday(cfg, now)
   if (!today.includes(domain) && today.length >= cfg.maxNewPerDay) {
+    // The sentence names no host: the ledger is the deployment's, so the hosts
+    // on it are whichever workspaces scanned today, and listing them to this
+    // caller would hand one tenant another's client list (B3c item 1). They
+    // stay on `used` for the server log.
     return {
       ok: false,
       reason: 'burst-cap',
-      message: `The demo cap of ${cfg.maxNewPerDay} new domains a day has been reached (${today.join(', ')}). Those are cached and can be re-shown for free; a different domain needs the cap raised.`,
+      message: `The cap of ${cfg.maxNewPerDay} new domains a day has been reached on this deployment. A domain already scanned today is cached and can be re-shown for free; a different domain needs the cap raised or the next UTC day. Nothing was collected and nothing was charged.`,
       used: today,
       limit: cfg.maxNewPerDay,
     }
