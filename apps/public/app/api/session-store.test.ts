@@ -1,3 +1,4 @@
+import type { Db } from '@bliprank/db/client'
 import { migratedPglite, pgliteDb, TEST_KEY } from '@bliprank/db/testing'
 import { mintWorkspaceToken } from '@bliprank/db/token'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -51,6 +52,33 @@ import { GET as gaps } from './gaps/route'
 import { POST as preview } from './preview/route'
 import { POST as scan } from './scan/route'
 import { NOT_SIGNED_IN } from '@/lib/auth/handlers'
+import { READ_AGAIN } from '@/lib/workspace-access'
+
+/**
+ * The app's Db with one race on demand (B3c item 7): while `race.armed`, the
+ * next ws_put_document is preceded, in the same transaction and context, by
+ * the identical write from another tab of the same owner, so the route's own
+ * write then names a version that is no longer current. PGlite is one
+ * connection, so the other tab cannot be a second transaction; inside the
+ * same one it exercises the same check under the same lock.
+ */
+const race = vi.hoisted(() => ({ armed: false }))
+const raced = (real: Db): Db => ({
+  query: (text, params) => real.query(text, params),
+  transaction: (fn) =>
+    real.transaction((tx) =>
+      fn({
+        transaction: tx.transaction,
+        query: async <T,>(text: string, params: readonly unknown[] = []) => {
+          if (race.armed && /ws_put_document/.test(text)) {
+            race.armed = false
+            await tx.query(text, params)
+          }
+          return tx.query<T>(text, params)
+        },
+      }),
+    ),
+})
 
 let pg: Awaited<ReturnType<typeof migratedPglite>>
 let dir: string
@@ -62,7 +90,7 @@ const originalEnv = { ...process.env }
 
 beforeAll(async () => {
   pg = await migratedPglite()
-  pgHolder.db = pgliteDb(pg)
+  pgHolder.db = raced(pgliteDb(pg))
   const app = pgliteDb(pg)
   for (const [u, name] of [[ONE, 'One'], [TWO, 'Two']] as const) {
     await app.query('SELECT ensure_account($1, $2, $3)', [u.id, u.email, 'brand'])
@@ -266,6 +294,24 @@ describe('request → session → token → context → store → response', () 
     const res = await post(categoryPost, 'category', { domain: 'acme.test', slug: 'seo-tools', reason: 'a reason long enough to pass the check' })
     expect(res.status).toBe(200)
     expect(((await res.json()) as { request: { slug: string } }).request.slug).toBe('seo-tools')
+  })
+
+  it('a correction that loses the version race is a 409 read-again, nothing of it lands, and read again it applies (B3c item 7)', async () => {
+    await storeOf(ONE).documents.put('category-record', 'race.test', RECORD, 0)
+    session.user = ONE
+    race.armed = true
+    const body = { domain: 'race.test', slug: 'hr-payroll-software', reason: 'the site sells payroll software, not CRM' }
+    const res = await post(categoryPost, 'category', body)
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ kind: 'read-again', message: READ_AGAIN })
+    expect(race.armed).toBe(false)
+    // The transaction the race ran in is rolled back whole: version 1 stands, and no request of race.test was filed or applied.
+    expect((await pg.query<{ version: number }>(`SELECT version FROM workspace_documents WHERE kind = 'category-record' AND host = 'race.test' ORDER BY version`)).rows).toEqual([{ version: 1 }])
+    expect((await pg.query<{ n: number }>(`SELECT count(*)::int AS n FROM workspace_requests WHERE host = 'race.test'`)).rows).toEqual([{ n: 0 }])
+    // Read again, the same decision against what stands now applies.
+    const again = await post(categoryPost, 'category', body)
+    expect(again.status).toBe(200)
+    expect(await again.json()).toMatchObject({ applied: true, version: 2 })
   })
 
   it('the burst-cap refusal names no host another workspace scanned: the ledger is the deployment\'s, the sentence is the visitor\'s (B3c item 1)', async () => {

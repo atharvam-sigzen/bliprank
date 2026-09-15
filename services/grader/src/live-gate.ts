@@ -19,10 +19,9 @@
  * is the thing that catches the accident before the truth has to.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
 import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
-import type { LedgerStores } from './ledger-stores.js'
-import { dirname, join } from 'node:path'
+import { fileCapUsd, type LedgerStores } from './ledger-stores.js'
+import { join } from 'node:path'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 
 export const USAGE_URL = 'https://api.openwebninja.com/usage'
@@ -63,17 +62,16 @@ export const DEFAULT_CAP_USD = 5
  * and safe. Changing an existing cap is what editing the ledger file is for,
  * and `Budget` enforces that by throwing on any raise passed in code.
  */
-export function ledgerCapUsd(dataDir: string, env: NodeJS.ProcessEnv = process.env): number {
-  const file = join(dataDir, 'ledger.json')
-  if (existsSync(file)) {
-    try {
-      const cap = (JSON.parse(readFileSync(file, 'utf8')) as { capUsd?: unknown }).capUsd
-      if (typeof cap === 'number' && Number.isFinite(cap) && cap > 0) return cap
-    } catch {
-      // Unreadable. Fall through to the bootstrap value rather than guessing a
-      // number: `Budget` will fail on the corrupt file itself and say so, which
-      // is a better error than a cap invented here.
-    }
+export function ledgerCapUsd(dataDir: string, env: NodeJS.ProcessEnv = process.env, ledgers?: LedgerStores): number {
+  // ⚠️ THE FILE IS READ ONLY WHERE THE LEDGER IS A FILE (B3c item 5). On the
+  // KV backend the deployment's ledger is in Upstash and the instance's disk
+  // holds no ledger of it; a stray ledger.json there would have set the cap
+  // for every workspace of the deployment. bank-author.ts reads its own cap
+  // the same way. An unreadable file falls through to the bootstrap value
+  // rather than a guess: `Budget` fails on the corrupt file itself and says so.
+  if (!ledgers || ledgers.backend === 'file') {
+    const own = fileCapUsd(join(dataDir, 'ledger.json'))
+    if (own !== null) return own
   }
   const named = Number(env['GRADER_CAP_USD'])
   return Number.isFinite(named) && named > 0 ? named : DEFAULT_CAP_USD
@@ -202,16 +200,18 @@ export interface GateConfig {
 }
 
 /**
- * `message` is what a visitor may read. `used` is for the server log only: it
- * is every host scanned today on a DEPLOYMENT-WIDE ledger, which on a
- * deployment with more than one workspace is other tenants' clients
- * (MVP_PLAN B3c item 1). It never goes in the sentence.
+ * `message` is what a visitor may read. Everything beside it is for the server
+ * log: `used` is every host scanned today on a DEPLOYMENT-WIDE ledger, which
+ * on a deployment with more than one workspace is other tenants' clients
+ * (MVP_PLAN B3c item 1); `cause` is whatever the provider or the network said
+ * when the quota could not be read, which may be a response body (item 6).
+ * Neither goes in the sentence.
  */
 export type GateVerdict =
   | { readonly ok: true; readonly quota: readonly EngineQuota[] }
   | { readonly ok: false; readonly reason: 'burst-cap'; readonly message: string; readonly used: readonly string[]; readonly limit: number }
   | { readonly ok: false; readonly reason: 'quota'; readonly message: string; readonly short: readonly EngineQuota[] }
-  | { readonly ok: false; readonly reason: 'unreadable'; readonly message: string }
+  | { readonly ok: false; readonly reason: 'unreadable'; readonly message: string; readonly cause: string }
 
 interface Ledger {
   [utcDay: string]: string[]
@@ -271,7 +271,14 @@ export async function checkGate(
     quota = await readQuota(apiKey, fetchImpl)
   } catch (e) {
     // Fail CLOSED. Not knowing the remaining quota is not permission to spend it.
-    return { ok: false, reason: 'unreadable', message: `Could not read the provider's remaining quota (${(e as Error).message}), so this scan is refused rather than run blind.` }
+    // The sentence is fixed: what the provider or the network said is the
+    // server's to log, never the visitor's to read (B3c item 6).
+    return {
+      ok: false,
+      reason: 'unreadable',
+      message: "Could not read the provider's remaining quota, so this scan is refused rather than run blind. Nothing was collected and nothing was charged.",
+      cause: (e as Error).message,
+    }
   }
 
   const needed = cfg.callsPerEngine

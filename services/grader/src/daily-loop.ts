@@ -373,7 +373,7 @@ export async function runTick(
     if (day !== today0) return { refuse: `a live tick runs for today (${today0}); --day ${day} is for the dry list`, list }
     // The runner's lifetime ledger must have room for the day, or every run stops at its first cell and the loop ticks daily to no effect.
     // On the file backend the file is read without opening it (opening can lower its cap); in KV the ledger's own figure is asked for.
-    const rl = ledgers.backend === 'file' ? runnerLedger(opts.dataDir) : await kvRunnerLedger(ledgers, ledgerCapUsd(opts.dataDir, env))
+    const rl = ledgers.backend === 'file' ? runnerLedger(opts.dataDir) : await kvRunnerLedger(ledgers, ledgerCapUsd(opts.dataDir, env, ledgers))
     const where = ledgers.backend === 'file' ? join(opts.dataDir, 'ledger.json') : 'the runner ledger in Upstash'
     if (rl?.exhaustedAt) return { refuse: `the runner's ledger ${where} is exhausted (since ${rl.exhaustedAt}); raise its cap deliberately by editing the file before a tick can run`, list }
     if (rl && rl.capUsd - rl.spentUsd < capUsd) return { refuse: `the runner's ledger ${where} has $${(rl.capUsd - rl.spentUsd).toFixed(3)} left of its $${rl.capUsd.toFixed(2)} lifetime cap, less than today's $${capUsd.toFixed(3)}; raise it deliberately`, list }
@@ -410,9 +410,10 @@ export async function runTick(
       if (opts.mode === 'live') {
         const verdict = await gate(d.host, d.cells, apiKey, now())
         if (!verdict.ok) {
-          // Nothing was spent, so the reservation goes back.
+          // Nothing was spent, so the reservation goes back. The outcome is the
+          // operator's log, so an unreadable quota's cause travels with it here.
           await unreserve(ledgers, ledgerAt, day, capUsd, d.host)
-          refused.push({ host: d.host, reason: `${verdict.reason}: ${verdict.message}` })
+          refused.push({ host: d.host, reason: `${verdict.reason}: ${verdict.message}${verdict.reason === 'unreadable' ? ` (${verdict.cause})` : ''}` })
           continue
         }
       }
@@ -476,7 +477,7 @@ function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.P
       plan: o.plan,
       day: o.day,
       engines: [...ENGINES],
-      capUsd: ledgerCapUsd(opts.dataDir, opts.env),
+      capUsd: ledgerCapUsd(opts.dataDir, opts.env, opts.ledgers),
       maxPrompts: gate.callsPerEngine,
       runAllowanceCalls: o.allowanceCalls,
       mode: o.mode,

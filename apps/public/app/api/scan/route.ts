@@ -343,6 +343,9 @@ export async function POST(req: Request): Promise<Response> {
         // Sized to the WHOLE cycle, custom cells included, or the check passes and the quota runs out part-way.
         const gate = await checkGate(domain, { ...cfg, callsPerEngine: cfg.callsPerEngine + customCount }, found.key, now)
         if (!gate.ok) {
+          // What the provider said when the quota could not be read is logged
+          // here and never sent: it may be a response body (B3c item 6).
+          if (gate.reason === 'unreadable') console.error('[scan] quota unreadable', domain, gate.cause)
           send(c, 'error', { kind: gate.reason, message: gate.message })
           return done(c)
         }
@@ -365,8 +368,10 @@ export async function POST(req: Request): Promise<Response> {
           apiKey: found.key,
           // The store's own lifetime cap, never a default. Passing a smaller
           // number here lowers the ledger permanently on the first charge —
-          // see `ledgerCapUsd`, which is where that reasoning lives.
-          capUsd: ledgerCapUsd(DATA, env),
+          // see `ledgerCapUsd`, which is where that reasoning lives. On the
+          // KV backend the instance's disk holds no ledger of the deployment,
+          // so the file is not consulted (B3c item 5).
+          capUsd: ledgerCapUsd(DATA, env, ledgers),
           maxPrompts: cfg.callsPerEngine,
           // The most attempts this run may make, retries included: the cycle's
           // cells with headroom (ADR-0017). Bounds a retry storm at the

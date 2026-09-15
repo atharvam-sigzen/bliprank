@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { checkGate, defaultGateConfig, readQuota, recordScan, scannedToday } from './live-gate.js'
+import { checkGate, DEFAULT_CAP_USD, defaultGateConfig, ledgerCapUsd, readQuota, recordScan, scannedToday } from './live-gate.js'
 
 /**
  * The gate, tested against the states it exists to refuse.
@@ -124,6 +124,17 @@ describe('a scan is refused unless BOTH limits allow it', () => {
     expect((await checkGate('a.com', cfg(), 'k', NOW, http500)).ok).toBe(false)
   })
 
+  it('the refusal for an unreadable quota is a fixed sentence; what the provider said goes on `cause` for the log, never to the visitor (B3c item 6)', async () => {
+    const leaky = (async () => {
+      throw new Error('<html>502 from upstream, x-api-key=abc echoed back</html>')
+    }) as unknown as typeof fetch
+    const r = await checkGate('a.com', cfg(), 'k', NOW, leaky)
+    if (r.ok || r.reason !== 'unreadable') throw new Error('expected an unreadable verdict')
+    expect(r.message).not.toMatch(/html|502|x-api-key|upstream/)
+    expect(r.message).toContain('rather than run blind')
+    expect(r.cause).toContain('502 from upstream')
+  })
+
   it('FAILS CLOSED on a corrupt ledger rather than treating it as an empty day', async () => {
     const c = cfg({ maxNewPerDay: 2 })
     writeFileSync(c.ledgerFile, '{ not json')
@@ -142,6 +153,24 @@ describe('a scan is refused unless BOTH limits allow it', () => {
     const r = await checkGate('a.com', cfg({ callsPerEngine: 17 }), 'k', NOW, fetchOK({ ...FULL, copilot: 3 }))
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.reason).toBe('quota')
+  })
+})
+
+describe('the per-run cap a store is opened with', () => {
+  it('reads the file\'s own cap on the file backend only; on KV the instance\'s disk sets nothing for the deployment (B3c item 5)', () => {
+    const d = dir()
+    writeFileSync(join(d, 'ledger.json'), JSON.stringify({ capUsd: 300, spentUsd: 2.15, calls: 399, byEngine: {}, updatedAt: 'x' }))
+    expect(ledgerCapUsd(d, {})).toBe(300)
+    expect(ledgerCapUsd(d, { GRADER_CAP_USD: '7' }, { backend: 'file' } as never)).toBe(300)
+    expect(ledgerCapUsd(d, {}, { backend: 'kv' } as never)).toBe(DEFAULT_CAP_USD)
+    expect(ledgerCapUsd(d, { GRADER_CAP_USD: '7' }, { backend: 'kv' } as never)).toBe(7)
+    // No file: the environment names the cap a new ledger is created with, else the default.
+    expect(ledgerCapUsd(dir(), {})).toBe(DEFAULT_CAP_USD)
+    expect(ledgerCapUsd(dir(), { GRADER_CAP_USD: '0' })).toBe(DEFAULT_CAP_USD)
+    // An unreadable file is Budget's to refuse, not a cap invented here.
+    const c = dir()
+    writeFileSync(join(c, 'ledger.json'), '{ not json')
+    expect(ledgerCapUsd(c, { GRADER_CAP_USD: '9' })).toBe(9)
   })
 })
 
