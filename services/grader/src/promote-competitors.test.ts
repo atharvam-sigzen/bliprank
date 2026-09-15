@@ -25,6 +25,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { DEMO_BANKS } from '@bliprank/taxonomy'
+import { defaultDataDir } from './data-dir.js'
 import {
   DEFAULT_THRESHOLDS,
   buildPromotion,
@@ -473,7 +474,7 @@ describe('the corpus reader', () => {
 
 describe('end to end, on the real committed corpus', () => {
   /*
-   * ⚠️ THIS RUNS AGAINST `data-live`, AND IT IS READ-ONLY.
+   * ⚠️ THIS RUNS AGAINST THE MACHINE'S OWN DATA DIRECTORY, AND IT IS READ-ONLY.
    *
    * It is the only test here that touches real collected answers, and it is
    * worth the coupling: the extractor's job is to survive what engines actually
@@ -481,7 +482,9 @@ describe('end to end, on the real committed corpus', () => {
    * It asserts a floor, not an exact set, so a later collection cycle adding
    * answers cannot fail it.
    */
-  const DATA = join(new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'), '..', 'data-live')
+  // Resolved the way every process in this package resolves it, so the guard
+  // reads whatever the machine holds and sees nothing on a clean checkout (B5).
+  const DATA = defaultDataDir()
 
   it('promotes real ERP products from the real answers, and no prose', () => {
     const bank = allBanks(DATA).find((b) => b.category === 'erp-software')

@@ -88,6 +88,25 @@ describe('the deployment (ADR-0002 Amendment 1, MVP_PLAN B1)', () => {
   })
 })
 
+describe('no test depends on this machine’s live data (MVP_PLAN B5)', () => {
+  // The scan route test resolved the machine's own services/grader data
+  // directory, wrote its visitor ledger there and expected a cached
+  // pipedrive.com cycle only one machine held, so the suite failed on a clean
+  // checkout and the branch's first CI run was red (B0's gate had never
+  // passed remotely). A test that wants whatever data the machine holds goes
+  // through the resolver the app uses (`lib/data-dir.ts`,
+  // `services/grader/src/data-dir.ts`) and must pass when it finds nothing;
+  // the live directory's name may not appear in a test at all.
+  it('no test file names the live data directory', () => {
+    const tests = execFileSync('git', ['ls-files', '--', 'apps', 'packages', 'services'], { cwd: root(''), encoding: 'utf8' })
+      .split('\n')
+      .filter((p) => /\.test\.tsx?$/.test(p) && !p.endsWith('lib/build-env.test.ts'))
+    expect(tests.length).toBeGreaterThan(100)
+    const offenders = tests.filter((p) => readFileSync(root(p), 'utf8').includes('data-' + 'live'))
+    expect(offenders).toEqual([])
+  })
+})
+
 describe('no linter is addressed by name', () => {
   // Strict tsc is the gate. A directive naming a linter that is not installed
   // is a promise nothing keeps; B0 removed the three that existed.

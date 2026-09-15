@@ -61,7 +61,7 @@ describe('what the route refuses', () => {
 
 describe('what it returns', () => {
   it('serves the committed reference scan’s answers, whole and aligned', async () => {
-    // Only meaningful on a machine that holds data-live; a clean checkout has no
+    // Only meaningful on a machine that holds live results; a clean checkout has no
     // results directory and correctly answers 404, which the refusal tests above
     // already cover.
     const res = await ask('?domain=pipedrive.com')

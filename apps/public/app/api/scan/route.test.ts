@@ -1,7 +1,10 @@
-import { dirname, join } from 'node:path'
-import { existsSync } from 'node:fs'
-import { afterEach, describe, expect, it } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { POST } from './route'
+import { writeCycle } from '../../../../../services/grader/src/cycles.js'
+import { recordCategory } from '../../../../../services/grader/src/resolve-category.js'
 import { recordVisitorScan, defaultVisitorThrottleConfig } from '../../../../../services/grader/src/visitor-throttle'
 
 /**
@@ -12,24 +15,48 @@ import { recordVisitorScan, defaultVisitorThrottleConfig } from '../../../../../
  *   2. Throttled requests short-circuit before provider-quota / checkGate logic.
  *   3. Throttled requests do not touch the global shared ledger.
  *   4. Cached domains bypass the throttle entirely and return instantly.
+ *
+ * ⚠️ OVER A SCRATCH DATA DIRECTORY, NEVER THE MACHINE'S OWN (MVP_PLAN B5).
+ * The first version of this file walked up to the machine's live data
+ * directory, wrote its visitor ledger there, and expected a cached
+ * pipedrive.com cycle that only one machine held — so the suite failed on a
+ * clean checkout and CI's first run on the branch was red. Every path the
+ * route touches is now `GRADER_DATA_DIR`, a fresh directory per test, and
+ * the cached cycle is written from a fixture result the way
+ * cycles.route.test.ts writes its own. Nothing here reaches the network: the
+ * first case is refused at the throttle, before the quota read, and the
+ * second is served from the cache, before the flags.
  */
 
-const getGraderDataDir = (): string => {
-  let curr = process.cwd()
-  while (curr && curr !== dirname(curr)) {
-    if (existsSync(join(curr, 'services', 'grader', 'data-live'))) {
-      return join(curr, 'services', 'grader', 'data-live')
-    }
-    curr = dirname(curr)
-  }
-  return join(process.cwd(), 'services', 'grader', 'data-live')
-}
+const CACHED = 'cached-domain.example'
+let dir: string
+const originalEnv = { ...process.env }
+
+/** A finished cycle, the shape `/api/scan` files and reads back (cycles.route.test.ts's fixture). */
+const cycleOf = (domain: string, day: string) => ({
+  status: 'scanned',
+  domain,
+  category: 'crm-software',
+  categoryName: 'CRM software',
+  comparisonBasis: 'grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1',
+  algoVersion: 'det-2',
+  collectedAt: `${day}T10:00:00.000Z`,
+  counts: { cellsRequested: 85, cacheHits: 0, collected: 85, failed: 0, answersScored: 85, providerCalls: 85 },
+  brands: [{ id: 'x', name: domain, isSubject: true, mentions: 20, citations: 0, metric: { value: 0.24, ci_low: 0.16, ci_high: 0.34, n: 85, algo_version: 'det-2', collection_path: 'third-party-grounded', comparison_basis: 'b' } }],
+  run: { mode: 'live', plan: 'payg', day, engines: ['chatgpt'], capUsd: 5, at: `${day}T10:01:00.000Z` },
+})
 
 describe('POST /api/scan per-visitor throttling', () => {
-  const originalEnv = { ...process.env }
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'bliprank-scan-route-'))
+    process.env['GRADER_DATA_DIR'] = dir
+    // The per-visitor throttle reads a header only behind a named proxy; the requests below write cf-connecting-ip.
+    process.env['TRUSTED_PROXY'] = 'cloudflare'
+  })
 
   afterEach(async () => {
     process.env = { ...originalEnv }
+    rmSync(dir, { recursive: true, force: true })
   })
 
   async function parseSseResponse(res: Response): Promise<{ event: string; data: Record<string, unknown> }[]> {
@@ -63,10 +90,9 @@ describe('POST /api/scan per-visitor throttling', () => {
 
   it('rejects with visitor-rate-limit when visitor limit is reached', async () => {
     const visitorIp = '203.0.113.88'
-    const rootData = getGraderDataDir()
-    const vCfg = defaultVisitorThrottleConfig(rootData, { GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR: '2' } as unknown as NodeJS.ProcessEnv)
+    const vCfg = defaultVisitorThrottleConfig(dir, { GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR: '2' } as unknown as NodeJS.ProcessEnv)
 
-    // Pre-populate 2 scans for this IP
+    // Pre-populate 2 scans for this IP, in the scratch directory's own ledger
     const now = new Date()
     await recordVisitorScan(visitorIp, vCfg, now)
     await recordVisitorScan(visitorIp, vCfg, now)
@@ -75,8 +101,6 @@ describe('POST /api/scan per-visitor throttling', () => {
     process.env['GRADER_LIVE_SCAN'] = 'true'
     process.env['OPENWEBNINJA_API_KEY'] = 'test-key-mock'
     process.env['GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR'] = '2'
-    // The per-visitor throttle reads a header only behind a named proxy; the requests below write cf-connecting-ip.
-    process.env['TRUSTED_PROXY'] = 'cloudflare'
 
     const req = new Request('http://localhost:3001/api/scan', {
       method: 'POST',
@@ -103,11 +127,16 @@ describe('POST /api/scan per-visitor throttling', () => {
 
   it('cached domains return cached result without hitting visitor throttle', async () => {
     const visitorIp = '203.0.113.99'
-    const rootData = getGraderDataDir()
-    const vCfg = defaultVisitorThrottleConfig(rootData, { GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR: '1' } as unknown as NodeJS.ProcessEnv)
+    const vCfg = defaultVisitorThrottleConfig(dir, { GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR: '1' } as unknown as NodeJS.ProcessEnv)
 
     // Pre-populate limit
     await recordVisitorScan(visitorIp, vCfg, new Date())
+
+    // The cached cycle, written from the fixture under the category it records:
+    // a cycle is served only when it still measures the recorded category.
+    recordCategory(dir, { host: CACHED, slug: 'crm-software', source: 'leader-domain', evidence: CACHED, decidedAt: '2026-09-01T00:00:00.000Z', generated: false })
+    const filed = writeCycle(dir, cycleOf(CACHED, '2026-09-01'))
+    expect('refuse' in filed).toBe(false)
 
     const req = new Request('http://localhost:3001/api/scan', {
       method: 'POST',
@@ -115,8 +144,7 @@ describe('POST /api/scan per-visitor throttling', () => {
         'Content-Type': 'application/json',
         'cf-connecting-ip': visitorIp,
       },
-      // pipedrive.com is cached in data-live/results/pipedrive.com.json
-      body: JSON.stringify({ domain: 'pipedrive.com' }),
+      body: JSON.stringify({ domain: CACHED }),
     })
 
     const res = await POST(req)
@@ -124,10 +152,11 @@ describe('POST /api/scan per-visitor throttling', () => {
 
     const cachedEvent = events.find((e) => e.event === 'cached')
     expect(cachedEvent).toBeDefined()
-    expect(cachedEvent?.data['domain']).toBe('pipedrive.com')
+    expect(cachedEvent?.data['domain']).toBe(CACHED)
 
     const resultEvent = events.find((e) => e.event === 'result')
     expect(resultEvent).toBeDefined()
+    expect((resultEvent?.data as { run?: { day?: string } }).run?.day).toBe('2026-09-01')
 
     // No error was raised
     expect(events.find((e) => e.event === 'error')).toBeUndefined()

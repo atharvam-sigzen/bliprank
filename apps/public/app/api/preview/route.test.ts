@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { POST } from './route'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR } from '@/lib/preview-contract'
@@ -13,33 +14,18 @@ import { DEFAULT_MAX_PREVIEWS_PER_HOUR } from '@/lib/preview-contract'
  * domain), which are the two rungs that never fetch a homepage and never author
  * a bank. A test that hits a real site would be slow, flaky, and would make the
  * suite depend on somebody else's uptime — and would spend a model call.
+ *
+ * ⚠️ OVER A SCRATCH DATA DIRECTORY (MVP_PLAN B5). The first version wrote the
+ * route's throttle ledger and category records into the machine's own live
+ * data directory and restored them afterwards, so "this domain has never been
+ * seen" was true only on a machine where nobody had previewed it, and the
+ * suite's state depended on what a dev server had written last. Every path
+ * is now `GRADER_DATA_DIR`, a fresh directory per test: a domain is unseen
+ * because nothing has seen it, not because a test remembered to forget it.
  */
 
-const dataDir = (): string => {
-  let curr = process.cwd()
-  while (curr && curr !== dirname(curr)) {
-    if (existsSync(join(curr, 'services', 'grader'))) return join(curr, 'services', 'grader', 'data-live')
-    curr = dirname(curr)
-  }
-  return join(process.cwd(), 'services', 'grader', 'data-live')
-}
-
-const PREVIEW_LEDGER = join(dataDir(), 'preview-throttle.json')
-const RECORDS = join(dataDir(), 'domain-categories.json')
-
-/** Drop one domain's recorded category, so a test can start from "never seen". */
-const forget = (domain: string): void => {
-  if (!existsSync(RECORDS)) return
-  try {
-    const store = JSON.parse(readFileSync(RECORDS, 'utf8')) as Record<string, unknown>
-    delete store[domain]
-    writeFileSync(RECORDS, `${JSON.stringify(store, null, 2)}\n`)
-  } catch {
-    // Unparseable is the same as absent for this purpose: the resolver drops a
-    // corrupt store and re-derives, which is the state this wants anyway.
-    rmSync(RECORDS, { force: true })
-  }
-}
+let dir: string
+const originalEnv = { ...process.env }
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   POST(new Request('http://localhost/api/preview', { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }))
@@ -49,31 +35,17 @@ const post = (body: unknown, headers: Record<string, string> = {}) =>
  * `cf-connecting-ip` through `extractClientIp` once `TRUSTED_PROXY` names
  * Cloudflare, which is the same resolution the scan route uses.
  */
-process.env['TRUSTED_PROXY'] = 'cloudflare'
 let seq = 0
 const freshIp = () => ({ 'cf-connecting-ip': `203.0.113.${(seq += 1) % 250}` })
 
-/** What the ledger and records looked like before, restored afterwards. */
-let ledgerBefore: string | null = null
-let recordsBefore: string | null = null
-
 beforeEach(() => {
-  ledgerBefore = existsSync(PREVIEW_LEDGER) ? readFileSync(PREVIEW_LEDGER, 'utf8') : null
-  recordsBefore = existsSync(RECORDS) ? readFileSync(RECORDS, 'utf8') : null
+  dir = mkdtempSync(join(tmpdir(), 'bliprank-preview-route-'))
+  process.env['GRADER_DATA_DIR'] = dir
+  process.env['TRUSTED_PROXY'] = 'cloudflare'
 })
 afterEach(() => {
-  // The route writes to the real data dir, like the scan route's test does.
-  // Leaving a throttle entry or a category record behind would make the next
-  // run of this suite behave differently from the first — which is the exact
-  // class of "passes only because of how it was tested" bug this repo is
-  // auditing for.
-  for (const [path, before] of [
-    [PREVIEW_LEDGER, ledgerBefore],
-    [RECORDS, recordsBefore],
-  ] as const) {
-    if (before === null) rmSync(path, { force: true })
-    else writeFileSync(path, before)
-  }
+  process.env = { ...originalEnv }
+  rmSync(dir, { recursive: true, force: true })
 })
 
 describe('POST /api/preview', () => {
@@ -143,24 +115,18 @@ describe('POST /api/preview', () => {
   it('keeps its own ledger, so previewing never consumes a scan allowance', async () => {
     // A shared counter would make looking at your prompts cost you a scan — the
     // feature that exists to make scanning safer would make it impossible.
-    const scanLedger = join(dataDir(), 'visitor-throttle.json')
+    const scanLedger = join(dir, 'visitor-throttle.json')
     const before = existsSync(scanLedger) ? readFileSync(scanLedger, 'utf8') : null
     await post({ domain: 'pipedrive.com' }, freshIp())
     const after = existsSync(scanLedger) ? readFileSync(scanLedger, 'utf8') : null
     expect(after).toBe(before)
+    // And its own ledger was written, in the scratch directory and nowhere else.
+    expect(existsSync(join(dir, 'preview-throttle.json'))).toBe(true)
   })
 
   it('reuses the recorded category on a second look rather than re-deriving it', async () => {
-    /*
-     * ⚠️ THIS TEST OWNS ITS STARTING STATE, and it did not, and that is why it
-     * failed. The record store is a real file in a real data dir that a running
-     * dev server also writes to, so "this domain has never been seen" was true
-     * only on a machine where nobody had previewed it — which is precisely the
-     * "passes because of how it was tested" shape this audit is looking for.
-     * afterEach restores the file, so the deletion is contained.
-     */
-    forget('zendesk.com')
-
+    // The directory is fresh, so zendesk.com has never been seen here: the
+    // first look decides and records, the second reads the record back.
     const first = await (await post({ domain: 'zendesk.com' }, freshIp())).json()
     const second = await (await post({ domain: 'zendesk.com' }, freshIp())).json()
     expect(second.category).toBe(first.category)

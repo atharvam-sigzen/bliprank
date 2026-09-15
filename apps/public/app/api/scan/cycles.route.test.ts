@@ -14,7 +14,7 @@ import { recordDomainCycle, defaultDomainCeilingConfig } from '../../../../../se
  * leaves the machine). Everything else is the real code path — the cache, the
  * record and bank checks, the same-day refusal, the flags, the visitor
  * throttle, the per-domain ceiling and the cycle store — running against a
- * scratch data directory named by `GRADER_DATA_DIR`, never the real data-live.
+ * scratch data directory named by `GRADER_DATA_DIR`, never the machine's own.
  *
  * ⚠️ WHAT THIS DOES AND DOES NOT PROVE ABOUT THE CATEGORY. With the runner
  * mocked, "the category never re-derives" is asserted here only at the route:
