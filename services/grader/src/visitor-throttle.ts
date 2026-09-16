@@ -19,7 +19,9 @@
  * cached results are answered before this check is reached.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
+import type { LedgerStores } from './ledger-stores.js'
+import { isIP } from 'node:net'
 import { dirname, join } from 'node:path'
 
 export const DEFAULT_MAX_SCANS_PER_VISITOR_PER_HOUR = 3
@@ -32,6 +34,8 @@ export interface VisitorThrottleConfig {
   readonly windowMs: number
   /** Path to the JSON ledger file. */
   readonly ledgerFile: string
+  /** Where the ledger lives; the file at `ledgerFile` when absent (MVP_PLAN B3b). */
+  readonly ledger?: LedgerDoc
 }
 
 export type VisitorVerdict =
@@ -49,46 +53,66 @@ interface VisitorLedger {
   [ip: string]: number[]
 }
 
-const readLedger = (f: string): VisitorLedger => {
+const docOf = (cfg: VisitorThrottleConfig): LedgerDoc => cfg.ledger ?? fileLedgerDoc(cfg.ledgerFile)
+const shapeLedger = (raw: unknown): VisitorLedger => (typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as VisitorLedger) : {})
+const readLedger = async (cfg: VisitorThrottleConfig): Promise<VisitorLedger> => {
   try {
-    return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as VisitorLedger) : {}
+    return shapeLedger(await docOf(cfg).read())
   } catch {
     // A corrupt ledger fails closed: treat as unknown/full rather than ignoring.
     return { __corrupt: [] } as unknown as VisitorLedger
   }
 }
 
+/** The visitor key when no proxy is trusted, or the trusted header is missing or malformed. */
+export const DIRECT = 'direct'
+
 /**
- * Resolves the client IP address from standard and platform-specific proxy headers.
- * - Cloudflare Pages / Workers: `cf-connecting-ip` (ADR-0002 deployment target)
- * - Vercel: `x-vercel-forwarded-for`, `x-real-ip`
- * - Standard reverse proxies: `x-forwarded-for` (client is the first entry)
+ * The one header each edge sets from the connection and strips or overwrites
+ * from the client, checked against the provider's own documentation on
+ * 2026-09-09:
+ *
+ *   cloudflare  `cf-connecting-ip` "provides the client IP address connecting to
+ *               Cloudflare"; `X-Forwarded-For` is APPENDED to when the client
+ *               already sent one, which is why Cloudflare recommends this header
+ *               over it. (developers.cloudflare.com/fundamentals/reference/http-headers)
+ *   vercel      Vercel overwrites `x-forwarded-for` and "do[es] not forward
+ *               external IPs"; `x-vercel-forwarded-for` is the same value and
+ *               survives a proxy placed on top of Vercel.
+ *               (vercel.com/docs/headers/request-headers, last updated 2025-12-13)
  */
-export function extractClientIp(headersOrReq: Headers | Request): string {
+const TRUSTED_HEADER = { cloudflare: 'cf-connecting-ip', vercel: 'x-vercel-forwarded-for' } as const
+
+/**
+ * The visitor key for the throttle.
+ *
+ * ⚠️ A HEADER IS ONLY READ WHEN THE DEPLOYMENT NAMES THE PROXY THAT SETS IT.
+ * `TRUSTED_PROXY=cloudflare|vercel` in the environment says which edge this
+ * process sits behind, and only that edge's header is read. Anything else —
+ * unset, misspelt, a local demo with no proxy — reads NO header and returns
+ * `direct`, so every caller shares one bucket. That is fail-closed: a caller
+ * who could choose their own header could be as many visitors as they liked
+ * (the 2026-09-09 audit's top defect), whereas one shared bucket only ever
+ * refuses too early. The preview route's global cap carries the real bound
+ * either way.
+ *
+ * A trusted header whose value is not an IP address is treated as absent.
+ */
+export function extractClientIp(headersOrReq: Headers | Request, env: NodeJS.ProcessEnv = process.env): string {
   const headers = headersOrReq instanceof Request ? headersOrReq.headers : headersOrReq
-
-  const cf = headers.get('cf-connecting-ip')
-  if (cf?.trim()) return cf.trim()
-
-  const vercel = headers.get('x-vercel-forwarded-for')
-  if (vercel?.trim()) return vercel.split(',')[0]!.trim()
-
-  const realIp = headers.get('x-real-ip')
-  if (realIp?.trim()) return realIp.trim()
-
-  const xff = headers.get('x-forwarded-for')
-  if (xff?.trim()) return xff.split(',')[0]!.trim()
-
-  return '127.0.0.1'
+  const proxy = env['TRUSTED_PROXY']
+  if (proxy !== 'cloudflare' && proxy !== 'vercel') return DIRECT
+  const value = headers.get(TRUSTED_HEADER[proxy])?.split(',')[0]?.trim() ?? ''
+  return isIP(value) ? value : DIRECT
 }
 
 /** Timestamps of live scans within the rolling window for this visitor IP. */
-export function visitorScansInWindow(
+export async function visitorScansInWindow(
   ip: string,
   cfg: VisitorThrottleConfig,
   now: Date = new Date(),
-): readonly number[] {
-  const l = readLedger(cfg.ledgerFile)
+): Promise<readonly number[]> {
+  const l = await readLedger(cfg)
   if ('__corrupt' in l) {
     return Array.from({ length: cfg.maxScansPerHour }, () => now.getTime())
   }
@@ -103,12 +127,12 @@ export function visitorScansInWindow(
  * Runs before `checkGate`: a refused request returns an honest explanation,
  * costs nothing, and does not touch the shared global ledger.
  */
-export function checkVisitorThrottle(
+export async function checkVisitorThrottle(
   ip: string,
   cfg: VisitorThrottleConfig,
   now: Date = new Date(),
-): VisitorVerdict {
-  const active = visitorScansInWindow(ip, cfg, now)
+): Promise<VisitorVerdict> {
+  const active = await visitorScansInWindow(ip, cfg, now)
   if (active.length >= cfg.maxScansPerHour) {
     const oldest = Math.min(...active)
     const resetMs = Math.max(0, oldest + cfg.windowMs - now.getTime())
@@ -131,26 +155,28 @@ export function checkVisitorThrottle(
 }
 
 /** Record a successful or attempted spend by this visitor IP in the rolling window. */
-export function recordVisitorScan(
+export async function recordVisitorScan(
   ip: string,
   cfg: VisitorThrottleConfig,
   now: Date = new Date(),
-): void {
-  const l = readLedger(cfg.ledgerFile)
-  const base: VisitorLedger = '__corrupt' in l ? {} : l
-  const cutoff = now.getTime() - cfg.windowMs
-  const current = (base[ip] ?? []).filter((t) => typeof t === 'number' && t > cutoff)
-  current.push(now.getTime())
-  const next: VisitorLedger = { ...base, [ip]: current }
-  mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
-  writeFileSync(cfg.ledgerFile, JSON.stringify(next, null, 2) + '\n')
+): Promise<void> {
+  await docOf(cfg).update((raw) => {
+    const base: VisitorLedger = raw === CORRUPT ? {} : shapeLedger(raw)
+    const cutoff = now.getTime() - cfg.windowMs
+    const current = (base[ip] ?? []).filter((t) => typeof t === 'number' && t > cutoff)
+    current.push(now.getTime())
+    const next: VisitorLedger = { ...base, [ip]: current }
+    return next
+  })
 }
 
 export const defaultVisitorThrottleConfig = (
   dataDir: string,
   env: NodeJS.ProcessEnv = process.env,
+  ledgers?: LedgerStores,
 ): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_SCANS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_SCANS_PER_VISITOR_PER_HOUR),
   windowMs: Number(env['GRADER_VISITOR_WINDOW_MS'] ?? DEFAULT_VISITOR_WINDOW_MS),
   ledgerFile: join(dataDir, 'visitor-throttle.json'),
+  ...(ledgers ? { ledger: ledgers.doc('visitor-throttle.json') } : {}),
 })

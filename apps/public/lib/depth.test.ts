@@ -1,0 +1,306 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+
+/**
+ * THE SIMPLE VIEW, ENFORCED.
+ *
+ * A depth split is one commit of discipline and then a slow slide back: the
+ * simple view acquires a paragraph, then a second headline number, then a
+ * provenance line "because it is only small", and eighteen months later it is
+ * the essay again with a switch on top. Nothing in a review catches that,
+ * because each addition is individually reasonable.
+ *
+ * So the four properties that make the split honest are asserted here rather
+ * than remembered. They are deliberately mechanical — they read the stylesheet
+ * and the source, not a screenshot — because there is no browser in this
+ * toolchain and a rule nothing can check is a rule that is already broken.
+ *
+ *   1. The stylesheet only ever selects [data-depth='simple'], so a page with
+ *      no attribute (no JavaScript) gets the FULL record, never a subset.
+ *   2. No disclosure is ever marked .detail.
+ *   3. The sample size survives at simple depth on every surface that prints a
+ *      number.
+ *   4. The simple view has a prose budget, and it is small.
+ */
+
+const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
+
+const SHEETS = [{ name: 'apps/public', css: read('../app/globals.css') }]
+
+/** Every .tsx under apps/public, so a new surface cannot opt out by being new. */
+function sources(): { path: string; src: string }[] {
+  const out: { path: string; src: string }[] = []
+  const walk = (dir: URL) => {
+    for (const entry of readdirSync(dir)) {
+      if (entry === 'node_modules' || entry === '.next') continue
+      const child = new URL(`${entry}${entry.includes('.') ? '' : '/'}`, dir)
+      if (statSync(child).isDirectory()) walk(new URL(`${entry}/`, dir))
+      else if (entry.endsWith('.tsx') && !entry.includes('.test.')) out.push({ path: `${dir.pathname}${entry}`, src: readFileSync(child, 'utf8') })
+    }
+  }
+  walk(new URL('../../public/', import.meta.url))
+  return out
+}
+
+const SOURCES = sources()
+
+/**
+ * ⚠️ WHOLE-TOKEN, NOT `\bdetail\b`. A regex word boundary treats `-` as a
+ * boundary, so `\bdetail\b` matches `no-detail-here` and `detail-panel`,
+ * neither of which a CSS `.detail` selector matches. Every check below used
+ * the boundary form; one of them — the provenance completeness rule — was
+ * weakened by it, since a line reading `className="notdetail"` counted as
+ * marked. Found by the stripper's own test in simple-view.test.ts.
+ */
+const marked = (cls: string) => cls.split(/\s+/).includes('detail')
+
+/** Every className string in the app that carries `detail`. */
+const MARKED = SOURCES.flatMap(({ path, src }) =>
+  [...src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)]
+    .map((m) => ({ path, cls: m[1] ?? m[2] ?? '' }))
+    .filter((x) => marked(x.cls)),
+)
+
+describe('the scan is not vacuous', () => {
+  /*
+   * EVERY RULE BELOW IS A LOOP OVER FILES, AND A LOOP OVER NOTHING PASSES.
+   *
+   * The walker resolves paths itself, so a rename, a moved test directory or a
+   * bad URL join would empty it silently and turn this whole suite green while
+   * checking nothing at all. That failure mode is worse than no suite, because
+   * it reports safety.
+   */
+  it('finds the app and a realistic number of components', () => {
+    // A floor near the real count, not a token one: at 20 the walker could have
+    // dropped half the tree — including every bracket route, which is where the
+    // agency surfaces live — and still passed. Derived 2026-09-07, when apps/web
+    // was retired and the walk became apps/public only: the walker then saw 39
+    // non-test .tsx files, so 35 leaves room for a small tidy-up and none for a
+    // dropped directory.
+    expect(SOURCES.length).toBeGreaterThanOrEqual(35)
+    expect(SOURCES.some((s) => s.path.includes('[domain]'))).toBe(true)
+    expect(SOURCES.some((s) => s.path.includes('/public/app/page.tsx'))).toBe(true)
+    expect(SOURCES.some((s) => s.path.includes('head-to-head-section'))).toBe(true)
+  })
+
+  it('finds real .detail markings', () => {
+    expect(MARKED.length).toBeGreaterThanOrEqual(5)
+    expect(MARKED.some((m) => m.path.includes('/public/'))).toBe(true)
+  })
+})
+
+describe('the fallback fails open: absent data-depth is the FULL record', () => {
+  it('no rule selects the absence of the attribute, or the detailed value', () => {
+    /*
+     * THE WHOLE SAFETY PROPERTY IN ONE ASSERTION.
+     *
+     * `[data-depth='simple'] .detail { display: none }` hides nothing when the
+     * attribute is missing. `:root:not([data-depth='simple']) .simple-only`, or
+     * any rule keyed on 'detailed', would invert that: a reader whose JavaScript
+     * never ran — so the boot script never stamped anything — would be served a
+     * page with two thirds of it hidden and no control able to reveal it, since
+     * the control is the JavaScript that did not run.
+     *
+     * The theme has a legitimate three-state cascade and does use :not(). Depth
+     * has two states and one fail-open direction, and must never grow a third.
+     */
+    for (const { name, css } of SHEETS) {
+      const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '')
+      const selectors = [...stripped.matchAll(/([^{}]*)\{/g)].map((m) => m[1]!.trim()).filter((s) => s.includes('data-depth'))
+      expect([name, selectors.length > 0]).toEqual([name, true])
+      for (const sel of selectors) {
+        expect([name, sel, /\[data-depth\s*=\s*'simple'\]/.test(sel)]).toEqual([name, sel, true])
+        expect([name, sel, sel.includes('detailed')]).toEqual([name, sel, false])
+        expect([name, sel, /not\s*\(\s*\[data-depth/.test(sel)]).toEqual([name, sel, false])
+      }
+    }
+  })
+
+  it('.detail is hidden by exactly one rule, and only under simple', () => {
+    for (const { name, css } of SHEETS) {
+      const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '')
+      const hits = [...stripped.matchAll(/([^{}]*\.detail[^{}]*)\{([^}]*)\}/g)]
+      expect([name, hits.length]).toEqual([name, 1])
+      expect([name, hits[0]![1]!.trim()]).toEqual([name, "[data-depth='simple'] .detail"])
+      expect([name, /display\s*:\s*none/.test(hits[0]![2]!)]).toEqual([name, true])
+    }
+  })
+})
+
+describe('no simple-depth rule targets a class the app never renders', () => {
+  /*
+   * ⚠️ WRITTEN BECAUSE I DID EXACTLY THIS, AND SHIPPED IT.
+   *
+   * The first depth pass appended one shared block to BOTH stylesheets, back
+   * when apps/web (retired 2026-09-07) still existed. Three of the four rules
+   * it put there were dead on arrival: that app rendered `.prose`,
+   * `.prose--flag` and `.annotated` precisely nowhere — its body copy was
+   * `.stamp__body`, `.notice` and `.metric__interval`, none of them set in the
+   * display serif. So the typographic half of the fix corrected nothing there,
+   * while the sheet read as though the dashboard had had the same pass the
+   * Grader had.
+   *
+   * Copying the RULES is not doing the WORK, and a rule that targets nothing is
+   * indistinguishable from a rule that is working until someone greps. One app
+   * now, but the sheet still outlives any one component.
+   */
+  const APPS = [{ sheet: 'apps/public', dir: '/public/' }]
+
+  const rendered = (dir: string) => {
+    const classes = new Set<string>()
+    for (const { path, src } of SOURCES) {
+      if (!path.includes(dir)) continue
+      for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g))
+        for (const c of (m[1] ?? m[2] ?? '').split(/[\s${}?:'"+]+/)) if (c) classes.add(c)
+    }
+    return classes
+  }
+
+  it.each(APPS)('$sheet renders every class its simple-depth rules select', ({ sheet, dir }) => {
+    const css = SHEETS.find((s) => s.name === sheet)!.css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const used = rendered(dir)
+    const dead: string[] = []
+    for (const m of css.matchAll(/\[data-depth='simple'\]([^{]*)\{/g)) {
+      // The last class in the selector is the element the rule actually styles.
+      const classes = [...m[1]!.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((x) => x[1]!)
+      const target = classes[classes.length - 1]
+      if (target && !used.has(target)) dead.push(`${sheet}: [data-depth='simple'] .${target}`)
+    }
+    expect(dead).toEqual([])
+  })
+
+  it('the check bites — it would score a rule for an unrendered class as dead', () => {
+    const used = rendered('/public/')
+    // A class the sheet declares (`.metric__value`, globals.css) and the app
+    // genuinely never renders — verified by grep on 2026-09-07 — asserted so the
+    // rule above is not passing because `rendered` returns everything.
+    expect(used.has('detail')).toBe(true)
+    expect(used.has('metric__value')).toBe(false)
+  })
+})
+
+describe('a disclosure is never .detail', () => {
+  /*
+   * THE ONE MOVE THIS PRODUCT CANNOT MAKE. Everything on the .detail list is
+   * something a reader may choose not to read. A disclosure is not: the fixture
+   * stamp says the numbers were not collected from a provider, the planned
+   * notice says nothing ran on a timer, and .prose--flag carries the
+   * short-sample and fallback-bank caveats that change how a visible number
+   * must be read. Hiding any of them to make the simple view calmer would make
+   * it calmer by making it untrue.
+   */
+  const DISCLOSURES = ['stamp', 'notice', 'prose--flag', 'gradebadge__cap']
+
+  it('no disclosure class shares an element with detail', () => {
+    for (const { path, src } of SOURCES) {
+      for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+        const cls = m[1] ?? m[2] ?? ''
+        if (!marked(cls)) continue
+        for (const d of DISCLOSURES) {
+          expect([path, cls, cls.includes(d)]).toEqual([path, cls, false])
+        }
+      }
+    }
+  })
+
+  it('the check bites — it would score a disclosure marked detail as a failure', () => {
+    // Without this the rule above passes vacuously the day nothing is marked.
+    const cls = 'prose prose--flag detail'
+    expect(marked(cls) && DISCLOSURES.some((d) => cls.includes(d))).toBe(true)
+    // ...and the boundary form it replaced would have scored a false positive.
+    expect(marked('prose no-detail-here')).toBe(false)
+    expect(/\bdetail\b/.test('prose no-detail-here')).toBe(true)
+  })
+})
+
+describe('the sample size survives at simple depth', () => {
+  it('the rail prints its own n, so no surface depends on the margin for it', () => {
+    /*
+     * INVARIANT 2. The margin note beside a rail loses its provenance line at
+     * simple depth, and that is safe only because `n` is not in it — the rail
+     * prints "n = N" itself, in a node nothing marks .detail. If the rail ever
+     * stopped doing that, hiding the margin would take the sample size off the
+     * page and leave a bare percentage, which is the exact artefact every
+     * competitor ships and this product exists not to.
+     */
+    const rail = read('../components/range-rail.tsx')
+    expect(rail).toContain('rail__n')
+    expect(rail).toContain('n = {metric.n}')
+    // and it is not inside anything that carries .detail
+    expect(/className="[^"]*detail[^"]*"[^>]*>\s*n = /.test(rail)).toBe(false)
+  })
+
+  it('nothing in the app marks a rail, a value or a bound as detail', () => {
+    const PROTECTED = ['rail__n', 'rail__value', 'rail__bound', 'rail__track', 'record__domain']
+    for (const { path, src } of SOURCES) {
+      for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+        const cls = m[1] ?? m[2] ?? ''
+        if (!marked(cls)) continue
+        for (const p of PROTECTED) expect([path, cls, cls.includes(p)]).toEqual([path, cls, false])
+      }
+    }
+  })
+})
+
+describe('provenance is detail on EVERY surface, not just the one under review', () => {
+  /*
+   * FOUND ON REVIEW, AFTER THE FIRST PASS SHIPPED.
+   *
+   * The Grader marked its provenance line `.detail`; workspace-record.tsx
+   * rendered the same field, from the same metric, on the same record, on two
+   * notes — and neither was marked. So the simple view showed the algorithm
+   * version and collection path on the dashboard and hid them on the Grader,
+   * for one scan.
+   *
+   * Nothing caught it because the first pass tested the RULE (no disclosure is
+   * detail) and not its COMPLEMENT (everything that should be detail, is). One
+   * of those is checkable for a field with a single formatter, so it is checked:
+   * formatProvenance has exactly one job and every call site wants the same
+   * answer.
+   */
+  it('every rendered formatProvenance call sits on an element marked detail', () => {
+    const offenders: string[] = []
+    for (const { path, src } of SOURCES) {
+      for (const line of src.split('\n')) {
+        if (!line.includes('formatProvenance(')) continue
+        // The render sites are JSX; a bare import or a helper definition is not.
+        if (!line.includes('className=')) continue
+        const cls = /className="([^"]*)"/.exec(line)?.[1] ?? ''
+        if (!marked(cls)) offenders.push(`${path}: ${line.trim()}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('the check bites — it finds the call sites at all', () => {
+    const sites = SOURCES.flatMap(({ path, src }) =>
+      src.split('\n').filter((l) => l.includes('formatProvenance(') && l.includes('className=')).map(() => path),
+    )
+    expect(sites.length).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('the simple view is typeset as an interface, not as a column', () => {
+  it('body prose leaves the display face at simple depth', () => {
+    /*
+     * THE ESSAY FIX, ASSERTED. The complaint that started this work was that the
+     * product "reads like an essay or a blog", and the mechanical cause is that
+     * .prose is set in the display serif at a 62ch measure. Shortening the copy
+     * does not change what that signals; changing the face does.
+     */
+    const css = SHEETS[0]!.css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = /\[data-depth='simple'\]\s+\.prose\s*\{([^}]*)\}/.exec(css)?.[1]
+    expect(rule).toBeDefined()
+    expect(rule).toContain('var(--font-sans)')
+    const measure = /max-width\s*:\s*(\d+)ch/.exec(rule!)?.[1]
+    expect(Number(measure)).toBeLessThanOrEqual(50)
+  })
+
+  it('the default .prose is still the serif — the record keeps its voice', () => {
+    // The simple view overrides; it does not replace. A detailed reader still
+    // gets the record, and that is the point of one dataset at two depths.
+    const css = SHEETS[0]!.css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const base = /(?:^|\})\s*\.prose\s*\{([^}]*)\}/.exec(css)?.[1]
+    expect(base).toContain('var(--font-display)')
+  })
+})

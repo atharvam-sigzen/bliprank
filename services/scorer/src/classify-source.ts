@@ -60,9 +60,15 @@ export interface ClassifierRegistry {
   readonly competitorDomains?: Readonly<Record<string, readonly string[]>>
   /**
    * Publisher authority registry: domain → publisher name. ADR-0005 flags this
-   * as a maintained asset that will drift without ownership; it is data, not
-   * code, so it can be updated without a scoring version bump ONLY because the
-   * class is stored per row at scoring time (R5).
+   * as a maintained asset that will drift without ownership.
+   *
+   * ⚠️ IT CANNOT BE UPDATED WITHOUT A VERSION BUMP — corrected at det-3. This
+   * said it could, "ONLY because the class is stored per row at scoring time
+   * (R5)". Storing the class per row protects HISTORY: an old row keeps the
+   * class it was given. It does not protect COMPARABILITY between two cycles
+   * scored either side of a registry edit under the same stamp, which is what
+   * `compare()` relies on. The grader wires a real registry now, so adding a
+   * domain is a scoring rule change like any other.
    */
   readonly publishers?: Readonly<Record<string, string>>
 }
@@ -116,6 +122,28 @@ const REFERENCE: Record<string, string> = {
 
 /** Government suffixes get `reference` without needing an entry each. */
 const GOV_SUFFIXES = ['.gov', '.gov.uk', '.gov.in', '.gov.au', '.europa.eu']
+
+/**
+ * The tables, read-only, for the version pin in `source-class-pin.test.ts`.
+ * An entry in one of these is a scoring rule: adding a domain changes what an
+ * existing answer scores, so the pin freezes their exact contents under
+ * `SCORING_ALGO_VERSION` (ADR-0012). Exported for that test and nothing else;
+ * the classifier reads the private constants above.
+ */
+export const PLATFORM_TABLES: {
+  readonly video: Readonly<Record<string, string>>
+  readonly community: Readonly<Record<string, string>>
+  readonly review: Readonly<Record<string, string>>
+  readonly reference: Readonly<Record<string, string>>
+  readonly govSuffixes: readonly string[]
+} = Object.freeze({
+  // Frozen COPIES: a consumer cannot reach the tables the classifier reads.
+  video: Object.freeze({ ...VIDEO }),
+  community: Object.freeze({ ...COMMUNITY }),
+  review: Object.freeze({ ...REVIEW }),
+  reference: Object.freeze({ ...REFERENCE }),
+  govSuffixes: Object.freeze([...GOV_SUFFIXES]),
+})
 
 // --- extractors ------------------------------------------------------------
 

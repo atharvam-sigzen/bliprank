@@ -227,14 +227,11 @@ describe('the shipped fixture exercises every state the chart can render', () =>
 const sheet = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
 
 /**
- * BOTH stylesheets. The two apps share a palette and most components, and they
- * have already diverged once — checking only this app's would let the dashboard
- * carry a mark this suite believes it has verified.
+ * The stylesheet, in the shape the per-sheet loops below iterate. There was a
+ * second entry until apps/web was retired (2026-09-07); the list stays so those
+ * loops keep naming the sheet they measured.
  */
-const SHEETS: readonly { name: string; css: string }[] = [
-  { name: 'apps/public', css: sheet('../app/globals.css') },
-  { name: 'apps/web', css: sheet('../../web/app/globals.css') },
-]
+const SHEETS: readonly { name: string; css: string }[] = [{ name: 'apps/public', css: sheet('../app/globals.css') }]
 
 /** Custom properties from `:root`, so the test moves when the palette moves. */
 function tokensOf(css: string): Record<string, string> {
@@ -484,7 +481,7 @@ describe('WCAG 1.4.11 — every mark a reader needs clears 3:1 on every surface 
 })
 
 describe('colour decisions live in CSS, where this suite can measure them', () => {
-  const TSX = ['../app/page.tsx', '../components/head-to-head-chart.tsx', '../../web/app/page.tsx', '../../web/components/ci-trend-chart.tsx', '../../web/components/metric-card.tsx']
+  const TSX = ['../app/page.tsx', '../components/head-to-head-chart.tsx', '../components/ci-trend-chart.tsx']
 
   it('THE FINDING: no component dims a colour token from an inline style', () => {
     // The dashboard's source-mix bar sat at `opacity: 0.28` on --color-secondary
@@ -505,32 +502,6 @@ describe('colour decisions live in CSS, where this suite can measure them', () =
       }
     }
     expect(offenders).toEqual([])
-  })
-
-  it('the two stylesheets agree on every shared mark', () => {
-    // apps/web and apps/public keep separate copies of the palette and the chart
-    // marks. They have diverged once already. A mark that is 3:1 in one sheet and
-    // not in the other is a bug this suite would otherwise certify as fixed.
-    const shared = ['.chart__band', '.chart__line', '.chart__dot', '.chart__axis', '.range__span', '.range__tick', '.notice--info']
-    const mismatched: string[] = []
-    for (const sel of shared) {
-      const seen = SHEETS.map((s) => ({ name: s.name, decl: declarationsIn(s.css, sel) }))
-      const missing = seen.filter((x) => !x.decl)
-      if (missing.length) {
-        mismatched.push(`${sel} missing from ${missing.map((m) => m.name).join(', ')}`)
-        continue
-      }
-      const [a, b] = seen as [{ name: string; decl: Record<string, string> }, { name: string; decl: Record<string, string> }]
-      const norm = (d: Record<string, string>) => JSON.stringify(Object.entries(d).sort())
-      if (norm(a.decl) !== norm(b.decl)) mismatched.push(`${sel} differs between ${a.name} and ${b.name}`)
-    }
-    expect(mismatched).toEqual([])
-  })
-
-  it('the palettes are identical, so a ratio measured here holds there', () => {
-    const [a, b] = SHEETS.map((s) => tokensOf(s.css)) as [Record<string, string>, Record<string, string>]
-    const colours = (t: Record<string, string>) => Object.entries(t).filter(([k]) => k.startsWith('--color-')).sort()
-    expect(colours(a)).toEqual(colours(b))
   })
 })
 
@@ -562,7 +533,13 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     for (const b of SCAN.brands) {
       // R8 on the committed artefact too: a scan file missing provenance would
       // render a bare number and no test above would have caught it.
-      expect([b.id, b.metric.n, b.metric.algo_version, b.metric.collection_path]).toEqual([b.id, SCAN.counts.answersScored, 'det-1', 'third-party-grounded'])
+      // Against the FILE's own stamp, not a literal. The reference scan moves
+      // forward with the algorithm (R5 re-scores forward rather than mutating),
+      // and every brand in one file must share its version or the file is not
+      // one measurement. `apps/public` does not depend on the scorer, so the
+      // constant is not importable here — and the file's own stamp is the
+      // stronger assertion anyway.
+      expect([b.id, b.metric.n, b.metric.algo_version, b.metric.collection_path]).toEqual([b.id, SCAN.counts.answersScored, SCAN.algoVersion, 'third-party-grounded'])
     }
   })
 
@@ -596,7 +573,29 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
     // time a real scan is committed, which is not a defect.
     expect(IS_LIVE).toBe(SCAN.run.mode === 'live')
     if (SCAN.run.mode === 'live') {
-      expect(SCAN.counts.providerCalls).toBeGreaterThan(0)
+      /*
+       * ⚠️ A RE-SCORED FILE IS LIVE AND MAKES NO CALLS, AND BOTH ARE TRUE.
+       *
+       * `run.mode` describes where the ANSWERS came from; `counts` describes
+       * the pass that produced the NUMBER. Those were the same event until
+       * `grader:rescore` existed, and this assertion quietly assumed it. A
+       * re-derivation reads answers a live collection already bought, so it
+       * records `mode: 'live'` — correctly, the banner's claim is about the
+       * answers — alongside zero provider calls.
+       *
+       * So the check follows the same split rather than being dropped: the
+       * answers must have come from somewhere, and for a re-scored file that
+       * somewhere is the store. `cacheHits > 0` is the same claim about the same
+       * thing, made against the counts this file actually holds.
+       */
+      if (SCAN.rescoredFrom) {
+        expect(SCAN.counts.providerCalls).toBe(0)
+        expect(SCAN.counts.cacheHits).toBeGreaterThan(0)
+        // And the row it superseded is what holds the calls that bought them.
+        expect(SCAN.rescoredAt).toBeTruthy()
+      } else {
+        expect(SCAN.counts.providerCalls).toBeGreaterThan(0)
+      }
     } else {
       expect(SCAN.counts.providerCalls).toBe(0)
       expect(SCAN.run.spentUsd ?? 0).toBe(0)
@@ -613,7 +612,7 @@ describe('the demo path — what a viewer actually reaches by clicking', () => {
 })
 
 describe('the design-system checklist, as assertions', () => {
-  const TSX_ALL = ['../app/page.tsx', '../components/head-to-head-chart.tsx', '../components/chrome.tsx', '../../web/app/page.tsx', '../../web/components/ci-trend-chart.tsx', '../../web/components/chrome.tsx', '../../web/components/metric-card.tsx']
+  const TSX_ALL = ['../app/page.tsx', '../components/head-to-head-chart.tsx', '../components/chrome.tsx', '../components/ci-trend-chart.tsx']
 
   it('THE FINDING: no emoji or symbol font character is used as a UI icon', () => {
     // The theme toggle shipped with `☀`, `☾` and `◐`. Those render at whatever
@@ -814,7 +813,7 @@ describe('marks are clamped to their plot at the extremes', () => {
     // over both edges; an `overflow: hidden` on the track silently removes a
     // third of it. That happened once, added for a background texture that did
     // not need it.
-    for (const rel of ['../app/globals.css', '../../web/app/globals.css']) {
+    for (const rel of ['../app/globals.css']) {
       const css = readFileSync(new URL(rel, import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
       for (const m of css.matchAll(/\.rail__track\s*\{([^}]*)\}/g)) {
         expect([rel, /overflow\s*:\s*(hidden|clip|auto|scroll)/.test(m[1]!)]).toEqual([rel, false])
@@ -922,7 +921,7 @@ describe('every control is big enough to hit', () => {
     // box model for each of these is declared. Reusing it rather than building a
     // second CSS parser in the same file.
     // The chrome is in the list now. It was not, and `.themetoggle` shipped at
-    // 32px on every page of both apps - the one interactive element on the
+    // 32px on every page - the one interactive element on the
     // identity strip, sitting beside a `.navbar__wsbtn` whose own comment
     // claimed 44px "like every other control on the sheet". A loop that only
     // knows about the demo path certifies the rest by construction.
@@ -931,8 +930,8 @@ describe('every control is big enough to hit', () => {
     }
   })
 
-  it('the toggle is 44px in the other sheet too, since the chrome ships from both', () => {
-    expect(declarationsIn(SHEETS[1]!.css, '.themetoggle')?.['min-height']).toBe('44px')
+  it('the toggle is 44px when read from the sheet directly, not only through the demo path', () => {
+    expect(declarationsIn(SHEETS[0]!.css, '.themetoggle')?.['min-height']).toBe('44px')
   })
 })
 
@@ -1073,7 +1072,7 @@ describe('overhanging marks are not clipped', () => {
   ]
 
   it('every container of an overhanging mark leaves overflow visible', () => {
-    for (const rel of ['../app/globals.css', '../../web/app/globals.css']) {
+    for (const rel of ['../app/globals.css']) {
       const css = readFileSync(new URL(rel, import.meta.url), 'utf8').replace(/\/\*[^]*?\*\//g, '')
       for (const { child, container } of OVERHANGS) {
         if (!css.includes(child)) continue

@@ -1,6 +1,6 @@
 # BlipRank — Progress Record
 
-**As of:** 2026-08-24 · **master:** `0ac22df` · **First commit:** 2026-08-18 · **Tests:** 503 passing, 26 files, all offline
+**As of:** 2026-09-10 · **branch:** `mvp/stage-a` (off `fix/preview-every-domain`, which carries `main`; Stage A landed 2026-09-09, Stage B0–B3a 2026-09-10) · **First commit:** 2026-08-18 · **Tests:** 1,701 passing, 126 files, all offline
 
 A status record, not a plan and not a pitch. `docs/PHASES.md` says what is in
 scope; this file says what actually exists. Everything below is checked against
@@ -11,57 +11,56 @@ so. Update it at every phase transition.
 
 ## 1. Where we are
 
-**Phase P0 — Foundation. Gate G0 is active and has not run.**
+**Phase P3 — Grader & public surface, closing. Gate G3 is open on one
+criterion. The P0 pilot (G0) has still not run.**
 
-The pilot machinery is complete, reviewed and tested end to end against
-fixtures. **Zero real answers have been collected.** No engine has returned a
-parseable response. There is no measured $/answer, no measured latency, no ρ̂_u,
-no DEFF and no n_eff.
+**Real answers exist.** Live scanning was turned on 2026-08-25 (§2) and the
+local Grader runner has since collected real answers from all five surfaces
+through the budgeted orchestrator. On this machine `services/grader/data-live/`
+holds 360 stored cells (one object per cell, rule R4), a ledger of 399 provider
+attempts for $2.14 against a $5 cap (last charge 2026-09-01T11:29Z), scanned
+records for pipedrive.com, sigzen.com and thecosmicbyte.com, and the last two
+on the daily-cap ledger for 2026-09-01. Three categories were authored from
+homepages by the bank author (ADR-0009 Amendment 1). The directory is
+gitignored (R4), so those figures are this machine's; the shape of them is
+reproducible with `pnpm grader:scan`. The earlier pilot attempt of 2026-08-20
+(596 attempts, every one an HTTP 403, $4.150 charged by our own ledger and
+nothing stored) stands in the history below as what it was.
 
-The block is external: the OpenWeb Ninja account has no active API
-subscriptions. All five surfaces return `HTTP 403: You are not subscribed to
-this API` — recorded verbatim in
-`services/collector/pilot/data/2026-08-20/failures.jsonl`. The runner, the
-budget guard, the canary dispatch and the analysis pipeline all behaved
-correctly; there is no code defect to fix here. Atharva is resolving the
-subscription on the provider dashboard.
+**What that does and does not change.** G0's nine criteria are still `NOT
+RUN` bar the Wilson agreement check: the pilot design (100 prompts × 5 engines
+× 10 runs × 2 days; ρ̂_u, DEFF, n_eff, $/answer at Mega marginal) has not been
+executed, and the Grader's single-run cells cannot stand in for it. The three
+provisional numbers in `packages/stats/format.ts` (the A–D thresholds,
+`MIN_N_FOR_COMPARISON`, the overlap test) are still provisional and still
+blocked from live-facing builds. **No gate — G0, G1 or any later gate — has
+been passed.**
 
-**Spend to date: $4.150** against the pilot's $75 cap, from
-`services/collector/pilot/data/2026-08-20/ledger.json` (last written
-2026-08-20T06:34:32Z):
+**G3, criterion by criterion** (PHASES.md). The classifier's ≥95% on 100
+random real domains is **open**: ADR-0009 built the site-content signal and
+the taxonomy grows on demand, but its thresholds were set from six homepages
+and the labelled 100 has not been built. Indexable no-JS result pages and the
+email gate (3.5) are not built. p95 ≤ 90s and the two cost criteria have been
+observed on single scans, not measured as a distribution. The five-stranger
+usability checks have not been run.
 
-| Engine              | Attempts | Charged (payg) |
-| ------------------- | -------- | -------------- |
-| chatgpt             | 130      | $0.910         |
-| gemini              | 130      | $0.910         |
-| copilot             | 130      | $0.910         |
-| google-ai-mode      | 130      | $1.040         |
-| google-ai-overviews | 76       | $0.380         |
-| **Total**           | **596**  | **$4.150**     |
+**Two decisions are a human's** (CLAUDE.md §9): the classifier thresholds, and
+whether the SSRF blocked-range table in `services/grader/src/fetch-site.ts`
+matches the network the collector will deploy into.
 
-Every one of those 596 attempts was a 403. **Zero answers were stored** — the
-day's data directory holds only `meta.json`, `ledger.json` and
-`failures.jsonl`. The figure is what our own ledger charged itself at
-pay-as-you-go rates before the guard stopped; the provider most likely billed
-$0 for calls against an unsubscribed API. It is stated as $4.150 because that
-is what the ledger records, and the ledger is the artefact `/cost-audit`
-reconciles against the invoice.
+**Not armed.** The daily loop (ADR-0017) is built and verified offline; no
+task is registered and no live tick has run. The publisher registry (ADR-0015)
+is proposed and not wired.
 
-Of G0's nine criteria, **one has an executable result**: the Wilson
-implementation agrees with statsmodels to ≤ 1e-9 (PASS). The other eight are
-`NOT RUN`. Per `docs/PHASES.md`, a criterion with no executable check is
-`NOT RUN`, not `PASS`.
-
-**No gate — G0, G1 or any later gate — has been passed.**
-
-Since this record was first written, a parallel fixture-and-free-tier track has
-built a good deal more (§2): the real R2 transport, the QStash runner, the
-deterministic scorer and citation classifier, both UI scaffolds, a fleet-safe
-spend ledger and a collection heartbeat. **None of it changes the line above.**
-Every one of those is verified against fixtures or published test vectors, not
-against a live service or a collected answer, and several carry explicitly
-provisional numbers awaiting G0. The test count going up is not evidence about
-the product.
+**The spend switch, decided.** `.claude/settings.json` injects
+`COLLECTION_ENABLED=true` into every process an agent session spawns. Set
+deliberately on 2026-08-25 (`ca48704`) so live scans work from a dev session,
+and reaffirmed by the owner on 2026-09-07 when the closure sweep found
+CLAUDE.md §7 still documenting the default as off. §7 now documents the real
+state and the reason. Every live path still sits behind `GRADER_LIVE_SCAN`, a
+key, a plan and the runner's ledger; the daily loop additionally behind
+`GRADER_DAILY_LOOP=armed` and the hard daily ceiling; the suite is offline by
+construction.
 
 ---
 
@@ -618,7 +617,7 @@ hits are excluded: a hit proves the cache works, not that collection does.
 
 | # | Item | Status |
 | --- | --- | --- |
-| 2.1 | Deterministic scorer | **Done, fixture-only.** No model call on any path (R1). URL masking so a brand appearing only in a link is cited but not *mentioned*; `position` is a rank among detected brands, not a character offset; explicit letter/digit/underscore boundaries rather than ``, which does not fire around `+` or `.`. A test pins that a score row carries **no** interval — one answer is one Bernoulli trial. |
+| 2.1 | Deterministic scorer | **Done, fixture-only.** No model call on any path (R1). URL masking so a brand appearing only in a link is cited but not *mentioned*; `position` is a rank among detected brands, not a character offset; explicit letter/digit/underscore boundaries rather than ``, which does not fire around `+` or `.`. A test pins that a score row carries **no** interval — one answer is one Bernoulli trial. |
 | 2.1b | Citation source classifier | **Done, fixture-only.** ADR-0005 classes, identity before platform. The hard constraint has its own tests: no input reaches `owned` for an unlisted domain, including a provider-supplied publisher name — acting on that would make the class depend on which provider collected the run. |
 | 2.5 | Golden set | **Skeleton only.** Harness plus 7 hand-built seed cases. Returns `NOT_RUN` below the 300-case target: agreement over a dozen answers is noise wearing a gate's clothes. |
 
@@ -801,6 +800,8 @@ an exact-zero bound as `0`, not `0.0`: Close's interval prints `0–4.3%` while
 every other row prints two decimals on both bounds. In a tabular-figures column
 that is the one row whose decimals do not line up, and it is the row most likely
 to be questioned. The render test asserts what ships rather than changing it.
+*(Superseded 2026-09-07: both bounds carry the same decimals now; see §2 "Eight
+dangling items", item 8. Still human-owned, still flagged for review.)*
 
 **The pricing page is built** — `apps/public/app/pricing`, three tiers
 (Starter $49/15 prompts, Pro $149/40, Growth $349/100), each cap shared between
@@ -834,6 +835,12 @@ masking the real cause. Confirmed pre-existing: it reproduces identically at
 `6060f1a` with this work stashed. `next dev` is unaffected, so the demo runs;
 ADR-0002's Cloudflare Pages deploy cannot ship until it is diagnosed. Its own
 task.
+
+> **Resolved 2026-09-07, and the paragraph above was wrong about what it had
+> confirmed.** The failure was the environment, not the app: the harness
+> injected `NODE_ENV=development` into the build. Rebuilding at `6060f1a` under
+> the same injection reproduced the environment, not a defect. See §2, "Eight
+> dangling items", item 4.
 
 598 tests, 30 files. Typecheck clean on both apps.
 
@@ -1081,7 +1088,9 @@ independent causes:
 
 1. `.claude/settings.json` injected `COLLECTION_ENABLED` into every spawned
    process, and Next never lets `.env.local` override a variable already in
-   `process.env`. (Resolved by the operator removing the override.)
+   `process.env`. (Resolved by the operator removing the override — and then
+   put back as `true` the same day, `ca48704`, so live scans work from a dev
+   session. It is still there; see §1, "The spend switch, as it actually is".)
 2. **The route read `process.env` only** — but Next loads env files from the
    directory it runs in, `apps/public`, never from the repo root where
    `.env.local` actually lives. Meanwhile `loadApiKey` reads the root file
@@ -1146,6 +1155,261 @@ needed. See the handover note in the session report.
 
 ---
 
+### P3 in the open: real scans, cycles, diagnostics, correctable context and the loop (2026-08-27 → 2026-09-07)
+
+A hundred and three commits since the previous entry. The record is in ADR-0009 to
+ADR-0017; this is the index.
+
+- **The classifier reads the site (ADR-0009, 2026-09-01).** A deterministic
+  keyword signal over the homepage's own text, behind an explicit SSRF
+  boundary, and a taxonomy that grows on demand: a domain nothing fits gets a
+  bank authored from its homepage by a free-tier model on OpenRouter
+  (Amendment 1 made the author a swappable provider; the competitor rule holds
+  in code, not in the prompt). The decision is recorded once per domain and
+  never silently re-derived. Thresholds come from six homepages, so G3's ≥95%
+  stays open until the labelled 100 exists.
+- **The first live scans (2026-09-01).** thecosmicbyte.com and sigzen.com
+  through the public route, real quota, real answers, and seven defects found
+  by running rather than by reading: the usage endpoint's changed contract
+  refusing every scan, a scan discarded when the browser closed, an authored
+  bank vanishing on the next visit, a result served under a category it was
+  not measured against (the cache now keys on the category), a brand whose
+  domain runs its words together scoring zero (det-2), a refusal firing on
+  "lighting kit", and a fallback model that did not exist.
+- **Two reading depths (ADR-0010, 2026-09-02).** One dataset, a simple reading
+  and the full record; `formatFrequency` speaks a rate as "about 1 in 4, as
+  few as 1 in 6" with its interval intact; the depth switch is on every chrome.
+  The Visibility /100 preview score was deleted.
+- **Every tested prompt opens to the answer the engine gave (ADR-0011).**
+- **det-2 and the corroboration rule (ADR-0012).** The bar for the R5
+  exception written down: a full-corpus check with zero differing rows plus a
+  structural argument, or bump. `pnpm grader:version-diff` is that check as a
+  tool; `/score-version` names the real files.
+- **Cycles (ADR-0013).** A domain can be collected again on a later UTC day,
+  every cycle is kept, the record draws a real trend once two exist, and a
+  second cycle is refused before spending if its basis could not join the
+  trend. A person starts each cycle; there is no scheduler.
+- **Diagnostics (ADR-0014).** What the engines cited, every citation
+  classified by the scan's own rules, and the gap report of the homepage
+  against the cycle's prompts. Evidence fetched on request, never written into
+  a result.
+- **The publisher registry (ADR-0015).** Fifty-two outlets under four
+  admission criteria, proposed and NOT wired: a measured dry run moves "other"
+  from 88.7% to 87.2%, and the rest of "other" needs new classes, not a longer
+  list.
+- **Correctable context (ADR-0016, 2026-09-03).** A category correction is a
+  new record version by a person's choice; a competitor set is adjusted per
+  domain from reviewed sources and moves the basis; custom prompts are a
+  second measurement on their own basis, never the headline. Visitors file
+  requests, operators apply them. One basis definition lives in
+  `packages/contracts/src/basis.ts`.
+- **The daily loop (ADR-0017, 2026-09-03 → 09-07).** Audited, scoped to two
+  decisions, built: `pnpm grader:tick -- --apply --live` runs every tracked,
+  due domain under a daily cap of `min(Σ expected × 1.2,
+  COLLECTION_BUDGET_USD_DAILY)`, refuses without `GRADER_DAILY_LOOP=armed`,
+  and is registered nowhere. The per-domain ceiling was split: hand-started
+  cycles per month for a person, a per-run allowance of attempts for the
+  collector. The three failure scenarios are tests.
+
+### Eight dangling items, closed (2026-09-07)
+
+Each was audited before it was touched; all eight were still open, and two had
+been misdescribed.
+
+1. **The held claim.** The orchestrator's index claim was never released,
+   only lease-expired, so any stop left a cell "claimed elsewhere" for thirty
+   minutes and a same-day re-run reported `scanned` with a cell short and no
+   provider call (ADR-0017's measured case). `AnswerIndex.release` exists
+   now, owner-checked and atomic (`KV.delIfEquals`; an `EVAL` on Upstash), and
+   the orchestrator releases on every exit including a throw. The re-run is a
+   test (`ceiling-worked-examples.test.ts`, block D). Found under it:
+   completing a partial cell re-bought the runs already stored, and test B2
+   had pinned the waste (10 calls where 7 complete the cell). It buys the
+   missing runs only. ⚠️ HUMAN REVIEW REQUIRED: spend-control logic.
+2. **The stream's word for a stop.** An allowance stop and a lifetime-cap stop
+   were both `budget-exhausted`. The allowance is `allowance-exhausted` now,
+   on the stream, in the counts and in the QStash handler's shortfall record.
+3. **The carried typecheck error.** `prompt-breakdown.test.ts` set an optional
+   field to an explicit `undefined` under `exactOptionalPropertyTypes`; it
+   drops the key now. It was carried for a week because nothing ran the apps'
+   typechecks: `pnpm typecheck` now runs the root project and every workspace
+   package's `typecheck` script, so an app error is red at the root.
+4. **The /404 build failure was the environment, twice recorded as the app.**
+   `.claude/settings.json` injected `NODE_ENV=development` into every process
+   an agent session spawned, and a production build under it makes Next fall
+   back to the pages-router error page while prerendering /404 and /500. The
+   injection is gone, `apps/public/lib/build-env.test.ts` pins its absence,
+   and `next build` passes with NODE_ENV unset. Vercel and Cloudflare were
+   never affected. Every "confirmed pre-existing" in this file was a re-run
+   under the same poisoned environment.
+5. **The untracked tooling.** `.agents/` (thirteen taste skills from the
+   `skills` CLI, one of them in use), seven claudekit skill directories under
+   `.claude/skills/` (4.5 MB) and `skills-lock.json` are per-developer
+   installs; the owner untracked `.agents` on 2026-08-25. They are ignored, and
+   the project's own three skills stay tracked by name.
+6. **This record**, brought to 2026-09-07.
+7. **`apps/web` retired.** It rendered one fixture page, "Acme CRM", that
+   `apps/public/dashboard` superseded on 2026-09-02, and it cost every UI
+   change a second landing plus five test files pinning byte-identity across
+   the deploy boundary. The tag `apps-web-fixture-final` marks the last commit
+   that has it. ADR-0002's placement of the paid product on Vercel is
+   unchanged; the directory returns when P4 builds it.
+8. **The zero bound.** `formatInterval` printed an exact-zero lower bound as
+   `0` beside an estimate of `0.0%`; both carry the same decimals now.
+   ⚠️ HUMAN REVIEW REQUIRED: `packages/stats`.
+
+**Verification, 2026-09-07.** `pnpm typecheck` (root, then `apps/public`)
+clean. `pnpm test`: 107 files, 1,478 tests, all passing, all offline. `next
+build` on `apps/public` with NODE_ENV unset compiles and prerenders all twelve
+static pages, `/_not-found` included. `scripts/crawl.mjs` against that
+production build: every served route clickable by at least one persona.
+`cost-sentinel` on the collector diff: no spend increase, no double
+collection, one low-severity note (two Redis round-trips per release, marked
+in code with its upgrade path). `stats-reviewer` on the format change:
+statistically neutral; the sighted and screen-reader renderings of a zero
+bound now agree. No provider was called by any of it.
+
+### Stage B — foundation: CI, Vercel, identity, the workspace store (2026-09-10)
+
+`docs/MVP_PLAN.md` Stage B, taken in order on `mvp/stage-a`, one commit per
+row. Nothing armed, nothing spent; the whole suite still runs offline.
+
+**B0 — the CI gate** (`caf86ec`). `.github/workflows/ci.yml` runs `pnpm
+install --frozen-lockfile`, `pnpm typecheck`, `pnpm test` on every push and
+pull request with no key, no collection flag and no secret; the suite was
+verified green under `env -u COLLECTION_ENABLED`. The three `eslint-disable`
+directives that named a linter never installed are gone; strict tsc is the
+lint. `build-env.test.ts` pins all of it.
+
+**B1 — `apps/public` on Vercel** (`63e1dcb`, `dd0ce6d`). ADR-0002 Amendment
+1 records the decision and the provider facts it rests on, each with its doc
+page and date: Hobby 300s default and maximum, Pro 300s/800s, streamed
+responses counted; App Router duration in the route file; pnpm 6–10
+supported so the pinned pnpm 11 needs `ENABLE_EXPERIMENTAL_COREPACK=1`; the
+2026-08-26 interim deployment as precedent. Every route exports its own
+`maxDuration`; `vercel.json` sets none. The seven "LOCAL DEMO ONLY" claims
+are gone. The amendment is explicit that this makes the routes deployable,
+not useful: their store was one machine's disk, which is what B3 is for.
+
+**B2 — identity** (`28e4901`, audited and fixed in `2edceeb`). Migration
+0003: accounts carry the Supabase auth uid and a kind; a brand account owns
+one workspace by trigger; three definer functions (`ensure_account`,
+`create_workspace`, `workspaces_of`) are the only onboarding path, so the
+web tier holds one credential. `packages/db` gains `client` (a two-method
+`Db`, `withWorkspace`), `token` (the minter, round-tripped through
+`set_workspace_jwt` in its test) and `testing` (the real migrations on
+PGlite behind the same interface). The app gains the magic-link sign-in,
+the confirm route, `/account`, `/api/me`, `/api/workspaces` and the session
+middleware; identity is all-eight-variables-or-off, and off is one fixed
+sentence. The tenancy audit of the first commit found a blocker — the
+tenant role could read `auth_uid`, the argument that names an account — and
+six more findings; all are fixed with tests that fail before the fix, and
+the deploy check and the standing sweep now derive every SECURITY DEFINER
+function an application role may execute and fail on one not declared.
+
+**B3a — the workspace store** (`2fd6524`). Migration 0004: `workspace_cycles`
+(keyed by algo version too, so a re-score is a new row, R5),
+`workspace_documents` (INSERT-only, version N+1 chosen by the database,
+earlier rows are the history) and `workspace_requests` (one pending per
+host by partial unique index, optimistic resolve). SELECT policies on the
+verified context; four definer writers take the workspace from
+`ws_required()` and refuse without one — nothing the caller passes chooses
+the tenant. `services/grader/src/store/pg-store.ts` is the `WorkspaceStore`
+interface and its Postgres implementation, tested in two real workspace
+contexts on PGlite. `answer-stores.ts` chooses R2 + Upstash or the file
+store for raw answers (R4) in one place, replacing three copies of the file
+constructors. **B3b is not done:** the file modules still own the
+invariants over files, the routes still read files, and the spend ledgers
+still write files, which is what keeps `/api/scan` off on the deployment.
+
+⚠️ HUMAN REVIEW REQUIRED, all on this branch: migrations 0003 and 0004
+and `packages/db/src/client.ts` (tenancy); `answer-stores.ts` wired into
+the scan runner (spend control); the numbering clash with
+`fix/tenancy-deploy-gate`'s unmerged 0003.
+
+**B3r — the oversight tenancy review of B2/B3a** (`fc439f6`, 2026-09-10;
+its own audit fixed in the B3b commit). Four confirmed findings, each with
+the failing case it catches: 0003 runs in one transaction, and
+`migrations.test.ts` applies a file statement by statement as psql does,
+cut after its GRANT, to prove the owner is left in no writing group;
+`ws_required()` is executable by the writers only, so a policy written
+through it raises for the tenant instead of returning rows; the deploy
+check and the isolation test derive their subject from everything a tenant
+session can read (any schema, any relation kind, `with_check` read for
+writes) minus the one shared name, so `USING (true)`, a wrapper policy, an
+open `WITH CHECK` and a view with no policy each fail both gates; and
+`schema_migrations`, created in 0003 with a unique index on the four-digit
+number, makes two files under one number impossible in any database, with
+the ordered list derived from the directory and the deploy check asserting
+the record is gapless. Its tenancy audit found one MAJOR — the derivations
+named `app_rw` literally, and production's tenant is a login role that is a
+MEMBER of `app_rw`, so a policy or grant on that role, or on a group
+`app_rw` inherits, was invisible — fixed by walking `pg_has_role(…,
+'MEMBER')` from every non-superuser member of `app_rw` in all three
+derivations, with the login-role and inherited-group cases added; and the
+record is now written first in each file. Cost review: null result.
+
+**B3b — the routes onto the store, the ledgers off disk** (2026-09-15,
+ADR-0002 Amendment 2). `apps/public/lib/workspace-access.ts` is the one
+way a route reaches workspace state: with identity configured, the
+Supabase session names the person, `workspaces_of` names the account's
+one workspace, the server mints a token for it and every store call opens
+its own `withWorkspace` transaction (`sessionWorkspaceStore`); a request
+that names a workspace or an account in its body or query changes nothing,
+and the end-to-end test on PGlite proves it for every route, the scan
+stream included. With identity off on a machine it is the file store
+(`fileWorkspaceStore`, the same interface over today's layout, reading
+through the modules' own validated readers); on a fleet runtime with
+identity off it is refused. An account with no workspace is told to create
+one; an agency with several is refused until Stage D1 builds the
+portfolio. The three request validators are pure decisions with a file twin
+for the CLIs and a store twin for the routes; the resolver takes a record
+store, and the document writer takes an expected version so a first
+decision is written once under the workspace lock. The ledgers: a
+`LedgerDoc` (a file, or a KV value under a `setnx` lock) carries the four
+count ledgers and the daily loop's day; the dollar caps are `Budget` on a
+file and the collector's `KvSpendLedger` on KV with the per-run allowance
+of ADR-0017 kept on both; `ledgerStores` chooses Upstash when the six
+answer-store variables are set, files on a machine, and refuses a fleet
+with neither. **Consequences to know:** on the deployment the Grader now
+needs a sign-in; `GRADER_DATA_DIR` must be writable there; generated banks
+are still files and so per instance on a deployment. `pnpm test`,
+`pnpm typecheck` and the apps/public build green.
+
+⚠️ HUMAN REVIEW REQUIRED: `workspace-access.ts`, `ws_put_document(…,
+p_expect_version)` in 0004, the three role-walking derivations (tenancy);
+`ledger-doc.ts`, `ledger-stores.ts`, the spend ledger in `run.ts`, the
+charge in `bank-author.ts`, the four ledger modules (spend control).
+
+**B4 — corrections inside the workspace** (2026-09-15). The three
+correction decisions are pure functions now (`checkCorrection` +
+`correctionOf`, `nextOverride`, `nextPromptSet`), with a file twin the CLIs
+keep and a store twin (`correctCategoryIn`, `applyOverrideIn`,
+`applyCustomPromptsIn`) that writes against the version it read. The
+session's role comes back from `workspaceAccess`; a POST from an owner or
+admin on the Postgres store applies — version N+1, every earlier version
+kept, the pending request that asked for exactly this marked applied by the
+account — and answers `applied: true`; a member, or the file store, files a
+request as before. The end-to-end test drives both paths through the real
+routes on PGlite. Stage B is complete on `mvp/stage-a`.
+
+**The B3b and B4 tenancy audits** (2026-09-15, both: no leak). B3b MAJOR:
+the per-domain ceiling's refusal named a count from a deployment-wide
+ledger, which may be another workspace's cycles of the same domain; the
+sentence now names the ceiling and the reset date only. B4 MAJOR 1: the
+apply gate was three copies in the routes and the database enforces
+membership, not role, on a write; one exported `applies()` now, and the
+real fix (a role claim in the token the definer functions check) is
+human-owned and open. B4 MAJOR 2: the per-domain correction caps were keyed
+by bare domain across workspaces; keyed by workspace now, with the
+end-to-end case. Minors fixed: a NULL expected version is refused; the
+store fallbacks refuse a fleet runtime; no result file on Postgres; a lost
+version race is a 409. Open: the CREATEROLE deployer's auto-membership on
+PG16+ (a deploy-procedure question, see the plan row). Cost review of B3b:
+null result; one bounded observation on the KV lock TTL.
+
+---
+
 ## 3. Tools and services, and why
 
 From `docs/ARCHITECTURE.md` §5–§7 and `docs/COST-MODEL.md`. Three different
@@ -1154,7 +1418,7 @@ problems, three different homes (ADR-0002).
 | Piece | Choice | Reason |
 |---|---|---|
 | `apps/web` — dashboard, reconciliation, agency workspaces | **Vercel** | Low volume, latency-sensitive, cacheable. ~$70/mo Y1 → ~$320/mo Y3 including seats: a rounding error against total tech spend. Self-hosting Next.js on the collector boxes was considered and rejected — it trades preview deploys and instant rollbacks for ops work, the wrong economy for a three-person team at that price. |
-| `apps/public` — free Grader | **Cloudflare Pages** | Static asset requests are free and unlimited. Vercel meters bandwidth ($0.15/GB past 1TB) and edge requests ($2/M past 10M) — on *acquisition* traffic, which is exactly the traffic you cannot forecast. It also isolates a tool that may get hammered from the paid product. |
+| `apps/public` — free Grader, workspace record | **Vercel** (ADR-0002 Amendment 1, 2026-09-10; interim deployment 2026-08-26) | Eight route handlers need a Node function host. The Cloudflare Pages reasoning (free static requests, isolation from the paid product) stands in the ADR for the day acquisition traffic is measurable. |
 | `services/collector` | **Vercel Fluid Compute + QStash → Hetzner CAX (ARM) at ~M18–M20** | Fluid Compute bills active CPU, not wall-clock — I/O wait is free — and optimized concurrency shares one instance across many in-flight invocations. That is precisely the shape of waiting 8s on an API, and at M12 the requirement is 1.3 req/s sustained. **The migration trigger is the rate budget, not cost.** One token bucket must span all collection under the provider's 15 req/s ceiling; on auto-scaling ephemeral instances that state cannot live locally, so every call takes a Redis round-trip. A fixed fleet gives each worker a static slice and the problem disappears. Because collection sits behind `EngineAdapter`, only the runner changes. |
 | Postgres | **Supabase** | Score rows, aggregates, prompt banks, workspaces, accounts. Row-Level Security in the database is what makes R7 mechanically testable — tenancy enforced where the data is, not in application code an agency feature can route around. Moves to dedicated Postgres at ~150M score rows. |
 | Raw payloads | **Cloudflare R2** | Zero egress is the whole point: the reconciliation and CBI work reads the corpus back repeatedly. $0.015/GB-mo, and batching writes one-object-per-cell costs ~4.1M Class A ops/month ($18) against 20.4M ($92) per-answer. R4 keeps these out of Postgres entirely. |
@@ -1215,101 +1479,144 @@ fresh session: 38.2k tokens, of which the four enabled plugins cost ≈ 3k.
 
 ---
 
+## 4a. Open methodology items
+
+### `comparison_basis` cannot express a prompt-subset comparison (2026-09-09)
+
+**Found while building the by-question-type split.** The Grader now groups a
+cycle by the bank's buyer intent — `discovery` against `problem-led` — and on
+the shipped scan the gap is the largest anywhere on the record: 58.0%
+[44.2–70.6] of discovery answers name the subject against 25.7% [14.2–42.1] of
+problem-led ones. The ranges do not overlap.
+
+**That comparison is statistically legitimate.** The two groups are disjoint
+prompt sets, so unlike two engines over the same prompts they are independent
+samples. Nothing about the arithmetic blocks `compare()`.
+
+**What blocks it is bookkeeping.** `comparison_basis` is a CYCLE-level string:
+it carries `unprompted=17`, the prompt count for the whole cycle. So a group
+metric can be built two ways and both are wrong:
+
+- with the cycle's basis — it claims seventeen prompts for a group that used
+  ten, which is a false statement about what the number measures;
+- with an honest subset basis (`unprompted=10` against `unprompted=7`) — the
+  two differ, and `compare()` correctly refuses a comparison that is in fact
+  valid.
+
+The basis has no way to say "this is a named subset of one cycle's prompts,
+compared with a sibling subset of the same cycle". That is the gap.
+
+**Not solved, and deliberately not worked around.** The surface states what the
+drawn ranges show ("the ranges do not overlap on this scan") and never the word
+"significant", which is the claim `compare()` exists to gate — the same
+discipline the per-engine strip follows for a different reason. Asserted by
+test, so a later edit cannot quietly upgrade the wording.
+
+**Where it will matter next.** Any subset comparison within one cycle wants the
+same thing: by intent, by locale once a bank spans more than one, by prompt
+cohort after a bank version bump. The per-engine strip is the same shape from
+the other direction — there the samples are disjoint too, and the basis differs
+by design, so `compare()` refuses a valid comparison there as well. One change
+to the basis would unblock both.
+
+⚠️ Human-owned (CLAUDE.md §4): it is a change to what a stored number claims
+about itself, not a rendering decision. Whoever takes it should decide whether
+the basis gains a subset qualifier, or whether `compare()` grows an explicit
+"same cycle, different slice" entry point that does not consult the basis at
+all.
+
 ## 5. What's next, in order
 
-Two tracks now, deliberately. The gate chain is unchanged and still governs what
-counts as validated; alongside it a parallel fixture-and-free-tier track has run
-ahead, on the explicit understanding that **none of it is gate-validated
-progress**.
+**(a) Close G3's classifier criterion.** Build the labelled sample of 100
+random real domains and measure ADR-0009's thresholds against it. It is the one
+open G3 criterion entirely in our hands, and the thresholds are a human's
+decision once the numbers exist.
 
-### The gate chain
+**(b) The two human decisions in CLAUDE.md §9:** the thresholds above, and the
+SSRF blocked-range table in `fetch-site.ts` against the network the collector
+will deploy into.
 
-**(a) Restore OpenWeb Ninja API access.** Atharva, on the provider dashboard.
-Nothing downstream can start until the five surfaces stop returning 403. Two
-preconditions at the same time: `.env.example` still needs its key rotated (it
-was never committed — the only committed version has zero non-empty values — but
-it sat in a non-ignored file), and `OPENWEBNINJA_PLAN` must be set explicitly,
-since the pay-as-you-go default is the wrong rate at scale. Note the runner now
-refuses to start without an explicit `--plan`.
+**(c) Arm the daily loop, or decide not to.** ADR-0017's loop is built and
+verified offline. The first live tick needs `GRADER_DAILY_LOOP=armed`, a hard
+`COLLECTION_BUDGET_USD_DAILY` and a separate go-ahead; registering the task is
+documented and not done. The ceiling question the ADR left open is answered by
+the split (§2), and the held claim it named is fixed.
 
-**(b) Run the G0 pilot for real.** 100 prompts × 5 engines × 10 runs × 3 known
-brands, **Day 1 and Day 2** — the second day is not optional, because without it
-the design-effect and precision rows cannot be estimated and stay `NOT RUN`.
-Hard cap $75 (the cap is per pilot; the runner subtracts what earlier days
-spent). Then the analysis for $/answer at Mega marginal, p95 latency, ρ̂_u, DEFF
-and n_eff per engine, and a pass/fail per engine. Runbook:
-`services/collector/pilot/README.md`.
+**(d) Run the G0 pilot for real.** Unchanged in substance from the first
+version of this file: 100 prompts × 5 engines × 10 runs × 3 known brands, Day 1
+and Day 2, hard cap $75, then $/answer at Mega marginal, p95 latency, ρ̂_u, DEFF
+and n_eff per engine, pass/fail per engine. The provider subscription that
+blocked it on 2026-08-20 is no longer the block — live scans have run since
+2026-09-01 — so what remains is the decision to spend the $75 and the two days.
+Until it runs, the three provisional numbers in `format.ts` (the A–D
+thresholds, `MIN_N_FOR_COMPARISON`, the overlap test) stay provisional and
+blocked from live-facing builds, and the free scan's size stays an argument
+rather than a measurement. Runbook: `services/collector/pilot/README.md`.
 
-**(c) After G0 returns a verdict:** G1's pipeline criteria, which require 10,000
-durably stored answers and a ≥ 90% cache hit rate on a repeat cycle and so
-cannot be evaluated on fixtures at all. The code G1 tests already exists (1.1,
-1.4, 1.5) — what is missing is real data flowing through it.
+**(e) G1's pipeline criteria** — 10,000 durably stored answers and ≥90% cache
+hits on a repeat cycle — and the deploy-time tenancy gate that ADR-0007 makes a
+hard prerequisite for G1. That gate is still on `fix/tenancy-deploy-gate`,
+still not merged; until it lands, `main` has no complete deploy-time gate.
 
-> **G1 also carries a hard tenancy prerequisite.** The deploy-time gate
-> (`check-deploy.sql`) is partial and must be closed *before* G1, per ADR-0007 —
-> not "before launch". PHASES.md's standing suite item 3 runs the RLS suite at
-> every gate, and G1 is the first gate at which real collected rows exist to be
-> isolated. The redesign is scoped in ADR-0007 §4 and its evidence is on
-> `fix/tenancy-deploy-gate`; it is not an eighth patch round.
+**(f) MVP_PLAN Stage B3b, then B4, C, D, E** — the file modules onto the
+`WorkspaceStore` interface with a file implementation for the CLIs, the
+routes reading through a workspace token, the spend ledgers off disk (the
+last thing keeping live scans off the deployment), then operator corrections
+inside a workspace. Before any of it merges: the human reviews above, and the
+0003 numbering clash.
 
-**(d) G2 — scoring correctness.** Needs the golden set populated to 300–500
-hand-labelled answers, which needs real collected answers, which needs G0.
+**(f) G2** needs the golden set at 300–500 hand-labelled answers. It holds 7 of
+300, and `grader:version-diff` reports agreement beside the flip list.
 
-**(e) G3 — the public Grader**, including the category classifier, competitor
-head-to-head and email gate that the current scaffold does not have.
+**(g) P4** — the paid product, identity, workspaces, reconciliation. `apps/web`
+is created then, from `apps/public`'s components, not before.
 
-### The parallel track, and what it is waiting on
+**(h) Free-tier R2 and Upstash credentials,** so the two transports are
+verified against a real service. Both are still pinned only by
+self-consistency and both fail closed.
 
-**Free-tier credentials (Atharva).** R2 and Upstash accounts, so one signed
-PUT/GET and one real QStash delivery can close the verification gap. Both
-transports are currently pinned only by self-consistency: the three AWS SigV4
-vectors are all bodyless GETs, so nothing independently verifies the actual
-write path, and every "valid" QStash token in the tests is minted by our own
-signer. Both fail *closed*, so the risk is silent inaction rather than
-corruption — which is what the collection heartbeat now watches for.
+**(i) The spend ledger becomes a recurring budget, not a lifetime total.**
+`Budget` is a lifetime figure for a data directory that never refills; the cap
+was raised $5 → $300 on 2026-09-07 and that buys about 3.4 months at 5 domains
+collecting daily. The model is right for testing and wrong for paying
+customers: a counter that only decreases has to be raised by hand on a cadence
+nobody scheduled, means nothing to anyone doing accounts, and stops collection
+for everyone at once, mid-month, when a total that started in August finally
+lands. The likely shape is a monthly reset with the lifetime cap kept
+underneath as the runaway guard — `daily-spend.json` is the working precedent.
+**Not a task**: it is a billing question (what period, per-store or
+per-workspace, what happens to an in-flight cycle at the boundary, who is told
+when it binds) and none of it is answerable before there is a plan and a
+customer. Reasoning in ADR-0017 Amendment 1.
 
-**`p1/db-schema` → the tenancy mechanism, merged 2026-08-24 (ADR-0007).** The
-`tenancy-auditor` pass on the JWT verifier returned a BLOCKER: the verifier was
-an optional path around a GUC any role could set. Fixed in
-`0002_tenancy_context.sql`, then re-audited six more times, every attempted
-bypass blind. On `master`.
+**(j) Two review findings held against a pending redesign.** `stats-reviewer`
+raised three MINOR items on the det-3 bump. The first — the CI band spanning a
+version boundary the line broke at — is **fixed** (2026-09-09,
+`ci-trend-chart.render.test.tsx`). The other two are deliberately not fixed
+separately, because the design session's citation-class chart change (switching
+the statistic and dropping the interval from share-of-citations) is expected to
+resolve both structurally:
 
-**The deploy-time tenancy gate — OPEN, deadline G1.** Not merged, not a
-checklist, not deferred to "before launch". The redesign is decided: derive every
-RLS-relevant object from Postgres's own catalog (`pg_class` across all relkinds,
-`pg_inherits` for partitioning and legacy inheritance, views and their
-`security_invoker` setting, real ownership via `relowner`) and require every
-object *found* to prove coverage — no hand-written exemption or inclusion lists,
-which are what missed the unanticipated arrangement seven times. Existing work
-and all seven audit reports are preserved on `fix/tenancy-deploy-gate`
-(`0003_tenancy_exposure_manifest.sql`, `deploy-check.test.ts`, 78 tests). Until
-it lands, `master` has no complete deploy-time gate: a misconfiguration
-introduced by a deploy-time `GRANT` will not be caught. See §2 and ADR-0007.
+- **F5 · the share metric's `comparison_basis` does not identify its
+  denominator.** `citations.ts` stamps the ANSWER basis on a metric whose `n` is
+  the citation count; two scans on an identical basis can cite very different
+  numbers of URLs. No consumer compares source mixes today — `citationMix` has
+  one caller, which renders it — so it is a latent trap rather than a live
+  fault, and it fires the day anyone compares mixes across cycles.
+- **F6 · citations are treated as independent when they cluster.** Measured on
+  the reference scan: 282 citations from 85 answers, but only 44 answers cited
+  anything, mean cluster 6.41, max 11. At an ICC of 0.2 the design effect is
+  ~2.08, so n_eff ≈ 135 rather than 282 and the published interval is about √2
+  too narrow. This is the caveat already written into `wilson.ts` and deferred
+  to G0, which is where ρ̂ and DEFF get measured rather than assumed.
 
-**Three provisional numbers, all awaiting G0 data**: the A–D confidence-grade
-thresholds (blocked from live builds), `MIN_N_FOR_COMPARISON`, and the choice of
-an overlap test for significance. None were replaced with a better guess, because
-a second invented number would look more considered while being exactly as
-unfounded.
+⚠️ **The check that must actually happen:** once the redesign lands, confirm
+whether a `Metric` with a citation denominator still exists anywhere. If it does
+not, close F5 as resolved-by-the-redesign and confirm F6's denominator is
+genuinely independent. If it does, both are still open and F5 needs the
+denominator in the basis. As of 2026-09-09 the redesign has **not** landed:
+`citations.ts` and `cited-sources.tsx` were last touched by `34f3e90`.
 
-**`COLLECTOR_TOPOLOGY` — decided 2026-08-22, ADR-0006 accepted.** Declaring
-topology in deployment config is the mechanism; undeclared is refused rather than
-defaulted. Extended at sign-off to `LocalRateBudget`, which had the same risk
-shape and none of the guard. One thing stays deliberately open: deleting
-`LocalSpendLedger` entirely and always using the shared ledger would remove the
-guard, `resolveTopology` and the ADR along with it, and becomes available the
-moment the free-tier Upstash credentials land.
-
-**Sign-offs recorded 2026-08-22.** `budget.ts`, `rate-budget.ts` and `retry.ts`
-accepted on their review history. `wilson.ts` accepted after a full read,
-boundary special case included — 1,023 statsmodels reference vectors at three
-alphas plus six property tests, and one documented assumption that outlives
-them: it takes an *effective* n, and nothing measures the design effect until
-G0. `format.ts` and `spend-ledger.ts` remain under review.
-
-**Nothing past G0 counts as validated progress until G0 has a real pass/fail
-result.** Everything above is infrastructure whose correctness is established
-against fixtures; that is a different and much weaker claim than "the unit
-economics hold". If measured $/answer lands materially above $0.002, or the
-design effect makes the Starter unit's effective n useless, the pricing is
-reworked before anything else is built. G0 exists to be able to fail.
+**Still true:** nothing past G0 counts as validated progress until G0 has a
+real pass/fail result. Real answers exist now; the unit economics have not been
+measured, and measuring them is what G0 is for.

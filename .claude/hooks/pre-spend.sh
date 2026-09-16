@@ -1,26 +1,64 @@
 #!/usr/bin/env bash
-# Blocks any command that could issue a paid collection call outside the scheduler.
-# Rule R3 in CLAUDE.md. Exit 2 = block and tell Claude why.
+# Blocks any command that could issue a paid collection or model call from an
+# agent session. Rule R3 in CLAUDE.md. Exit 2 = block and tell Claude why.
+#
+# ⚠️ NO ENVIRONMENT FLAG CAN LIFT THIS. It used to stand down whenever
+# COLLECTION_ENABLED was "true", and .claude/settings.json injects exactly
+# that into every agent session — so the hook was a no-op where it ran
+# (audit 2026-09-09, defect 3). A spending command is now blocked here
+# unconditionally; a person runs it from a plain shell, which is the second
+# deliberate act CLAUDE.md §7 describes.
+#
+# ⚠️ WHAT THIS IS, AND IS NOT. It matches the TEXT of a command, so it is a
+# guard against an accidental or careless spend from an agent session, not a
+# security boundary against a command built to evade it: a name assembled at
+# runtime (`F=...; tsx "$F"`, eval, source) is invisible to a regex by
+# construction (cost-sentinel, 2026-09-09). The bounds that do not depend on
+# text are the ledgers: the collector's Budget before every attempt, the
+# per-run allowance, the daily cap, and the provider's own account limit.
 set -euo pipefail
 INPUT=$(cat)
 CMD=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 
+# A token ends at anything that is not part of a name: whitespace, end of
+# segment, or a shell character such as `)`, `>`, `"` or a backtick. Anchoring
+# on whitespace alone let `X=$(pnpm grader:diagnose)` and
+# `pnpm grader:diagnose>out` through (cost-sentinel, 2026-09-09).
+END="([^[:alnum:]_:./-]|$)"
 # Patterns match spend *commands*, not filenames: "pnpm backfill ..." (the
 # /backfill command's runner) rather than any path that merely contains the word.
-BLOCK_PATTERNS=(
+BLOCK_ALWAYS=(
   "api.openwebninja.com"
   "services/collector/.*run"
   "collector:start"
   "collector:pilot"
   "(^|[[:space:];&|(])pnpm[^;&|]*[[:space:]]backfill(:[[:alnum:]_-]+)?([[:space:]]|$)"
+  "grader:(diagnose|aeo)$END"
+  "(tsx|node)[^;&|]*(^|/)(diagnose|aeo)\.ts$END"
 )
+# The scan runner spends unless the SAME command says --fixture or --stub.
+SCAN="grader:scan$END|(tsx|node)[^;&|]*(^|/)run\.ts$END"
+OFFLINE="--(fixture|stub)$END"
+# The daily loop spends only with --live on the same command; the dry list and --fixture are free.
+TICK="grader:tick$END|(tsx|node)[^;&|]*(^|/)tick\.ts$END"
+LIVE="--live$END"
+# The one QStash schedule (ADR-0018 D8): registering or resuming it makes an armed deployment run daily. Printing, listing, pausing and removing are free.
+SCHEDULE="grader:schedule$END|(tsx|node)[^;&|]*(^|/)schedule\.ts$END"
+ARM="--(register|resume)$END"
 
-for pat in "${BLOCK_PATTERNS[@]}"; do
-  if echo "$CMD" | grep -Eq "$pat"; then
-    if [ "${COLLECTION_ENABLED:-false}" != "true" ]; then
-      echo "BLOCKED by pre-spend hook (CLAUDE.md rule R3): this command can issue paid collection calls, and COLLECTION_ENABLED is not 'true'. Use fixtures instead, or ask the human to enable collection deliberately." >&2
-      exit 2
-    fi
-  fi
-done
+block() {
+  echo "BLOCKED by pre-spend hook (CLAUDE.md rule R3): '$1' can issue paid provider or model calls, and an agent session may not spend. Use --fixture / fixtures, or ask the human to run it from their own shell." >&2
+  exit 2
+}
+
+# One segment per shell command, so `a --fixture && b` cannot smuggle `b` past the flag check.
+while IFS= read -r SEG; do
+  [ -z "$SEG" ] && continue
+  for pat in "${BLOCK_ALWAYS[@]}"; do
+    if echo "$SEG" | grep -Eq -- "$pat"; then block "$SEG"; fi
+  done
+  if echo "$SEG" | grep -Eq -- "$SCAN" && ! echo "$SEG" | grep -Eq -- "$OFFLINE"; then block "$SEG"; fi
+  if echo "$SEG" | grep -Eq -- "$TICK" && echo "$SEG" | grep -Eq -- "$LIVE"; then block "$SEG"; fi
+  if echo "$SEG" | grep -Eq -- "$SCHEDULE" && echo "$SEG" | grep -Eq -- "$ARM"; then block "$SEG"; fi
+done < <(printf '%s\n' "$CMD" | sed -E 's/(&&|\|\||;|\|)/\n/g')
 exit 0

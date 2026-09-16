@@ -25,8 +25,7 @@ const SEED = {
 }
 
 const SPOTS = [
-  // The three regions from the user's screenshots, plus the pricing inline link.
-  { name: 'worked-example', path: '/dashboard', find: /worked example/i },
+  // The regions from the user's screenshots, plus the pricing inline link.
   { name: 'workspace-pointer', path: '/dashboard', find: /workspace (page|settings)/i },
   { name: 'add-client', path: '/agency', find: /add a client/i },
   { name: 'backlink', path: '/dashboard/prompts', find: /back to the overview/i },

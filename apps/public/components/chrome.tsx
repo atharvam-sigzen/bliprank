@@ -1,20 +1,18 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { ThemeToggle, THEME_BOOT, themedUrl, useTheme, applyTheme, readTheme, type ThemeChoice } from './theme'
+import { ThemeToggle, DepthToggle, THEME_BOOT, themedUrl, useTheme, useDepth, applyTheme, applyDepth, readTheme, readDepth, defaultDepthFor, type ThemeChoice, type Depth } from './theme'
 import { BUNDLED_SCANS, normaliseTyped, scans } from '@/lib/scan-result'
 import { readActiveDomain, readAgencyDomains, writeActiveDomain, writeRole } from '@/lib/workspace'
 
 /**
  * Shared chrome: the product bar and the theme toggle.
  *
- * WHY THIS EXISTS. `apps/web` and `apps/public` are separate deploys, for
- * hosting reasons rather than product ones (ADR-0002): the Grader sits on
- * acquisition traffic nobody can forecast, so it goes to Cloudflare Pages where
- * static requests are free and unmetered, while the dashboard is low-volume and
- * latency-sensitive and goes to Vercel. That is an infrastructure fact, and a
- * reader should never have to infer it from two pages that look unrelated. One
- * bar, one mark, and each surface names the other.
+ * WHY THIS EXISTS. The Grader and the dashboard are one product, and a reader
+ * should never have to infer that from pages that look unrelated. One bar, one
+ * mark, and each surface names the other. (ADR-0002 plans the paid product as
+ * a separate Vercel deploy, `apps/web`; the fixture-only app of that name was
+ * retired 2026-09-07 and this file is the only chrome now.)
  *
  * THE ROUTE DECIDES THE CHROME. There are three chromes and the surface picks
  * one: / and both pricing pages are NEUTRAL (the fork lives there as two
@@ -205,12 +203,14 @@ function NeutralBar({ current }: { current: Surface }) {
         <Mark />
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
         <div className="navbar__links">
           <NavLink link={{ href: '/', label: 'Grader', on: 'grader' }} current={current} />
           <NavLink link={{ href: '/pricing', label: 'Pricing', on: 'pricing' }} current={current} />
+          <NavLink link={{ href: '/sign-in', label: 'Sign in' }} current={current} />
         </div>
 
         <div className="navbar__util">
@@ -304,6 +304,7 @@ function BrandBar({ current }: { current: Surface }) {
         </Switcher>
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
@@ -367,6 +368,7 @@ function AgencyBar({ current }: { current: Surface }) {
         </Switcher>
 
         <div className="navbar__theme">
+          <DepthToggle />
           <ThemeToggle />
         </div>
 
@@ -391,12 +393,4 @@ export function ProductBar({ current }: { current: Surface }) {
   return <NeutralBar current={current} />
 }
 
-export { THEME_BOOT, ThemeToggle, themedUrl, useTheme, applyTheme, readTheme, type ThemeChoice }
-
-/**
- * Backward compatibility wrapper. In new code, prefer `themedUrl(url, useTheme())`
- * so the link stays reactive to live theme changes.
- */
-export function withTheme(url: string): string {
-  return themedUrl(url, readTheme())
-}
+export { THEME_BOOT, ThemeToggle, DepthToggle, themedUrl, useTheme, useDepth, applyTheme, applyDepth, readTheme, readDepth, defaultDepthFor, type ThemeChoice, type Depth }

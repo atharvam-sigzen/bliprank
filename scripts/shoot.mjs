@@ -13,7 +13,20 @@
  * the committed scan on the client and returns before any fetch is made. The
  * guards are there for what this script might become, not for what it does now.
  *
- * Usage: node scripts/shoot.mjs [outDir]
+ * ⚠️ RUN THE SERVER WITH A SHORT PREVIEW WINDOW, or this gate fails itself.
+ *
+ *   next start -p 3001                          # normal
+ *   GRADER_VISITOR_WINDOW_MS=1000 next start …  # for THIS harness
+ *
+ * /api/preview throttles a visitor over a ONE-HOUR window, ledgered to disk at
+ * services/grader/data-live/preview-throttle.json. This harness loads the
+ * Grader twelve times in a couple of minutes from one address, so from the
+ * second run onwards it trips its own throttle and reports 429s on every grader
+ * capture. Those are the limiter working, and unlike the 404s below they are
+ * NOT given an allowance: a 429 in ordinary use is a real problem and must stay
+ * loud. The window is shortened for the harness instead.
+ *
+ * Usage: GRADER_VISITOR_WINDOW_MS=1000 node scripts/shoot.mjs [outDir]
  */
 
 import { mkdirSync, readFileSync } from 'node:fs'
@@ -76,6 +89,20 @@ async function shoot(browser, { name, path, viewport, theme, prepare, seed }) {
   // everything else — including any request to the provider.
   const page = await context.newPage()
   const problems = []
+  /*
+   * THE 404s ARE COLLECTED BY URL, NOT BY THEIR CONSOLE LINE.
+   *
+   * The browser logs a failed request as "Failed to load resource: the server
+   * responded with a status of 404 (Not Found)" and NAMES NOTHING. An allowance
+   * matched against that string would suppress every 404 on the page, including
+   * the next real one. So the responses are recorded here and the allowance is
+   * matched against the URL; the console line is only ever silenced once every
+   * 404 on that capture is accounted for.
+   */
+  const notFound = []
+  page.on('response', (r) => {
+    if (r.status() === 404) notFound.push(r.url())
+  })
   page.on('console', (m) => {
     if (m.type() === 'error') problems.push(`console: ${m.text().slice(0, 160)}`)
   })
@@ -181,25 +208,50 @@ async function shoot(browser, { name, path, viewport, theme, prepare, seed }) {
     const hits = []
     // Percentages and x/100 scores, excluding the fixed 0/100 scale endpoints
     // the rail always prints and the engine/prompt counts in settings.
-    for (const m of text.matchAll(/\d+(\.\d+)?\s?%/g)) hits.push(m[0])
+    for (const m of text.matchAll(/\b\d+(\.\d+)?\s?%/g)) hits.push(m[0])
     for (const el of document.querySelectorAll('.score__value, .portfolio__grade, .gradebadge, .rail__value')) {
       hits.push(`${el.className.split(' ')[0]}:${el.textContent?.trim().slice(0, 12)}`)
     }
     return [...new Set(hits)].slice(0, 12)
   })
 
+  const refused = (await page.$('section.record--refused')) !== null
+
   await context.close()
-  return { file, blocked, problems, overflow, typography, figures }
+  return { file, blocked, problems, notFound, overflow, typography, figures, refused }
 }
 
 const browser = await chromium.launch()
 mkdirSync(OUT, { recursive: true })
 
-const typeDomain = async (page) => {
-  await page.fill('#domain', 'pipedrive.com')
+/*
+ * THE WAIT IS ON THE SETTLED STATE, NOT ON THE FIRST THING THAT APPEARS.
+ *
+ * This used to wait for `.record__domain`. The pre-scan preview wears that
+ * class too (prompt-preview.tsx), so the wait resolved on the preview, the
+ * capture showed "Working out your category...", and a masthead regression
+ * that only shows once a result is on the page sat in the committed shots
+ * unphotographed for a whole commit. And `[role=alert]` was worse: the domain
+ * field's error slot carries that role whether or not it has an error in it,
+ * so the old wait resolved on the still-submitting form every time.
+ *
+ * A scan settles in exactly three states and this waits for those: a result
+ * (a rail, which only a real metric draws), a refusal (the refused record), or
+ * the preview's confirm button — which is then pressed, and the wait repeats
+ * for the first two.
+ */
+const SETTLED = 'section.record .rail, section.record--refused'
+const scanFlow = (domain) => async (page) => {
+  await page.fill('#domain', domain)
   await page.click('button[type=submit]')
-  await page.waitForSelector('.record__domain, .record, [role=alert]', { timeout: 8000 })
+  await page.waitForSelector(`${SETTLED}, .record__action.btn--primary`, { timeout: 15000 })
+  if (!(await page.$(SETTLED))) {
+    await page.click('.record__action.btn--primary')
+    await page.waitForSelector(SETTLED, { timeout: 15000 })
+  }
 }
+
+const typeDomain = scanFlow('pipedrive.com')
 
 /*
  * The refusal state, WITHOUT touching the provider.
@@ -218,19 +270,13 @@ const QUOTA_MESSAGE =
 
 const QUOTA_SSE = ['event: error', `data: ${JSON.stringify({ kind: 'quota', message: QUOTA_MESSAGE })}`, '', ''].join('\n')
 
-const typeSigzen = async (page) => {
-  await page.fill('#domain', 'sigzen.com')
-  await page.click('button[type=submit]')
-  await page.waitForSelector('.record__domain, .record, [role=alert]', { timeout: 8000 })
-}
+const typeSigzen = scanFlow('sigzen.com')
 
 const refuse = async (page) => {
   await page.route('**/api/scan', (route) =>
     route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream' }, body: QUOTA_SSE }),
   )
-  await page.fill('#domain', 'example.com')
-  await page.click('button[type=submit]')
-  await page.waitForSelector('[role=alert]', { timeout: 8000 })
+  await scanFlow('example.com')(page)
 }
 
 /*
@@ -282,20 +328,38 @@ const SHOTS = [
   { name: '8-agency-portfolio', path: '/agency', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
   { name: '9-agency-add', path: '/agency/add', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com']) } },
   /*
-   * sigzen.com — the third demo domain, and the one that proves the product's
-   * argument hardest. It is a real collected scan of a company AI answers never
-   * mention: 0.0% with a real interval, ONE brand, no competitors, because it
-   * classified into the fallback bank which has no leaders by design.
+   * sigzen.com — a real collected scan that is NOT bundled with the build (the
+   * shipped registry holds pipedrive.com alone), so on the Grader it goes through
+   * the preview to "Run this scan", which calls /api/scan, which this harness
+   * aborts by design. What gets photographed is therefore the runner-unreachable
+   * refusal: a state a visitor really sees when the scan service is down, and
+   * the one screen that must show NO number. The block is the point of the
+   * capture, so it is expected here and a problem everywhere else.
    *
-   * It is also the file that used to crash the result page, so it is captured in
-   * both places that render it.
+   * Before 2026-09-02 the wait resolved on the preview and this shot never got
+   * this far; the comment above it still described a bundled scan.
    */
-  { name: '10-grader-sigzen', path: '/', prepare: typeSigzen },
+  { name: '10-grader-sigzen', path: '/', prepare: typeSigzen, expectsRefusal: true },
   { name: '11-dashboard-sigzen', path: '/dashboard', seed: { [KEY.role]: 'brand', [KEY.active]: 'sigzen.com' } },
   { name: '12-agency-pricing', path: '/agency/pricing' },
   { name: '13-agency-lifecycle', path: '/agency/lifecycle', seed: { [KEY.role]: 'agency' } },
-  { name: '14-manage-prompts', path: '/dashboard/prompts', seed: { [KEY.role]: 'brand', [KEY.active]: 'zendesk.com' } },
-  { name: '15-agency-client', path: '/agency/client/zendesk.com', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) } },
+  /*
+   * zendesk.com is classified but has never been SCANNED on this machine, so
+   * /api/custom-prompts answers 404 'no-record' — the route stating that there
+   * is no cycle for a custom prompt to join yet. The page renders that state
+   * correctly; only the browser's anonymous console line made it look like a
+   * fault. See the expects404 note in the flag loop.
+   */
+  { name: '14-manage-prompts', path: '/dashboard/prompts', seed: { [KEY.role]: 'brand', [KEY.active]: 'zendesk.com' }, expects404: [/\/api\/custom-prompts\b/] },
+  /*
+   * The client page asks /api/category and /api/competitors, NOT
+   * /api/custom-prompts — the first version of this allowance guessed the same
+   * route as shot 14 and the stale-allowance guard caught it on the first run,
+   * which is the guard doing exactly its job. All three answer the same
+   * deliberate 404: `no-record`, because zendesk.com is classified but has
+   * never been scanned on this machine.
+   */
+  { name: '15-agency-client', path: '/agency/client/zendesk.com', seed: { [KEY.role]: 'agency', [KEY.agency]: JSON.stringify(['pipedrive.com', 'zendesk.com']) }, expects404: [/\/api\/(category|competitors)\b/] },
   { name: '16-workspace-page', path: '/dashboard/workspace', seed: { [KEY.role]: 'brand', [KEY.active]: 'pipedrive.com' } },
 ]
 
@@ -305,8 +369,43 @@ for (const shot of SHOTS) {
     for (const theme of ['light', 'dark']) {
       const r = await shoot(browser, { ...shot, viewport, theme })
       const flags = []
-      if (r.blocked.length) flags.push(`BLOCKED ${r.blocked.length} forbidden request(s)`)
-      if (r.problems.length) flags.push(...r.problems)
+      // A shot that must end in the runner refusal: the guard aborting /api/scan
+      // IS the state under capture, and the browser logs that abort as a failed
+      // resource. Anything else blocked, or any other error, is still a problem —
+      // and so is that shot NOT ending in the refusal.
+      const blocked = shot.expectsRefusal ? r.blocked.filter((u) => !/\/api\/scan/i.test(u)) : r.blocked
+      let problems = shot.expectsRefusal ? r.problems.filter((p) => !/net::ERR_FAILED/.test(p)) : r.problems
+
+      /*
+       * EXPECTED 404s, THE SAME BARGAIN AS `expectsRefusal`.
+       *
+       * A gate that reports a designed condition as a failure gets ignored, and
+       * an ignored gate is worse than none: this one flagged eight captures on
+       * every run because /api/custom-prompts answers 404 'no-record' for a demo
+       * domain that was never scanned on this machine. That is the route working.
+       *
+       * Two guards keep the allowance from becoming a blanket:
+       *   1. it matches the URL, so an unlisted 404 is still a failure and still
+       *      names itself;
+       *   2. a shot that declares the allowance and produces NO matching 404 is
+       *      flagged too. A stale allowance silently covering a route that has
+       *      stopped 404ing is how a suppression outlives its reason.
+       */
+      const allowed = shot.expects404 ?? []
+      const unexpected404 = r.notFound.filter((u) => !allowed.some((re) => re.test(u)))
+      const matched404 = r.notFound.filter((u) => allowed.some((re) => re.test(u)))
+      if (allowed.length && matched404.length === 0) {
+        flags.push('expects404 is declared and nothing 404ed: the allowance is stale')
+      }
+      if (unexpected404.length) flags.push(...[...new Set(unexpected404)].map((u) => `404 ${u}`))
+      // Only now is the anonymous console line safe to drop, and only for the
+      // 404s actually accounted for.
+      if (allowed.length && unexpected404.length === 0) {
+        problems = problems.filter((p) => !/status of 404/.test(p))
+      }
+      if (blocked.length) flags.push(`BLOCKED ${blocked.length} forbidden request(s)`)
+      if (problems.length) flags.push(...problems)
+      if (shot.expectsRefusal && !r.refused) flags.push('expected the runner refusal and the page did not show one')
       if (r.typography.length) flags.push(...r.typography)
       // Named for what they are: these captures must contain no measurement.
       if (/preflight|fallback|agency-add/.test(shot.name) && r.figures.length) {

@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { checkGate, defaultGateConfig, readQuota, recordScan, scannedToday } from './live-gate.js'
+import { checkGate, DEFAULT_CAP_USD, defaultGateConfig, ledgerCapUsd, readQuota, recordScan, scannedToday } from './live-gate.js'
 
 /**
  * The gate, tested against the states it exists to refuse.
@@ -90,8 +90,8 @@ describe('a scan is refused unless BOTH limits allow it', () => {
 
   it('refuses a NEW domain once the day is spent, but never a repeat', async () => {
     const c = cfg({ maxNewPerDay: 2, callsPerEngine: 17 })
-    recordScan('one.com', c, NOW)
-    recordScan('two.com', c, NOW)
+    await recordScan('one.com', c, NOW)
+    await recordScan('two.com', c, NOW)
 
     const fresh = await checkGate('three.com', c, 'k', NOW, fetchOK())
     expect(fresh.ok).toBe(false)
@@ -105,8 +105,8 @@ describe('a scan is refused unless BOTH limits allow it', () => {
 
   it('the cap is per UTC day and yesterday does not count against today', async () => {
     const c = cfg({ maxNewPerDay: 1, callsPerEngine: 17 })
-    recordScan('one.com', c, new Date('2026-08-24T23:00:00Z'))
-    expect(scannedToday(c, NOW)).toEqual([])
+    await recordScan('one.com', c, new Date('2026-08-24T23:00:00Z'))
+    expect(await scannedToday(c, NOW)).toEqual([])
     expect((await checkGate('new.com', c, 'k', NOW, fetchOK())).ok).toBe(true)
   })
 
@@ -122,6 +122,17 @@ describe('a scan is refused unless BOTH limits allow it', () => {
 
     const http500 = (async () => ({ ok: false, status: 500 })) as unknown as typeof fetch
     expect((await checkGate('a.com', cfg(), 'k', NOW, http500)).ok).toBe(false)
+  })
+
+  it('the refusal for an unreadable quota is a fixed sentence; what the provider said goes on `cause` for the log, never to the visitor (B3c item 6)', async () => {
+    const leaky = (async () => {
+      throw new Error('<html>502 from upstream, x-api-key=abc echoed back</html>')
+    }) as unknown as typeof fetch
+    const r = await checkGate('a.com', cfg(), 'k', NOW, leaky)
+    if (r.ok || r.reason !== 'unreadable') throw new Error('expected an unreadable verdict')
+    expect(r.message).not.toMatch(/html|502|x-api-key|upstream/)
+    expect(r.message).toContain('rather than run blind')
+    expect(r.cause).toContain('502 from upstream')
   })
 
   it('FAILS CLOSED on a corrupt ledger rather than treating it as an empty day', async () => {
@@ -145,17 +156,35 @@ describe('a scan is refused unless BOTH limits allow it', () => {
   })
 })
 
+describe('the per-run cap a store is opened with', () => {
+  it('reads the file\'s own cap on the file backend only; on KV the instance\'s disk sets nothing for the deployment (B3c item 5)', () => {
+    const d = dir()
+    writeFileSync(join(d, 'ledger.json'), JSON.stringify({ capUsd: 300, spentUsd: 2.15, calls: 399, byEngine: {}, updatedAt: 'x' }))
+    expect(ledgerCapUsd(d, {})).toBe(300)
+    expect(ledgerCapUsd(d, { GRADER_CAP_USD: '7' }, { backend: 'file' } as never)).toBe(300)
+    expect(ledgerCapUsd(d, {}, { backend: 'kv' } as never)).toBe(DEFAULT_CAP_USD)
+    expect(ledgerCapUsd(d, { GRADER_CAP_USD: '7' }, { backend: 'kv' } as never)).toBe(7)
+    // No file: the environment names the cap a new ledger is created with, else the default.
+    expect(ledgerCapUsd(dir(), {})).toBe(DEFAULT_CAP_USD)
+    expect(ledgerCapUsd(dir(), { GRADER_CAP_USD: '0' })).toBe(DEFAULT_CAP_USD)
+    // An unreadable file is Budget's to refuse, not a cap invented here.
+    const c = dir()
+    writeFileSync(join(c, 'ledger.json'), '{ not json')
+    expect(ledgerCapUsd(c, { GRADER_CAP_USD: '9' })).toBe(9)
+  })
+})
+
 describe('the ledger records only what actually spent', () => {
-  it('appends once per domain per day and is idempotent', () => {
+  it('appends once per domain per day and is idempotent', async () => {
     const c = cfg()
-    recordScan('a.com', c, NOW)
-    recordScan('a.com', c, NOW)
-    recordScan('b.com', c, NOW)
-    expect(scannedToday(c, NOW)).toEqual(['a.com', 'b.com'])
+    await recordScan('a.com', c, NOW)
+    await recordScan('a.com', c, NOW)
+    await recordScan('b.com', c, NOW)
+    expect(await scannedToday(c, NOW)).toEqual(['a.com', 'b.com'])
     expect(JSON.parse(readFileSync(c.ledgerFile, 'utf8'))['2026-08-25']).toEqual(['a.com', 'b.com'])
   })
 
-  it('is configurable, because a demo and a quiet week want different numbers', () => {
+  it('is configurable, because a demo and a quiet week want different numbers', async () => {
     const c = defaultGateConfig('/tmp/x', { GRADER_MAX_NEW_SCANS_PER_DAY: '5', GRADER_PROMPTS_PER_SCAN: '9' } as unknown as NodeJS.ProcessEnv)
     expect([c.maxNewPerDay, c.callsPerEngine]).toEqual([5, 9])
   })
@@ -318,7 +347,7 @@ describe('running out of quota mid-demo', () => {
 
   it('a domain already scanned today still passes the burst cap and is served from cache', async () => {
     const c = cfg({ maxNewPerDay: 1, callsPerEngine: 17 })
-    recordScan('first.com', c, NOW)
+    await recordScan('first.com', c, NOW)
     // Re-showing a domain must never be refused: that path spends nothing and is
     // exactly what a presenter does when they want the result back on screen.
     expect((await checkGate('first.com', c, 'k', NOW, fetchOK())).ok).toBe(true)

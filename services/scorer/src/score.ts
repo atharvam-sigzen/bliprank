@@ -21,7 +21,7 @@ import { isOnDomain } from './domain.js'
  * Bumped whenever a rule changes what an existing answer would score (R5).
  * Never mutate historical rows: bump, re-score forward, changelog the diff.
  */
-export const SCORING_ALGO_VERSION = 'det-2'
+export const SCORING_ALGO_VERSION = 'det-3'
 
 export interface BrandSpec {
   readonly id: string

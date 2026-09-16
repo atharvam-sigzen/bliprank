@@ -3,11 +3,19 @@
 import { useEffect, useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
 import { ActionLink } from '@/components/action-link'
-import { themedUrl, useTheme } from '@/components/theme'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
+import { CitedSources } from '@/components/cited-sources'
+import { GapReport } from '@/components/gap-report'
+import { CustomPromptsBlock } from '@/components/custom-prompts-block'
+import { PromptBreakdown } from '@/components/prompt-breakdown'
+import { Headline } from '@/components/headline'
 import { RangeRail } from '@/components/range-rail'
-import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
+import { CiTrendChart } from '@/components/ci-trend-chart'
+import { NewCycle } from '@/components/new-cycle'
+import { CategoryCorrection } from '@/components/category-correction'
+import { CompetitorOverrides } from '@/components/competitor-overrides'
+import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf } from '@/lib/cycles'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
 
@@ -16,9 +24,6 @@ import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } fro
 // relying on confidenceGrade to throw would mean discovering the block in front
 // of a customer rather than at build time. This fails `next build` instead.
 assertProvisionalAllowed('The workspace record')
-
-/** The worked-example app's origin; localhost in dev, the deploy URL in prod. */
-const DASHBOARD_URL = process.env['NEXT_PUBLIC_DASHBOARD_URL'] ?? 'http://localhost:3000'
 
 /**
  * Which side of the plan the surrounding page sells. It changes the copy that
@@ -76,6 +81,21 @@ export function WorkspaceRecord({ domain, context }: { domain: string; context: 
  * anything /api/scan cached into the registry.
  */
 function Measured({ workspace, context }: { workspace: Workspace; context: WorkspaceContext }) {
+  // A new cycle lands in the registry mid-render-life; bumping this re-reads
+  // it, so the trend acquires its point without a reload.
+  const [, refresh] = useState(0)
+  // Once, on load: cycles the server filed that this browser never saw — a run
+  // that finished after the tab closed, another browser, cleared site data.
+  // A 404 (a deployment whose store lacks the domain) adds nothing and says nothing.
+  useEffect(() => {
+    let live = true
+    void syncCycles(workspace.domain).then((added) => {
+      if (live && added > 0) refresh((g) => g + 1)
+    })
+    return () => {
+      live = false
+    }
+  }, [workspace.domain])
   const scan: ScanResultFile | null = scanFor(workspace.domain)
   // `hasData` is derived from exactly this call, so the branch cannot be taken.
   // The guard exists because the type system cannot know that, and falling back
@@ -89,11 +109,15 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
-  const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
   // Object identity against the compiled-in constants, the same derivation the
   // chrome's switcher uses: scans() returns the bundled files by reference, so
   // a scan not in BUNDLED_SCANS is one this browser collected this session.
   const bundled = BUNDLED_SCANS.includes(scan)
+  // Every collected cycle of this domain under its current category, oldest
+  // first; `scan` is its last entry. Cycles under an earlier category are
+  // counted, named on the page, and never drawn (see lib/cycles.ts).
+  const cycles = cyclesFor(workspace.domain)
+  const excluded = earlierCategoryCycles(workspace.domain)
 
   return (
     <>
@@ -109,14 +133,17 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
             {run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
-          <span className="note__line">{formatProvenance(metric)}</span>
+          {/* DETAIL, like every other provenance line on every surface. The
+              answer count and engine count above it stay at both depths. */}
+          <span className="note__line detail">{formatProvenance(metric)}</span>
           {/* THE COST LINE IS OMITTED, NOT ZEROED. This file may not record
               spend; `$0.0000` would state that a scan which bought 85 answers
               cost nothing, and an empty slot in the mono figure voice still
               reads as a measurement. No line at all is the only honest option. */}
           {run.spentUsd === null ? null : <span className="note__line">cost ${run.spentUsd.toFixed(4)}</span>}
           <span className="note__gloss">
-            One cycle, collected by a budgeted runner. Opening this page collects nothing and costs nothing.
+            {cycles.length > 1 ? `${cycles.length} cycles, each collected by a budgeted runner; this is the latest.` : 'One cycle, collected by a budgeted runner.'}{' '}
+            Opening this page collects nothing and costs nothing.
           </span>
           {/* A DEMO IS LABELLED AS ONE. The bundled scans resolve for every
               visitor identically, so a reader who opened one from the switcher
@@ -152,6 +179,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       ) : null}
 
       <section className="record">
+        {/* Same lede as the Grader, from the same component: the two surfaces
+            render one record and must not come to word it differently. */}
+        <Headline subject={subject.name} metric={metric} engines={run.engines.length} />
+
         {/* The rail with its papers beside it. Same instrument as the Grader,
             same discipline: the figure cannot be photographed without the range
             around it or without where it came from. */}
@@ -166,41 +197,12 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
               {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
             </span>
             {run.day ? <span className="note__line">day {run.day}</span> : null}
-            <span className="note__line">{formatProvenance(metric)}</span>
+            {/* DETAIL, matching the Grader. Found on review: the same field on
+                the same record was marked on one surface and not the other, so
+                the simple view was inconsistent between them. */}
+            <span className="note__line detail">{formatProvenance(metric)}</span>
             <span className="note__gloss">
               From prompts that name no brand, so the number measures what the engines volunteer rather than what we prompted them with.
-            </span>
-          </aside>
-        </div>
-
-        {/*
-          THE PREVIEW SCORE, presented exactly as the Grader presents it.
-          Duplicated markup rather than shared: the two surfaces must agree on
-          the wording and the shape, and the wording is the point. If a third
-          surface needs it, that is the moment to extract a component.
-        */}
-        <div className="annotated" style={{ marginTop: 'var(--space-5)' }}>
-          <div className="annotated__body">
-            <p className="readout__cap">Visibility</p>
-            <p className="score">
-              <span className="score__value num">{preview.score}</span>
-              <span className="score__of">/ 100</span>
-              <span className="score__flag">preview</span>
-            </p>
-            <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
-              {PREVIEW_SCORE_CAPTION}. It combines the mention rate with competitive position on placeholder weights, carries no confidence
-              interval, and is not comparable with anyone else&apos;s score, including a later version of this one.
-            </p>
-          </div>
-          <aside className="note note--flag">
-            <span className="note__cap note__cap--flag">How it is made</span>
-            {preview.parts.map((part) => (
-              <span className="note__line" key={part.label}>
-                {part.label} {(part.weight * 100).toFixed(0)}% · {part.points.toFixed(1)} pts
-              </span>
-            ))}
-            <span className="note__gloss">
-              {missingNote(preview)}
             </span>
           </aside>
         </div>
@@ -222,19 +224,41 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
         </div>
       </section>
 
+      {/* THE TREND, WHEN THERE IS ONE TO DRAW. Two collected cycles or more;
+          below that the section further down keeps refusing it in words. */}
+      {cycles.length >= 2 ? <TrendSection cycles={cycles} subjectName={subject.name} /> : null}
+
       {/* The same comparison the Grader renders, from the same scan file. The
           zero-competitor branch inside it keeps its honest prose: a fallback
           scan is measured alone and says so rather than drawing a chart. */}
       <HeadToHeadSection scan={scan} />
 
+      {/* The per-question table, from the same cycle. It renders its own honest
+          absence when the file predates `promptRows`, so this surface makes no
+          claim about the split that the data does not carry. */}
+      <PromptBreakdown scan={scan} />
+      {/* THE SECOND MEASUREMENT, when this cycle asked the customer's own prompts (ADR-0016). Its own record; never folded into the one above. */}
+      <CustomPromptsBlock scan={scan} cycles={cycles} />
+
+      {/* The two diagnostics, from the same evidence and the page itself (ADR-0014). */}
+      <CitedSources scan={scan} />
+      <GapReport scan={scan} />
+
       {/*
-        ⚠️ THE TWO CHARTS THIS COMPONENT REFUSES TO DRAW.
+        ⚠️ THE CHART THIS COMPONENT STILL REFUSES TO DRAW.
 
         One cycle is one point, and a line through one point is a shape with no
-        measurement under it. The stored payload also holds no per-engine split,
-        so a by-engine table would have to divide a total by five and present the
-        result as five findings. Both are the same failure — a picture asserting
-        more than the data contains — and both are refused in words instead.
+        measurement under it. A picture asserting more than the data contains is
+        refused in words instead.
+
+        THE BY-ENGINE TABLE USED TO BE THE SECOND ENTRY HERE, and the reason it
+        gave was sound but the fact underneath it was wrong. "The per-engine
+        split is not in this cycle's stored payload" was true of the payload and
+        false of the pipeline: `scoreAnswer` computed it for every answer and
+        `runScan` summed it away before writing the file. The rate was never
+        divided five ways — the rows are kept now, and `PromptBreakdown` counts
+        them. What was refused was the division, and the division is still
+        refused: a file without rows gets the sentence, not a grid.
       */}
       <section className="section">
         <h2>What is not on this page</h2>
@@ -247,23 +271,27 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
             drawn yet.
           </p>
         ) : null}
-        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          There is no trend chart. A trend needs at least two cycles to compare and this workspace has one
-          {run.day ? (
-            <>
-              , collected on <span className="num">{run.day}</span>
-            </>
-          ) : null}
-          . A line through a single point would be drawing movement that has not been measured.
-        </p>
-        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
-          There is no breakdown by engine either. {run.engines.length > 0 ? `The ${run.engines.length} surfaces` : 'The answer surfaces'} were
-          scored together into one rate of{' '}
-          <span className="num">{scan.counts.answersScored}</span> answers, and the per-engine split is not in this cycle&apos;s stored payload.
-          Splitting the total five ways would be arithmetic presented as evidence.
-        </p>
-        <WorkedExample />
+        {cycles.length >= 2 ? (
+          <p className="prose">
+            The trend is above, drawn from <span className="num">{cycles.length}</span> collected cycles. Nothing on this page is projected: every
+            point was bought on its own day, and the movement between neighbours is judged by the same rule as every comparison here.
+          </p>
+        ) : (
+          <>
+            <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
+              There is no trend chart. A trend needs at least two cycles to compare and this workspace has one
+              {run.day ? (
+                <>
+                  , collected on <span className="num">{run.day}</span>
+                </>
+              ) : null}
+              . A line through a single point would be drawing movement that has not been measured.
+            </p>
+          </>
+        )}
       </section>
+
+      <NewCycle domain={workspace.domain} cycles={cycles} excluded={excluded} onCollected={() => refresh((g) => g + 1)} />
 
       {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
     </>
@@ -360,11 +388,6 @@ function Preflight({ workspace, context }: { workspace: Workspace; context: Work
       ) : null}
 
       {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
-
-      <section className="section">
-        <h2>A worked example</h2>
-        <WorkedExample />
-      </section>
     </>
   )
 }
@@ -443,6 +466,13 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
         </dd>
       </dl>
 
+      {/* THE ONE EDITABLE THING, AND IT IS NOT EDITED HERE. The category row
+          above is a fact; this files a request against it, shown as pending
+          until a person applies it on the machine that holds the record
+          (ADR-0016). On a deployment without that machine it says so. */}
+      <CategoryCorrection domain={workspace.domain} />
+      <CompetitorOverrides domain={workspace.domain} />
+
       {context === 'brand' ? (
         <div style={{ marginTop: 'var(--space-3)' }}>
           <ActionLink href="/dashboard/prompts">Manage prompts</ActionLink>
@@ -471,25 +501,66 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
 }
 
 /**
- * The link to `apps/web`. Labelled as illustrative every time it appears: that
- * app is a design surface running on made-up cycles, and a reader who lands on
- * it from here must not mistake its charts for their own measurements.
+ * MENTION RATE OVER CYCLES — real data, on the real record.
+ *
+ * Until 2026-09-02 a trend existed only in the fixture-only apps/web app (a
+ * "worked example" over cycles that were never collected; retired 2026-09-07).
+ * This one is drawn from `cyclesFor`, which holds only scans that were actually
+ * bought, one per UTC day.
+ *
+ * The verdict beside it is `compare()`'s between the two newest cycles: no
+ * arrow, no colour and no emphasis unless the intervals separate, and "not
+ * comparable" rather than a movement when the stamp or the basis differs
+ * between them (R5). The chart itself breaks its line at such a boundary.
  */
-export function WorkedExample() {
-  const theme = useTheme()
+function TrendSection({ cycles, subjectName }: { cycles: readonly ScanResultFile[]; subjectName: string }) {
+  const points = trendOf(cycles)
+  const movement = latestMovement(cycles)
+  const first = cycles[0]!
+  const last = cycles[cycles.length - 1]!
+  const significant = movement?.verdict.significance === 'higher' || movement?.verdict.significance === 'lower'
+  const glyph =
+    movement?.verdict.significance === 'higher' ? '▲' : movement?.verdict.significance === 'lower' ? '▼' : movement?.verdict.significance === 'not-comparable' ? '≠' : '–'
+  const gloss =
+    movement?.verdict.significance === 'no-significant-change'
+      ? 'The two confidence intervals overlap, so this sample cannot tell the cycles apart.'
+      : movement?.verdict.significance === 'insufficient-data'
+        ? 'Too few answers in one of the cycles to attempt the comparison.'
+        : movement?.verdict.significance === 'not-comparable'
+          ? `These two cycles were ${movement.why ?? 'measured to precisions too different to compare'}, so comparing them would attribute a definition change to the brand. The line breaks there.`
+          : 'The intervals separate, and the cycles were measured to comparable precision.'
+
   return (
-    <div style={{ marginTop: 'var(--space-3)' }}>
-      {/* themedUrl: the worked example is a different origin, so the theme
-          chosen here cannot reach its localStorage. The query parameter is how
-          the choice crosses; `system` sends nothing and the media query
-          decides there as it does here. */}
-      <ActionLink href={themedUrl(DASHBOARD_URL, theme)} external>
-        Worked example
-      </ActionLink>
+    <section className="section" id="trend">
+      <h2>Mention rate over cycles</h2>
       <p className="prose">
-        A demonstration of the multi-cycle view. The figures there are illustrative, not collected, they belong to no real brand, and the run of
-        cycles they are drawn on was never collected on a schedule.
+        <span className="num">{cycles.length}</span> collected cycles of {subjectName}, from <span className="num">{cycleDayOf(first)}</span> to{' '}
+        <span className="num">{cycleDayOf(last)}</span>. Each point is one day&apos;s answers to the recorded category&apos;s prompts, with its own
+        interval. Where two neighbouring points were measured on a different basis or scored by a different version, the line between them
+        breaks and the comparison is refused rather than made.
       </p>
-    </div>
+      <div className="annotated">
+        <div className="annotated__body">
+          <CiTrendChart points={points} title={`${subjectName}: mention rate over ${cycles.length} cycles`} />
+        </div>
+        <aside className="note">
+          <span className="note__cap">Latest movement</span>
+          {movement ? (
+            <>
+              <span className="note__line">
+                {movement.current} vs {movement.previous}
+              </span>
+              <p className={`delta${significant ? ' delta--significant' : ''}`} style={{ marginTop: 'var(--space-2)' }}>
+                <span className="delta__glyph" aria-hidden="true">
+                  {glyph}
+                </span>
+                <span>{movement.verdict.label}</span>
+              </p>
+              <span className="note__gloss">{gloss}</span>
+            </>
+          ) : null}
+        </aside>
+      </div>
+    </section>
   )
 }

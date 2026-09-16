@@ -35,3 +35,15 @@ shots/
 # TypeScript incremental build cache — a build artifact, never source.
 # It was tracked by mistake and showed up as a modified file after every build.
 *.tsbuildinfo
+
+# Third-party skill installs, per developer, managed outside the repo: the
+# `skills` CLI writes .agents/ + skills-lock.json, claudekit writes into
+# .claude/skills/. The project's own three skills stay tracked by the
+# negations below. Same reasoning as .obsidian/: personal tooling, not project
+# state, and 4.5 MB of someone else's prose is not something a clone needs.
+.agents/
+skills-lock.json
+.claude/skills/*
+!.claude/skills/geo-domain/
+!.claude/skills/measurement-methodology/
+!.claude/skills/reconciliation-formats/

@@ -52,7 +52,7 @@ export interface CachedBank {
 
 export interface CachedDecision {
   readonly slug: string
-  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`. */
+  /** `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback` | `correction`. */
   readonly source: string
   readonly evidence: string
   readonly decidedAt: string

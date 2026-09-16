@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { BackLink } from '@/components/back-link'
 import { TIERS, capRefusal, type Tier } from '@/lib/pricing'
 import { addCustomPrompt, readCustomPrompts, removeCustomPrompt } from '@/lib/custom-prompts'
+import { REASON_MIN, filePromptSet, loadCustomPromptStatus, type CustomPromptStatus } from '@/lib/custom-prompt-request'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor } from '@/lib/workspace'
 
 /**
@@ -26,8 +27,13 @@ import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor } from '@/lib/workspa
  * that shipped before. The caps themselves come from the published tiers and are
  * still statements about the OFFER.
  *
- * Nothing here schedules or collects a custom prompt: adding one changes the
- * allocation arithmetic on this page and nothing else.
+ * SINCE ADR-0016 THE LIST IS A DRAFT, AND FILING IT IS THE ACT. The browser
+ * list is where a visitor composes; "File this list" sends the whole list to
+ * the machine that holds the record as a REQUEST, validated there with the
+ * scorer's own matcher (a prompt naming you or a tracked brand is refused at
+ * once, with the reason). A person applies it; from then on every cycle asks
+ * the set as a second measurement beside the curated bank. Nothing here
+ * schedules a cycle, and a filed list changes nothing until applied.
  */
 export function ManagePrompts({ domain, backHref, backLabel }: { domain: string; backHref: string; backLabel: string }) {
   const workspace = workspaceFor(domain)
@@ -43,6 +49,12 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
    * subscriptions table that does not exist.
    */
   const [checkAgainst, setCheckAgainst] = useState<Tier['id'] | ''>('')
+  // The set on the machine that holds the record, and the request against it.
+  const [server, setServer] = useState<{ kind: 'loading' } | { kind: 'ready'; status: CustomPromptStatus } | { kind: 'away'; message: string }>({ kind: 'loading' })
+  const [reason, setReason] = useState('')
+  const [filing, setFiling] = useState(false)
+  const [filed, setFiled] = useState<{ ok: boolean; message: string } | null>(null)
+  const [reload, setReload] = useState(0)
 
   // Storage is read in an effect, not during render: the server rendered this
   // component with an empty list, and reading localStorage mid-render would
@@ -50,6 +62,21 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
   useEffect(() => {
     setCustom(readCustomPrompts(domain))
   }, [domain])
+  useEffect(() => {
+    let live = true
+    void loadCustomPromptStatus(domain).then((r) => {
+      if (!live) return
+      setServer(r.ok ? { kind: 'ready', status: r.status } : { kind: 'away', message: r.message })
+      // An empty draft starts from the set on record, so "file this list" edits what stands rather than replacing it with one line.
+      if (r.ok && r.status.set && r.status.set.prompts.length) {
+        const onRecord = r.status.set.prompts
+        setCustom((cur) => (cur.length ? cur : onRecord))
+      }
+    })
+    return () => {
+      live = false
+    }
+  }, [domain, reload])
 
   if (!workspace) {
     return (
@@ -195,21 +222,82 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
               </ol>
             )}
 
-            {/* THE HONESTY LINE. A list of prompts under an "Add" button reads
-                as configuration of a running system, and there is no running
-                system. Said in prose, next to the control that invites the
-                misreading. */}
+            {/* THE HONESTY LINE, REWRITTEN FOR ADR-0016. The list is a draft
+                in this browser. Filing it is a request; applying it is a
+                person's act on the machine that holds the record; asking it is
+                the next cycle, started by a person. Each of those is said. */}
             <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-              Custom prompts are stored in this browser only. Nothing schedules or collects them, because recurring collection is not built;
-              adding one changes the allocation arithmetic on this page and nothing else. No prompt on this list has been asked of any engine.
+              This list is a draft, stored in this browser. Filing it sends the whole list to the machine that holds this domain&apos;s record as a
+              request; a person applies it there, and from then on every cycle asks these prompts beside the curated bank, scored as a separate
+              measurement. Nothing is asked of any engine until a person starts a cycle.
             </p>
+
+            {server.kind === 'away' ? (
+              <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
+                {server.message} So this list cannot be filed from here.
+              </p>
+            ) : server.kind === 'ready' ? (
+              <div className="card" style={{ marginTop: 'var(--space-3)' }} data-prompt-request>
+                <p className="prose">
+                  {server.status.set
+                    ? `On record: set version ${server.status.set.version}, ${server.status.set.prompts.length} ${server.status.set.prompts.length === 1 ? 'prompt' : 'prompts'}, applied by ${server.status.set.by} on ${server.status.set.at.slice(0, 10)}.`
+                    : 'On record: no custom prompts yet, so cycles ask the curated bank only.'}{' '}
+                  {server.status.pending
+                    ? `A request of ${server.status.pending.prompts.length} ${server.status.pending.prompts.length === 1 ? 'prompt' : 'prompts'} was filed on ${server.status.pending.requestedAt.slice(0, 10)} and has not been applied; filing again replaces it.`
+                    : ''}
+                </p>
+                <p className="prose">
+                  Each prompt adds <span className="num">{server.status.perPrompt.cells}</span> requests to every cycle, about{' '}
+                  <span className="num">${server.status.perPrompt.usd.toFixed(3)}</span> of collection budget at the {server.status.perPrompt.plan === 'payg' ? 'pay-as-you-go' : server.status.perPrompt.plan} rate.
+                  This build allows <span className="num">{server.status.limits.maxPrompts}</span> per domain. A prompt that names you or a brand we track is
+                  refused: it would guarantee a mention and measure our phrasing.
+                </p>
+                <label className="field__label" htmlFor="prompt-request-reason">
+                  Why these prompts, in a sentence a person can check
+                </label>
+                <textarea id="prompt-request-reason" className="field" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} minLength={REASON_MIN} />
+                {filed ? (
+                  <p className={`prose${filed.ok ? '' : ' prose--flag'}`} role={filed.ok ? 'status' : 'alert'}>
+                    {filed.message}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={filing || reason.trim().length < REASON_MIN || (custom.length === 0 && !server.status.set)}
+                  onClick={async () => {
+                    setFiling(true)
+                    const r = await filePromptSet(domain, custom, reason)
+                    setFiling(false)
+                    setFiled(
+                      r.ok
+                        ? {
+                            ok: true,
+                            message: r.applied
+                              ? `Applied ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'}. The next cycle asks them beside the curated bank, as a second measurement on its own basis.`
+                              : `Filed ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'} as a request. Nothing changes until a person applies it.`,
+                          }
+                        : { ok: false, message: r.message },
+                    )
+                    if (r.ok) setReload((n) => n + 1)
+                  }}
+                >
+                  {filing
+                    ? 'Filing…'
+                    : custom.length === 0
+                      ? 'File an empty list (clear the set on record)'
+                      : `File this list of ${custom.length} as a request${server.status.set ? ` (replaces the ${server.status.set.prompts.length} on record)` : ''}`}
+                </button>
+              </div>
+            ) : null}
           </div>
           <aside className="note">
-            <span className="note__cap">Storage</span>
-            <span className="note__line">this browser only</span>
+            <span className="note__cap">Draft</span>
+            <span className="note__line">this browser, until filed</span>
             <span className="note__line">cap 200 characters</span>
             <span className="note__gloss">
-              There is no account behind this list yet, so clearing site data clears it.
+              There is no account behind this draft yet, so clearing site data clears it. What has been filed and applied lives on the machine
+              that holds the record and is shown above.
             </span>
           </aside>
         </div>

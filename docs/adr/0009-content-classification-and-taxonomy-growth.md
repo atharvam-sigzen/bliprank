@@ -486,3 +486,310 @@ general bucket — safe direction, real cost.
   call is still valid and still means "no tracked-brand check" — asserted, so the
   default cannot become a silent no-op nobody notices.
 - Five leaders will falsely trigger it until their aliases are tightened.
+
+---
+
+# Amendment 3 — where a generated category's competitors finally come from
+
+**Status:** Accepted · **Date:** 2026-09-02 · **Phase:** P3
+
+## Context
+
+Section 3 above states the rule twice and builds only half of it:
+
+> "Real competitors may only ever arrive later, from brands the engines actually
+> named in answers we actually collected."
+
+The refusal half was built and enforced three times over. The **arrival** half was
+never designed, so `leaders: []` was not a starting state — it was permanent. A
+customer correctly placed in an authored category saw "there is no comparison on
+this scan" on every screen, forever, while the answers already bought for them
+named six competing products by name. One collected ChatGPT answer for
+`ERP solution for jewellery business with retail POS` lists Ornexa, Akrut
+Jewellery ERP, Gehna ERP, Aurex ERP, 24KaratSolutions and Jewellers Pro — in a
+comparison table, with a ranked shortlist under it.
+
+The evidence was on disk. Nothing could read it.
+
+## Decision
+
+`services/grader/src/promote-competitors.ts`, plus a runner,
+`pnpm grader:promote`. It reads the stored answers for a category's own prompts
+and proposes competitors, each carrying the answers it was learned from.
+
+### It is deterministic, and the reason is not cost
+
+R1 names competitor detection as deterministic-first. Asking a model "which of
+these strings are product names" would cost about $0.0002, so cost decides
+nothing here. What decides it is the argument the content classifier already
+makes: the competitor set determines `position`, `position` determines the
+preview score, and the score is on the sheet. A set that can answer differently
+on two runs over one corpus makes the number non-reproducible.
+
+So extraction is markdown shape and arithmetic — bold spans, headings, and the
+first column of a comparison table, the three shapes an engine uses to list
+products whatever the category is. It is a heuristic, it is labelled one
+everywhere it surfaces, and it is not what makes the mechanism safe.
+
+### Two classes of candidate, not one
+
+- **`tracked`** — a brand already in a leader table somewhere in the taxonomy,
+  found with `findMentions`: the *same* matcher that decides whether a brand
+  counts as mentioned in a scored answer, so the proposal and the measurement
+  share one definition of "this text names that brand". It brings a reviewed
+  alias set with it, and it inherits Amendment 2's recorded defect — `Close`,
+  `Wave`, `Sage`, `Notion` and `Asana` are ordinary English words in the alias
+  tables today.
+- **`extracted`** — a name nothing tracks yet. No alias set exists, so the alias
+  is the name.
+
+### What makes it safe is the bar and the human, not the extractor
+
+Three counts, all of which must clear: **at least 3 distinct answers, at least 2
+distinct prompts, at least 2 distinct engines.**
+
+The engine count is the load-bearing one. A single engine inventing a plausible
+product name is fluent and repeatable, and will clear an answer count and a
+prompt count on its own. Two engines are separate systems over separate indexes.
+
+Measured on the real committed corpus, `erp-software`, 50 collected answers:
+
+| Cleared the bar | Below it |
+|---|---|
+| Odoo, QuickBooks, ERPNext, Xero, Microsoft Dynamics 365, Salesforce, Shopify, SAP Business One | "My recommendation" (3 answers, 3 prompts, **1 engine**), "Best overall", "My shortlist", "Strong options to evaluate", "Software", "ERP Platform" |
+
+Every name that cleared is a real product. Every phrase that did not is an
+engine's own house style, recurring inside one engine. That is the bar working,
+and it is also the whole of the evidence for it: these thresholds have not been
+measured against a labelled set, exactly as this ADR's own classifier thresholds
+have not.
+
+And on `gaming-peripherals-india`, also 50 answers: **nothing clears**, because
+the engines name specific SKUs rather than brands and each appears once. An empty
+result is the honest one, and the mechanism produces it rather than lowering its
+own bar to have something to show.
+
+### `--apply` is a human act, and the default is a dry run
+
+CLAUDE.md §4 puts the scoring rule set on the human side of the line, and a
+competitor set is part of it. Nor can any threshold separate "Shopify was named
+as a competitor" from "Shopify was named as an integration" — the real corpus
+contains the second, in the words *"Connect online platforms like Shopify or
+WooCommerce for seamless omni-channel management"*, and it cleared the bar. A
+person reading the excerpt sees it immediately.
+
+So the report prints, per candidate: how it was found, the alias that matched,
+the three counts, and a quoted excerpt — including everything that fell *below*
+the bar, because a silent cut reads as "there was nothing else". Nothing is
+written without `--apply`. The dry run spends nothing and reaches no network, so
+it is free to run as often as anyone likes, which is why it is the default.
+
+### It is stored beside the bank, not in it
+
+ADR-0009's third refusal is that `readGeneratedBanks` **drops** a generated bank
+file that has acquired leaders. That refusal is unchanged and unweakened —
+writing promoted leaders into the bank file would have required switching off the
+check standing in the way, and "the check is off for the good writes" is not a
+check.
+
+Promotion writes `data-live/promoted-competitors/<slug>.json` and the merge
+happens on read. Every entry must carry its evidence, re-checked on read exactly
+as `leaders` is re-checked on the bank file, so a hand-written entry with no
+evidence is dropped. **A leader therefore reaches a chart by exactly one route,
+and it is the route that cannot be walked without collected answers behind it.**
+
+### `domains: []`, always
+
+`Leader.domains` is the citation-attribution list, and its own docblock is
+emphatic that it is deliberately narrow because a wrong entry credits somebody
+else's citation to this brand. A promoted name was learned from prose, and prose
+cites nothing; deriving `ornexa.com` from "Ornexa" is precisely the invention
+this module exists to refuse, and ADR-0005 already declines to bucket an unknown
+citation. A promoted competitor is comparable on mentions and silent on
+citations. Forced empty on write *and* on read.
+
+### The bank version moves with the competitor set
+
+`comparisonBasisFor` stamps `slug@version` into every metric's
+`comparison_basis`. Adding competitors changes `position`, which changes the
+preview score, so a scan run before promotion and one run after are not
+measurements of the same thing. The version bump is what makes `compare()` refuse
+them instead of reporting the difference as movement — R5's discipline, applied
+to the competitor set.
+
+## Consequences
+
+**Good.**
+
+- The rule this ADR wrote down is now the rule the code implements, both halves.
+- A competitor on a chart carries the answers it was learned from, which is
+  something no competing tool in this category can say about its own.
+- Promoted brands join `trackedBrands`, so Amendment 2's fourth refusal covers
+  them automatically: no future authored bank may name one in a prompt.
+
+**Costs, accepted.**
+
+- **The extractor is a heuristic and will propose noise.** Bounded by the bar,
+  the printed excerpts and the human gate. A wrong promotion is visible in the
+  file and reversible by editing it, with the version bump that implies.
+- **A promoted `tracked` candidate can be a real string match and a nonsense
+  competitor at once**, until the five colliding aliases Amendment 2 reported are
+  tightened. Still human-owned, still unfixed here.
+- **An existing scan keeps its own basis until the domain is re-scanned.** The
+  `/api/scan` result cache keys on the category slug, not the version, so a
+  customer measured under `@1` continues to see their `@1` result. Correct under
+  R5 — and it means promotion does not retroactively alter a record already
+  published. Re-scanning costs a scan, which is the customer's call.
+- **Nothing has been promoted.** The mechanism ships dry, and a test asserts that
+  `data-live` holds no promotion file — so the first one cannot arrive without a
+  human editing that test alongside it.
+
+⚠️ **HUMAN REVIEW REQUIRED — the competitor set for `erp-software`.** The dry run
+proposes eight names. Six are unambiguous. `Shopify` reads as an integration
+rather than a rival in its own excerpt, and `ERPNext` is the platform
+`sigzen.com` implements rather than a competitor of it — the same distinction
+Amendment 1 drew when it allowed an ERP bank to name ERPNext. Both are judgement
+calls about a market, which is not a call this code is allowed to make.
+
+---
+
+# Amendment 3, addendum — the first promotion, and the distinction the bar cannot make
+
+**Status:** Accepted · **Date:** 2026-09-02
+
+## What was promoted
+
+An operator read the dry run for `erp-software` and approved six of the eight
+names that cleared the bar:
+
+**Odoo · QuickBooks · Xero · Microsoft Dynamics 365 · Salesforce · SAP Business One**
+
+`erp-software` moved to `@2`. `gaming-peripherals-india` still has nothing
+promoted, because nothing clears the bar there.
+
+## What was refused, and why it matters more than what was promoted
+
+Two names cleared the arithmetic and were wrong about the market:
+
+| Refused | Its own evidence | Why it is not a rival |
+|---|---|---|
+| `Shopify` | *"Connect online platforms like Shopify or WooCommerce for seamless omni-channel management"* | Named as an **integration** the ERP connects to. |
+| `ERPNext` | *"### 1. ERPNext — my first choice"* | The **platform** sigzen.com implements. Amendment 1 already drew this line when it allowed an ERP bank to name ERPNext. |
+
+Both were named by real engines, in real answers, repeatedly, across engines.
+Every count was honest. The counts were simply not the question.
+
+## ⚠️ The known limitation: mentioned-as-a-rival vs mentioned-as-an-adjacent-thing
+
+The evidence bar counts **whether** a name was said. It has no representation at
+all for **how** it was said, and at least three distinct relationships collapse
+into the same three integers:
+
+- **rival** — the thing a buyer would choose instead ("Odoo or SAP Business One")
+- **integration** — the thing it connects to ("connect Shopify to your ERP")
+- **platform or substrate** — the thing it is built on or implements ("ERPNext
+  partner", "WordPress hosting")
+
+A brand in any of those three appears in the same answers, in the same bold
+spans and comparison tables, with the same recurrence across engines. No
+threshold on answers, prompts or engines separates them, and raising the bar
+does not help: `Shopify` cleared on three engines, more than several genuine
+rivals did.
+
+**Not being fixed now, deliberately.** The cheap-looking fixes are all worse
+than the human gate:
+
+- *An LLM classifying the relationship* breaks R1. The competitor set decides
+  `position`, `position` decides the preview score, and a set that can answer
+  differently on two runs over one corpus is not reproducible.
+- *Cue phrases* ("integrates with", "connect", "built on") are a keyword list
+  against free prose, and would refuse a genuine rival any time an answer
+  happened to mention integrating with it — which good ERP answers do constantly.
+- *Requiring the name to appear in a comparison table* helps for one answer
+  shape and fails for the prose shortlists that make up most of the corpus.
+
+The honest shape of a fix, whenever this is revisited at scale, is probably
+**positional rather than lexical**: the same first-appearance offsets
+`scoreAnswer` already computes, asking whether the candidate sits in the same
+enumeration as the other candidates or off in a supporting clause. That is a
+deterministic signal over structure we already extract, which is the only kind
+of signal allowed on this path. It is a real piece of work and it needs its own
+evidence, not a guess.
+
+**Until then the design holds because the gate is a person.** The dry run is
+free, prints the matched alias and a quoted excerpt for every candidate, and
+writes nothing. A refusal is recorded in the store (`excluded`) rather than
+living in the operator's shell history, so the same wrong candidate is not
+re-proposed on the next run over the same corpus — and `--exclude` is retroactive,
+so a promotion that turns out wrong is removed by naming it, with the version
+bump that implies.
+
+**The cost of this limitation scales with categories, not with corpus size.**
+One judgement call per category is affordable; it is the thing to watch when the
+taxonomy has two hundred of them.
+
+## Corrections, from re-reading this after it shipped
+
+Four defects, found by re-examining the module rather than by a failing test.
+Two of them contradicted claims made above, so the claims are corrected here
+rather than quietly patched.
+
+**1. A promotion for a hand-authored bank was written, reported as a success,
+and read by nothing.** `withPromoted` runs inside `readGeneratedBanks`, so
+`--apply --category crm-software` printed "6 competitors · bank version 1 -> 2"
+and changed nothing. A false success report is worse than a refusal, because
+there is nothing to notice. The runner now refuses, and refusing is the correct
+half to build: a hand-authored bank's leader table is reviewed — curated
+aliases, narrowed attribution domains, deliberate omissions like `wave` and
+`kit` — and CLAUDE.md §4 puts it on the human side. Promotion exists for the
+categories that have no such table and should not quietly acquire write access
+to the ones that do.
+
+**2. ⚠️ The version bump was trusted from the file, not enforced on read.**
+The section above says "the version bump is what makes `compare()` refuse
+them". That was true of what `buildPromotion` wrote and false of what
+`withPromoted` read: a promotion file hand-edited back to the bank's own version
+attached its competitors while claiming an **unchanged basis**, so `compare()`
+would have put a number scored against six rivals beside one scored against
+none and called the difference movement. Every sibling invariant in this store
+is re-checked on read — a leader with no evidence is dropped, `domains` is
+forced empty — and this one was the exception for no reason. Now
+`max(promoted.bankVersion, bank.version + 1)`.
+
+**3. Refusing every candidate discarded the refusal.** `readPromoted` returned
+null whenever `leaders` was empty, and a test asserted that was correct on the
+reasoning that "an operator who refuses everything has changed nothing". They
+have: they read the excerpts and decided. Because the bar is deterministic, the
+next run over the same corpus re-proposed every refused name with no memory —
+so the persistence this amendment is built around failed in exactly the case
+where every candidate was wrong. Null now means "nothing recorded at all"; a
+refusals-only file is remembered and attaches nothing.
+
+**4. The corpus admitted prompts that name a brand by construction.** Promotion
+was fed every prompt in the bank. Across the hand-authored taxonomy that is 190
+of 445 prompts — "HubSpot vs Salesforce for a 20-person sales team", "What do
+users complain about most with Pipedrive?" — and a brand named in the question
+is guaranteed a mention in the answer. Promoting from that evidence is this
+system discovering competitors it supplied itself, the same circularity
+Amendment 2 refuses on the authoring side. It was harmless only because the
+Grader collects unprompted cells and nothing else, so no such answer is in the
+store — an accident of the current collection scope, not a guarantee. The
+filter is now `UNPROMPTED_INTENTS`, the same one `runScan` applies.
+
+### Checked and left alone
+
+- **Promoted names join `trackedBrands`**, so Amendment 2's fourth refusal now
+  covers them: no future authored bank may name Odoo, QuickBooks, Xero,
+  Microsoft Dynamics 365, Salesforce or SAP Business One in a prompt. That is
+  correct — those are brands whose mention rates this product now publishes —
+  but it is also the `kit` failure mode with a new door: a *noise* promotion
+  would start discarding good generated banks. The six promoted names are
+  unambiguous, so there is nothing to fix today. It is a reason to keep the
+  human gate rather than to raise the bar and drop it.
+- **A prompt with no content terms** would render as 0% coverage in the AEO
+  report, reading as "your page covers none of this" when the truth is "there
+  was nothing to check". Zero of the 924 prompts across every bank hit it, and
+  `widestGap`'s secondary sort already prefers a real gap over it, so the fix
+  would be shorter than the comment explaining why it was needed. (`widestGap`
+  went with the `--draft` path on 2026-09-02; the report itself sorts the same
+  way, and the observation stands.)

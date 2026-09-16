@@ -379,6 +379,53 @@ table {
   border-left: 3px solid var(--color-accent);
 }
 
+/*
+ * THE LEDE OF A RECORD — the finding in a sentence, above the instrument.
+ *
+ * SANS, NOT THE DISPLAY SERIF, and that is the one deliberate exception to this
+ * sheet's "serif on words" rule. A serif at this size reads as a pull quote,
+ * which is exactly the register the MVP feedback objected to; this has to read
+ * as an interface making a statement. The serif keeps the headings and the
+ * margin gloss, where it says "this is a record" without doing the talking.
+ *
+ * The figures inside it stay mono, like every figure on this sheet. "1 in 4"
+ * is a quantity, and a quantity set in the body face is a quantity the eye has
+ * to find rather than one it lands on.
+ */
+.headline {
+  margin: var(--space-4) 0 0;
+}
+
+.headline__claim {
+  font-family: var(--font-sans);
+  font-size: clamp(1.1875rem, 0.95rem + 1.05vw, 1.5rem);
+  font-weight: 460;
+  line-height: 1.32;
+  letter-spacing: -0.011em;
+  color: var(--color-foreground);
+  max-width: 34ch;
+  margin: 0;
+  /* A domain or a trading name can be long and must never overflow the
+     measure; the same rule the record headline uses, for the same reason. */
+  overflow-wrap: anywhere;
+}
+
+.headline__claim strong {
+  font-weight: 660;
+}
+
+/* The bounds and the sample, quieter but NOT small print: this is the half of
+   the sentence that carries the uncertainty, and shrinking it below the body
+   size would be the layout undoing what the wording is for. */
+.headline__range {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-muted-foreground);
+  max-width: 46ch;
+  margin: var(--space-2) 0 0;
+}
+
 /* The lede under a page title. */
 .lede {
   font-family: var(--font-display);
@@ -435,6 +482,28 @@ table {
 }
 
 .themetoggle:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+/*
+ * THE DEPTH SWITCH, ON.
+ *
+ * Same fill and ink as hover, held — the identical device .navbar__wsbtn--open
+ * uses two hundred lines down, for the identical reason: a state is drawn as a
+ * state, not announced only to the accessibility tree.
+ *
+ * Said three ways, none load-bearing alone. The fill is the first; the icon
+ * gains rules (two strokes become four) so the state survives greyscale, a
+ * monochrome print and a reader who cannot separate the fill from the paper;
+ * and `aria-checked` is the third. Colour is not one of the three — this sheet
+ * does not spend colour on state, it spends it on data.
+ *
+ * The label does NOT change, which is the point of it. "Full detail" names what
+ * is being switched at both depths, so the reading the reader is not currently
+ * getting is always on screen.
+ */
+.depthtoggle[aria-checked='true'] {
   background: var(--color-muted);
   color: var(--color-foreground);
 }
@@ -2785,6 +2854,10 @@ h3.record__title,
   order: 1;
   display: flex;
   align-items: center;
+  /* Two controls now: depth and theme. Without a gap they share an edge and
+     read as one segmented control, which they are not — they switch different
+     things and either can be set without the other. */
+  gap: var(--space-1);
 }
 
 .navbar__link {
@@ -3132,4 +3205,467 @@ h3.record__title,
   letter-spacing: 0.08em;
   color: var(--color-muted-foreground);
   margin-right: 2px;
+}
+
+/* ==========================================================================
+   THE PER-QUESTION MARK
+   ==========================================================================
+
+   One glyph per collected answer in the breakdown grid. Deliberately quiet:
+   a hit is weighted, a miss is muted, and neither is coloured. Green for
+   "mentioned" would make the table read as a scorecard, and a cell here is
+   one answer — not a verdict, and carrying no interval of its own. */
+.mark {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}
+
+.mark--hit {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+/*
+ * RANK AS WEIGHT. The cell used to set every named answer in one bold ink,
+ * which said "named" and nothing about how well — while the figure beside it
+ * read backwards (see the note above rankLabel). The ranking is now carried by
+ * the mark, so the grid's pattern is legible before any number is parsed.
+ *
+ * Weight and ink only. Colour is spent on data on this sheet, and a rank
+ * encoded in hue is a rank a colour-blind reader and a greyscale print both
+ * lose. Every step stays at or above the 4.5:1 this text owes: --color-
+ * foreground is 18.5:1 on the card and --color-neutral-ink 5.85:1.
+ */
+.mark--rank1 {
+  font-weight: 700;
+}
+
+.mark--rank2 {
+  font-weight: 550;
+}
+
+.mark--rank3 {
+  font-weight: 450;
+  color: var(--color-neutral-ink);
+}
+
+/* ==========================================================================
+   DEPTH — the simple reading
+   ==========================================================================
+
+   ONE DIRECTION ONLY. Every rule in this section is written as
+   [data-depth='simple'] and never as its negation, so a page with no attribute
+   at all — a reader with JavaScript off, whom the boot script never reached —
+   gets the full record rather than a subset they have no way to reveal. The
+   fallback fails open, and it does so structurally rather than by remembering.
+
+   NOTHING HERE IS A SECOND DESIGN. There is no simple palette, no simple
+   component and no simple number. The same components render the same scan;
+   this section shows fewer of them and re-typesets the prose. A figure visible
+   at both depths is the same figure, with the same interval, from the same
+   pass.
+
+   THE RULE FOR WHAT CARRIES .detail — and it is a rule, not a taste, because
+   the alternative is that the simple view quietly becomes a different product:
+
+       A block is .detail if and only if hiding it removes no MARK from the
+       page. Prose that explains something still drawn stays at both depths.
+       Prose that explains something itself hidden goes with it.
+
+   That is what keeps the dashed rows on the head-to-head chart explained in the
+   simple view, and it is why the fixture stamp and the short-sample caveat are
+   not .detail: both change how a visible number must be read. Hiding a
+   disclosure to make a page calmer is the one move this product cannot make.
+   ========================================================================== */
+
+[data-depth='simple'] .detail {
+  display: none;
+}
+
+/*
+ * THE MARGIN FOLDS AWAY. The two-column record — content, and its papers
+ * alongside — is the detailed reading; at simple depth the annotation column
+ * collapses into the flow exactly as it already does under 1100px, so no new
+ * layout is invented for this and the notes that survive keep their DOM
+ * position. (0,2,0) beats the (0,1,0) rule inside the min-width query whatever
+ * the source order.
+ */
+[data-depth='simple'] .annotated {
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--space-3);
+}
+
+/*
+ * THE CHILDREN FOLLOW THE COLUMN. Above 1100px the body and the note are placed
+ * explicitly (`grid-column: 1` / `2`, both on row 1) so the note can sit sticky
+ * beside its referent. Collapsing the template alone leaves those placements
+ * in force: the note lands in an implicit second column sized to its own prose
+ * and the body's `1fr` resolves to ZERO. Measured on 2026-09-02 at
+ * `0px 1056px`: a masthead title with no width, a domain wrapping one syllable
+ * per line, on the default view of every non-agency page. So the placements
+ * are reset with the template, at (0,3,0), which beats the (0,2,0) rules inside
+ * the media query whatever the source order.
+ */
+[data-depth='simple'] .annotated > .annotated__body,
+[data-depth='simple'] .annotated > .note {
+  grid-column: auto;
+  grid-row: auto;
+  position: static;
+}
+
+/*
+ * THE ESSAY FIX, AND IT IS A TYPE RULE RATHER THAN A CUT.
+ *
+ * The sheet's standing rule is serif on words, mono on figures. That is right
+ * for a record and it is precisely what made the product read "like an essay or
+ * a blog" to a brand owner: Newsreader at a 62ch measure IS magazine
+ * typography, and no amount of shortening the copy changes what it signals.
+ *
+ * So at simple depth the serif is demoted to headings and the display face
+ * stops being the medium of every explanation. Body prose goes to the interface
+ * sans, one step larger, at a measure short enough to read as an interface
+ * statement rather than a column. The serif still opens every section, so the
+ * record's voice is intact — it is no longer doing the talking.
+ */
+[data-depth='simple'] .prose {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: normal;
+  max-width: 46ch;
+}
+
+/* The amber tick survives the change of face. A caveat is a caveat at both
+   depths, and it is the one piece of prose a simple reader most needs to see. */
+[data-depth='simple'] .prose--flag {
+  font-weight: 460;
+}
+
+/*
+ * n AND THE ENGINE COUNT NEVER LEAVE. The margin note beside the rail loses its
+ * provenance line at simple depth — algorithm version and collection path are
+ * the auditor's fields, not the owner's — but the category, the answer count
+ * and the engine count stay, at both depths, on every surface. A reader must
+ * never be able to screenshot a number from this product without the size of
+ * the sample beside it. Asserted in apps/public/lib/depth.test.ts.
+ */
+[data-depth='simple'] .note {
+  font-size: 0.71875rem;
+}
+
+/* ==========================================================================
+   THE EVIDENCE — an answer, as the engine wrote it
+   ==========================================================================
+
+   Set apart from the record's own voice on purpose. Everything else on this
+   page is ours; this is somebody else's text quoted whole, and it should not
+   be able to be mistaken for our prose. Mono, indented, and never styled to
+   look authored. */
+.evidence {
+  border-top: var(--hairline);
+  padding: var(--space-3) 0;
+}
+
+.evidence:last-of-type {
+  border-bottom: var(--hairline);
+}
+
+.evidence__q {
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  list-style: none;
+}
+
+.evidence__q::-webkit-details-marker {
+  display: none;
+}
+
+.evidence__q::before {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--color-muted-foreground);
+  flex: none;
+}
+
+.evidence[open] > .evidence__q::before {
+  content: '−';
+}
+
+.evidence__prompt {
+  flex: 1;
+}
+
+.evidence__count {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  flex: none;
+}
+
+.evidence__a {
+  margin: var(--space-3) 0 var(--space-3) var(--space-4);
+}
+
+.evidence__head {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  margin: 0 0 var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+
+.evidence__engine {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The answer itself. `pre-wrap` because it is markdown as the engine emitted
+   it: the line breaks are the engine's and re-flowing them would be editing. */
+.evidence__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--color-muted);
+  border-radius: 2px;
+  max-height: 30rem;
+  overflow-y: auto;
+}
+
+/* ==========================================================================
+   THE SOURCES AND THE GAP REPORT — ADR-0014
+   ==========================================================================
+   Two lists on the paper. Neither is a card: a citation list sits under the
+   answer it belongs to in the mono figure voice, and a finding is a row with
+   its status in the margin column, the way the rail keeps its papers beside
+   it. Missing is set in weight, never in colour alone.
+   ========================================================================== */
+
+.cites {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.cites--none {
+  color: var(--color-muted-foreground);
+}
+
+.cites__host {
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.findings {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.finding {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.finding__status {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-top: 2px;
+  color: var(--color-muted-foreground);
+}
+
+.finding--missing .finding__status {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+.finding__what {
+  margin: 0;
+}
+
+.finding__evidence {
+  margin: 2px 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.finding__why {
+  margin: 4px 0 0;
+}
+
+/* ==========================================================================
+   TERM COVERAGE — a count, drawn as a count
+   ==========================================================================
+   Discrete divisions, never a continuous bar: each row is split into that
+   question's own term count, so a row of sixths cannot be mistaken for a row of
+   ninths at the same fill. See the note above CoverageStrip.
+
+   NOT THE RAIL'S LANGUAGE. No Prussian band, no needle, no bounds. The rail
+   means "a measurement and its interval"; this is a word check over one
+   document, with no sample and no uncertainty to draw.
+   ========================================================================== */
+
+.cov {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 11rem;
+}
+
+.cov__strip {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-width: 5.5rem;
+  height: 10px;
+}
+
+.cov__seg {
+  flex: 1;
+  border-radius: 1px;
+  /* The empty divisions are deliberately quiet: the count beside the strip
+     states the denominator in words, so nothing meaningful depends on seeing
+     them (WCAG 1.4.11). They show granularity, not a value. */
+  background: var(--color-muted);
+}
+
+/* Neutral ink, not the data colour. --color-primary is spent on measurements,
+   and this is a fact about a document. 5.85:1 on the card, well past the 3:1 a
+   non-text mark owes. */
+.cov__seg--on {
+  background: var(--color-neutral-ink);
+}
+
+/* The mean across all questions, at the same x on every row: read down the
+   column it is a dashed upright. --color-field-border is the token that clears
+   3:1 on the card, the paper and the muted surface, which this mark owes
+   because it carries meaning. */
+.cov__mean {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--color-field-border);
+}
+
+.cov__count {
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+}
+
+/* ==========================================================================
+   PER-ENGINE INTERVALS
+   ==========================================================================
+   The rail's vocabulary at small scale, and legitimately so: an engine's rate
+   is a proportion of a sample, so it has an interval to draw. The coverage
+   strip in the gap report deliberately does NOT look like this, because a word
+   check over one document has no sample and no uncertainty.
+
+   Same fixed 0-100 track as everywhere else on this sheet. Same band colour
+   (4.44:1 on the card) and the same haloed needle, so a reader who has learnt
+   the rail reads this without being taught twice.
+   ========================================================================== */
+
+.estrip {
+  margin-top: var(--space-5);
+}
+
+.estrip__rows {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.estrip__row {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.estrip__name {
+  font-size: 0.8125rem;
+  color: var(--color-foreground);
+}
+
+.estrip__track {
+  position: relative;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-muted);
+}
+
+.estrip__band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  background: var(--color-secondary);
+}
+
+/* The needle is haloed for the same reason the rail's is: a mark drawn ON a
+   mark needs to clear the thing beneath it, not just the page. */
+.estrip__needle {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 3px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-card);
+}
+
+/* The rate across all engines. A reference, never a threshold: nothing on this
+   strip is tested against it, because the overall rate contains each engine's
+   own answers and the two are not independent. */
+.estrip__ref {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--color-field-border);
+}
+
+.estrip__count {
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /* The name takes its own line rather than squeezing the track to nothing. */
+  .estrip__row {
+    grid-template-columns: minmax(0, 1fr) 4.5rem;
+  }
+
+  .estrip__name {
+    grid-column: 1 / -1;
+  }
 }

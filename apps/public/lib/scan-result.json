@@ -9,17 +9,21 @@
     "signal": "leader-domain",
     "evidence": "pipedrive.com"
   },
+  "categorySource": {
+    "signal": "leader-domain",
+    "evidence": "pipedrive.com"
+  },
   "subjectSource": "leader",
   "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
-  "algoVersion": "det-1",
+  "algoVersion": "det-3",
   "collectedAt": "2026-08-25T06:18:56.874Z",
   "counts": {
     "cellsRequested": 85,
-    "cacheHits": 66,
-    "collected": 19,
+    "cacheHits": 85,
+    "collected": 0,
     "failed": 0,
     "answersScored": 85,
-    "providerCalls": 22
+    "providerCalls": 0
   },
   "brands": [
     {
@@ -33,7 +37,7 @@
         "ci_low": 0.3459365569169934,
         "ci_high": 0.552759388428024,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -49,7 +53,7 @@
         "ci_low": 0.6265804034631292,
         "ci_high": 0.8124038333751294,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -65,7 +69,7 @@
         "ci_low": 0.3349577742719609,
         "ci_high": 0.5412261589275047,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -81,7 +85,7 @@
         "ci_low": 0.3240354231287895,
         "ci_high": 0.5296364979251242,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -97,7 +101,7 @@
         "ci_low": 0.11932143444884925,
         "ci_high": 0.28411024369402993,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -113,7 +117,7 @@
         "ci_low": 0.040463723499160636,
         "ci_high": 0.16035984533375297,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -129,7 +133,7 @@
         "ci_low": 0.0253851600334125,
         "ci_high": 0.13041438450839765,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
@@ -145,10 +149,1177 @@
         "ci_low": 0,
         "ci_high": 0.04323948381405151,
         "n": 85,
-        "algo_version": "det-1",
+        "algo_version": "det-3",
         "collection_path": "third-party-grounded",
         "comparison_basis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1"
       }
+    }
+  ],
+  "promptRows": [
+    {
+      "prompt": "What is the best CRM for a solo founder just starting out?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "What is the best CRM for a solo founder just starting out?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 2,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "What is the best CRM for a solo founder just starting out?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "What is the best CRM for a solo founder just starting out?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "What is the best CRM for a solo founder just starting out?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 1,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Which CRM works best for a 10-person B2B sales team?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 7,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "Which CRM works best for a 10-person B2B sales team?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Which CRM works best for a 10-person B2B sales team?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 1,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "Which CRM works best for a 10-person B2B sales team?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 1,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM works best for a 10-person B2B sales team?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 1,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 4,
+      "position": 4,
+      "brandsDetected": 5,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM",
+        "Microsoft Dynamics 365 Sales"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 4,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "monday CRM"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 5,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "monday CRM",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 4,
+      "position": 1,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "monday CRM"
+      ]
+    },
+    {
+      "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Which CRM is best for a small business in the UK?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 2,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Which CRM is best for a small business in the UK?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Freshsales",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM is best for a small business in the UK?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Which CRM is best for a small business in the UK?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 2,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "monday CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM is best for a small business in the UK?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 1,
+      "brandsDetected": 1,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Best CRM for a startup in India with a small sales team",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM",
+        "HubSpot",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a startup in India with a small sales team",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM",
+        "Freshsales",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a startup in India with a small sales team",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Freshsales",
+        "Zoho CRM",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a startup in India with a small sales team",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM",
+        "Freshsales",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a startup in India with a small sales team",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 2,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM do large enterprise sales organisations typically use?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "Microsoft Dynamics 365 Sales"
+      ]
+    },
+    {
+      "prompt": "Which CRM do large enterprise sales organisations typically use?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "Microsoft Dynamics 365 Sales",
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM do large enterprise sales organisations typically use?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "Microsoft Dynamics 365 Sales",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Which CRM do large enterprise sales organisations typically use?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "Microsoft Dynamics 365 Sales",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Which CRM do large enterprise sales organisations typically use?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 1,
+      "cited": true,
+      "competitorsMentioned": [
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Freshsales",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 1,
+      "brandsDetected": 5,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Freshsales",
+        "Salesforce",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "monday CRM",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 7,
+      "position": 1,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 1,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Freshsales",
+        "monday CRM"
+      ]
+    },
+    {
+      "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Best CRM for a field sales team in the UAE",
+      "engine": "chatgpt",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 4,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM",
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a field sales team in the UAE",
+      "engine": "copilot",
+      "intent": "discovery",
+      "mentioned": true,
+      "mentionCount": 3,
+      "position": 3,
+      "brandsDetected": 6,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot",
+        "Zoho CRM",
+        "monday CRM",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a field sales team in the UAE",
+      "engine": "gemini",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM",
+        "Salesforce",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a field sales team in the UAE",
+      "engine": "google-ai-mode",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "Zoho CRM",
+        "HubSpot",
+        "Freshsales"
+      ]
+    },
+    {
+      "prompt": "Best CRM for a field sales team in the UAE",
+      "engine": "google-ai-overviews",
+      "intent": "discovery",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 1,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 1,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 4,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 1,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 4,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "Zoho CRM",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
+    },
+    {
+      "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+      "engine": "chatgpt",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 2,
+      "position": 4,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Salesforce",
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+      "engine": "copilot",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 4,
+      "brandsDetected": 4,
+      "cited": false,
+      "competitorsMentioned": [
+        "Zoho CRM",
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+      "engine": "gemini",
+      "intent": "problem-led",
+      "mentioned": true,
+      "mentionCount": 1,
+      "position": 3,
+      "brandsDetected": 3,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+      "engine": "google-ai-mode",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 2,
+      "cited": false,
+      "competitorsMentioned": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+      "engine": "google-ai-overviews",
+      "intent": "problem-led",
+      "mentioned": false,
+      "mentionCount": 0,
+      "position": null,
+      "brandsDetected": 0,
+      "cited": false,
+      "competitorsMentioned": []
     }
   ],
   "run": {
@@ -164,5 +1335,7 @@
     ],
     "capUsd": 5,
     "at": "2026-08-25T06:19:05.858Z"
-  }
+  },
+  "rescoredAt": "2026-09-07T11:30:07.025Z",
+  "rescoredFrom": "det-3"
 }

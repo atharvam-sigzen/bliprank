@@ -1,5 +1,4 @@
 import { wilson, type Metric } from '@bliprank/stats'
-import { previewScore, type PreviewScore } from './preview-score'
 import type { ScanBrand } from './scan-result'
 
 /**
@@ -12,12 +11,11 @@ import type { ScanBrand } from './scan-result'
  * caption.
  *
  * THE ARITHMETIC IS REAL EVEN THOUGH THE INPUTS ARE INVENTED. Each row's
- * interval comes from `wilson()` on its invented counts, and each row's score
- * comes from the same `previewScore` the Grader uses. Hand-writing plausible
+ * interval comes from `wilson()` on its invented counts. Hand-writing plausible
  * intervals would have produced a screen that could not exist — a row whose
- * interval did not match its n, or a score that did not follow from its inputs
- * — and the first person to check the arithmetic would find the demo lying
- * about something it did not need to lie about. Invented inputs, honest maths.
+ * interval did not match its n — and the first person to check the arithmetic
+ * would find the demo lying about something it did not need to lie about.
+ * Invented inputs, honest maths.
  *
  * ⚠️ TENANCY IS HUMAN-OWNED (CLAUDE.md §4). Nothing here is a step toward a
  * real agency workspace: an actual portfolio view crosses a workspace boundary
@@ -45,7 +43,6 @@ export interface PortfolioRow {
   readonly client: string
   readonly categoryName: string
   readonly metric: Metric
-  readonly preview: PreviewScore
   /** Named so the row can say what it could not rank against. */
   readonly rivals: number
 }
@@ -81,7 +78,6 @@ export const PORTFOLIO: readonly PortfolioRow[] = CLIENTS.map((c) => {
     client: c.client,
     categoryName: c.categoryName,
     metric: subject.metric,
-    preview: previewScore(subject, rivals),
     rivals: rivals.length,
   }
 })

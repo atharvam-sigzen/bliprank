@@ -4,13 +4,16 @@ import { useState } from 'react'
 import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProvenance } from '@bliprank/stats'
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
+import { Headline } from '@/components/headline'
+import { CitedSources } from '@/components/cited-sources'
+import { GapReport } from '@/components/gap-report'
+import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { RangeRail } from '@/components/range-rail'
 import { PromptPreview } from '@/components/prompt-preview'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
 import { fetchPreview } from '@/lib/preview'
 import type { PreviewResponse } from '@/lib/preview-contract'
-import { PREVIEW_SCORE_CAPTION, missingNote, previewScore } from '@/lib/preview-score'
 import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
 
@@ -395,7 +398,6 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
   const subject = subjectOf(scan)
   const metric = subject.metric
   const { grade, note } = confidenceGrade(metric)
-  const preview = previewScore(subject, scan.brands.filter((b) => !b.isSubject))
   // Counted once. The zero-competitor branch of HeadToHeadSection computes the same
   // thing, and the caveat above it may not imply a comparison it refuses.
   const competitors = scan.brands.filter((b) => !b.isSubject).length
@@ -405,6 +407,11 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       {/* The scanned domain is the subject of the whole record, so it is set
           as its headline — on the paper, not in a box. */}
       <h2 className="record__domain">{scan.domain}</h2>
+
+      {/* The finding, before the caveats about it and before the instrument
+          that draws it. A reader who stops here has the estimate, both bounds
+          and the sample size, in a sentence. */}
+      <Headline subject={subject.name} metric={metric} engines={run.engines.length} />
 
       {/*
         A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the
@@ -453,55 +460,25 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
             {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
-          <span className="note__line">{formatProvenance(metric)}</span>
-        </aside>
-      </div>
-
-      {/*
-        THE PREVIEW SCORE — on the paper, annotated in the margin, and NOT on a
-        rail.
-        
-        The rail means "this is a measurement and here is its interval". This
-        number has no interval, because nobody has derived one for it, so it gets
-        a plain figure and the composition of that figure sits beside it. Same
-        provenance discipline as everything else on the sheet: the number cannot
-        be read without the working.
-        
-        It sits ABOVE the Precision grade rather than beside it, so the two are
-        never scanned as one compound verdict. They answer different questions —
-        how visible, and how much the sample knows.
-      */}
-      <div className="annotated" style={{ marginTop: 'var(--space-5)' }}>
-        <div className="annotated__body">
-          <p className="readout__cap">Visibility</p>
-          <p className="score">
-            <span className="score__value num">{preview.score}</span>
-            <span className="score__of">/ 100</span>
-            <span className="score__flag">preview</span>
-          </p>
-          <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
-            {PREVIEW_SCORE_CAPTION}. It combines the mention rate with competitive position on placeholder weights, carries no confidence
-            interval, and is not comparable with anyone else&apos;s score — including a later version of this one.
-          </p>
-        </div>
-        <aside className="note note--flag">
-          <span className="note__cap note__cap--flag">How it is made</span>
-          {preview.parts.map((part) => (
-            <span className="note__line" key={part.label}>
-              {part.label} {(part.weight * 100).toFixed(0)}% · {part.points.toFixed(1)} pts
-            </span>
-          ))}
-          {preview.parts.map((part) => (
-            <span className="note__line" key={`${part.label}-detail`}>
-              {part.detail}
-            </span>
-          ))}
-          <span className="note__gloss">{missingNote(preview)}</span>
+          {/* The auditor's line — algorithm version and collection path — and
+              the only part of this note that goes at simple depth. The category,
+              the answer count and the engine count above it stay at BOTH depths:
+              a number from this product is never screenshottable without the
+              size of the sample beside it. */}
+          <span className="note__line detail">{formatProvenance(metric)}</span>
         </aside>
       </div>
 
       <div className="gradeline">
-        <span className="gradebadge" aria-hidden="true">
+        {/* THE BADGE IS THE DETAILED READING OF THIS; THE SENTENCE BESIDE IT IS
+            the simple one, and it is already plain language ("tight enough to
+            act on", "we do not yet know enough to say"). A letter in a box is
+            the PageSpeed pattern — it reads as a mark out of ten however it is
+            captioned, and it is the single most misreadable object on the page
+            for the audience the simple view exists to serve. So at simple depth
+            the grade stays, in the words that say what it means, and the badge
+            that invites the wrong reading of it does not. */}
+        <span className="gradebadge detail" aria-hidden="true">
           {/* Labelled, because a bare A-D badge is the PageSpeed/security-score
               pattern and reads as "you scored B". This grades how much the
               sample knows, not how the brand is doing. */}
@@ -523,7 +500,12 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           no competitors at all. Two contradictions on one screen, and the
           second implies a comparison set that does not exist. Both clauses now
           come from the same metric and brand list the rest of the record does. */}
-      <p className="prose" style={{ marginTop: 'var(--space-4)' }}>
+      {/* DETAIL. Every mark this paragraph explains — the range, the Precision
+          grade, the overlapping competitor bars — is drawn elsewhere and carries
+          its own label, so hiding it removes no mark from the page. It is the
+          methodology argument, and it is the right argument in the wrong place
+          for a reader who has not yet been told what their number is. */}
+      <p className="prose detail" style={{ marginTop: 'var(--space-4)' }}>
         This is a measure of how much <span className="num">{metric.n}</span> answers can tell us, not a mark out of ten. It places you in a range,{' '}
         <span className="num">{formatInterval(metric)}</span>, and the Precision grade above says how much of one
         {competitors > 0 ? '. A competitor whose range overlaps yours cannot be told apart from you on this sample' : ''}. Anyone quoting a precise
@@ -543,6 +525,24 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       ) : null}
 
       <HeadToHeadSection scan={scan} />
+
+      {/* The same cycle, per question and per engine. One component on both
+          surfaces, so the Grader and the workspace record cannot come to
+          disagree about what the same file says. */}
+      {/* DETAIL. A 6x5 grid of glyphs with a four-symbol legend: every mark it
+          draws is its own, so hiding it takes the explanation with the thing
+          explained and leaves the headline untouched.
+
+          NOTE: this is rule-consistent and probably not the last word. "Which
+          questions you appear in" is nearer the brand owner's world than the
+          by-engine split is, and a one-line plain version of it ("you appear in
+          3 of the 6 questions we asked") likely belongs in the simple view. Not
+          invented here. */}
+      <PromptBreakdown scan={scan} />
+
+      {/* The two diagnostics, from the same evidence and the page itself (ADR-0014). */}
+      <CitedSources scan={scan} />
+      <GapReport scan={scan} />
 
       <OpenWorkspaceButton domain={scan.domain} label="Open in dashboard" />
       <ResetButton onReset={onReset} />

@@ -22,14 +22,24 @@ export type ScanEvent =
  * Parses an SSE body incrementally. `EventSource` cannot be used because this
  * is a POST with a JSON body, and the browser's EventSource is GET-only.
  */
-export async function runLiveScan(domain: string, onEvent: (e: ScanEvent) => void, signal?: AbortSignal): Promise<void> {
+export interface LiveScanOptions {
+  readonly signal?: AbortSignal
+  /**
+   * Ask for ANOTHER cycle of a domain the server already holds, rather than
+   * its cached latest. The route skips its cache and nothing else: every gate
+   * a first scan passes still runs (ADR-0013).
+   */
+  readonly newCycle?: boolean
+}
+
+export async function runLiveScan(domain: string, onEvent: (e: ScanEvent) => void, opts: LiveScanOptions = {}): Promise<void> {
   let res: Response
   try {
     res = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain }),
-      ...(signal ? { signal } : {}),
+      body: JSON.stringify(opts.newCycle ? { domain, cycle: 'new' } : { domain }),
+      ...(opts.signal ? { signal: opts.signal } : {}),
     })
   } catch (e) {
     onEvent({ kind: 'error', errorKind: 'network', message: `Could not reach the scan service: ${(e as Error).message}` })

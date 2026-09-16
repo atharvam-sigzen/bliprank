@@ -253,3 +253,53 @@ work continued two phases past P1 on top of an open security gate.
 
 A deadline pinned to an event that never happens is not a deadline. If a future
 item needs forcing, pin it to a date.
+
+---
+
+# Integration note — 2026-09-15 (MVP_PLAN C0)
+
+`main` and `mvp/stage-a` both moved past the gate split on 2026-09-09: main by
+closing the gate as `0003_tenancy_exposure_manifest.sql`, the branch by taking
+0003 for accounts identity (B2) and 0004–0007 for workspace state, the role
+claim, the member's first record and filing ownership, with a migration record
+whose unique index refuses two files under one number (B3r). C0 merged main into
+the branch. The manifest is **0008** here, not folded into the branch's
+derivation, because two of its assertions (`assert_role_powers()`,
+`auth_key_health()`) exist nowhere else and the second must be a definer owned
+by `auth_verifier`, so a migration was needed regardless; and because the
+manifest is not a listing of unsafe shapes but the declared surface plus a
+derivation over every privilege, relkind, schema and role, which the branch's
+read inverse covers only for SELECT. Re-expressing it as DO blocks would have
+lost the declaration the seam tests compare against.
+
+What changed at the renumbering, all in the file's header: it records itself
+first and runs in one transaction; the 0004 state tables are declared (scoped
+SELECT, `svc_onboard` service writes); the definer owner rule is `owner = ANY
+(trusted)` rather than `auth_verifier` alone (B2 owns the onboarding and state
+writers by `svc_onboard`, deliberately); the tenant-callable definer list is the
+branch's twelve; `migration_record()` (owned by `auth_verifier`, executable
+by `deploy_check`) lets the deploy principal this ADR prescribes read the
+record, which is FORCE RLS to its owner with no other grant — read directly,
+that principal got `permission denied` and could not run the gate at all; and,
+from the tenancy audit of the merge, a `service` row names its **grantee** and
+the reachability sweep matches on it, because matching any trusted role let a
+grant to the wrong service role on the workspace-state tables pass (measured:
+with a matching policy the scorer wrote another workspace's category record).
+The owner rule names the two roles that own definers, `auth_verifier` and
+`svc_onboard`, never the scorer.
+
+The merged `check-deploy.sql` runs the manifest first and keeps every
+derivation the branch had (the FORCE sweep, the definer-body rules, the
+declared-definer allowlist, the owner's memberships, the record, the read
+inverse). Where the manifest now speaks before a branch assertion, that
+assertion's failing case runs its own section alone and then lets the whole
+gate refuse (`only`, `refusedBy` in `check-deploy.test.ts`), so no derivation
+is proven by another's message. Main's 77 cases pass against the merged gate
+with one expectation moved and recorded: a declared `security_invoker` view is
+accepted by the manifest and still refused by the branch's read inverse, which
+does not yet know an invoker view inherits its base tables' policies. That rule
+is the tenancy owner's decision. Two allowlists of the same twelve definers
+now exist (this file's block and the manifest function); either going stale
+fails the healthy database, and consolidating them is a follow-up, not a merge
+decision. The tenancy audit of this merge is recorded in `docs/MVP_REVIEWS.md`
+(row C0).

@@ -15,7 +15,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { UNPROMPTED_INTENTS, comparisonBasisFor, runScan, subjectFor } from './scan.js'
+import { UNPROMPTED_INTENTS, comparisonBasisFor, promptsFor, runScan, subjectFor } from './scan.js'
 
 /**
  * A controllable offline adapter. The pilot's fixture adapter mentions brands
@@ -402,5 +402,224 @@ describe('a brand whose domain runs its words together is still found', () => {
     const { spec, source } = subjectFor('pipedrive.com', crm)
     expect(source).toBe('leader')
     expect(spec.squashedAliases).toBeUndefined()
+  })
+})
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PER-ANSWER ROWS — the split the record used to say was "not in this cycle's
+ * stored payload".
+ *
+ * The claim these tests pin is a RECONCILIATION claim, not a feature claim: the
+ * rows must be the same evidence the headline rate is made of, one row per
+ * scored answer, or a surface that renders both is showing two measurements
+ * under one heading. `promptBreakdown` in the public app refuses to draw when
+ * they disagree; these are what stop them disagreeing at the source.
+ */
+describe('promptRows — the per-prompt, per-engine evidence behind the rate', () => {
+  const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
+
+  it('emits exactly one row per scored answer, and they reconcile with the metric', async () => {
+    // Pipedrive is named by chatgpt only, so the two engines genuinely differ —
+    // a split that a divide-the-total table could not have produced.
+    const d = deps((_prompt, engine) => (engine === 'chatgpt' ? 'Pipedrive is a good pick.' : 'Try something else entirely.'))
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 3 }), d)
+    expect(r.status).toBe('scanned')
+    if (r.status !== 'scanned') return
+
+    const subject = r.brands.find((b) => b.isSubject)!
+    expect(r.promptRows).toHaveLength(subject.metric.n)
+    expect(r.promptRows).toHaveLength(r.counts.answersScored)
+    expect(r.promptRows.filter((row) => row.mentioned)).toHaveLength(subject.mentions)
+
+    // The split itself: every chatgpt answer names it, no gemini answer does.
+    const chatgpt = r.promptRows.filter((row) => row.engine === 'chatgpt')
+    const gemini = r.promptRows.filter((row) => row.engine === 'gemini')
+    expect(chatgpt).toHaveLength(3)
+    expect(gemini).toHaveLength(3)
+    expect(chatgpt.every((row) => row.mentioned)).toBe(true)
+    expect(gemini.every((row) => row.mentioned)).toBe(false)
+  })
+
+  it('carries the prompt AS SENT, not the normalised cache-key form', async () => {
+    const d = deps(() => 'nothing here')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    const sent = unprompted.slice(0, 2).map((p) => p.text)
+    expect([...new Set(r.promptRows.map((row) => row.prompt))].sort()).toEqual([...sent].sort())
+    // The cache key lowercases; a sheet showing that would show a question we
+    // did not ask. At least one demo prompt has a capital in it.
+    expect(sent.some((t) => t !== t.toLowerCase())).toBe(true)
+  })
+
+  it('records position, mention count and the competitors named in the same answer', async () => {
+    // HubSpot first, Pipedrive second: position is by first appearance, so the
+    // row must say 2 of 2 rather than merely "mentioned".
+    const d = deps(() => 'HubSpot leads here, though Pipedrive is the better value. Pipedrive again.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 1 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    const row = r.promptRows[0]!
+    expect(row.mentioned).toBe(true)
+    expect(row.position).toBe(2)
+    expect(row.brandsDetected).toBeGreaterThanOrEqual(2)
+    expect(row.mentionCount).toBe(2)
+    expect(row.competitorsMentioned).toContain('HubSpot')
+  })
+
+  it('an unmentioned answer is a row, not a missing row — that is the whole point', async () => {
+    const d = deps(() => 'No CRM is named in this answer at all.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    expect(r.promptRows).toHaveLength(4)
+    expect(r.promptRows.every((row) => row.mentioned === false)).toBe(true)
+    expect(r.promptRows.every((row) => row.position === null)).toBe(true)
+    // A zero rate with four rows behind it is a finding. Four missing rows
+    // would be indistinguishable from a scan that never ran.
+    expect(r.brands.find((b) => b.isSubject)!.metric.value).toBe(0)
+  })
+
+  it('rows describe the SUBJECT only — a competitor does not get its own rows', async () => {
+    const d = deps(() => 'HubSpot is the only one worth naming.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    // Two prompts x two engines = four answers, and four rows — not eight, not
+    // one set per brand scored.
+    expect(r.promptRows).toHaveLength(4)
+    expect(r.brands.length).toBeGreaterThan(1)
+    expect(r.promptRows.every((row) => row.mentioned === false)).toBe(true)
+    expect(r.promptRows.every((row) => row.competitorsMentioned.includes('HubSpot'))).toBe(true)
+  })
+})
+
+describe('a per-domain competitor override reaches the scan through the resolver (ADR-0016)', () => {
+  it('the excluded rival is not scored, the included one is, and the basis carries set=<version>; without an override nothing changes', async () => {
+    const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const hubspot = bank.leaders.find((l) => l.id === 'hubspot')!
+    const semrush = DEMO_BANKS.find((b) => b.category === 'seo-tools')!.leaders.find((l) => l.id === 'semrush')!
+    const text = () => 'HubSpot and Semrush and Acme all get a mention.'
+    const resolver = (competitorSet?: { version: number; competitors: { id: string; name: string; aliases: string[]; domains: string[] }[] }) => async () => ({
+      slug: 'crm-software',
+      bank,
+      signal: 'site-content',
+      evidence: 'x',
+      ...(competitorSet ? { competitorSet } : {}),
+    })
+    const plain = await runScan(req('acme.example'), { ...deps(text), resolveCategory: resolver() })
+    const overridden = await runScan(req('acme.example'), {
+      ...deps(text),
+      resolveCategory: resolver({
+        version: 3,
+        competitors: [...bank.leaders.filter((l) => l.id !== 'hubspot'), semrush].map((l) => ({ id: l.id, name: l.name, aliases: [...l.aliases], domains: [...l.domains] })),
+      }),
+    })
+    expect(plain.status).toBe('scanned')
+    expect(overridden.status).toBe('scanned')
+    if (plain.status !== 'scanned' || overridden.status !== 'scanned') return
+    expect(plain.comparisonBasis).not.toContain('set=')
+    expect(plain.brands.map((b) => b.id)).toContain(hubspot.id)
+    expect(overridden.comparisonBasis).toBe(`${plain.comparisonBasis}|set=3`)
+    expect(overridden.brands.map((b) => b.id)).not.toContain(hubspot.id)
+    expect(overridden.brands.map((b) => b.id)).toContain(semrush.id)
+    expect(overridden.brands.find((b) => b.id === semrush.id)!.mentions).toBe(overridden.counts.answersScored)
+  })
+})
+
+describe('the customer’s own prompts are a second measurement, never the headline (ADR-0016)', () => {
+  it('custom cells are collected in the same loop, scored into their own block on their own basis, and the headline is byte-identical to a scan without them', async () => {
+    const text = (prompt: string) => (prompt.startsWith('custom:') ? 'Only Pipedrive here.' : 'HubSpot and Pipedrive both.')
+    const plain = await runScan(req('pipedrive.com'), deps(text))
+    const withCustom = await runScan(req('pipedrive.com', { customPrompts: { version: 2, prompts: ['custom: which crm works offline', 'custom: best crm for a two-person studio'] } }), deps(text))
+    expect(plain.status).toBe('scanned')
+    expect(withCustom.status).toBe('scanned')
+    if (plain.status !== 'scanned' || withCustom.status !== 'scanned') return
+    // The headline sample, its basis, its brands and its rows: unchanged.
+    expect(withCustom.comparisonBasis).toBe(plain.comparisonBasis)
+    expect(withCustom.brands).toEqual(plain.brands)
+    expect(withCustom.promptRows).toEqual(plain.promptRows)
+    expect(plain).not.toHaveProperty('customPrompts')
+    // The custom block: its own basis, its own answers, its own rows.
+    const c = withCustom.customPrompts!
+    expect(c.version).toBe(2)
+    expect(c.comparisonBasis).toBe(`${plain.comparisonBasis.replace(/unprompted=\d+/, 'unprompted=0')}|custom=2@2`)
+    expect(c.counts).toEqual({ cellsRequested: 2 * ENGINES.length, answersScored: 2 * ENGINES.length })
+    expect(c.promptRows.every((r) => r.prompt.startsWith('custom:'))).toBe(true)
+    expect(c.brands.find((b) => b.isSubject)!.mentions).toBe(2 * ENGINES.length)
+    expect(c.brands.find((b) => b.id === 'hubspot')!.mentions).toBe(0)
+    // The cycle's counts are the whole cycle; the block's are its share.
+    expect(withCustom.counts.cellsRequested).toBe(plain.counts.cellsRequested + c.counts.cellsRequested)
+    expect(withCustom.counts.answersScored).toBe(plain.counts.answersScored + c.counts.answersScored)
+  })
+})
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * INTENT ON A ROW — the bank's classification, carried to the payload.
+ *
+ * The bank has always classified every prompt as discovery, problem-led,
+ * comparison or brand-verification, and PROPERTY 2 sends only the first two.
+ * That classification never reached the stored result, so a by-prompt-type view
+ * was not buildable from a scan file: the reader could see which questions the
+ * brand appeared in, and not which KIND of question.
+ *
+ * Nothing here is scored, inferred or measured. The intent is copied off the
+ * bank entry the cell was built from, which is why the map is keyed on the
+ * prompt list the cells came from rather than on the whole bank.
+ */
+describe('promptRows carry the bank’s intent', () => {
+  it('every row names the intent the bank gave that prompt', async () => {
+    const d = deps(() => 'Pipedrive is a good pick.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 4 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const byText = new Map(bank.prompts.map((p) => [p.text, p.intent]))
+    expect(r.promptRows.length).toBeGreaterThan(0)
+    for (const row of r.promptRows) {
+      expect([row.prompt, row.intent]).toEqual([row.prompt, byText.get(row.prompt)])
+    }
+  })
+
+  it('⚠️ only the two unprompted intents can appear, because PROPERTY 2 sends nothing else', () => {
+    // Asserted over the whole taxonomy rather than one scan: if a bank ever
+    // gained a comparison prompt that `promptsFor` let through, a row would
+    // carry `comparison` and the headline would be measuring our own phrasing.
+    for (const bank of DEMO_BANKS) {
+      for (const p of promptsFor(bank)) expect([p.text, p.intent]).toEqual([p.text, expect.stringMatching(/^(discovery|problem-led)$/)])
+    }
+  })
+
+  it('the map is keyed on the prompts SENT, so a sliced cycle attaches nothing extra', async () => {
+    // `maxPrompts` slices the set. Keying off the full bank would still find an
+    // intent for a prompt this cycle never asked, which is harmless here and
+    // exactly the kind of near-miss that becomes wrong when a bank is edited.
+    const d = deps(() => 'nothing')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 2 }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+    const sent = new Set(promptsFor(DEMO_BANKS.find((b) => b.category === 'crm-software')!, 2).map((p) => p.text))
+    expect(new Set(r.promptRows.map((x) => x.prompt))).toEqual(sent)
+    expect(r.promptRows.every((x) => x.intent !== undefined)).toBe(true)
+  })
+
+  it('⚠️ a CUSTOM prompt carries no intent — nobody classified it', async () => {
+    // ADR-0016: the customer wrote it. It is held to PROPERTY 2 by the scorer's
+    // own matcher, but it has no buyer intent, and `'custom'` here would file a
+    // provenance fact in an intent field. The key is absent, not undefined.
+    const d = deps(() => 'Pipedrive is a good pick.')
+    const r = await runScan(req('pipedrive.com', { maxPrompts: 1, customPrompts: { version: 1, prompts: ['how do we shorten our sales cycle'] } }), d)
+    if (r.status !== 'scanned') throw new Error(r.status)
+
+    expect(r.promptRows.every((x) => x.intent !== undefined)).toBe(true)
+    const custom = r.customPrompts
+    expect(custom, 'the custom block should exist').toBeDefined()
+    expect(custom!.promptRows.length).toBeGreaterThan(0)
+    for (const row of custom!.promptRows) {
+      expect(row.intent).toBeUndefined()
+      expect(Object.hasOwn(row, 'intent'), 'absent, not an explicit undefined').toBe(false)
+    }
   })
 })

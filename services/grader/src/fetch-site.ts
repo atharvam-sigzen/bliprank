@@ -66,6 +66,13 @@ export interface FetchSiteOptions {
   /** Injected in tests. Production passes nothing and gets real DNS. */
   readonly resolve?: (host: string) => Promise<readonly string[]>
   readonly fetchImpl?: typeof fetch
+  /** Test seam for the per-hop pinned dispatcher's lifetime. Production passes nothing and gets `pinnedAgent`. */
+  readonly pinFactory?: (url: URL, address: string) => PinnedDispatcher
+}
+
+/** The two members this file uses of an undici dispatcher. See the cast in `fetchSiteHtml`. */
+export interface PinnedDispatcher {
+  close(): Promise<void>
 }
 
 export type FetchSiteResult =
@@ -140,8 +147,8 @@ export function blockedReason(address: string): string | null {
 
   if (!addr.includes(':')) return `${addr} is neither an IPv4 nor an IPv6 address`
 
-  // v4-mapped and v4-compatible forms: ::ffff:127.0.0.1 reaches loopback and
-  // passes any check that only looked at the colons. Re-check the tail as v4.
+  // v4-mapped and v4-compatible forms with a DOTTED tail: ::ffff:127.0.0.1
+  // reaches loopback and passes any check that only looked at the colons.
   const tail = addr.slice(addr.lastIndexOf(':') + 1)
   if (tail.includes('.')) {
     const mapped = parseIpv4(tail)
@@ -150,18 +157,55 @@ export function blockedReason(address: string): string | null {
     return inner ? `${addr} embeds ${inner}` : null
   }
 
-  if (addr === '::' || addr === '::1') return `${addr} is the IPv6 unspecified or loopback address`
-  // fc00::/7 unique-local, fe80::/10 link-local, ff00::/8 multicast. Compared on
-  // the first hextet rather than by expanding the address: these prefixes are
-  // all within the first 16 bits, so the leading group is sufficient and
-  // expansion is one more thing to get wrong.
-  const head = Number.parseInt(addr.split(':')[0] || '0', 16)
-  if (Number.isNaN(head)) return `${addr} is not a parseable IPv6 address`
+  /*
+   * Everything else is decided on the EXPANDED address, never on its spelling.
+   * `0:0:0:0:0:0:0:1` is `::1`, `::ffff:7f00:1` is `::ffff:127.0.0.1` written
+   * in hex, and `2002:7f00:1::` is 6to4 for 127.0.0.1 — three spellings of
+   * loopback that a check on the literal text or on the first hextet alone
+   * let through (2026-09-09 audit). Expansion is eight numbers; the ranges are
+   * then compared as numbers.
+   */
+  const h = expandIpv6(addr)
+  if (!h) return `${addr} is not a parseable IPv6 address`
+  const dotted = (hi: number, lo: number): string => `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`
+  const viaV4 = (form: string, v4: string): string | null => {
+    const inner = blockedReason(v4)
+    return inner ? `${addr} is ${form} embedding ${inner}` : null
+  }
+  if (h.every((x) => x === 0)) return `${addr} is the IPv6 unspecified address`
+  if (h.slice(0, 7).every((x) => x === 0) && h[7] === 1) return `${addr} is the IPv6 loopback address`
+  // ::ffff:a.b.c.d (v4-mapped) and ::a.b.c.d (v4-compatible, deprecated), both in hex.
+  if (h.slice(0, 5).every((x) => x === 0) && (h[5] === 0xffff || h[5] === 0)) return viaV4(h[5] ? 'v4-mapped' : 'v4-compatible', dotted(h[6]!, h[7]!))
+  if (h[0] === 0x2002) return viaV4('6to4 (2002::/16)', dotted(h[1]!, h[2]!))
+  if (h[0] === 0x0064 && h[1] === 0xff9b && h.slice(2, 6).every((x) => x === 0)) return viaV4('NAT64 (64:ff9b::/96)', dotted(h[6]!, h[7]!))
+  // fc00::/7 unique-local, fe80::/10 link-local, ff00::/8 multicast: all within the first 16 bits.
+  const head = h[0]!
   if ((head & 0xfe00) === 0xfc00) return `${addr} is in fc00::/7 (unique local)`
   if ((head & 0xffc0) === 0xfe80) return `${addr} is in fe80::/10 (link local)`
   if ((head & 0xff00) === 0xff00) return `${addr} is in ff00::/8 (multicast)`
-  if ((head & 0xffff) === 0x0064 && addr.startsWith('64:ff9b')) return `${addr} is in 64:ff9b::/96 (NAT64, which can map to a private v4)`
   return null
+}
+
+/** An IPv6 literal (already lowercased, zone stripped) as its eight hextets, or null when it is not one. */
+export function expandIpv6(addr: string): number[] | null {
+  const halves = addr.split('::')
+  if (halves.length > 2) return null
+  const hextets = (s: string): number[] | null => {
+    if (s === '') return []
+    const out: number[] = []
+    for (const p of s.split(':')) {
+      if (!/^[0-9a-f]{1,4}$/.test(p)) return null
+      out.push(Number.parseInt(p, 16))
+    }
+    return out
+  }
+  const head = hextets(halves[0]!)
+  const tail = halves.length === 2 ? hextets(halves[1]!) : []
+  if (!head || !tail) return null
+  if (halves.length === 1) return head.length === 8 ? head : null
+  const fill = 8 - head.length - tail.length
+  if (fill < 1) return null
+  return [...head, ...new Array<number>(fill).fill(0), ...tail]
 }
 
 const realResolve = async (host: string): Promise<readonly string[]> => {
@@ -307,8 +351,14 @@ export async function fetchSiteHtml(domain: string, options: FetchSiteOptions = 
       const resolved = await resolvePublicAddress(url.hostname, resolveImpl)
       if (!resolved.ok) return { ok: false, reason: 'blocked', message: resolved.message }
 
-      // Built per hop, and only for the real fetch. See `pinnedAgent`.
-      if (!options.fetchImpl) pin = pinnedAgent(url, resolved.address)
+      // Built per hop, and only for the real fetch. See `pinnedAgent`. The
+      // previous hop's agent is closed FIRST: one socket pool per redirect,
+      // with only the last ever closed, was a leak per hop (2026-09-09 audit).
+      const makePin = options.pinFactory ?? (options.fetchImpl ? null : pinnedAgent)
+      if (makePin) {
+        await pin?.close().catch(() => {})
+        pin = makePin(url, resolved.address)
+      }
 
       let res: Response
       try {
@@ -404,11 +454,6 @@ export async function fetchSiteHtml(domain: string, options: FetchSiteOptions = 
  * undici's fetch — the pre-flight address check still applies there, and only
  * the rebinding window (a production-path concern) reopens.
  */
-/** The two members this file uses of an undici dispatcher. See the cast below. */
-interface PinnedDispatcher {
-  close(): Promise<void>
-}
-
 function pinnedAgent(url: URL, address: string): PinnedDispatcher {
   return new Agent({
     connect: {

@@ -45,10 +45,19 @@ import {
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 import { fixtureAdapter } from '@bliprank/collector/fixture'
 import { loadApiKey } from './load-key.js'
-import { FileBlobStore, FileKV } from './local-store.js'
+import { answerStores } from './answer-stores.js'
 import { DEFAULT_CAP_USD } from './live-gate.js'
-import { runScan, type ScanProgress, type ScanResult } from './scan.js'
-import { allBanks, allCategories, resolveCategory } from './resolve-category.js'
+import { runScan, type ScanProgress, type ScanResult, subjectFor } from './scan.js'
+import { FALLBACK_SLUG, type PromptBank } from '@bliprank/taxonomy'
+import { competitorsIn } from './competitor-overrides.js'
+import { customPromptsAt, readCustomPromptSet } from './custom-prompts.js'
+import { declaredSingleProcess, ledgerStores, type LedgerStores } from './ledger-stores.js'
+import { categoryRecordIn, customPromptsAtIn, customPromptsIn, recordsIn } from './store/documents.js'
+import { defaultWorkspaceStore } from './store/file-store.js'
+import type { WorkspaceStore } from './store/pg-store.js'
+import { runAllowanceFor } from './domain-ceiling.js'
+import type { CategoryResolution } from './scan.js'
+import { allBanks, allCategories, resolveCategory, type CategoryRecord } from './resolve-category.js'
 import { bankAuthorConfig, type BankAuthorConfig } from './bank-author.js'
 
 /** Provider ceiling for one API key, shared across engines. */
@@ -68,7 +77,8 @@ export interface RunnerOptions {
   readonly mode: 'live' | 'fixture' | 'stub'
   readonly apiKey: string
   readonly dataDir: string
-  readonly outFile: string
+  /** The whole result as JSON on disk, for the CLI. Absent on a deployment: the workspace store holds the cycle, and an instance's disk is shared by every workspace it serves (B3b tenancy audit). */
+  readonly outFile?: string
   readonly log: (s: string) => void
   /**
    * Which model authors a bank when no category in the taxonomy fits (rung 4 of
@@ -77,6 +87,32 @@ export interface RunnerOptions {
    * unauthorable domain falls back exactly as before.
    */
   readonly author?: BankAuthorConfig | undefined
+  /**
+   * The competitor-set version to measure under (ADR-0016). Omitted: the
+   * override in force now. `null`: the category's own set, no override. A
+   * number: that recorded override, so a re-derivation of a stored cycle
+   * measures against the set the cycle was measured with; a version the store
+   * no longer holds fails the run rather than substituting today's.
+   */
+  readonly competitorSet?: number | null
+  /**
+   * The custom prompt set to ask (ADR-0016, decision 4). Omitted: the set in
+   * force now, read from the store. `null`: none, for re-deriving a cycle that
+   * asked none. A number: that recorded version; one the store no longer holds
+   * fails the run rather than substituting today's.
+   */
+  readonly customPrompts?: number | null
+  /**
+   * The most provider attempts this run may make, retries included (ADR-0017).
+   * The route and the daily loop derive it from the cycle's cells
+   * (`runAllowanceFor`); the CLI derives it from its bill unless `--allowance`
+   * says otherwise. Absent means unbounded within the ledger's cap.
+   */
+  readonly runAllowanceCalls?: number
+  /** The deployment's workspace store (records, overrides, prompt sets); this machine's files when absent (MVP_PLAN B3b). */
+  readonly store?: WorkspaceStore
+  /** Where the spend ledger lives; this machine's files when absent (MVP_PLAN B3b, R3). */
+  readonly ledgers?: LedgerStores
 }
 
 export function parseArgs(
@@ -120,7 +156,6 @@ export function parseArgs(
   const apiKey = found?.key ?? ''
   if (!offline && !apiKey) return { refuse: `OPENWEBNINJA_API_KEY not found in the environment, .env.local or .env` }
   if (!offline) keySource = found?.from ?? 'unknown'
-  const author = bankAuthorConfig(env, (n) => loadApiKey(repoRoot, env, n)?.key) ?? undefined
   if (!offline && env['COLLECTION_ENABLED'] !== 'true') {
     return { refuse: 'COLLECTION_ENABLED is not "true" (rule R3). Enable it deliberately for this run, or pass --fixture.' }
   }
@@ -135,7 +170,12 @@ export function parseArgs(
 
   const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const dataDir = args.get('data') ?? join(here, '..', 'data')
+  // After the data dir: the author's ledger lives beside the collector's, on
+  // the file backend this CLI declares for itself (see runGrader).
+  const author = bankAuthorConfig(declaredSingleProcess(env), (n) => loadApiKey(repoRoot, env, n)?.key, dataDir) ?? undefined
   const maxPromptsArg = args.get('max-prompts')
+  const allowanceArg = args.get('allowance')
+  if (allowanceArg !== undefined && !(Number.isInteger(Number(allowanceArg)) && Number(allowanceArg) >= 0)) return { refuse: `--allowance must be a non-negative integer of attempts, got ${allowanceArg}` }
   const maxRpsArg = args.get('max-rps')
   if (maxRpsArg !== undefined && !(Number(maxRpsArg) > 0)) return { refuse: `--max-rps must be > 0, got ${maxRpsArg}` }
 
@@ -154,6 +194,7 @@ export function parseArgs(
       apiKey,
       dataDir,
       outFile: args.get('out') ?? join(dataDir, 'latest.json'),
+      ...(allowanceArg !== undefined ? { runAllowanceCalls: Number(allowanceArg) } : {}),
       /*
        * The bank author, from the environment and the same repo-root dotenv the
        * provider key comes from. Absent when no key is configured, which
@@ -274,8 +315,17 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // of $1 therefore blocked every live scan afterwards, which is a fixture
     // run breaking live collection while spending nothing. Found by doing
     // exactly that during a lock test.
-    const ledgerFile = join(o.dataDir, offline ? `ledger.${o.mode}.json` : 'ledger.json')
-    const budget = new Budget(ledgerFile, o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]))
+    // The CLI's own ledgers: this process holds run.lock over the data
+    // directory, which is what `single-process` asserts, so the declaration is
+    // made here when the environment makes none; a declared fleet or a PaaS
+    // marker still refuses (ledger-stores.ts, B3c item 4). A route passes its
+    // own ledgers and never reaches this line.
+    const ledgers = o.ledgers ?? ledgerStores(o.dataDir, declaredSingleProcess(process.env))
+    const store = o.store ?? defaultWorkspaceStore(o.dataDir)
+    const spendLedger = ledgers.spend(offline ? `ledger.${o.mode}.json` : 'ledger.json', o.capUsd, (engine) => (offline ? 0 : PRICE_USD_PER_CALL[o.plan][engine as EngineId]), {
+      ...(o.runAllowanceCalls !== undefined ? { runAllowanceCalls: o.runAllowanceCalls } : {}),
+      engines: o.engines,
+    })
     // THE LEDGER IS CUMULATIVE FOR THE DATA DIR, THIS RUN IS NOT.
     //
     // `Budget` loads the existing ledger off disk and only ever adds to it, so
@@ -284,7 +334,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     // its own cost, and growing with every later run - and /api/scan then
     // cached that figure as the domain's own. The delta is the only per-scan
     // number the ledger can honestly yield.
-    const spentBefore = budget.state.spentUsd
+    const spentBefore = await spendLedger.spentUsd()
 
     // Share one key's ceiling across the engines in play, then take a fraction
     // of it — the published per-engine ceilings sum to more than one key allows.
@@ -308,9 +358,13 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
       }),
     )
 
-    const declared = { ...process.env, COLLECTOR_TOPOLOGY: 'single-process' }
+    // Declared only when nothing is declared: a fleet stays a fleet (B3c item 4).
+    const declared = declaredSingleProcess(process.env)
     const reason = 'local Grader runner: one process, holding an exclusive run.lock over its data dir'
-    const blob = new FileBlobStore(join(o.dataDir, 'answers'))
+    // Where the answers this run pays for are kept: R2 + Upstash when the
+    // environment names them, this machine's disk otherwise (answer-stores.ts).
+    const stores = answerStores(o.dataDir, process.env)
+    const blob = stores.blob
     // A real DeadLetter, appended to disk. A cell that fails after burning its
     // attempts must leave a durable trace: the scan then reports a smaller `n`
     // and a wider interval, and without this the reason for the shortfall is
@@ -328,10 +382,12 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     }
 
     const orchestrator = new CollectionOrchestrator({
-      index: new AnswerIndex(new FileKV(join(o.dataDir, 'index.json'))),
+      index: new AnswerIndex(stores.kv),
       blob,
       rateBudget: LocalRateBudget.forSingleProcess(buckets, { iUnderstandThisBudgetIsPerProcess: true, reason, env: declared }),
-      budget: LocalSpendLedger.forSingleProcess(budget, { iUnderstandThisCapIsPerProcess: true, reason, env: declared }),
+      // The ledger the deployment reaches: a file behind `Budget` here, atomic
+      // KV counters there; charge-before-attempt either way (ledger-stores.ts).
+      budget: spendLedger,
       deadLetter,
       owner: `grader-local-${process.pid}`,
     })
@@ -352,27 +408,63 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
      * so a generated bank on a fixture run would collect nothing and report
      * `no-answers` — a confusing way to say "this mode cannot do that".
      */
+    /*
+     * ...EXCEPT THAT A RECORDED DECISION IS READ IN EVERY MODE (ADR-0016). A
+     * record is a file, not a fetch: reading it keeps `--fixture` offline, and
+     * it is what lets an offline run measure against the domain's competitor
+     * override and stamp `set=` into its basis exactly as a live run would. The
+     * homepage GET and the author stay live-only. With no record, an offline
+     * run classifies from the host alone, as it always did.
+     */
+    const fromRecord = async (domain: string, record: CategoryRecord, bank: PromptBank, fallback?: CategoryResolution['fallback']): Promise<CategoryResolution> => {
+      // The domain's competitor override: the one in force, or the one pinned
+      // by `competitorSet`, so the scan measures against the set the record
+      // page shows (or a stored cycle recorded) and stamps its version.
+      const cs = await competitorsIn(store, o.dataDir, domain, bank, subjectFor(domain, bank, record.brandName).spec.id, o.competitorSet)
+      if (!cs) throw new Error(`${domain}: competitor set ${o.competitorSet} is not on record; a measurement under another set is a different measurement`)
+      if (cs.missing.length) throw new Error(`${domain}: the competitor set includes ${cs.missing.join(', ')}, which this build no longer holds`)
+      return {
+        slug: record.slug,
+        bank,
+        signal: record.source,
+        evidence: record.evidence,
+        ...(record.brandName ? { brandName: record.brandName } : {}),
+        ...(fallback ? { fallback } : {}),
+        ...(cs.set !== undefined ? { competitorSet: { version: cs.set, competitors: cs.competitors } } : {}),
+      }
+    }
+    const offlineRecord = o.mode !== 'live' ? await categoryRecordIn(store, o.domain) : null
+    const offlineBank = offlineRecord ? allBanks(o.dataDir).find((b) => b.category === offlineRecord.slug) : undefined
     const resolver =
       o.mode === 'live'
         ? async (domain: string) => {
             const r = await resolveCategory(domain, {
               dataDir: o.dataDir,
+              records: recordsIn(store),
               author: o.author,
               log: o.log,
             })
-            return {
-              slug: r.record.slug,
-              bank: r.bank,
-              signal: r.record.source,
-              evidence: r.record.evidence,
-              ...(r.record.brandName ? { brandName: r.record.brandName } : {}),
-              ...(r.fallback ? { fallback: r.fallback } : {}),
-            }
+            return fromRecord(domain, r.record, r.bank, r.fallback)
           }
-        : undefined
+        : offlineRecord && offlineBank
+          ? async (domain: string) =>
+              fromRecord(domain, offlineRecord, offlineBank, offlineRecord.slug === FALLBACK_SLUG ? { reason: 'unclassified', detail: offlineRecord.evidence, candidates: [] } : undefined)
+          : undefined
 
+    // The customer's own prompts: the set in force, or the version pinned by
+    // a re-derivation. Read beside the scan, so what is asked is what the record
+    // page shows, and a pinned version the store lost fails rather than drifts.
+    const customSet = o.customPrompts === null ? null : o.customPrompts === undefined ? await customPromptsIn(store, o.domain) : await customPromptsAtIn(store, o.domain, o.customPrompts)
+    if (o.customPrompts !== undefined && o.customPrompts !== null && !customSet) throw new Error(`${o.domain}: custom prompt set ${o.customPrompts} is not on record; a measurement under another set is a different measurement`)
     const result = await runScan(
-      { domain: o.domain, engines: o.engines, day: o.day, runsPerCell: 1, ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}) },
+      {
+        domain: o.domain,
+        engines: o.engines,
+        day: o.day,
+        runsPerCell: 1,
+        ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}),
+        ...(customSet && customSet.prompts.length ? { customPrompts: { version: customSet.version, prompts: customSet.prompts } } : {}),
+      },
       {
         orchestrator,
         blob,
@@ -393,13 +485,13 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
       },
     )
 
-    const spentThisRun = budget.state.spentUsd - spentBefore
+    const spentThisRun = (await spendLedger.spentUsd()) - spentBefore
     const run: GraderRun = { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spentThisRun, capUsd: o.capUsd, at: new Date().toISOString() }
     const envelope = { ...result, run }
-    writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
+    if (o.outFile) writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
     // Cumulative here, deliberately: "of the cap" is a statement about the cap,
     // which is per data dir and not per scan.
-    o.log(`\nspent $${budget.state.spentUsd.toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${blob.size} stored cells · wrote ${o.outFile}`)
+    o.log(`\nspent ${(await spendLedger.spentUsd()).toFixed(4)} of the $${o.capUsd.toFixed(2)} cap · ${'size' in blob ? `${(blob as { size: number }).size} stored cells` : `cells stored in ${stores.backend}`} ${o.outFile ? ` · wrote ${o.outFile}` : ''}`)
     return envelope
   } finally {
     if (existsSync(lock)) unlinkSync(lock)
@@ -418,18 +510,22 @@ async function main(): Promise<void> {
   // Print the bill before incurring it, never after. `/backfill` holds the same
   // rule and it is the difference between a decision and a discovery.
   const promptsIfWhole = opts.maxPrompts ?? 17
-  const worst = estimateUsd(opts, promptsIfWhole)
+  // The customer's own prompts are cells too (ADR-0016); a bill that left them out would be a discovery, not a decision.
+  const customIfWhole = opts.customPrompts === null ? 0 : (opts.customPrompts === undefined ? readCustomPromptSet(opts.dataDir, opts.domain) : customPromptsAt(opts.dataDir, opts.domain, opts.customPrompts))?.prompts.length ?? 0
+  const worst = estimateUsd(opts, promptsIfWhole + customIfWhole)
+  // The per-run allowance (ADR-0017): the cycle's cells with retry headroom, unless the command line named one. Bounds this run's attempts, retries included.
+  const allowance = opts.runAllowanceCalls ?? runAllowanceFor((promptsIfWhole + customIfWhole) * opts.engines.length)
   opts.log(
     `grader scan · ${opts.domain} · mode=${opts.mode} · plan=${opts.plan} · day=${opts.day}\n` +
-      `  ${opts.engines.length} engines x up to ${promptsIfWhole} unprompted prompts x 1 run\n` +
-      `  worst case (every cell a miss): $${worst.toFixed(4)} against a $${opts.capUsd.toFixed(2)} cap`,
+      `  ${opts.engines.length} engines x up to ${promptsIfWhole} unprompted prompts${customIfWhole ? ` + ${customIfWhole} of the domain's own` : ''} x 1 run\n` +
+      `  worst case (every cell a miss): $${worst.toFixed(4)} against a $${opts.capUsd.toFixed(2)} cap · at most ${allowance} attempts this run, retries included`,
   )
   if (preview) {
     opts.log('\n--preview: nothing collected, nothing charged.')
     return
   }
 
-  const result = await runGrader(opts)
+  const result = await runGrader({ ...opts, runAllowanceCalls: allowance })
   opts.log(`\nstatus: ${result.status}`)
   if (result.status === 'scanned') {
     opts.log(`category: ${result.category} · answers scored: ${result.counts.answersScored} · provider calls: ${result.counts.providerCalls}`)

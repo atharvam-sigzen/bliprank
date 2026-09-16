@@ -6,16 +6,28 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && pnpm -r run --if-present typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "collector:pilot": "tsx services/collector/src/pilot/collect.ts",
     "collector:analyse": "tsx services/collector/src/pilot/analyse.ts",
     "test:rls": "vitest run packages/db",
     "grader:scan": "tsx services/grader/src/run.ts",
-    "demo:dashboard": "pnpm --filter @bliprank/web dev",
     "demo:grader": "pnpm --filter @bliprank/public dev",
-    "grader:diagnose": "tsx services/grader/src/diagnose.ts"
+    "grader:diagnose": "tsx services/grader/src/diagnose.ts",
+    "grader:promote": "tsx services/grader/src/promote.ts",
+    "grader:aeo": "tsx services/grader/src/aeo.ts",
+    "grader:rescore": "tsx services/grader/src/rescore.ts",
+    "grader:answers": "tsx services/grader/src/answers.ts",
+    "grader:publishers": "tsx services/grader/src/publishers.ts",
+    "grader:version-diff": "tsx services/grader/src/version-diff.ts",
+    "grader:label": "tsx services/grader/src/label-run.ts",
+    "grader:correct": "tsx services/grader/src/correct.ts",
+    "grader:competitors": "tsx services/grader/src/competitors.ts",
+    "grader:prompts": "tsx services/grader/src/prompts.ts",
+    "grader:tick": "tsx services/grader/src/tick.ts",
+    "grader:schedule": "tsx services/grader/src/schedule.ts",
+    "grader:track": "tsx services/grader/src/tick.ts track"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

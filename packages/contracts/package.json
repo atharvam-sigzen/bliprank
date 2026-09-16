@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./engines": "./src/engines.ts",
-    "./geo": "./src/geo.ts"
+    "./geo": "./src/geo.ts",
+    "./basis": "./src/basis.ts"
   },
   "scripts": {
     "test": "vitest run"

@@ -69,6 +69,19 @@ export interface QStashConfig {
   readonly retries?: number
 }
 
+/** A schedule as `GET /v2/schedules` reports it (the fields this repo reads; QStash sends more). */
+export interface QStashSchedule {
+  readonly scheduleId: string
+  readonly cron: string
+  readonly destination: string
+  readonly createdAt?: number
+  readonly isPaused?: boolean
+  readonly body?: string
+  readonly retries?: number
+  readonly lastScheduleTime?: number
+  readonly nextScheduleTime?: number
+}
+
 export class QStashError extends Error {
   override readonly name = 'QStashError'
   constructor(readonly status: number, body: string) {
@@ -95,6 +108,32 @@ export class QStashClient {
   }
 
   /**
+   * Publish one JSON body to the destination. The general form every job on
+   * this transport takes: the per-cell runner's `publish` below and the daily
+   * fan-out's domain jobs (ADR-0018 D3). `deduplicationId` is QStash's own
+   * guard against the same message twice ("The deduplication window is 10
+   * minutes"); `timeoutSec` bounds how long QStash waits on the destination
+   * before it counts the delivery failed and retries, so a caller sets it to
+   * the destination's own maxDuration. A duplicate is accepted by QStash with
+   * the existing message's id and `deduplicated: true`.
+   */
+  async publishJson(body: unknown, opts: { readonly deduplicationId?: string; readonly delaySec?: number; readonly timeoutSec?: number } = {}): Promise<{ messageId: string; deduplicated: boolean }> {
+    const url = `${this.base}/v2/publish/${encodeURIComponent(this.cfg.destination)}`
+    const res = await this.f(url, {
+      method: 'POST',
+      headers: this.headers({
+        ...(opts.deduplicationId ? { 'upstash-deduplication-id': opts.deduplicationId } : {}),
+        ...(opts.delaySec ? { 'upstash-delay': `${opts.delaySec}s` } : {}),
+        ...(opts.timeoutSec ? { 'upstash-timeout': `${opts.timeoutSec}s` } : {}),
+      }),
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) throw new QStashError(res.status, await res.text().catch(() => ''))
+    const out = (await res.json().catch(() => ({}))) as { messageId?: string; deduplicated?: boolean }
+    return { messageId: out.messageId ?? '', deduplicated: out.deduplicated === true }
+  }
+
+  /**
    * Enqueue one cell.
    *
    * Deduplicated on the path-qualified cache key (ADR-0003): if a cycle is
@@ -104,18 +143,8 @@ export class QStashClient {
    * deliver messages whose only outcome would be `claimed-elsewhere`.
    */
   async publish(job: CollectJob, opts: { delaySec?: number } = {}): Promise<{ messageId: string }> {
-    const url = `${this.base}/v2/publish/${encodeURIComponent(this.cfg.destination)}`
-    const res = await this.f(url, {
-      method: 'POST',
-      headers: this.headers({
-        'upstash-deduplication-id': `${r2KeyFor(job.cell, job.adapterId)}:${job.runs}`,
-        ...(opts.delaySec ? { 'upstash-delay': `${opts.delaySec}s` } : {}),
-      }),
-      body: JSON.stringify(job),
-    })
-    if (!res.ok) throw new QStashError(res.status, await res.text().catch(() => ''))
-    const out = (await res.json().catch(() => ({}))) as { messageId?: string }
-    return { messageId: out.messageId ?? '' }
+    const { messageId } = await this.publishJson(job, { deduplicationId: `${r2KeyFor(job.cell, job.adapterId)}:${job.runs}`, ...(opts.delaySec ? { delaySec: opts.delaySec } : {}) })
+    return { messageId }
   }
 
   /**
@@ -137,17 +166,59 @@ export class QStashClient {
     return { published, failed }
   }
 
-  /** Register the recurring cycle. `cron` is standard 5-field UTC. */
-  async schedule(cron: string, body: unknown): Promise<{ scheduleId: string }> {
+  /**
+   * Register a recurring publish. `cron` is standard 5-field, evaluated in UTC
+   * by QStash unless prefixed `CRON_TZ=<zone>`. A caller-chosen `scheduleId`
+   * makes a second registration an UPDATE of the same schedule rather than a
+   * second schedule (QStash: "If a schedule with the provided ID exists, the
+   * settings of the existing schedule will be updated with the new
+   * settings"), which is what lets a deployment have exactly one daily tick
+   * (ADR-0018 D8). `retries` overrides the client's default for this
+   * schedule's deliveries; `timeoutSec` is the destination's own maxDuration.
+   */
+  async schedule(cron: string, body: unknown, opts: { readonly scheduleId?: string; readonly retries?: number; readonly timeoutSec?: number } = {}): Promise<{ scheduleId: string }> {
     const url = `${this.base}/v2/schedules/${encodeURIComponent(this.cfg.destination)}`
     const res = await this.f(url, {
       method: 'POST',
-      headers: this.headers({ 'upstash-cron': cron }),
+      headers: this.headers({
+        'upstash-cron': cron,
+        ...(opts.scheduleId ? { 'upstash-schedule-id': opts.scheduleId } : {}),
+        ...(opts.retries !== undefined ? { 'upstash-retries': String(opts.retries) } : {}),
+        ...(opts.timeoutSec ? { 'upstash-timeout': `${opts.timeoutSec}s` } : {}),
+      }),
       body: JSON.stringify(body),
     })
     if (!res.ok) throw new QStashError(res.status, await res.text().catch(() => ''))
     const out = (await res.json().catch(() => ({}))) as { scheduleId?: string }
     return { scheduleId: out.scheduleId ?? '' }
+  }
+
+  /** Every schedule this token holds, as QStash reports them (`GET /v2/schedules`). */
+  async listSchedules(): Promise<readonly QStashSchedule[]> {
+    const res = await this.f(`${this.base}/v2/schedules`, { method: 'GET', headers: { authorization: `Bearer ${this.cfg.token}` } })
+    if (!res.ok) throw new QStashError(res.status, await res.text().catch(() => ''))
+    const out = (await res.json().catch(() => [])) as unknown
+    return Array.isArray(out) ? (out as QStashSchedule[]) : []
+  }
+
+  /** `POST /v2/schedules/{id}/pause`: "the cron trigger will simply be ignored" until resumed. The reversible stop. */
+  pauseSchedule(scheduleId: string): Promise<void> {
+    return this.scheduleAction(scheduleId, 'pause')
+  }
+
+  resumeSchedule(scheduleId: string): Promise<void> {
+    return this.scheduleAction(scheduleId, 'resume')
+  }
+
+  /** `DELETE /v2/schedules/{id}`: the schedule is gone; a later `schedule()` with the same id creates it afresh. */
+  deleteSchedule(scheduleId: string): Promise<void> {
+    return this.scheduleAction(scheduleId, null)
+  }
+
+  private async scheduleAction(scheduleId: string, action: 'pause' | 'resume' | null): Promise<void> {
+    const url = `${this.base}/v2/schedules/${encodeURIComponent(scheduleId)}${action ? `/${action}` : ''}`
+    const res = await this.f(url, { method: action ? 'POST' : 'DELETE', headers: { authorization: `Bearer ${this.cfg.token}` } })
+    if (!res.ok) throw new QStashError(res.status, await res.text().catch(() => ''))
   }
 }
 
@@ -232,7 +303,7 @@ export async function handleCollectJob(req: IncomingRequest, d: HandlerDeps): Pr
       await d.heartbeat.recordCollected(1).catch(() => undefined) // never fail a paid job on telemetry
     }
 
-    const shortfall = outcome.status === 'budget-exhausted' || outcome.status === 'aborted'
+    const shortfall = outcome.status === 'budget-exhausted' || outcome.status === 'allowance-exhausted' || outcome.status === 'aborted'
     if (shortfall) {
       const got = 'answers' in outcome ? outcome.answers.length : 0
       d.deadLetter.record({
@@ -240,7 +311,7 @@ export async function handleCollectJob(req: IncomingRequest, d: HandlerDeps): Pr
         cellKey: job.cell.key,
         prompt: job.prompt,
         run: got,
-        kind: outcome.status === 'budget-exhausted' ? 'rate-limited' : 'timeout',
+        kind: outcome.status === 'aborted' ? 'timeout' : 'rate-limited',
         message: `cell left short: ${got} of ${job.runs} runs (${outcome.status})`,
         attempts: outcome.providerCalls,
         at: (d.now?.() ?? new Date()).toISOString(),

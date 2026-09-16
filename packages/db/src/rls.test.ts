@@ -40,6 +40,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 let db: PGlite
 
@@ -62,7 +63,8 @@ const OWNER_OF: Record<string, string> = { [WS1]: USER1, [WS2]: USER2 }
 function mint(claims: Record<string, unknown>, opts: { secret?: string; kid?: string; alg?: string } = {}): string {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const head = b64({ alg: opts.alg ?? 'HS256', typ: 'JWT', kid: opts.kid ?? KID })
-  const body = b64({ exp: Math.floor(Date.now() / 1000) + 300, iss: ISS, aud: AUD, ...claims })
+  // Every member this suite creates is an owner, so the role claim 0005 requires defaults to it; a case overrides it to test the check.
+  const body = b64({ exp: Math.floor(Date.now() / 1000) + 300, iss: ISS, aud: AUD, role: 'owner', ...claims })
   const sig = createHmac('sha256', opts.secret ?? SECRET).update(`${head}.${body}`).digest('base64url')
   return `${head}.${body}.${sig}`
 }
@@ -109,9 +111,7 @@ async function as<T>(role: Role, ctx: { workspace?: string; leakStaleWs?: string
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  await db.exec(readFileSync(new URL('../migrations/0000_init.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../migrations/0001_tenancy_identity.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../migrations/0002_tenancy_context.sql', import.meta.url), 'utf8'))
+  for (const m of MIGRATIONS) await db.exec(readFileSync(new URL(`../migrations/${m}`, import.meta.url), 'utf8'))
   await db.exec(`INSERT INTO auth_signing_keys (kid, secret, issuer, audience) VALUES ('${KID}', '${SECRET}', '${ISS}', '${AUD}')`)
   // Seed as svc_onboard (identity + entitlements) and svc_scorer (corpus) — the roles that may write.
   await db.exec(`SET ROLE svc_onboard`)
@@ -160,19 +160,56 @@ describe('the standing sweep that catches the next migration', () => {
       SELECT DISTINCT c.relname FROM pg_class c
       JOIN pg_namespace n ON n.oid=c.relnamespace
       WHERE n.nspname='public' AND c.relkind IN ('r','p')
-        AND has_any_column_privilege('app_rw', c.oid, 'SELECT')`)).rows as { relname: string }[]
+        AND (has_any_column_privilege('public', c.oid, 'SELECT') OR EXISTS (SELECT 1 FROM pg_roles r
+              WHERE r.rolname NOT LIKE 'pg\\_%' AND NOT r.rolsuper
+                AND EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'))
+                AND has_any_column_privilege(r.oid, c.oid, 'SELECT')))`)).rows as { relname: string }[]
     const badly: string[] = []
     for (const { relname } of readable) {
       if (SHARED.has(relname)) continue
-      // a SELECT/ALL policy applying to PUBLIC or app_rw must mention current_workspace_id
+      // Every policy applying to PUBLIC or app_rw must scope on current_workspace_id
+      // in the expression that governs the verb: `qual` for rows read, updated or
+      // deleted, `with_check` for rows written (it defaults to `qual` when absent).
+      // Reading only `qual` let an INSERT policy with an open WITH CHECK pass
+      // (oversight review 2026-09-10, B3r item 3). At least one read policy must exist.
       const pols = (await db.query(`
-        SELECT qual FROM pg_policies
-        WHERE schemaname='public' AND tablename=$1 AND cmd IN ('SELECT','ALL')
-          AND (roles = '{public}' OR 'app_rw' = ANY(roles))`, [relname])).rows as { qual: string | null }[]
-      const scoped = pols.length > 0 && pols.every((p) => (p.qual ?? '').includes('current_workspace_id'))
+        SELECT cmd, qual, with_check FROM pg_policies
+        WHERE schemaname='public' AND tablename=$1
+          AND (roles = '{public}' OR EXISTS (SELECT 1 FROM unnest(roles) pr JOIN pg_roles r ON r.rolname = pr
+                 WHERE EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'))))`, [relname])).rows as { cmd: string; qual: string | null; with_check: string | null }[]
+      const scopes = (expr: string | null) => (expr ?? '').includes('current_workspace_id')
+      const scoped =
+        pols.some((p) => p.cmd === 'SELECT' || p.cmd === 'ALL') &&
+        pols.every(
+          (p) =>
+            (!['SELECT', 'ALL', 'UPDATE', 'DELETE'].includes(p.cmd) || scopes(p.qual)) &&
+            (!['INSERT', 'ALL', 'UPDATE'].includes(p.cmd) || scopes(p.with_check ?? p.qual)),
+        )
       if (!scoped) badly.push(relname)
     }
     expect(badly).toEqual([])
+  })
+
+  it('every SECURITY DEFINER function an application role may execute is one the model declares', async () => {
+    // Same derivation as check-deploy.sql, run here so the suite catches a new
+    // door before a deploy does. The declared list is the arrangement; that
+    // anything reachable and not on it fails is the property.
+    const DECLARED = new Set([
+      'current_workspace_id()', 'current_account_id()', 'current_workspace_role()', 'set_workspace_jwt(text)',
+      'ensure_account(uuid,text,text)', 'create_workspace(uuid,text)', 'workspaces_of(uuid)',
+      'ws_required()', 'ws_put_cycle(text,date,text,text,jsonb)', 'ws_put_document(text,text,jsonb,integer)',
+      'ws_file_request(text,text,jsonb,timestamp with time zone)',
+      'ws_resolve_request(text,text,timestamp with time zone,text,text,text)',
+    ])
+    const reachable = (await db.query(`
+      SELECT p.oid::regprocedure::text AS sig
+        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE p.prosecdef AND n.nspname NOT IN ('pg_catalog','information_schema')
+         AND EXISTS (SELECT 1 FROM unnest(ARRAY['app_rw','svc_scorer','svc_onboard']) AS g(r)
+                      WHERE has_function_privilege(g.r, p.oid, 'EXECUTE'))
+       ORDER BY 1`)).rows as { sig: string }[]
+    expect(reachable.length).toBeGreaterThanOrEqual(6)
+    expect(reachable.map((r) => r.sig).filter((s) => !DECLARED.has(s))).toEqual([])
   })
 
   it('no login-capable role is a member of more than one service group (MAJOR-C invariant)', async () => {
@@ -578,24 +615,26 @@ describe('(B) the billing gate blocks before it creates', () => {
 // ===========================================================================
 describe('adversarial paths — a tenant must not be able to manufacture a context', () => {
   /**
-   * Every table whose visibility depends on tenant context — DERIVED, not
-   * listed. A hardcoded array silently stops covering the next table someone
-   * adds, which is the same failure mode as a hardcoded role list in the deploy
-   * check. Anything app_rw can read and whose policy mentions
-   * current_workspace_id belongs here by construction.
+   * Every table the tenant role can read — DERIVED, not listed. A hardcoded
+   * array silently stops covering the next table someone adds, which is the
+   * same failure mode as a hardcoded role list in the deploy check. The subject
+   * is what app_rw can SELECT minus the shared allowlist, never what a policy
+   * mentions: a `USING (true)` table must be blind without a context too, and
+   * asking its policy whether it needed checking is how one would have escaped
+   * (oversight review 2026-09-10, B3r item 3).
    */
   let SCOPED: string[] = []
   beforeAll(async () => {
     SCOPED = (
       (
         await db.query(`
-          SELECT DISTINCT p.tablename FROM pg_policies p
-           WHERE p.schemaname = 'public'
-             AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
-             AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
-           ORDER BY p.tablename`)
-      ).rows as { tablename: string }[]
-    ).map((r) => r.tablename)
+          SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+             AND c.relname <> 'prompt_banks'
+             AND (has_any_column_privilege('app_rw', c.oid, 'SELECT') OR has_any_column_privilege('public', c.oid, 'SELECT'))
+           ORDER BY 1`)
+      ).rows as { relname: string }[]
+    ).map((r) => r.relname)
     // If this ever comes back short, the sweep below is asserting nothing.
     expect(SCOPED.length).toBeGreaterThanOrEqual(7)
   })
@@ -667,9 +706,29 @@ describe('adversarial paths — a tenant must not be able to manufacture a conte
 
   it('the tenant cannot call the context writer directly', async () => {
     await asTenant(async (q) => {
-      await expect(q(`SELECT stamp_tenant_context('${WS1}','${USER1}')`)).rejects.toThrow(/permission denied/)
+      await expect(q(`SELECT stamp_tenant_context('${WS1}','${USER1}','owner')`)).rejects.toThrow(/permission denied/)
       await expect(q(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
     })
+  })
+
+  it('the 0004 writers refuse a context stamped for another backend, and one from an earlier transaction', async () => {
+    // The writer mechanism is context-dependent like the reads, so it gets
+    // the same non-sanctioned paths (audit m8): a foreign pid's row, and a
+    // committed row from a previous transaction on this backend.
+    await db.exec(`INSERT INTO auth_tenant_context (backend_pid, xact_id, workspace_id, account_id)
+                   VALUES (pg_backend_pid() + 1, pg_current_xact_id(), '${WS1}', '${USER1}')`)
+    await asTenant(async (q) => {
+      await expect(q(`SELECT ws_put_document('category-record', 'x.example', '{}', 0)`)).rejects.toThrow(/no verified tenant context/)
+      await expect(q(`SELECT ws_file_request('category', 'x.example', '{}', now())`)).rejects.toThrow(/no verified tenant context/)
+    })
+    await db.exec(`DELETE FROM auth_tenant_context WHERE backend_pid <> pg_backend_pid()`)
+    await db.exec(`SELECT set_workspace('${WS1}')`) // committed, own transaction
+    await asTenant(async (q) => {
+      await expect(q(`SELECT ws_put_cycle('x.example', '2026-09-01', 'det-2', 'b', '{"status":"scanned","domain":"x.example"}')`)).rejects.toThrow(/no verified tenant context/)
+      await expect(q(`SELECT ws_resolve_request('category', 'x.example', now(), 'applied', 'op', null)`)).rejects.toThrow(/no verified tenant context/)
+    })
+    await db.exec(`DELETE FROM auth_tenant_context`)
+    expect((await db.query(`SELECT count(*)::int AS n FROM workspace_documents WHERE host = 'x.example'`)).rows).toEqual([{ n: 0 }])
   })
 
   it('a context stamped for ANOTHER backend is not visible to this one', async () => {

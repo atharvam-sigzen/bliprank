@@ -19,8 +19,9 @@
  * is the thing that catches the accident before the truth has to.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { CORRUPT, fileLedgerDoc, type LedgerDoc } from './ledger-doc.js'
+import { fileCapUsd, type LedgerStores } from './ledger-stores.js'
+import { join } from 'node:path'
 import { ENGINES, type EngineId } from '@bliprank/contracts'
 
 export const USAGE_URL = 'https://api.openwebninja.com/usage'
@@ -35,6 +36,54 @@ export const USAGE_URL = 'https://api.openwebninja.com/usage'
  * comment, which is the wrong place to find out.
  */
 export const DEFAULT_CAP_USD = 5
+
+/**
+ * The per-run cap to open `Budget` with, for a store that may already have one.
+ *
+ * ⚠️ THE LEDGER'S OWN CAP WINS, ALWAYS, AND THAT IS THE WHOLE POINT.
+ *
+ * `Budget` lowers its cap whenever it is opened with a smaller one, and
+ * persists that on the first CHARGED call — not on construction, which is why
+ * the failure looks like nothing until money moves. So a caller that passes a
+ * fixed default silently rewrites a deliberately raised ledger back down to it.
+ *
+ * That is not hypothetical. `/api/scan` passed `GRADER_CAP_USD ?? 5`, so after
+ * the lifetime cap was raised $5 → $300 on 2026-09-07, ONE hand-started cycle
+ * from the workspace record — on a server where nobody had set the env var —
+ * would have written the cap back to $5, leaving $2.85 of a $300 budget and
+ * saying nothing. `daily-loop.ts` already avoided this by reading the cap back
+ * out of the file; this is that fix, made once, where both callers can reach it.
+ *
+ * ⚠️ AND `GRADER_CAP_USD` STILL MEANS SOMETHING — it just cannot LOWER an
+ * existing ledger any more. Deleting it outright would have been simpler and
+ * would have quietly changed what a documented `.env.example` variable does: a
+ * reader setting it to 1 would get 300 and no explanation. It now names the cap
+ * a NEW ledger is created with, which is the only reading that is both useful
+ * and safe. Changing an existing cap is what editing the ledger file is for,
+ * and `Budget` enforces that by throwing on any raise passed in code.
+ */
+export function ledgerCapUsd(dataDir: string, env: NodeJS.ProcessEnv = process.env, ledgers?: LedgerStores): number {
+  // ⚠️ THE FILE IS READ ONLY WHERE THE LEDGER IS A FILE (B3c item 5). On the
+  // KV backend the deployment's ledger is in Upstash and the instance's disk
+  // holds no ledger of it; a stray ledger.json there would have set the cap
+  // for every workspace of the deployment. bank-author.ts reads its own cap
+  // the same way. An unreadable file falls through to the bootstrap value
+  // rather than a guess: `Budget` fails on the corrupt file itself and says so.
+  if (!ledgers || ledgers.backend === 'file') {
+    const own = fileCapUsd(join(dataDir, 'ledger.json'))
+    if (own !== null) return own
+  }
+  const named = Number(env['GRADER_CAP_USD'])
+  return Number.isFinite(named) && named > 0 ? named : DEFAULT_CAP_USD
+}
+
+/**
+ * Prompts one scan sends to EVERY engine, when `GRADER_PROMPTS_PER_SCAN` is not
+ * set. Named because the per-domain ceiling derives its default from it: a
+ * cycle is this many prompts times the engine count, and a ceiling that did not
+ * know the number silently shrank to one cycle a month when the number grew.
+ */
+export const DEFAULT_PROMPTS_PER_SCAN = 17
 
 /** Provider api_id -> our EngineId. `ai_answers` is a separate aggregate product. */
 const API_ID: Record<string, EngineId> = {
@@ -145,22 +194,34 @@ export interface GateConfig {
   /** Calls one scan will draw from EVERY engine — prompts x runs. */
   readonly callsPerEngine: number
   readonly ledgerFile: string
+  /** Where the ledger lives; the file at `ledgerFile` when absent (MVP_PLAN B3b). */
+  readonly ledger?: LedgerDoc
   readonly engines: readonly EngineId[]
 }
 
+/**
+ * `message` is what a visitor may read. Everything beside it is for the server
+ * log: `used` is every host scanned today on a DEPLOYMENT-WIDE ledger, which
+ * on a deployment with more than one workspace is other tenants' clients
+ * (MVP_PLAN B3c item 1); `cause` is whatever the provider or the network said
+ * when the quota could not be read, which may be a response body (item 6).
+ * Neither goes in the sentence.
+ */
 export type GateVerdict =
   | { readonly ok: true; readonly quota: readonly EngineQuota[] }
   | { readonly ok: false; readonly reason: 'burst-cap'; readonly message: string; readonly used: readonly string[]; readonly limit: number }
   | { readonly ok: false; readonly reason: 'quota'; readonly message: string; readonly short: readonly EngineQuota[] }
-  | { readonly ok: false; readonly reason: 'unreadable'; readonly message: string }
+  | { readonly ok: false; readonly reason: 'unreadable'; readonly message: string; readonly cause: string }
 
 interface Ledger {
   [utcDay: string]: string[]
 }
 
-const readLedger = (f: string): Ledger => {
+const docOf = (cfg: GateConfig): LedgerDoc => cfg.ledger ?? fileLedgerDoc(cfg.ledgerFile)
+const shapeLedger = (raw: unknown): Ledger => (typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Ledger) : {})
+const readLedger = async (cfg: GateConfig): Promise<Ledger> => {
   try {
-    return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as Ledger) : {}
+    return shapeLedger(await docOf(cfg).read())
   } catch {
     // A corrupt ledger must not open the gate. Treat it as "today is unknown",
     // which the burst cap then reads as a full day already spent.
@@ -171,8 +232,8 @@ const readLedger = (f: string): Ledger => {
 export const utcDay = (now: Date): string => now.toISOString().slice(0, 10)
 
 /** Domains already scanned live today, in order. */
-export function scannedToday(cfg: GateConfig, now: Date): readonly string[] {
-  const l = readLedger(cfg.ledgerFile)
+export async function scannedToday(cfg: GateConfig, now: Date): Promise<readonly string[]> {
+  const l = await readLedger(cfg)
   if ('__corrupt' in l) return Array.from({ length: cfg.maxNewPerDay }, (_, i) => `unknown-${i}`)
   return l[utcDay(now)] ?? []
 }
@@ -190,12 +251,16 @@ export async function checkGate(
   now: Date = new Date(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<GateVerdict> {
-  const today = scannedToday(cfg, now)
+  const today = await scannedToday(cfg, now)
   if (!today.includes(domain) && today.length >= cfg.maxNewPerDay) {
+    // The sentence names no host: the ledger is the deployment's, so the hosts
+    // on it are whichever workspaces scanned today, and listing them to this
+    // caller would hand one tenant another's client list (B3c item 1). They
+    // stay on `used` for the server log.
     return {
       ok: false,
       reason: 'burst-cap',
-      message: `The demo cap of ${cfg.maxNewPerDay} new domains a day has been reached (${today.join(', ')}). Those are cached and can be re-shown for free; a different domain needs the cap raised.`,
+      message: `The cap of ${cfg.maxNewPerDay} new domains a day has been reached on this deployment. A domain already scanned today is cached and can be re-shown for free; a different domain needs the cap raised or the next UTC day. Nothing was collected and nothing was charged.`,
       used: today,
       limit: cfg.maxNewPerDay,
     }
@@ -206,7 +271,14 @@ export async function checkGate(
     quota = await readQuota(apiKey, fetchImpl)
   } catch (e) {
     // Fail CLOSED. Not knowing the remaining quota is not permission to spend it.
-    return { ok: false, reason: 'unreadable', message: `Could not read the provider's remaining quota (${(e as Error).message}), so this scan is refused rather than run blind.` }
+    // The sentence is fixed: what the provider or the network said is the
+    // server's to log, never the visitor's to read (B3c item 6).
+    return {
+      ok: false,
+      reason: 'unreadable',
+      message: "Could not read the provider's remaining quota, so this scan is refused rather than run blind. Nothing was collected and nothing was charged.",
+      cause: (e as Error).message,
+    }
   }
 
   const needed = cfg.callsPerEngine
@@ -233,17 +305,18 @@ export async function checkGate(
 }
 
 /** Record a domain as collected today. Called only after a scan actually spends. */
-export function recordScan(domain: string, cfg: GateConfig, now: Date = new Date()): void {
-  const l = readLedger(cfg.ledgerFile)
-  const day = utcDay(now)
-  const list = ('__corrupt' in l ? {} : l)[day] ?? []
-  if (!list.includes(domain)) list.push(domain)
-  const next: Ledger = { ...('__corrupt' in l ? {} : l), [day]: list }
-  mkdirSync(dirname(cfg.ledgerFile), { recursive: true })
-  writeFileSync(cfg.ledgerFile, JSON.stringify(next, null, 2) + '\n')
+export async function recordScan(domain: string, cfg: GateConfig, now: Date = new Date()): Promise<void> {
+  await docOf(cfg).update((raw) => {
+    const l: Ledger = raw === CORRUPT ? {} : shapeLedger(raw)
+    const day = utcDay(now)
+    const list = [...(l[day] ?? [])]
+    if (!list.includes(domain)) list.push(domain)
+    const next: Ledger = { ...l, [day]: list }
+    return next
+  })
 }
 
-export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env): GateConfig => ({
+export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = process.env, ledgers?: LedgerStores): GateConfig => ({
   /*
    * Raised from 2 on 2026-08-25, deliberately, and it is now a RUNAWAY BACKSTOP
    * rather than the operating limit.
@@ -257,10 +330,8 @@ export const defaultGateConfig = (dataDir: string, env: NodeJS.ProcessEnv = proc
    * sequence.
    */
   maxNewPerDay: Number(env['GRADER_MAX_NEW_SCANS_PER_DAY'] ?? 12),
-  // ⚠️ TEMPORARY — 2026-09-01, testing only. Default lowered 17 -> 10 to halve
-  // the quota a live scan draws while domains are being tested.
-  // REVERT WITH: git checkout -- services/grader/src/live-gate.ts
-  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? 10),
+  callsPerEngine: Number(env['GRADER_PROMPTS_PER_SCAN'] ?? DEFAULT_PROMPTS_PER_SCAN),
   ledgerFile: join(dataDir, 'live-cap.json'),
+  ...(ledgers ? { ledger: ledgers.doc('live-cap.json') } : {}),
   engines: [...ENGINES],
 })

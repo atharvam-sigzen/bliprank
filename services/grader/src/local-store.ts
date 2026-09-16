@@ -124,4 +124,11 @@ export class FileKV implements KV {
     this.flush()
     return out
   }
+
+  async delIfEquals(key: string, expected: string): Promise<boolean> {
+    if (this.live(key) !== expected) return false
+    this.m.delete(key)
+    this.flush()
+    return true
+  }
 }

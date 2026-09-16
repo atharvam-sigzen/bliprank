@@ -4,7 +4,9 @@
 operational item with no completion date.
 **Written:** 2026-09-09 · **For:** whoever runs `pnpm db:check` against a real database
 **Relates to:** ADR-0007 (tenancy mechanism and gate split) · R7 (tenancy is
-verified mechanically) · migrations 0001–0003
+verified mechanically) · migrations 0001–0002 and 0008 (the manifest; it was
+0003 on main until the C0 merge of 2026-09-15 renumbered it behind the
+lineage's 0003–0007)
 
 The deploy gate closed on 2026-09-09. `packages/db/scripts/check-deploy.sql` now
 refuses a misconfigured database instead of describing what it would have
@@ -135,7 +137,7 @@ warning does not fail psql and an earlier version reported the superuser case
 into a log nobody read while passing the deploy.
 
 The gate needs a principal that can execute its functions. Grant the
-`deploy_check` role (`NOLOGIN`, created by migration 0003) to whoever runs it:
+`deploy_check` role (`NOLOGIN`, created by migration 0008) to whoever runs it:
 
 ```sql
 GRANT deploy_check TO <the deploying role>;

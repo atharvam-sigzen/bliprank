@@ -23,10 +23,15 @@
  * turns one into the other — which is why this file drives data rather than
  * reading pg_policies.
  *
- * THE RULE: every relation the manifest declares `scoped` gets a case here that
- * establishes two real tenant contexts and asserts the visible row sets do not
- * intersect. When a scoped relation is added to the manifest, add it here in the
- * same commit; the first test below fails if you do not.
+ * THE RULE: every relation the tenant role can read at all gets a case here
+ * that establishes two real tenant contexts and asserts the visible row sets
+ * do not intersect, unless it is on the shared allowlist by decision. The
+ * subject is derived from what app_rw can SELECT, never from what a policy
+ * says, so a new readable relation fails the first test below until a case is
+ * written for it — a `USING (true)` policy included. The exposure manifest
+ * (migration 0008) declares the same surface for the deploy gate, and the seam
+ * test below holds the two derivations to each other: what a tenant can read
+ * is exactly what the manifest declares scoped or shared.
  */
 
 import { createHmac } from 'node:crypto'
@@ -34,6 +39,7 @@ import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 
@@ -51,7 +57,7 @@ let db: PGlite
 function token(ws: string, sub: string): string {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const h = b64({ alg: 'HS256', typ: 'JWT', kid: 'k1' })
-  const p = b64({ sub, workspace_id: ws, exp: Math.floor(Date.now() / 1000) + 300, iss: 'iss', aud: 'aud' })
+  const p = b64({ sub, workspace_id: ws, role: 'owner', exp: Math.floor(Date.now() / 1000) + 300, iss: 'iss', aud: 'aud' })
   return `${h}.${p}.${createHmac('sha256', SECRET).update(`${h}.${p}`).digest('base64url')}`
 }
 
@@ -75,7 +81,7 @@ const visible = async (ws: string, sub: string, relation: string, col: string) =
 
 beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } })
-  for (const m of ['0000_init.sql', '0001_tenancy_identity.sql', '0002_tenancy_context.sql', '0003_tenancy_exposure_manifest.sql']) {
+  for (const m of MIGRATIONS) {
     await db.exec(migration(m))
   }
   await db.exec(`SET bliprank.rls_bypass_allowed = 'postgres'`)
@@ -89,6 +95,12 @@ beforeAll(async () => {
     INSERT INTO workspace_subscriptions (workspace_id,plan,status,brand_limit,current_period_end)
       VALUES ('${WS1}','growth','active',5,'2099-01-01'), ('${WS2}','growth','active',5,'2099-01-01');
     INSERT INTO workspace_brands (workspace_id,brand_id,relation) VALUES ('${WS1}','${B1}','own'), ('${WS2}','${B2}','own');
+    INSERT INTO workspace_cycles (workspace_id,host,day,algo_version,comparison_basis,result) VALUES
+      ('${WS1}','one.example','2026-09-01','det-2','b','{}'), ('${WS2}','two.example','2026-09-01','det-2','b','{}');
+    INSERT INTO workspace_documents (workspace_id,kind,host,version,body) VALUES
+      ('${WS1}','category-record','one.example',1,'{}'), ('${WS2}','category-record','two.example',1,'{}');
+    INSERT INTO workspace_requests (workspace_id,kind,host,body) VALUES
+      ('${WS1}','category','one.example','{}'), ('${WS2}','category','two.example','{}');
   `)
   await db.exec(`RESET ROLE`)
   await db.exec(`SET ROLE svc_scorer`)
@@ -122,47 +134,72 @@ const CASES: readonly (readonly [string, string])[] = [
   ['brands', 'id'],
   ['score_rows', 'brand_id'],
   ['score_aggregates', 'brand_id'],
+  ['workspace_cycles', 'host'],
+  ['workspace_documents', 'host'],
+  ['workspace_requests', 'host'],
 ]
 
 /**
- * Scoped relations as the CATALOG sees them: anything app_rw can read whose
- * policy consults the tenant context. Shared by the two tests below so the
- * derivation cannot drift between them.
+ * The shared-corpus allowlist: relations every tenant may read in full, by
+ * decision. Anything else the tenant role can read must have a disjointness
+ * case below. Adding a name here is a product decision, not a test fix.
  */
-async function catalogScoped(): Promise<string[]> {
-  const rows = (
-    await db.query(`
-      SELECT DISTINCT p.tablename FROM pg_policies p
-       WHERE p.schemaname = 'public'
-         AND coalesce(p.qual, '') LIKE '%current_workspace_id%'
-         AND has_any_column_privilege('app_rw', p.tablename::regclass, 'SELECT')
-       ORDER BY p.tablename`)
-  ).rows as { tablename: string }[]
-  return rows.map((r) => r.tablename)
+const SHARED = new Set(['public.prompt_banks'])
+
+/**
+ * THE INVERSE (oversight review 2026-09-10, B3r item 3). The subject used to be
+ * derived from pg_policies — "every relation whose policy mentions
+ * current_workspace_id" — which asked the policy whether it needed checking.
+ * A table with `USING (true)`, or a policy written through a wrapper function,
+ * mentioned nothing and so was never required to have a case: it passed this
+ * guard and the deploy gate while returning every tenant's rows. The subject
+ * is now everything the tenant role can read at all — every schema, every
+ * relation kind, any column — minus the shared allowlist. What a policy says
+ * is irrelevant; that a case proves the row sets disjoint is the property.
+ */
+async function uncovered(): Promise<string[]> {
+  const COVERED = new Set(CASES.map(([r]) => (r.includes('.') ? r : `public.${r}`)))
+  const readable = (
+    (
+      await db.query(`
+        SELECT ns.nspname || '.' || c.relname AS rel
+          FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+         WHERE ns.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+           AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+           -- partitions are exercised through their parent, which owns the case (an INHERITS child is its own relation)
+           AND NOT c.relispartition
+           -- readable by PUBLIC, by app_rw, by a login role that is a member of app_rw, or by a group any of those inherits
+           AND (has_any_column_privilege('public', c.oid, 'SELECT')
+                OR EXISTS (SELECT 1 FROM pg_roles r
+                            WHERE r.rolname NOT LIKE 'pg\\_%' AND NOT r.rolsuper
+                              AND EXISTS (SELECT 1 FROM pg_roles l WHERE NOT l.rolsuper AND pg_has_role(l.oid, 'app_rw', 'MEMBER') AND pg_has_role(l.oid, r.oid, 'MEMBER'))
+                              AND has_any_column_privilege(r.oid, c.oid, 'SELECT')))
+         ORDER BY 1`)
+    ).rows as { rel: string }[]
+  ).map((r) => r.rel)
+  // If the derivation comes back short, the sweep is asserting nothing.
+  expect(readable.length).toBeGreaterThanOrEqual(CASES.length + SHARED.size)
+  return readable.filter((r) => !SHARED.has(r) && !COVERED.has(r))
 }
 
-describe('every scoped relation has a disjointness case here', () => {
+describe('every relation the tenant role can read has a disjointness case here, or is shared by decision', () => {
+  it('nothing the tenant can read is left unexercised', async () => {
+    expect(await uncovered()).toEqual([])
+  })
+
   /*
-   * TWO DERIVATIONS, AND THE MERGE IS WHY THERE ARE TWO.
+   * TWO DERIVATIONS OF ONE SURFACE, AND THE MERGE IS WHY THERE ARE TWO.
    *
-   * `master` derived the subject from `pg_policies`: anything app_rw can read
-   * whose policy consults the tenant context belongs here, declared or not. This
-   * branch derived it from `tenancy_exposure_manifest`: anything DECLARED scoped
-   * belongs here. Each catches something the other cannot.
-   *
-   *   pg_policies    sees a scoped relation nobody declared. The manifest cannot;
-   *                  it only knows what is in it. (tenancy_exposure_faults() does
-   *                  catch the undeclared case at deploy time — but that is a
-   *                  different runner, and this file is the behavioural half.)
-   *
-   *   the manifest   sees a relation declared scoped whose policy does not
-   *                  actually mention current_workspace_id — a declaration that
-   *                  is a lie. pg_policies cannot; it would simply not find it.
-   *
-   * Keeping both also makes the SEAM between them testable, which is the third
-   * test below and the one most likely to earn its keep: if the manifest and the
-   * catalog disagree about what is scoped, one of them is wrong, and finding out
-   * from a test beats finding out from a tenant.
+   * This file derives the subject from REACHABILITY: everything the tenant role
+   * can read (`uncovered()` above). The deploy gate derives it from the
+   * DECLARATION: migration 0008's exposure manifest, which `tenancy_exposure_faults()`
+   * holds every reachable privilege to. Each catches something the other cannot:
+   * reachability sees a readable relation nobody declared; the manifest sees a
+   * relation declared scoped whose policy is a lie, or one declared shared that
+   * has quietly grown a tenant column. (`main` derived this file's subject from
+   * pg_policies before the merge of 2026-09-15; the reachability inverse is a
+   * superset of that, so the pg_policies derivation is kept only as the seam's
+   * second witness below.)
    */
   it('the manifest declares nothing scoped that this file does not exercise', async () => {
     const COVERED = new Set(CASES.map(([r]) => r))
@@ -176,33 +213,34 @@ describe('every scoped relation has a disjointness case here', () => {
     expect(missing).toEqual([])
   })
 
-  it('the CATALOG names nothing scoped that this file does not exercise — declared or not', async () => {
-    // master's derivation, kept at the merge. A relation can acquire a
-    // tenant-consulting policy without anyone remembering to declare it, and
-    // that relation is exactly the one nobody has written a case for.
-    const COVERED = new Set(CASES.map(([r]) => r))
-    const scoped = await catalogScoped()
-    // If the derivation comes back short, the sweep is asserting nothing.
-    expect(scoped.length).toBeGreaterThanOrEqual(CASES.length)
-    const missing = scoped.filter((r) => !COVERED.has(r) && !r.startsWith('score_rows_'))
-    expect(missing).toEqual([])
-  })
-
-  it('the manifest and the catalog agree about what is scoped', async () => {
-    // The seam. A declaration the catalog does not support, or a policy the
-    // manifest does not know about, means one of the two systems is describing a
-    // database that does not exist.
-    const declared = new Set(
+  it('the manifest, the catalog and reachability agree about what is scoped and what is shared', async () => {
+    // The seam. A declaration the catalog does not support, a policy the
+    // manifest does not know about, or a readable relation the manifest never
+    // declared, means one of the derivations is describing a database that
+    // does not exist.
+    const rows = (await db.query(`SELECT DISTINCT schema_name || '.' || relation AS rel, disposition FROM tenancy_exposure_manifest WHERE disposition IN ('scoped', 'shared')`))
+      .rows as { rel: string; disposition: string }[]
+    const declaredScoped = rows.filter((r) => r.disposition === 'scoped').map((r) => r.rel)
+    const declaredShared = rows.filter((r) => r.disposition === 'shared').map((r) => r.rel)
+    // What a tenant can read is exactly what is declared scoped or shared: the
+    // gate's declaration and this file's reachability describe one surface.
+    const readable = new Set([...SHARED, ...CASES.map(([r]) => (r.includes('.') ? r : `public.${r}`))])
+    expect(await uncovered()).toEqual([])
+    expect([...readable].sort()).toEqual([...declaredScoped, ...declaredShared].sort())
+    expect(declaredShared.sort()).toEqual([...SHARED].sort())
+    // And the catalog's own witness: every policy that consults the tenant
+    // context sits on a relation the manifest declares scoped, and every scoped
+    // declaration has such a policy (partitions through their parent).
+    const catalog = (
       (
-        (await db.query(`SELECT DISTINCT relation FROM tenancy_exposure_manifest WHERE disposition = 'scoped' ORDER BY 1`))
-          .rows as { relation: string }[]
-      ).map((r) => r.relation),
-    )
-    const catalog = new Set(await catalogScoped())
-    // Partitions are declared through their parent in the manifest but appear
-    // individually in pg_policies, so they are compared through the parent.
-    const norm = (s: Set<string>) => [...new Set([...s].map((r) => (r.startsWith('score_rows_') ? 'score_rows' : r)))].sort()
-    expect(norm(catalog)).toEqual(norm(declared))
+        await db.query(`
+          SELECT DISTINCT p.schemaname || '.' || p.tablename AS rel FROM pg_policies p
+           WHERE coalesce(p.qual, '') LIKE '%current_workspace_id%'
+             AND has_any_column_privilege('app_rw', (quote_ident(p.schemaname) || '.' || quote_ident(p.tablename))::regclass, 'SELECT')`)
+      ).rows as { rel: string }[]
+    ).map((r) => r.rel)
+    const norm = (xs: readonly string[]) => [...new Set(xs.map((r) => (r.startsWith('public.score_rows_') ? 'public.score_rows' : r)))].sort()
+    expect(norm(catalog)).toEqual(norm(declaredScoped))
   })
 })
 
@@ -245,6 +283,19 @@ describe('two real tenants, disjoint row sets', () => {
       await db.exec('ROLLBACK')
       await db.exec('RESET ROLE')
     }
+  })
+})
+
+describe('the capability column is not readable by the tenant (2026-09-10 audit, BLOCKER-1)', () => {
+  it('accounts.auth_uid is permission denied for app_rw even inside a verified context, and the other columns are not', async () => {
+    await asTenant(WS1, U1, async (q) => {
+      await db.exec('SAVEPOINT s')
+      await expect(db.query(`SELECT auth_uid FROM accounts`)).rejects.toThrow(/permission denied/)
+      await db.exec('ROLLBACK TO SAVEPOINT s')
+      await expect(db.query(`SELECT * FROM accounts`)).rejects.toThrow(/permission denied/)
+      await db.exec('ROLLBACK TO SAVEPOINT s')
+      expect(await q(`SELECT email, kind FROM accounts`)).toEqual([{ email: 'a@one.test', kind: 'brand' }])
+    })
   })
 })
 
@@ -315,5 +366,65 @@ describe('the shared relation is genuinely shared, and stays that way', () => {
     } finally {
       await db.exec(`ALTER TABLE prompt_banks DROP COLUMN workspace_id`)
     }
+  })
+})
+
+describe('the guard bites: a readable relation that no case covers is caught, whatever its policy says (B3r item 3)', () => {
+  afterAll(async () => {
+    await db.exec(`DROP TABLE IF EXISTS leaky_open, leaky_wrapped, leaky_required, leaky_login, leaky_group; DROP FUNCTION IF EXISTS ws_wrap();
+                   DROP ROLE IF EXISTS web_prod; REVOKE reporting_grp FROM app_rw; DROP ROLE IF EXISTS reporting_grp`)
+  })
+
+  it('a USING (true) table the tenant can read is uncovered', async () => {
+    await db.exec(`
+      CREATE TABLE leaky_open (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_open ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_open FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_open TO app_rw;
+      CREATE POLICY open ON leaky_open FOR SELECT USING (true);
+      INSERT INTO leaky_open VALUES ('${WS1}'), ('${WS2}')`)
+    expect(await uncovered()).toContain('public.leaky_open')
+    // And the case it would need is the one that fails: both tenants see both rows.
+    expect(await visible(WS1, U1, 'leaky_open', 'workspace_id')).toEqual([WS1, WS2])
+  })
+
+  it('a policy through a wrapper that never names current_workspace_id is uncovered too', async () => {
+    await db.exec(`
+      CREATE FUNCTION ws_wrap() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT current_workspace_id() $$;
+      CREATE TABLE leaky_wrapped (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_wrapped ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_wrapped FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_wrapped TO app_rw;
+      CREATE POLICY wrapped ON leaky_wrapped FOR SELECT USING (workspace_id = ws_wrap())`)
+    // The old derivation (qual LIKE '%current_workspace_id%') would not have listed this relation at all.
+    expect(await uncovered()).toContain('public.leaky_wrapped')
+  })
+
+  it('a grant to the LOGIN role that is a member of app_rw, or to a group app_rw inherits, is the tenant\'s reach too (B3r audit, MAJOR)', async () => {
+    await db.exec(`
+      CREATE ROLE web_prod LOGIN; GRANT app_rw TO web_prod;
+      CREATE ROLE reporting_grp NOLOGIN; GRANT reporting_grp TO app_rw;
+      CREATE TABLE leaky_login (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_login ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_login FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_login TO web_prod;
+      CREATE POLICY open ON leaky_login FOR SELECT TO web_prod USING (true);
+      CREATE TABLE leaky_group (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_group ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_group FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_group TO reporting_grp;
+      CREATE POLICY open ON leaky_group FOR SELECT TO reporting_grp USING (true)`)
+    // Named only app_rw, the derivation listed neither; both are reachable from a tenant session.
+    const missing = await uncovered()
+    expect(missing).toContain('public.leaky_login')
+    expect(missing).toContain('public.leaky_group')
+  })
+
+  it('ws_required() is not the tenant role to call: a policy through it fails closed rather than scoping (B3r item 2)', async () => {
+    expect((await db.query(`SELECT has_function_privilege('app_rw', 'ws_required()', 'EXECUTE') AS x`)).rows).toEqual([{ x: false }])
+    await db.exec(`
+      CREATE TABLE leaky_required (workspace_id uuid NOT NULL);
+      ALTER TABLE leaky_required ENABLE ROW LEVEL SECURITY; ALTER TABLE leaky_required FORCE ROW LEVEL SECURITY;
+      GRANT SELECT ON leaky_required TO app_rw;
+      CREATE POLICY required ON leaky_required FOR SELECT USING (workspace_id = ws_required());
+      INSERT INTO leaky_required VALUES ('${WS1}')`)
+    await expect(visible(WS1, U1, 'leaky_required', 'workspace_id')).rejects.toThrow(/permission denied for function ws_required/)
+    expect(await uncovered()).toContain('public.leaky_required')
   })
 })

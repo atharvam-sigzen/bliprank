@@ -19,19 +19,39 @@
  * requires the gate to fail. When you add an assertion to check-deploy.sql, add
  * the unsafe database it catches here — an assertion with no failing case is
  * indistinguishable from one that does nothing.
+ *
+ * MERGED INTO THE mvp/stage-a LINEAGE ON 2026-09-15 (MVP_PLAN C0). These are
+ * main's 78 cases for the exposure manifest, re-run against the merged gate:
+ * the manifest is migration 0008 here (not 0003), every database is built from
+ * the full migration list (`MIGRATIONS`, read from the directory), and the
+ * gate also carries the lineage's own derivations (check-deploy.test.ts holds
+ * their cases). Where a case's expectation moved, the comment at the case says
+ * what the merged gate does instead and why. `check-deploy.test.ts` is the
+ * older suite and is not superseded by this one; neither is a superset.
  */
 
 import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { afterEach, describe, expect, it } from 'vitest'
+import { MIGRATIONS } from './testing.js'
 
 const migration = (f: string) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')
 /** psql meta-commands are not SQL; PGlite runs the rest verbatim. */
-const CHECK = readFileSync(new URL('../scripts/check-deploy.sql', import.meta.url), 'utf8')
-  .split('\n')
+const RAW = readFileSync(new URL('../scripts/check-deploy.sql', import.meta.url), 'utf8')
+const CHECK = RAW.split('\n')
   .filter((l) => !l.trimStart().startsWith('\\'))
   .join('\n')
+
+/** One assertion of the gate on its own: the SQL between the `\echo` line that starts with `label` and the next `\echo`. */
+function section(label: string): string {
+  const lines = RAW.split('\n')
+  const start = lines.findIndex((l) => l.startsWith(`\\echo '${label}`))
+  expect(start, `no gate section starts with "${label}"`).toBeGreaterThan(-1)
+  const next = lines.findIndex((l, i) => i > start && l.startsWith('\\echo'))
+  return lines.slice(start + 1, next === -1 ? lines.length : next).join('\n')
+}
+const MANIFEST = 'checking every reachable object is declared in the exposure manifest'
 
 const WS1 = '00000000-0000-4000-8000-000000000001'
 const USER1 = '00000000-0000-4000-8000-0000000000f1'
@@ -43,22 +63,20 @@ afterEach(async () => {
   open = []
 })
 
-async function db(opts: { legacyKey?: 'short' | 'long'; skip0002?: boolean } = {}): Promise<PGlite> {
+async function db(opts: { legacyKey?: 'short' | 'long' } = {}): Promise<PGlite> {
   const d = new PGlite({ extensions: { pgcrypto } })
   open.push(d)
-  await d.exec(migration('0000_init.sql'))
-  await d.exec(migration('0001_tenancy_identity.sql'))
-  // PRODUCTION ORDER. A database that ran 0001 in service MUST hold a signing
-  // key — without one nobody can log in, and check-deploy asserted exactly that.
-  // The old suite inserted the key AFTER all three migrations, which is the one
-  // ordering in which a migration that cannot be applied looks fine.
-  if (opts.legacyKey) {
-    const secret = opts.legacyKey === 'short' ? 'short-0001-secret' : 'a-long-enough-0001-era-secret-value'
-    await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
-  }
-  if (!opts.skip0002) {
-    await d.exec(migration('0002_tenancy_context.sql'))
-    await d.exec(migration('0003_tenancy_exposure_manifest.sql'))
+  // Every migration on disk, in order: 0000..0007 of this lineage and 0008, the
+  // manifest. PRODUCTION ORDER for the key: a database that ran 0001 in service
+  // MUST hold a signing key — without one nobody can log in, and check-deploy
+  // asserts exactly that. Inserting it AFTER the migrations is the one ordering
+  // in which a migration that cannot be applied looks fine.
+  for (const m of MIGRATIONS) {
+    if (opts.legacyKey && m.startsWith('0002_')) {
+      const secret = opts.legacyKey === 'short' ? 'short-0001-secret' : 'a-long-enough-0001-era-secret-value'
+      await d.exec(`INSERT INTO auth_signing_keys (kid, secret) VALUES ('k0','${secret}')`)
+    }
+    await d.exec(migration(m))
   }
   // PGlite's session user is a superuser LOGIN role, which the RLS-bypass
   // assertion correctly refuses. A harness artifact, not a production shape —
@@ -89,6 +107,7 @@ async function healthy(): Promise<PGlite> {
 }
 
 const check = (d: PGlite) => d.exec(CHECK)
+const only = (d: PGlite, label: string) => d.exec(section(label))
 
 describe('the migration must apply to the database production actually has', () => {
   it('THE FINDING: 0002 applies to a database that ran 0001 in service, with a key already in it', async () => {
@@ -156,7 +175,7 @@ describe('check-deploy refuses the databases it exists to refuse', () => {
   })
 
   it('THE FINDING: a LOGIN role granted the context writers passed a check that only looked at groups', async () => {
-    for (const grant of ['set_workspace(uuid)', 'stamp_tenant_context(uuid,uuid)']) {
+    for (const grant of ['set_workspace(uuid)', 'stamp_tenant_context(uuid,uuid,text)']) {
       const d = await healthy()
       await d.exec(`CREATE ROLE web_prod LOGIN`)
       await d.exec(`GRANT app_rw TO web_prod`)
@@ -308,7 +327,7 @@ describe('the attacks hold for a real non-superuser LOGIN principal', () => {
     await withTenant(async (d) => {
       await expect(d.query(`SELECT secret FROM auth_signing_keys`)).rejects.toThrow(/permission denied/)
       await expect(d.query(`SELECT * FROM auth_tenant_context`)).rejects.toThrow(/permission denied/)
-      await expect(d.query(`SELECT stamp_tenant_context('${WS1}','${USER1}')`)).rejects.toThrow(/permission denied/)
+      await expect(d.query(`SELECT stamp_tenant_context('${WS1}','${USER1}','owner')`)).rejects.toThrow(/permission denied/)
       await expect(d.query(`SELECT set_workspace('${WS1}')`)).rejects.toThrow(/permission denied/)
     })
   })
@@ -538,6 +557,32 @@ describe('audit 5 — every assertion has a failing case, including the ones tha
     // the grantee, so this passed and RLS was the only thing left.
     await d.exec(`GRANT INSERT ON score_rows TO app_rw`)
     await expect(check(d)).rejects.toThrow(/undeclared-exposure[\s\S]*score_rows INSERT/)
+  })
+
+  it('THE FINDING (C0 audit): a service-declared privilege does not authorise it for the OTHER service role either', async () => {
+    // The row for workspace_documents INSERT names svc_onboard. Matching any of
+    // the three trusted roles let this grant pass, and with a FOR ALL policy to
+    // match, svc_scorer inserted a forged category record into another
+    // workspace, which that workspace's own verified session then read as its
+    // own (measured in the worktree, 2026-09-15). The grantee column closes it.
+    const d = await healthy()
+    await d.exec(`GRANT INSERT ON workspace_documents TO svc_scorer`)
+    await d.exec(`CREATE POLICY scorer_all_documents ON workspace_documents FOR ALL TO svc_scorer USING (true) WITH CHECK (true)`)
+    await expect(check(d)).rejects.toThrow(/undeclared-exposure\] public\.workspace_documents INSERT is reachable by svc_scorer/)
+
+    // And main's own rows, the same way round: the corpus is the scorer's to append, not onboarding's.
+    const d2 = await healthy()
+    await d2.exec(`GRANT INSERT ON score_aggregates TO svc_onboard`)
+    await expect(check(d2)).rejects.toThrow(/undeclared-exposure\] public\.score_aggregates INSERT is reachable by svc_onboard/)
+  })
+
+  it('a definer owned by the scorer is refused, whichever list it is on (C0 audit)', async () => {
+    const d = await healthy()
+    // On the twelve-name list, so `definer-function-exposed` cannot be what
+    // catches it: only the owner rule can, and it names auth_verifier and
+    // svc_onboard, never svc_scorer.
+    await d.exec(`ALTER FUNCTION ws_put_cycle(text,date,text,text,jsonb) OWNER TO svc_scorer`)
+    await expect(check(d)).rejects.toThrow(/definer-function-unsafe\] ws_put_cycle\(text,date,text,text,jsonb\) \(owner svc_scorer/)
   })
 
   it('a tenant-facing write policy on shared reference data is refused', async () => {
@@ -796,12 +841,20 @@ describe('audit 7 — one key for declaration and obligation, and the owner is a
     await expect(check(d)).rejects.toThrow(/scoped-view-not-invoker/)
   })
 
-  it('a scoped security_invoker view is accepted', async () => {
+  it('a scoped security_invoker view is accepted by the manifest, and still refused by the read inverse (recorded at C0)', async () => {
     const d = await healthy()
     await d.exec(`CREATE VIEW my_scores WITH (security_invoker = true) AS SELECT brand_id, mentions FROM score_rows`)
     await d.exec(`GRANT SELECT ON my_scores TO app_rw`)
     await d.exec(`INSERT INTO tenancy_exposure_manifest VALUES ('public','my_scores','SELECT','scoped','dashboard read model')`)
-    await expect(check(d)).resolves.toBeDefined()
+    // On main this database passed the whole gate. In this lineage the gate
+    // also holds the read inverse (B3r item 3), which refuses any relation the
+    // tenant can read that carries no scoping policy of its own — and a view
+    // carries none. It does not yet know that an invoker view inherits its
+    // base tables' policies; teaching it that is the tenancy owner's decision,
+    // recorded at the merge (2026-09-15), not made here. Both verdicts are
+    // pinned so the day the decision is made, this case says which way it went.
+    await expect(only(d, MANIFEST)).resolves.toBeDefined()
+    await expect(check(d)).rejects.toThrow(/public\.my_scores \(no read policy for the tenant role\)/)
   })
 
   it('a scoped matview or foreign table is refused outright — neither can carry a policy', async () => {

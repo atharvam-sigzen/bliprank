@@ -20,14 +20,13 @@
  *   2. A cached file the app cannot read fails a test rather than a demo.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { buildHeadToHead } from './head-to-head'
-import { previewScore } from './preview-score'
 import { BUNDLED_SCANS, SCAN, measuresCurrentCategory, rememberScan, runInfoOf, scanFor, scans, subjectOf, type ScanResultFile } from './scan-result'
 import { NO_RUN_BLOCK_SCAN } from './__fixtures__/no-run-block-scan'
+import { dataDir } from './data-dir'
 import { workspaceFor } from './workspace'
 
 const FIXTURE_ENGINES = ['chatgpt', 'copilot', 'gemini', 'google-ai-mode', 'google-ai-overviews']
@@ -131,15 +130,6 @@ describe('the live-scanned domain is COLLECTED everywhere, not just on the Grade
     const competitors = NO_RUN_BLOCK_SCAN.brands.filter((b) => !b.isSubject)
     expect(competitors).toEqual([])
 
-    // The position component is REPORTED MISSING rather than scored. Half credit
-    // for an absent input would have paid this brand for comparisons that never
-    // happened.
-    const preview = previewScore(subject, competitors)
-    expect(preview.missing).toContain('competitive position')
-    expect(preview.parts.map((p) => p.label)).toEqual(['mention rate'])
-    expect(preview.comparable).toBe(0)
-    expect(Number.isFinite(preview.score)).toBe(true)
-
     // And the chart is a chart of one row rather than an error.
     const h = buildHeadToHead({ label: subject.name, metric: subject.metric }, [])
     expect(h.rows).toHaveLength(1)
@@ -154,26 +144,40 @@ describe('the live-scanned domain is COLLECTED everywhere, not just on the Grade
 /**
  * THE GUARD.
  *
- * `services/grader/data-live/results/` is what `/api/scan` writes and is NOT
- * committed, so on a clean checkout this loop sees nothing and the bundled scans
- * carry the assertions. On the machine where a live scan has run — the machine
+ * The results directory under the app's own data directory (`lib/data-dir.ts`)
+ * is what `/api/scan` writes and is NOT committed, so on a clean checkout this
+ * loop sees nothing and the bundled scans carry the assertions. On the machine where a live scan has run — the machine
  * where this class of defect appears — every cached file is put through the same
  * accessors the pages use. A file the app cannot read fails here rather than in
  * front of someone.
  */
-const RESULTS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'services', 'grader', 'data-live', 'results')
+const RESULTS = join(dataDir(), 'results')
 
-const cachedFiles = (): readonly { name: string; scan: ScanResultFile }[] =>
-  existsSync(RESULTS)
-    ? readdirSync(RESULTS)
-        .filter((f) => f.endsWith('.json'))
-        .map((name) => ({ name, scan: JSON.parse(readFileSync(join(RESULTS, name), 'utf8')) as ScanResultFile }))
+const parseFile = (path: string): ScanResultFile => JSON.parse(readFileSync(path, 'utf8')) as ScanResultFile
+const cachedFiles = (): readonly { name: string; scan: ScanResultFile }[] => {
+  if (!existsSync(RESULTS)) return []
+  const top = readdirSync(RESULTS)
+    .filter((f) => f.endsWith('.json'))
+    .map((name) => ({ name, scan: parseFile(join(RESULTS, name)) }))
+  // Every cycle file as well (ADR-0013): results/cycles/<domain>/<day>.json is
+  // what /api/cycles hands the client, so it must render like the latest does.
+  const cyclesRoot = join(RESULTS, 'cycles')
+  const nested = existsSync(cyclesRoot)
+    ? readdirSync(cyclesRoot).flatMap((d) => {
+        const dir = join(cyclesRoot, d)
+        if (!statSync(dir).isDirectory()) return []
+        return readdirSync(dir)
+          .filter((f) => f.endsWith('.json'))
+          .map((name) => ({ name: `cycles/${d}/${name}`, scan: parseFile(join(dir, name)) }))
+      })
     : []
+  return [...top, ...nested]
+}
 
 describe('every scan file this build could load renders', () => {
   const cases = [
     ...BUNDLED_SCANS.map((scan, i) => ({ name: `bundled:${scan.domain ?? i}`, scan })),
-    ...cachedFiles().map((f) => ({ name: `data-live:${f.name}`, scan: f.scan })),
+    ...cachedFiles().map((f) => ({ name: `cached:${f.name}`, scan: f.scan })),
   ]
 
   it.each(cases)('$name', ({ scan }) => {
@@ -194,7 +198,6 @@ describe('every scan file this build could load renders', () => {
     const subject = subjectOf(scan)
     expect(subject).toBeDefined()
     const competitors = scan.brands.filter((b) => !b.isSubject)
-    expect(() => previewScore(subject, competitors)).not.toThrow()
     if (competitors.length > 0) {
       expect(() =>
         buildHeadToHead({ label: subject.name, metric: subject.metric }, competitors.map((b) => ({ label: b.name, metric: b.metric }))),

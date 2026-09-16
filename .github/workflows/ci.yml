@@ -1,0 +1,45 @@
+# CI — the gate every push and pull request passes through (docs/MVP_PLAN.md B0,
+# PRODUCT_GOAL point 10).
+#
+# OFFLINE BY CONSTRUCTION. No provider key, no COLLECTION_ENABLED, no
+# GRADER_LIVE_SCAN, no DATABASE_URL: the suite is built to pass with none of
+# them (the RLS suite runs on in-process PGlite, the hook test on bash + jq,
+# which ubuntu runners carry). A job that needed a secret to go green would be
+# a job that could spend (R3), so none is provided and none may be added here.
+#
+# Strict `tsc` is the lint. No linter is installed (B0 removed the directives
+# that named one), so typecheck + test is the whole gate.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      # Reads the exact version from package.json's `packageManager` field, so
+      # CI and a developer's shell run the same pnpm.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm test

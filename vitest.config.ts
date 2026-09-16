@@ -1,7 +1,28 @@
-import { realpathSync } from 'node:fs'
+import { realpathSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+
+// The canonical repo root, spelled the way `root` below needs it — see the note
+// there about the drive letter's case being load-bearing on win32. Every path
+// this config hands to vite is built from it so no id can differ by case.
+const ROOT = realpathSync.native(process.cwd()).replace(/\\/g, '/')
+
+/**
+ * `@/…` resolves against apps/public, matching its tsconfig (`@/*` -> `./*`).
+ * Returning null falls through to vite's own resolution, so a genuinely
+ * missing file still errors rather than silently landing elsewhere.
+ */
+function resolveAppAlias(id: string): string | null {
+  const base = `${ROOT}/apps/public/${id}`
+  for (const candidate of [base, `${base}.tsx`, `${base}.ts`, `${base}/index.tsx`, `${base}/index.ts`]) {
+    try {
+      if (statSync(candidate).isFile()) return candidate
+    } catch {
+      // Not this extension; try the next.
+    }
+  }
+  return null
+}
 
 // Resolve react the way apps/public does, once, so every specifier below is
 // pinned to the SAME copy. `resolve.dedupe` cannot do this here: it resolves
@@ -24,14 +45,16 @@ export default defineConfig({
   // lowercase-cwd shell only, which is why this suite was "green and red
   // depending on cache state". Pinning root to the realpathed cwd makes every
   // id canonical regardless of how the shell spelt the drive.
-  root: realpathSync.native(process.cwd()).replace(/\\/g, '/'),
-  // apps/public's `@/*` path alias, so a component can be rendered in a test the
-  // same way Next resolves it. Regex-anchored on `@/` rather than keyed on `@`:
-  // a bare `@` key is a prefix match and would rewrite every `@bliprank/*`
-  // import in the monorepo.
+  root: ROOT,
+  // The `@/*` path alias, so a component can be rendered in a test the same way
+  // Next resolves it. Regex-anchored on `@/` rather than keyed on `@`: a bare
+  // `@` key is a prefix match and would rewrite every `@bliprank/*` import in
+  // the monorepo.
   resolve: {
     alias: [
-      { find: /^@\//, replacement: fileURLToPath(new URL('./apps/public/', import.meta.url)) },
+      // The empty replacement hands the resolver the bare subpath ('lib/x'),
+      // which it joins onto apps/public — see resolveAppAlias above.
+      { find: /^@\//, replacement: '', customResolver: (id: string) => resolveAppAlias(id) },
       // One React instance, guaranteed at resolution time rather than left to
       // the externalization cache. Without these the suite's health depends on
       // the state of node_modules/.vite: a stale cache externalises
@@ -54,6 +77,14 @@ export default defineConfig({
   // harness, not the component.
   esbuild: { jsx: 'automatic' },
   test: {
+    // The file-backed ledgers open only for a process that has DECLARED itself
+    // the only one over its data directory (services/grader/src/ledger-stores.ts,
+    // ADR-0006, MVP_PLAN B3c item 4). Every test file runs in its own worker
+    // over its own scratch directory, which is exactly that, so the suite
+    // declares it once here rather than in forty beforeEach blocks. A test
+    // that asserts the refusal passes its own environment object, which this
+    // does not reach.
+    env: { COLLECTOR_TOPOLOGY: 'single-process' },
     // packages/db/src/deploy-check.test.ts stands up a fresh PGlite instance and
     // runs three migrations per case — the states it tests (role attributes,
     // ad-hoc grants, a legacy signing key present before 0002) cannot be undone

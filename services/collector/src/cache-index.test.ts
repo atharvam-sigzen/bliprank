@@ -115,3 +115,56 @@ describe('UpstashKV over mocked REST', () => {
     expect(calls).toHaveLength(0)
   })
 })
+
+describe('release — the claim ends with the collection, not with the lease (fixed 2026-09-07)', () => {
+  it('only the owner can release, and a released cell is claimable again inside the lease window', async () => {
+    let t = 0
+    const idx = new AnswerIndex(new MemoryKV(() => t), 60, () => new Date(t))
+    const cell = cellOf('best crm')
+    expect(await idx.claim(cell, 'openwebninja:chatgpt', 'job-A', 1800)).toBe(true)
+    // Not job-B's to release: A's claim stands and B still waits.
+    expect(await idx.release(cell, 'openwebninja:chatgpt', 'job-B')).toBe(false)
+    expect(await idx.claim(cell, 'openwebninja:chatgpt', 'job-B', 1800)).toBe(false)
+    t = 5_000 // well inside A's thirty-minute lease, where the old code left the cell stuck
+    expect(await idx.release(cell, 'openwebninja:chatgpt', 'job-A')).toBe(true)
+    expect(await idx.claim(cell, 'openwebninja:chatgpt', 'job-B', 1800)).toBe(true)
+    // Releasing what is no longer held is a no-op, not an error.
+    expect(await idx.release(cell, 'openwebninja:chatgpt', 'job-A')).toBe(false)
+  })
+
+  it('a claim that lapsed and was re-won by another worker is not deleted by the late release', async () => {
+    let t = 0
+    const idx = new AnswerIndex(new MemoryKV(() => t), 60, () => new Date(t))
+    const cell = cellOf('best crm')
+    expect(await idx.claim(cell, 'openwebninja:chatgpt', 'job-A', 10)).toBe(true)
+    t = 11_000 // A's lease lapsed; B wins the cell
+    expect(await idx.claim(cell, 'openwebninja:chatgpt', 'job-B', 10)).toBe(true)
+    expect(await idx.release(cell, 'openwebninja:chatgpt', 'job-A')).toBe(false)
+    expect(await idx.claim(cell, 'openwebninja:chatgpt', 'job-C', 10)).toBe(false) // B still holds it
+  })
+
+  it('a value the index did not write is left to its lease', async () => {
+    const kv = new MemoryKV()
+    const idx = new AnswerIndex(kv)
+    const cell = cellOf('best crm')
+    await kv.set(`claim:${cell.key}:openwebninja:chatgpt`, 'not json')
+    expect(await idx.release(cell, 'openwebninja:chatgpt', 'job-A')).toBe(false)
+    expect(await kv.get(`claim:${cell.key}:openwebninja:chatgpt`)).toBe('not json')
+  })
+})
+
+describe('UpstashKV.delIfEquals', () => {
+  it('is one server-side compare-and-delete, never a GET followed by a DEL', async () => {
+    const calls: unknown[] = []
+    const results = [[1], [0]]
+    const f = (async (_url: string | URL | Request, init?: RequestInit) => {
+      calls.push(JSON.parse(String(init?.body)))
+      return new Response(JSON.stringify((results.shift() ?? []).map((result) => ({ result }))), { status: 200 })
+    }) as typeof fetch
+    const kv = new UpstashKV('https://x.upstash.io', 't', f)
+    expect(await kv.delIfEquals('claim:k', 'v')).toBe(true)
+    expect(await kv.delIfEquals('claim:k', 'v')).toBe(false)
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toEqual([['EVAL', expect.stringMatching(/GET.*ARGV\[1\].*DEL/s), 1, 'claim:k', 'v']])
+  })
+})

@@ -38,6 +38,7 @@ import {
   FALLBACK_SLUG,
 } from '@bliprank/taxonomy'
 import { runInfoOf, scanFor } from './scan-result'
+import { cyclesFor } from './cycles'
 import { readBank, readDecision } from './resolved-category'
 
 export type Role = 'brand' | 'agency'
@@ -57,6 +58,13 @@ export interface Workspace {
   readonly hasData: boolean
   /** the day of the last collected cycle, or null when never run */
   readonly lastRunDay: string | null
+  /**
+   * Collected cycles this build holds for the domain. NULL when never run,
+   * for the same reason `answersCollected` is: a `0` in a figure slot on a
+   * pre-flight screen reads as a result, and the test that sweeps every
+   * workspace for figures would rightly refuse it.
+   */
+  readonly cycles: number | null
   /**
    * Answers behind that cycle, or null when there is none.
    *
@@ -177,6 +185,7 @@ export function workspaceFor(domain: string): Workspace | null {
     // comes from `collectedAt` instead. Empty means the file says nothing about
     // when it ran, which is null here rather than a blank in a date slot.
     lastRunDay: scan ? runInfoOf(scan).day || null : null,
+    cycles: scan ? cyclesFor(host).length : null,
     answersCollected: scan?.counts.answersScored ?? null,
   }
 }
@@ -193,7 +202,8 @@ export function workspaceFor(domain: string): Workspace | null {
 
 /** The value for a "Status" slot. Words, never a figure. */
 export function collectionStatus(w: Workspace): string {
-  return w.hasData ? `collected — cycle of ${w.lastRunDay}` : 'queued — first cycle not collected'
+  if (!w.hasData) return 'queued — first cycle not collected'
+  return w.cycles !== null && w.cycles > 1 ? `collected — ${w.cycles} cycles, latest ${w.lastRunDay}` : `collected — cycle of ${w.lastRunDay}`
 }
 
 /** One mono line for a provenance margin. */

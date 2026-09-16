@@ -63,7 +63,7 @@ export interface ScanResultFile {
   /**
    * Which rung of the classifier decided the category, and what it matched.
    *
-   * `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback`.
+   * `leader-domain` | `domain-token` | `site-content` | `generated` | `fallback` | `correction`.
    * Declared here because "no competitors" has two entirely different causes and
    * a surface may not conflate them: the FALLBACK bank has no leaders because we
    * could not place the business, while a GENERATED category has none because we
@@ -83,6 +83,21 @@ export interface ScanResultFile {
   }
   readonly collectedAt: string
   readonly brands: readonly ScanBrand[]
+  /**
+   * One row per scored answer for the SUBJECT — which prompt, which engine,
+   * mentioned or not, at what position. Written by `runScan` since 2026-09-02.
+   *
+   * ⚠️ OPTIONAL, AND THE ABSENCE MEANS ONE THING ONLY: this file predates the
+   * field. It does NOT mean the subject went unmentioned. `promptBreakdown`
+   * enforces the distinction — it returns null for a file without rows, and
+   * every surface renders the absence in words rather than as an empty grid.
+   *
+   * Typed as `unknown[]` here on purpose. It arrives from a JSON import and from
+   * `localStorage`, both of which are trust boundaries, so the shape is checked
+   * at runtime in `lib/prompt-breakdown.ts` and nowhere else. A declared row
+   * type here would let a caller skip that check while looking correct.
+   */
+  readonly promptRows?: readonly unknown[]
   /**
    * Present only on a file written by a runner that owned the budget — the CLI
    * envelope and, since this fix, `/api/scan`. Files cached before that carry no
@@ -214,7 +229,7 @@ export const BUNDLED_SCANS: readonly ScanResultFile[] = [SCAN]
  * Scans this browser collected through /api/scan during this session.
  *
  * `/api/scan` caches to `services/grader/data-live/results/`, which no client
- * can read - a static export has no filesystem and no route. So the third
+ * reads directly and which, until MVP_PLAN B3, is one machine's disk. So the third
  * domain anyone scanned rendered a full record on the Grader and then, one
  * click later, a dashboard saying "no cycle collected" for it. The result the
  * SSE already handed the client is stashed here instead, which costs nothing
@@ -247,7 +262,7 @@ const SESSION_KEY = 'bliprank-session-scans'
  * client pages. Same discipline as readAgencyDomains/readCustomPrompts:
  * validate, drop what fails, never throw.
  */
-function isScanResultFile(s: unknown): s is ScanResultFile {
+export function isScanResultFile(s: unknown): s is ScanResultFile {
   if (typeof s !== 'object' || s === null) return false
   const f = s as Partial<ScanResultFile>
   return (
@@ -299,11 +314,19 @@ function sessionScans(): readonly ScanResultFile[] {
   }
 }
 
-/** Stash a scan this session collected so every surface can find it. */
+/**
+ * Stash a scan this session collected so every surface can find it.
+ *
+ * ONE ENTRY PER DOMAIN PER DAY, since 2026-09-02 (ADR-0013). A cycle is one
+ * scan on one UTC day, and a domain may hold several: the store keeps them
+ * side by side so `cyclesFor` can draw a trend over them, and replaces only a
+ * same-day entry, which is the same measurement written again.
+ */
 export function rememberScan(scan: ScanResultFile): void {
   if (scan.status !== 'scanned' || !scan.domain) return
   try {
-    const kept = sessionScans().filter((s) => normaliseTyped(s.domain) !== normaliseTyped(scan.domain))
+    const day = runInfoOf(scan).day
+    const kept = sessionScans().filter((s) => !(normaliseTyped(s.domain) === normaliseTyped(scan.domain) && runInfoOf(s).day === day))
     globalThis.localStorage?.setItem(SESSION_KEY, JSON.stringify([...kept, scan]))
   } catch {
     /* failing to remember a scan must not break the page showing it */
@@ -338,10 +361,24 @@ export function normaliseTyped(input: string): string {
     .replace(/\.$/, '')
 }
 
-/** The scanned result for this domain, or null when this build has no scan for it. */
+/**
+ * The LATEST scanned cycle for this domain, or null when this build has none.
+ *
+ * Latest by the day its answers were bought, not by position in the registry:
+ * a cycle this browser collected after the bundled reference scan is the newer
+ * measurement and the record leads with it. On the same day the earlier entry
+ * wins, which is the bundled file — a session copy of the reference cycle is
+ * never allowed to shadow the committed one. Every cycle, in order, is
+ * `cyclesFor` in lib/cycles.ts.
+ */
 export function scanFor(domain: string): ScanResultFile | null {
   const typed = normaliseTyped(domain)
-  return scans().find((s) => normaliseTyped(s.domain) === typed && s.status === 'scanned') ?? null
+  let best: ScanResultFile | null = null
+  for (const s of scans()) {
+    if (s.status !== 'scanned' || normaliseTyped(s.domain) !== typed) continue
+    if (!best || runInfoOf(s).day > runInfoOf(best).day) best = s
+  }
+  return best
 }
 
 export const subjectOf = (s: ScanResultFile): ScanBrand => s.brands.find((b) => b.isSubject) ?? s.brands[0]!

@@ -71,7 +71,6 @@ export function assertSafeKey(key: string): void {
   if (key.split('/').some((seg) => seg === '.' || seg === '..')) {
     throw new Error(`R2 key must not contain a "." or ".." segment (URL parsing would silently resolve it): ${key}`)
   }
-  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(key)) throw new Error(`R2 key contains a control character: ${JSON.stringify(key)}`)
 }
 

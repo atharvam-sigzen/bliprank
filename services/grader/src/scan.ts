@@ -34,10 +34,10 @@
  *    "not comparable" for every row.
  */
 
-import { cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
+import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
-import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type PromptBank } from '@bliprank/taxonomy'
+import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, PUBLISHER_REGISTRY, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type Intent, type PromptBank } from '@bliprank/taxonomy'
 import type { BlobStore, CollectionOrchestrator } from '@bliprank/collector'
 
 /** The two groups that name no brand. See property 2 above. */
@@ -51,6 +51,12 @@ export interface ScanRequest {
   readonly runsPerCell?: number
   /** Cap the prompt count for a cheaper demo run. Omitted = the whole unprompted set. */
   readonly maxPrompts?: number
+  /**
+   * The customer's own prompts, at the version the store holds (ADR-0016).
+   * Collected as cells like any other, scored into their OWN block with their
+   * own basis, never into the headline sample. Omitted or empty: none.
+   */
+  readonly customPrompts?: { readonly version: number; readonly prompts: readonly string[] }
 }
 
 export interface ScanDeps {
@@ -107,6 +113,13 @@ export interface CategoryResolution {
   /** The recorded trading name, when the decision has one. See `subjectFor`. */
   readonly brandName?: string
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
+  /**
+   * The domain's own competitor set, when an override is in force
+   * (ADR-0016): the category's leaders with the override laid over them, and
+   * the override version the basis must carry as `set=`. Absent, the
+   * category's set applies alone and the basis is unchanged.
+   */
+  readonly competitorSet?: { readonly version: number; readonly competitors: readonly BrandSpec[] }
 }
 
 export interface ScanProgress {
@@ -128,6 +141,71 @@ export interface BrandResult {
   readonly metric: Metric
 }
 
+/**
+ * ONE SCORED ANSWER, AS THE SUBJECT SAW IT — PHASES 3.3, added 2026-09-02.
+ *
+ * ⚠️ NOTHING HERE IS A NEW MEASUREMENT. Every field below is already computed,
+ * for every answer, by the `scoreAnswer` call in the brand loop below — and was
+ * then summed into `mentions`/`citations` and thrown away. The result carried
+ * one rate over fifty answers and no way to see which prompt or which engine
+ * produced it, so the workspace record said in prose that "the per-engine split
+ * is not in this cycle's stored payload". It was in the pipeline; it was not in
+ * the payload. This is the payload. No extra scoring pass, no extra provider
+ * call, no model call — the same `ScoreRow`, kept instead of discarded.
+ *
+ * THE ATOM IS ONE ANSWER, NOT ONE PROMPT. A cell is `prompt x engine x day` and
+ * `runsPerCell` may be greater than one, so two rows can legitimately share a
+ * prompt and an engine. Aggregating up to a prompt is the reader's job
+ * (`lib/prompt-breakdown.ts`), because a surface that has to divide can also be
+ * asked what it divided — which is the failure the by-engine table was refused
+ * for in the first place.
+ *
+ * ⚠️ NO SENTIMENT FIELD, AND THAT IS NOT AN OVERSIGHT. Sentiment is the one
+ * signal R1 permits a model to produce, on a 25% sample, and PHASES 2.3 has not
+ * been built. No stored answer carries one. An optional field that is always
+ * absent would read on the sheet as "we could not tell for this answer", which
+ * is a different claim from "this build does not collect it" — and the second is
+ * the true one. The surfaces say the second, in words, once.
+ */
+export interface PromptRow {
+  /** The prompt as SENT, not the normalised cache-key form. */
+  readonly prompt: string
+  readonly engine: EngineId
+  readonly mentioned: boolean
+  /** Times an alias appeared in this answer. 0 when not mentioned. */
+  readonly mentionCount: number
+  /** Rank by first appearance among every brand detected, 1-based. null when absent. */
+  readonly position: number | null
+  /** How many brands the scorer found in this answer at all — the denominator of `position`. */
+  readonly brandsDetected: number
+  /** One of the subject's own domains was cited in this answer. */
+  readonly cited: boolean
+  /** TRACKED competitors named in this answer. Empty for a bank with no leaders. */
+  readonly competitorsMentioned: readonly string[]
+  /**
+   * The bank's own classification of the question — `discovery` or
+   * `problem-led`. Sourced from the bank, never inferred from the text.
+   *
+   * ⚠️ OPTIONAL, AND ABSENT MEANS "NOBODY CLASSIFIED THIS", NOT "UNKNOWN TYPE".
+   * Two ways it is absent, and they are different facts a surface must not
+   * merge:
+   *
+   *   - a CUSTOM prompt (ADR-0016). The customer wrote it. It is held to
+   *     PROPERTY 2 by the scorer's own matcher, but nobody assigned it a buyer
+   *     intent, and putting `'custom'` here would file a provenance fact in an
+   *     intent field. The custom rows live in their own block, so a reader
+   *     already knows where they came from.
+   *   - a result written before 2026-09-07, when this field did not exist.
+   *
+   * ⚠️ ONLY `discovery` AND `problem-led` CAN REACH A ROW, because PROPERTY 2
+   * sends nothing else. The type is the bank's full `Intent` rather than those
+   * two: narrowing it here would be a second statement of PROPERTY 2 that could
+   * disagree with the filter in `promptsFor`, and the filter is the one that
+   * decides what is collected.
+   */
+  readonly intent?: Intent
+}
+
 export interface ScanCounts {
   readonly cellsRequested: number
   readonly cacheHits: number
@@ -140,7 +218,14 @@ export interface ScanCounts {
 export type ScanResult =
   | { readonly status: 'ambiguous'; readonly domain: string; readonly classification: Classification; readonly candidates: readonly string[] }
   | { readonly status: 'unclassified'; readonly domain: string; readonly classification: Classification; readonly reason: string }
-  | { readonly status: 'no-answers'; readonly domain: string; readonly category: string; readonly counts: ScanCounts }
+  | {
+      readonly status: 'no-answers'
+      readonly domain: string
+      readonly category: string
+      readonly counts: ScanCounts
+      /** Custom cells that DID answer while the curated sample returned nothing (ADR-0016). Not scored: the headline is the trend and it has no sample. Said, so the spend is explicable. */
+      readonly customAnswersScored?: number
+    }
   | {
       readonly status: 'scanned'
       readonly domain: string
@@ -176,7 +261,35 @@ export type ScanResult =
       readonly collectedAt: string
       readonly counts: ScanCounts
       readonly brands: readonly BrandResult[]
+      /**
+       * Per-answer detail for the SUBJECT, one row per scored answer.
+       *
+       * Present on every scan this version runs. Absent on a result file written
+       * before it existed — and a surface must read that absence as "this file
+       * does not carry the split", never as "the subject was mentioned nowhere".
+       * Those are opposite claims and only one of them is in the file.
+       */
+      readonly promptRows: readonly PromptRow[]
+      /**
+       * THE SECOND MEASUREMENT: the customer's own prompts (ADR-0016, decision
+       * 4). Present only when the cycle asked any. Its own basis (`unprompted=0`,
+       * `custom=K@V`), its own rows and its own brand metrics, over ITS answers
+       * only; nothing above includes them, so the headline and its trend are
+       * exactly what they would be without it. `counts` is this block's share of
+       * the cycle's cells; the cycle's `counts` above is the whole.
+       */
+      readonly customPrompts?: CustomPromptsBlock
     }
+
+export interface CustomPromptsBlock {
+  readonly version: number
+  readonly prompts: readonly string[]
+  readonly comparisonBasis: string
+  readonly counts: { readonly cellsRequested: number; readonly answersScored: number }
+  /** Empty when no custom cell returned an answer: the block is present, and says so, rather than absent. */
+  readonly brands: readonly BrandResult[]
+  readonly promptRows: readonly PromptRow[]
+}
 
 /**
  * Read one cell's stored runs back out of the answer store.
@@ -198,7 +311,7 @@ async function readStoredAnswers(blob: BlobStore, r2Key: string): Promise<RawAns
   }
 }
 
-const leadersOf = (bank: PromptBank): BrandSpec[] =>
+export const leadersOf = (bank: PromptBank): BrandSpec[] =>
   bank.leaders.map((l) => ({ id: l.id, name: l.name, aliases: [...l.aliases], domains: [...l.domains] }))
 
 /**
@@ -250,16 +363,115 @@ export function subjectFor(domain: string, bank: PromptBank, siteTitle?: string)
  * includes prompts that name brands — and `compare()` must refuse to put them
  * side by side rather than reporting the difference as movement.
  */
-export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number): string {
-  return [
-    'grader',
-    `engines=${[...engines].sort().join(',')}`,
-    bank.locale,
-    bank.geo,
-    `${bank.category}@${bank.version}`,
-    `unprompted=${promptCount}`,
-    `runs=${runsPerCell}`,
-  ].join('|')
+export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number, competitorSet?: number, custom?: { readonly count: number; readonly version: number }): string {
+  // The shape lives in @bliprank/contracts (ADR-0016), shared with the reader
+  // that explains a refused comparison, so the two cannot drift. `set=` is
+  // appended only when a per-domain override is in force, and `custom=` only
+  // on the custom block's own basis, so a measurement without either formats
+  // exactly as it always did.
+  return formatBasis({
+    format: 'grader',
+    engines,
+    locale: bank.locale,
+    geo: bank.geo,
+    bank: { slug: bank.category, version: bank.version },
+    unprompted: promptCount,
+    runs: runsPerCell,
+    ...(competitorSet !== undefined ? { set: competitorSet } : {}),
+    ...(custom ? { custom } : {}),
+  })
+}
+
+/**
+ * The unprompted prompts a scan would send, in the order it would send them.
+ *
+ * Extracted so a caller can ask what a scan WOULD collect without collecting
+ * it. `rescore.ts` uses it to prove, before anything runs, that every cell is
+ * already in the answer store — which is what makes a re-derivation provably
+ * free rather than hopefully free.
+ */
+export function promptsFor(bank: PromptBank, maxPrompts?: number): readonly PromptBank['prompts'][number][] {
+  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
+  return maxPrompts ? unprompted.slice(0, maxPrompts) : unprompted
+}
+
+/**
+ * Every cell one scan of this bank covers: prompt x engine, on one day.
+ *
+ * ⚠️ ONE DEFINITION, TWO CALLERS. `runScan` builds its cells from this, and so
+ * does the pre-flight check in `rescore.ts`. A second copy of this loop would
+ * be a second answer to "which cells does a scan of this bank need", and the
+ * two would drift in the direction where the check passes and the scan then
+ * misses — which is the direction that spends money.
+ */
+export function cellsFor(
+  bank: PromptBank,
+  engines: readonly EngineId[],
+  day: string,
+  maxPrompts?: number,
+): readonly { readonly cell: CacheCell; readonly prompt: string; readonly engine: EngineId }[] {
+  const out: { cell: CacheCell; prompt: string; engine: EngineId }[] = []
+  for (const p of promptsFor(bank, maxPrompts)) {
+    for (const engine of engines) {
+      out.push({ cell: cacheCell({ prompt: p.text, engine, locale: bank.locale, geo: bank.geo, dateBucket: day }), prompt: p.text, engine })
+    }
+  }
+  return out
+}
+
+/**
+ * The cells the customer's own prompts add to a cycle: prompt x engine, on one
+ * day, in the same locale and geography as the bank, so the cache key is the
+ * same shape and a repeated cycle reads them back the same way. One definition
+ * for the scan, the re-score pre-flight and the evidence reader (ADR-0016).
+ */
+export function customCellsFor(
+  bank: PromptBank,
+  engines: readonly EngineId[],
+  day: string,
+  prompts: readonly string[],
+): readonly { readonly cell: CacheCell; readonly prompt: string; readonly engine: EngineId }[] {
+  const out: { cell: CacheCell; prompt: string; engine: EngineId }[] = []
+  for (const text of prompts) {
+    for (const engine of engines) {
+      out.push({ cell: cacheCell({ prompt: text, engine, locale: bank.locale, geo: bank.geo, dateBucket: day }), prompt: text, engine })
+    }
+  }
+  return out
+}
+
+/**
+ * The inverse of `comparisonBasisFor`: the scope a stored measurement was taken
+ * over, read back off its own basis string.
+ *
+ * ⚠️ IT LIVES BESIDE THE FUNCTION THAT WRITES THE STRING, deliberately. One
+ * function builds `engines=...|unprompted=N` and one takes it apart, and a
+ * parser that drifts from its writer silently recovers the wrong scope — which
+ * on the re-score path means republishing an 85-answer measurement as a
+ * 50-answer one, and on the evidence path means showing a reader answers from a
+ * scan other than the one they are looking at.
+ *
+ * Absent or malformed yields nothing and the caller supplies its own default. A
+ * file that never recorded its scope cannot have it recovered, and guessing
+ * narrow is as wrong as guessing wide.
+ */
+export function basisOf(comparisonBasis: string): { readonly maxPrompts?: number; readonly engines?: readonly EngineId[]; readonly set?: number } {
+  const b = parseBasis(comparisonBasis ?? '')
+  // A string the shared definition cannot parse is read by key, as this
+  // function always did: a file that recorded its scope in a partial or older
+  // form still gets the segments it did record, and nothing it did not.
+  const parts = (comparisonBasis ?? '').split('|')
+  const prompts = b ? b.unprompted : Number(parts.find((p) => p.startsWith('unprompted='))?.slice('unprompted='.length))
+  const engineList = (b ? b.engines : parts.find((p) => p.startsWith('engines='))?.slice('engines='.length).split(',') ?? []).filter((e): e is EngineId =>
+    (ENGINE_IDS as readonly string[]).includes(e),
+  )
+  const setRaw = b ? b.set : Number(parts.find((p) => p.startsWith('set='))?.slice('set='.length))
+  return {
+    ...(Number.isInteger(prompts) && prompts > 0 ? { maxPrompts: prompts } : {}),
+    ...(engineList.length > 0 ? { engines: engineList } : {}),
+    // The competitor-set version this measurement was taken under, when a per-domain override was in force (ADR-0016).
+    ...(setRaw !== undefined && Number.isInteger(setRaw) && setRaw >= 1 ? { set: setRaw } : {}),
+  }
 }
 
 export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanResult> {
@@ -327,12 +539,15 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   let categorySource: { signal: string; evidence: string } | undefined
   // The RECORDED trading name, never a fresh read of the site. See `subjectFor`.
   let brandName: string | undefined
+  // The domain's override over the category's set, when one is in force.
+  let competitorSet: CategoryResolution['competitorSet']
 
   if (deps.resolveCategory) {
     const resolved = await deps.resolveCategory(req.domain)
     slug = resolved.slug
     bank = resolved.bank
     brandName = resolved.brandName
+    competitorSet = resolved.competitorSet
     categorySource = { signal: resolved.signal, evidence: resolved.evidence }
     if (resolved.fallback) fallback = resolved.fallback
   } else if (classification.status === 'classified') {
@@ -355,21 +570,22 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   }
 
   // PROPERTY 2. Unprompted prompts only.
-  const unprompted = bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
-  const prompts = req.maxPrompts ? unprompted.slice(0, req.maxPrompts) : unprompted
+  const prompts = promptsFor(bank, req.maxPrompts)
 
   const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank, brandName)
-  const competitors = leadersOf(bank).filter((c) => c.id !== subject.id)
+  // The override's set when there is one, the category's otherwise; the subject is never its own rival either way.
+  const competitors = (competitorSet?.competitors ?? leadersOf(bank)).filter((c) => c.id !== subject.id)
   const scored: BrandSpec[] = [subject, ...competitors]
 
-  const cells: { cell: CacheCell; prompt: string; engine: EngineId }[] = []
-  for (const p of prompts) {
-    for (const engine of req.engines) {
-      cells.push({ cell: cacheCell({ prompt: p.text, engine, locale: bank.locale, geo: bank.geo, dateBucket: req.day }), prompt: p.text, engine })
-    }
-  }
+  const curatedCells = cellsFor(bank, req.engines, req.day, req.maxPrompts)
+  // The customer's own prompts ride the same loop as cells like any other —
+  // same cache key shape, same budget, same progress — and their answers are
+  // kept APART, so the headline below never sees them (ADR-0016, decision 4).
+  const customCells = req.customPrompts?.prompts.length ? customCellsFor(bank, req.engines, req.day, req.customPrompts.prompts) : []
+  const cells = [...curatedCells.map((c) => ({ ...c, custom: false })), ...customCells.map((c) => ({ ...c, custom: true }))]
 
   const answers: RawAnswer[] = []
+  const customAnswers: RawAnswer[] = []
   let cacheHits = 0
   let collected = 0
   let failed = 0
@@ -377,6 +593,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
 
   for (const [i, c] of cells.entries()) {
     if (deps.signal?.aborted) break
+    const sink = c.custom ? customAnswers : answers
     const outcome = await deps.orchestrator.collectCell({
       cell: c.cell,
       prompt: c.prompt,
@@ -389,36 +606,107 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
     else if (outcome.status === 'collected') collected += 1
     else failed += 1
     if ('answers' in outcome && outcome.answers) {
-      answers.push(...outcome.answers)
+      sink.push(...outcome.answers)
     } else if (outcome.status === 'cache-hit') {
-      answers.push(...(await readStoredAnswers(deps.blob, outcome.entry.r2Key)))
+      sink.push(...(await readStoredAnswers(deps.blob, outcome.entry.r2Key)))
     }
     deps.onProgress?.({ done: i + 1, total: cells.length, cell: `${c.engine} ${c.prompt.slice(0, 48)}`, outcome: outcome.status, providerCalls: outcome.providerCalls })
-    // A budget stop is a stop. Continuing would charge every remaining cell
-    // against a ledger that has already refused, one BudgetExceeded at a time.
-    if (outcome.status === 'budget-exhausted' || outcome.status === 'aborted') break
+    // A budget stop is a stop, whichever bound refused. Continuing would charge
+    // every remaining cell against a ledger, or a run allowance, that has
+    // already refused, one exception at a time.
+    if (outcome.status === 'budget-exhausted' || outcome.status === 'allowance-exhausted' || outcome.status === 'aborted') break
   }
 
+  // The cycle's counts are the WHOLE cycle, custom cells included: they are what
+  // was requested and what was spent. The custom block carries its own share.
   const counts: ScanCounts = {
     cellsRequested: cells.length,
     cacheHits,
     collected,
     failed,
-    answersScored: answers.length,
+    answersScored: answers.length + customAnswers.length,
     providerCalls,
   }
 
   if (answers.length === 0) {
     // No interval is defensible over zero answers, and `wilson(0, 0)` throws
     // rather than returning a shrug. Say so instead of rendering an empty chart.
-    return { status: 'no-answers', domain: req.domain, category: bank.category, counts }
+    return { status: 'no-answers', domain: req.domain, category: bank.category, counts, ...(customAnswers.length ? { customAnswersScored: customAnswers.length } : {}) }
   }
 
   // PROPERTY 3. One basis for every brand, because every brand is scored over
   // the same answers from the same scan.
-  const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell)
-  const n = answers.length
+  const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell, competitorSet?.version)
+  /*
+   * The bank's classification, keyed by the prompt TEXT the cells were built
+   * from — `prompts`, not `bank.prompts`. Those differ whenever `maxPrompts`
+   * slices the set, and keying off the full bank would attach an intent to a
+   * prompt this cycle never sent.
+   */
+  const intentOf = new Map<string, Intent>(prompts.map((p) => [p.text, p.intent]))
+  const { brands, promptRows } = scoreBlock(answers, scored, subject, competitors, comparisonBasis, intentOf)
 
+  // THE SECOND MEASUREMENT, over its own answers, on its own basis. Present
+  // whenever custom cells were asked, even if none answered, so the record can
+  // say "asked, nothing came back" rather than nothing at all.
+  const customPrompts: CustomPromptsBlock | undefined = req.customPrompts?.prompts.length
+    ? (() => {
+        const basis = comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { count: req.customPrompts.prompts.length, version: req.customPrompts.version })
+        // No map: the customer wrote these and nobody classified them. See
+        // `PromptRow.intent` for why that is an absent field, not a 'custom' one.
+        const block = customAnswers.length ? scoreBlock(customAnswers, scored, subject, competitors, basis) : { brands: [], promptRows: [] }
+        return { version: req.customPrompts.version, prompts: req.customPrompts.prompts, comparisonBasis: basis, counts: { cellsRequested: customCells.length, answersScored: customAnswers.length }, ...block }
+      })()
+    : undefined
+
+  return {
+    status: 'scanned',
+    domain: req.domain,
+    category: bank.category,
+    categoryName: bank.displayName,
+    classification,
+    // Spread, not `fallback,`: the field is optional and R8's no-optional-fields
+    // discipline is about METRICS, but exactOptionalPropertyTypes still refuses
+    // an explicit `undefined` here. A normal scan carries no key at all.
+    ...(fallback ? { fallback } : {}),
+    ...(categorySource ? { categorySource } : {}),
+    subjectSource,
+    comparisonBasis,
+    algoVersion: SCORING_ALGO_VERSION,
+    collectedAt: answers[answers.length - 1]?.collectedAt ?? req.day,
+    counts,
+    brands,
+    promptRows,
+    ...(customPrompts ? { customPrompts } : {}),
+  }
+}
+
+/**
+ * Every brand scored over one set of answers, on one basis: the subject's
+ * per-answer rows harvested from the same pass. One function, two callers (the
+ * headline sample and the custom block), so the two cannot score differently.
+ */
+/**
+ * @param intentOf the bank's classification per prompt TEXT, for the block being
+ *   scored. Empty for the custom block, whose prompts nobody classified. Built
+ *   from the same list the cells came from, so it cannot name a prompt the scan
+ *   did not send or miss one it did.
+ */
+function scoreBlock(
+  answers: readonly RawAnswer[],
+  scored: readonly BrandSpec[],
+  subject: BrandSpec,
+  competitors: readonly BrandSpec[],
+  comparisonBasis: string,
+  intentOf: ReadonlyMap<string, Intent> = new Map(),
+): { brands: BrandResult[]; promptRows: PromptRow[] } {
+  const n = answers.length
+  /*
+   * The subject's per-answer rows, harvested from the pass that was already
+   * running. See `PromptRow`: this costs one push per answer and buys the
+   * per-prompt and per-engine views the record previously had to refuse.
+   */
+  const promptRows: PromptRow[] = []
   const brands: BrandResult[] = scored.map((spec) => {
     let mentions = 0
     let citations = 0
@@ -426,9 +714,37 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
       // Scored once per brand rather than reading the competitor sub-shape:
       // `mentioned` is all this needs, the pass is pure string matching, and
       // making each brand its own subject keeps the numerator unambiguous.
-      const row = scoreAnswer({ answer: { text: a.text, citations: a.citations }, brand: spec, competitors })
+      const row = scoreAnswer({
+        answer: { text: a.text, citations: a.citations },
+        brand: spec,
+        competitors,
+        // ADR-0015 / det-3: the approved 52-entry publisher registry. It sits
+        // at step 3 of `classifyCitation`, AFTER owned, competitor, community,
+        // review and reference, so it can only move a citation from `other` to
+        // `earned_media` and can never override a more specific class.
+        publishers: PUBLISHER_REGISTRY,
+      })
       if (row.mentioned) mentions += 1
       if (row.cited) citations += 1
+      if (spec.id === subject.id) {
+        promptRows.push({
+          // The prompt as SENT. `cell.normalisedPrompt` is the cache key's
+          // lowercased form and putting that on a sheet would show the reader a
+          // question we did not ask.
+          prompt: a.prompt || a.cell.normalisedPrompt,
+          engine: a.cell.engine,
+          // Spread, not `intent,`: `exactOptionalPropertyTypes` refuses an
+          // explicit undefined, and a custom row should carry no key at all
+          // rather than a key whose value is nothing.
+          ...(intentOf.get(a.prompt || a.cell.normalisedPrompt) ? { intent: intentOf.get(a.prompt || a.cell.normalisedPrompt)! } : {}),
+          mentioned: row.mentioned,
+          mentionCount: row.mentionCount,
+          position: row.position,
+          brandsDetected: row.brandsDetected,
+          cited: row.cited,
+          competitorsMentioned: row.competitorsMentioned,
+        })
+      }
     }
     const w = wilson(mentions, n)
     return {
@@ -448,23 +764,5 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
       },
     }
   })
-
-  return {
-    status: 'scanned',
-    domain: req.domain,
-    category: bank.category,
-    categoryName: bank.displayName,
-    classification,
-    // Spread, not `fallback,`: the field is optional and R8's no-optional-fields
-    // discipline is about METRICS, but exactOptionalPropertyTypes still refuses
-    // an explicit `undefined` here. A normal scan carries no key at all.
-    ...(fallback ? { fallback } : {}),
-    ...(categorySource ? { categorySource } : {}),
-    subjectSource,
-    comparisonBasis,
-    algoVersion: SCORING_ALGO_VERSION,
-    collectedAt: answers[answers.length - 1]?.collectedAt ?? req.day,
-    counts,
-    brands,
-  }
+  return { brands, promptRows }
 }

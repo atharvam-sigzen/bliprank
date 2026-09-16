@@ -7,7 +7,6 @@ import { ProductBar } from '@/components/chrome'
 import { RangeRail } from '@/components/range-rail'
 import { CONCEPT_NOTICE, PORTFOLIO } from '@/lib/agency-fixture'
 import { NO_SCHEDULER_NOTE, Planned } from '@/lib/planned'
-import { PREVIEW_SCORE_CAPTION, previewScore } from '@/lib/preview-score'
 import { FEATURED_ID, tierById } from '@/lib/agency-pricing'
 import { runInfoOf, scanFor, subjectOf } from '@/lib/scan-result'
 import { collectionStatus, readAgencyDomains, removeAgencyDomain, workspaceFor, type Workspace } from '@/lib/workspace'
@@ -191,9 +190,6 @@ export default function AgencyPortfolio() {
               <span className="note__gloss">
                 These rows render a scan a budgeted runner already produced. Opening this page collects nothing and spends nothing.
               </span>
-              <span className="note__gloss">
-                {PREVIEW_SCORE_CAPTION}. Precision grades how much each sample knows; the score is a separate, provisional read on visibility.
-              </span>
             </aside>
           </div>
         </section>
@@ -295,14 +291,6 @@ export default function AgencyPortfolio() {
 
                     <div className="portfolio__marks">
                       <span className="portfolio__mark">
-                        <span className="readout__cap">Visibility</span>
-                        <span className="score">
-                          <span className="score__value num">{row.preview.score}</span>
-                          <span className="score__of">/ 100</span>
-                          <span className="score__flag">preview</span>
-                        </span>
-                      </span>
-                      <span className="portfolio__mark">
                         <span className="readout__cap">Precision</span>
                         <span className="portfolio__grade num">{grade}</span>
                       </span>
@@ -320,9 +308,6 @@ export default function AgencyPortfolio() {
             <span className="note__gloss">
               Every interval in this group is real arithmetic over invented counts. The figures are made up; the maths that turns them into a range
               is the same code the Grader runs, so no row shows a shape that could not occur.
-            </span>
-            <span className="note__gloss">
-              {PREVIEW_SCORE_CAPTION}. Precision grades how much each sample knows; the score is a separate, provisional read on visibility.
             </span>
           </aside>
         </div>
@@ -376,10 +361,6 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
   const run = runInfoOf(scan)
   const subject = subjectOf(scan)
   const { grade } = confidenceGrade(subject.metric)
-  const preview = previewScore(
-    subject,
-    scan.brands.filter((b) => !b.isSubject),
-  )
 
   return (
     <li className="portfolio__row">
@@ -396,7 +377,7 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
             {run.day ? ` · collected — cycle of ${run.day}` : ' · collected'} · {scan.counts.answersScored} answers
           </span>
         </Link>
-        <span className="portfolio__category">{formatProvenance(subject.metric)}</span>
+        <span className="portfolio__category detail">{formatProvenance(subject.metric)}</span>
         <RemoveButton domain={workspace.domain} onRemove={onRemove} />
       </div>
 
@@ -405,14 +386,6 @@ function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove:
       </div>
 
       <div className="portfolio__marks">
-        <span className="portfolio__mark">
-          <span className="readout__cap">Visibility</span>
-          <span className="score">
-            <span className="score__value num">{preview.score}</span>
-            <span className="score__of">/ 100</span>
-            <span className="score__flag">preview</span>
-          </span>
-        </span>
         <span className="portfolio__mark">
           <span className="readout__cap">Precision</span>
           <span className="portfolio__grade num">{grade}</span>
@@ -449,8 +422,8 @@ function QueuedRow({ workspace, onRemove }: { workspace: Workspace; onRemove: (d
         <RemoveButton domain={workspace.domain} onRemove={onRemove} />
       </div>
 
-      {/* The marks column, where a collected row carries Visibility and
-          Precision, holds a status instead. Not a greyed-out score, not a dash:
+      {/* The marks column, where a collected row carries Precision, holds a
+          status instead. Not a greyed-out score, not a dash:
           a sentence, in the same slot, so the difference is unmissable. */}
       <div className="portfolio__marks">
         <span className="portfolio__mark">

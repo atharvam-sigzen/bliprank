@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next'
 
-// Cloudflare Pages (ADR-0002): static asset requests are free and unlimited,
-// and this tool sits on acquisition traffic we cannot forecast.
+// Vercel (ADR-0002 Amendment 1, 2026-09-10): eight route handlers need a Node
+// function host. Each route file carries its own `maxDuration`, which is where
+// Vercel's docs put it for the App Router; `vercel.json` pins the framework.
 const config: NextConfig = {
   transpilePackages: ['@bliprank/stats'],
   reactStrictMode: true,

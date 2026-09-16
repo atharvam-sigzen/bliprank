@@ -66,7 +66,12 @@
  * error; it is a field nothing reads.
  */
 
+import { existsSync, readFileSync } from 'node:fs'
+import { basename, dirname } from 'node:path'
+import { fileCapUsd, ledgerStores, type LedgerStores } from './ledger-stores.js'
+import { join } from 'node:path'
 import Anthropic from '@anthropic-ai/sdk'
+import { Budget } from '@bliprank/collector'
 
 /** Change this alone to swap models. */
 export const DEFAULT_BANK_AUTHOR_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'
@@ -112,6 +117,45 @@ export const DEFAULT_BANK_AUTHOR_TIMEOUT_MS = 25_000
 export const GENERATED_DISCOVERY = 10
 export const GENERATED_PROBLEM_LED = 7
 
+/**
+ * The author's own dollar ledger — `bank-author-ledger.json` in the data dir.
+ *
+ * ⚠️ EVERY MODEL ATTEMPT IS CHARGED BEFORE IT IS MADE, whichever provider
+ * answers, through the same `Budget` the collector uses (R3). The 2026-09-09
+ * audit found this path reachable from the public preview route with a request
+ * cap but no dollar ledger. The default models are free tiers, so the default
+ * price is $0 and the ledger still COUNTS every attempt; point
+ * `BANK_AUTHOR_MODEL` at a paid model and `BANK_AUTHOR_USD_PER_CALL` is the
+ * price that makes the cap mean something. A cap that is reached is a failure
+ * like any other here: the bank is null and the domain falls back to the
+ * general bucket — authoring degrades, a scan never breaks.
+ */
+export interface AuthorLedger {
+  readonly file: string
+  readonly capUsd: number
+  readonly usdPerCall: number
+  /** Where the ledger lives: Upstash on the deployment, the file otherwise (ledger-stores.ts, MVP_PLAN B3b). Resolved from the file's directory when absent. */
+  readonly stores?: LedgerStores
+}
+export const DEFAULT_BANK_AUTHOR_CAP_USD = 5
+export const DEFAULT_BANK_AUTHOR_USD_PER_CALL = 0
+export const authorLedgerFile = (dataDir: string): string => join(dataDir, 'bank-author-ledger.json')
+
+/**
+ * Charge one attempt on `model`. Throws `BudgetExceeded` before any request.
+ *
+ * The file's own cap wins over the configured one, exactly as `ledgerCapUsd`
+ * does for the collector's ledger: `Budget` refuses to RAISE a cap from code,
+ * so a ledger a person raised by hand is not written back down by a default.
+ */
+async function chargeAttempt(ledger: AuthorLedger, model: string): Promise<void> {
+  // A file's own cap wins over the configured one; an unreadable file is
+  // `Budget`'s to refuse. In KV the configured cap is the cap.
+  const stores = ledger.stores ?? ledgerStores(dirname(ledger.file), process.env)
+  const capUsd = (stores.backend === 'file' ? fileCapUsd(ledger.file) : null) ?? ledger.capUsd
+  await stores.spend(basename(ledger.file), capUsd, () => ledger.usdPerCall).charge(model)
+}
+
 export type BankAuthorProvider = 'openai-compatible' | 'anthropic'
 
 export interface BankAuthorConfig {
@@ -122,6 +166,8 @@ export interface BankAuthorConfig {
   readonly baseUrl: string
   readonly apiKey: string
   readonly timeoutMs: number
+  /** Where every attempt is charged. Required: there is no unmetered config. */
+  readonly ledger: AuthorLedger
 }
 
 export interface GenerateInput {
@@ -152,7 +198,7 @@ export interface GeneratedBank {
  * `readKey` is passed in rather than imported so this stays free of the dotenv
  * loader's file IO and can be exercised without one.
  */
-export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string) => string | undefined): BankAuthorConfig | null {
+export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string) => string | undefined, dataDir: string, ledgers?: LedgerStores): BankAuthorConfig | null {
   const provider = (env['BANK_AUTHOR_PROVIDER'] ?? 'openai-compatible') as BankAuthorProvider
   // Explicit key first, then the conventional name for whichever provider is
   // selected. Two names rather than one because a machine may legitimately hold
@@ -177,15 +223,37 @@ export function bankAuthorConfig(env: NodeJS.ProcessEnv, readKey: (name: string)
   const baseUrl = env['BANK_AUTHOR_BASE_URL']
   const isDefaultSetup = provider !== 'anthropic' && (baseUrl === undefined || baseUrl.replace(/\/+$/, '') === DEFAULT_BANK_AUTHOR_BASE_URL)
   const fallback = env['BANK_AUTHOR_FALLBACK_MODEL'] ?? (isDefaultSetup ? DEFAULT_BANK_AUTHOR_FALLBACK_MODEL : '')
+  const model = env['BANK_AUTHOR_MODEL'] ?? DEFAULT_BANK_AUTHOR_MODEL
+  const usdPerCall = Number(env['BANK_AUTHOR_USD_PER_CALL'] ?? DEFAULT_BANK_AUTHOR_USD_PER_CALL)
+  /*
+   * ⚠️ A PAID MODEL WITHOUT A PRICE IS REFUSED, NOT METERED AT ZERO. At $0 a
+   * call the cap can never be reached, so the "dollar ledger" would count
+   * attempts and stop nothing. That is right for a `:free` slug and wrong for
+   * everything else: an operator who swaps in a paid model and forgets the
+   * price would get unmetered spend bounded only by the preview route's hourly
+   * cap (cost-sentinel, 2026-09-09). Refusing here surfaces the omission on
+   * the first request rather than on the invoice.
+   */
+  for (const m of [model, fallback.trim()]) {
+    if (m && !/:free$/.test(m) && !(usdPerCall > 0)) {
+      throw new RangeError(`${m} is not a :free slug, so BANK_AUTHOR_USD_PER_CALL must be set to the price per call (R3)`)
+    }
+  }
   return {
     provider: provider === 'anthropic' ? 'anthropic' : 'openai-compatible',
-    model: env['BANK_AUTHOR_MODEL'] ?? DEFAULT_BANK_AUTHOR_MODEL,
+    model,
     // An explicitly empty value disables the second attempt, which is the only
     // way to say "use one model and tell me when it breaks".
     ...(fallback.trim() ? { fallbackModel: fallback.trim() } : {}),
     baseUrl: (baseUrl ?? DEFAULT_BANK_AUTHOR_BASE_URL).replace(/\/+$/, ''),
     apiKey,
     timeoutMs: Number(env['BANK_AUTHOR_TIMEOUT_MS'] ?? DEFAULT_BANK_AUTHOR_TIMEOUT_MS),
+    ledger: {
+      file: authorLedgerFile(dataDir),
+      capUsd: Number(env['BANK_AUTHOR_CAP_USD'] ?? DEFAULT_BANK_AUTHOR_CAP_USD),
+      usdPerCall,
+      stores: ledgers ?? ledgerStores(dataDir, env),
+    },
   }
 }
 
@@ -328,16 +396,39 @@ export function parseCandidate(raw: unknown, model: string): GeneratedBank | nul
 }
 
 /** One attempt against an OpenAI-compatible chat-completions endpoint. */
-async function askOpenAiCompatible(input: GenerateInput, model: string): Promise<string> {
-  const doFetch = input.fetchImpl ?? fetch
+/**
+ * ONE TEXT COMPLETION, against whichever host `config` names.
+ *
+ * ⚠️ EXTRACTED FROM `askOpenAiCompatible`, WHICH NOW CALLS IT — not written
+ * beside it. A second copy of this request would be a second place for the
+ * OpenRouter attribution headers, the 200-with-an-error-body case and the
+ * timeout to be got right, and the copy nobody is looking at is the one that
+ * rots. The bank author's behaviour is unchanged: same endpoint, same headers,
+ * same temperature, same absence of `response_format` (see the section above on
+ * why that flag is a trap on a fleet of free models).
+ *
+ * The second caller is the AEO gap drafter (`aeo-audit.ts`), which needs prose
+ * rather than JSON — so the JSON extraction stays where it was, in `authorBank`,
+ * and this returns whatever the model said.
+ */
+export async function askText(
+  config: BankAuthorConfig,
+  model: string,
+  system: string,
+  user: string,
+  opts: { readonly maxTokens?: number; readonly fetchImpl?: typeof fetch } = {},
+): Promise<string> {
+  const doFetch = opts.fetchImpl ?? fetch
+  // Charged first. A refusal here is a thrown BudgetExceeded, and no request follows it.
+  await chargeAttempt(config.ledger, model)
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), input.config.timeoutMs)
+  const timer = setTimeout(() => controller.abort(), config.timeoutMs)
   try {
-    const res = await doFetch(`${input.config.baseUrl}/chat/completions`, {
+    const res = await doFetch(`${config.baseUrl}/chat/completions`, {
       method: 'POST',
       signal: controller.signal,
       headers: {
-        Authorization: `Bearer ${input.config.apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
         // OpenRouter's attribution headers. Ignored by every other
         // OpenAI-compatible host, and being identifiable is the correct posture
@@ -353,10 +444,10 @@ async function askOpenAiCompatible(input: GenerateInput, model: string): Promise
         // down once and reused forever, so the reproducibility that matters is
         // the RECORD's, not the sampler's.
         temperature: 0.3,
-        max_tokens: 4_000,
+        max_tokens: opts.maxTokens ?? 4_000,
         messages: [
-          { role: 'system', content: AUTHORING_SYSTEM },
-          { role: 'user', content: userMessage(input) },
+          { role: 'system', content: system },
+          { role: 'user', content: user },
         ],
       }),
     })
@@ -378,6 +469,10 @@ async function askOpenAiCompatible(input: GenerateInput, model: string): Promise
   }
 }
 
+/** The bank author's own call: the authoring system prompt, through `askText`. */
+const askOpenAiCompatible = (input: GenerateInput, model: string): Promise<string> =>
+  askText(input.config, model, AUTHORING_SYSTEM, userMessage(input), { ...(input.fetchImpl ? { fetchImpl: input.fetchImpl } : {}) })
+
 /**
  * One attempt against Anthropic.
  *
@@ -391,6 +486,8 @@ async function askOpenAiCompatible(input: GenerateInput, model: string): Promise
  * `parseCandidate`, so neither gets a weaker check than the other.
  */
 async function askAnthropic(input: GenerateInput, model: string): Promise<string> {
+  // The same ledger as the OpenAI-compatible path: no provider is unmetered.
+  await chargeAttempt(input.config.ledger, model)
   const client = new Anthropic({ apiKey: input.config.apiKey, timeout: input.config.timeoutMs })
   const response = await client.messages.create({
     model,

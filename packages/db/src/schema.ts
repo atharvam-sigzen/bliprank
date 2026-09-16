@@ -18,6 +18,10 @@ import { boolean, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uu
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
+  /** the Supabase Auth user id; null for a row provisioned before its person signed in (0003) */
+  authUid: uuid('auth_uid').unique(),
+  /** brand = owns one workspace; agency = owns many (0003) */
+  kind: text('kind', { enum: ['brand', 'agency'] }).notNull().default('brand'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -165,3 +169,51 @@ export const scoreAggregates = pgTable(
   },
   (t) => [primaryKey({ columns: [t.brandId, t.engine, t.period, t.periodStart, t.algoVersion, t.signal] })],
 )
+
+// --- 0004: the grader's per-domain state, scoped by workspace (MVP_PLAN B3) ---
+// Written only through ws_put_cycle / ws_put_document / ws_file_request /
+// ws_resolve_request, which take the workspace from the verified context.
+
+export const workspaceCycles = pgTable(
+  'workspace_cycles',
+  {
+    workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'restrict' }),
+    host: text('host').notNull(),
+    day: date('day').notNull(),
+    algoVersion: text('algo_version').notNull(),
+    comparisonBasis: text('comparison_basis').notNull(),
+    /** the ScanResultFile the app serves */
+    result: jsonb('result').notNull(),
+    writtenAt: timestamp('written_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.workspaceId, t.host, t.day, t.algoVersion] })],
+)
+
+export const workspaceDocuments = pgTable(
+  'workspace_documents',
+  {
+    workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'restrict' }),
+    kind: text('kind', { enum: ['category-record', 'competitor-override', 'custom-prompts'] }).notNull(),
+    host: text('host').notNull(),
+    /** N+1 per (workspace, kind, host); earlier rows are the history */
+    version: integer('version').notNull(),
+    body: jsonb('body').notNull(),
+    writtenAt: timestamp('written_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.workspaceId, t.kind, t.host, t.version] })],
+)
+
+export const workspaceRequests = pgTable('workspace_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'restrict' }),
+  kind: text('kind', { enum: ['category', 'competitors', 'custom-prompts'] }).notNull(),
+  host: text('host').notNull(),
+  body: jsonb('body').notNull(),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+  status: text('status', { enum: ['pending', 'applied', 'declined'] }).notNull().default('pending'),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  resolvedBy: text('resolved_by'),
+  note: text('note'),
+  /** the filing account (migration 0007); null on rows filed before it */
+  filedBy: text('filed_by'),
+})

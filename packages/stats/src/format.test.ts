@@ -3,6 +3,7 @@ import {
   compare,
   confidenceGrade,
   CONFIDENCE_GRADE_STATUS,
+  formatBounds,
   formatInterval,
   formatMetric,
   formatProvenance,
@@ -59,6 +60,15 @@ describe('formatting always carries the interval (R8)', () => {
     expect(m.ci_high).toBeGreaterThan(m.value)
   })
 
+  it('formatBounds is formatInterval taken apart, never a second opinion on the digits', () => {
+    for (const m of [metric(), fromWilson(37, 150), fromWilson(0, 10), fromWilson(10, 10)]) {
+      for (const dp of [0, 1, 2]) {
+        const b = formatBounds(m, dp)
+        expect(`${b.low}–${b.high}`).toBe(formatInterval(m, dp))
+      }
+    }
+  })
+
   it('handles the boundary cases Wilson produces exactly', () => {
     // k=0 and k=n are exact 0 and 1; the interval is one-sided and must render
     // as such rather than as a suspiciously tidy symmetric band.
@@ -66,8 +76,11 @@ describe('formatting always carries the interval (R8)', () => {
     const all = fromWilson(10, 10)
     expect(zero.value).toBe(0)
     expect(all.value).toBe(1)
-    expect(formatMetric(zero)).toBe(`0.0% (0–${(zero.ci_high * 100).toFixed(1)}%, n=10)`)
+    // An exact zero bound carries the same decimals as the estimate beside it:
+    // `0.0–…` under `0.0%`, never a bare `0` in a column of 1dp figures.
+    expect(formatMetric(zero)).toBe(`0.0% (0.0–${(zero.ci_high * 100).toFixed(1)}%, n=10)`)
     expect(formatMetric(all)).toBe(`100.0% (${(all.ci_low * 100).toFixed(1)}–100.0%, n=10)`)
+    expect(formatInterval(zero, 0)).toBe(`0–${(zero.ci_high * 100).toFixed(0)}%`)
     // and the two are mirror images, as Wilson requires
     expect(zero.ci_high).toBeCloseTo(1 - all.ci_low, 12)
   })

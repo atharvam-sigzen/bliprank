@@ -3,7 +3,8 @@
  * no real answers exist. No provider is called on any path in this app.
  *
  * Shaped to exercise every state the head-to-head can render, including the ones
- * that are easy to get wrong. Same convention as `apps/web/lib/fixtures.ts`.
+ * that are easy to get wrong. The only fixture module now (apps/web, which had a
+ * sibling, was retired 2026-09-07).
  */
 
 import { wilson, type Metric } from '@bliprank/stats'

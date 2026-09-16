@@ -1,13 +1,20 @@
-import { existsSync, mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import { ENGINES } from '@bliprank/contracts'
+import { classifyDomain, normaliseHost } from '@bliprank/taxonomy'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
-import { UNPROMPTED_INTENTS } from '../../../../../services/grader/src/scan.js'
-import { resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
+import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/src/scan.js'
+import { allBanks, allCategories, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
+import { competitorsIn } from '../../../../../services/grader/src/competitor-overrides.js'
+import { categoryRecordIn, recordsIn } from '../../../../../services/grader/src/store/documents.js'
+import type { WorkspaceStore } from '../../../../../services/grader/src/store/pg-store.js'
+import { ROOT } from '@/lib/data-dir'
+import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 import { DEFAULT_MAX_PREVIEWS_PER_HOUR, type PreviewResponse } from '@/lib/preview-contract'
+import { PREVIEW_FAILED } from '@/lib/route-errors'
 import {
+  DEFAULT_VISITOR_WINDOW_MS,
   checkVisitorThrottle,
   extractClientIp,
   recordVisitorScan,
@@ -49,33 +56,71 @@ import {
  * So it reuses `checkVisitorThrottle` against a SEPARATE ledger with a higher
  * ceiling: previewing is meant to be cheap and repeatable, scanning is not, and
  * one shared counter would make looking at your prompts cost you a scan.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⚠️ THE VISITOR THROTTLE IS ONLY AS GOOD AS `TRUSTED_PROXY`. `extractClientIp`
+ * reads one header, and only the one the named edge sets; with no proxy named
+ * (the local demo, or a deployment nobody configured) every caller is one
+ * bucket, which refuses early rather than never. A loop that changes headers
+ * per request is therefore one visitor, not many — but the global bound below
+ * is still the one that does not depend on configuration at all. Found by the
+ * ADR-0014 review on `/api/gaps` and fixed there first; this is the same fix.
+ *
+ * What a caller could make the machine do, unbounded: read one homepage per
+ * distinct domain named (a fetch proxy for arbitrary hosts, one GET each) and
+ * author a bank for each (a free-tier model call, and a record and a bank file
+ * on disk, per domain). Not twice per domain — a failed read still records a
+ * fallback, records are write-once, and a recorded domain resolves at rung 0
+ * with no fetch — so the vector is breadth, not depth.
+ *
+ * So the bound that does not trust the caller is GLOBAL: this many previews
+ * that would actually cost — an unrecorded domain the host alone cannot
+ * classify — per rolling hour, across everyone, on one ledger, plus a cap on
+ * how many may be in flight at once. A recorded or host-classified domain
+ * costs nothing outbound and is not counted against it, so the ordinary path
+ * (preview the domain you are about to scan) is unaffected until an attack is
+ * actually under way, and the refusal says which limit it hit.
  */
+
+/** Previews that would fetch a homepage or author a bank, per hour, across every caller. */
+const DEFAULT_MAX_COSTING_PREVIEWS_PER_HOUR = 60
+const MAX_IN_FLIGHT = 2
+let inFlight = 0
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const resolveRoot = (): string => {
-  let curr = process.cwd()
-  while (curr && curr !== dirname(curr)) {
-    if (existsSync(join(curr, 'services', 'grader'))) return curr
-    curr = dirname(curr)
-  }
-  return join(process.cwd(), '..', '..')
-}
-const ROOT = resolveRoot()
-const DATA = join(ROOT, 'services', 'grader', 'data-live')
 
-const normalise = (d: string): string =>
-  d.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')
 
-const previewThrottleConfig = (env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+
+type Access = WorkspaceAccess & { ok: true }
+const previewThrottleConfig = (access: Access, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
   maxScansPerHour: Number(env['GRADER_MAX_PREVIEWS_PER_VISITOR_PER_HOUR'] ?? DEFAULT_MAX_PREVIEWS_PER_HOUR),
   windowMs: Number(env['GRADER_VISITOR_WINDOW_MS'] ?? 60 * 60 * 1000),
   // A DIFFERENT FILE from the scan throttle's. Sharing one would mean three
   // previews used up the hour's three scans, so the feature that exists to make
   // scanning safer would instead make it impossible.
-  ledgerFile: join(DATA, 'preview-throttle.json'),
+  ledgerFile: `${access.dataDir}/preview-throttle.json`,
+  ledger: access.ledgers.doc('preview-throttle.json'),
 })
+
+/** The same rolling-window machinery under one shared key: the bound that does not care who asked. */
+const globalCapConfig = (access: Access, env: NodeJS.ProcessEnv): VisitorThrottleConfig => ({
+  maxScansPerHour: Number(env['GRADER_MAX_COSTING_PREVIEWS_PER_HOUR'] ?? DEFAULT_MAX_COSTING_PREVIEWS_PER_HOUR),
+  windowMs: DEFAULT_VISITOR_WINDOW_MS,
+  ledgerFile: `${access.dataDir}/preview-global-cap.json`,
+  ledger: access.ledgers.doc('preview-global-cap.json'),
+})
+const GLOBAL_KEY = '*'
+
+/**
+ * Would previewing this domain fetch a page or call a model? Rung 0 (a
+ * record) and rungs 1 and 2 (the host alone classifies it) cost nothing
+ * outbound; everything else reaches the homepage and, failing that, the
+ * author. Decided the way `resolveCategory` decides it, from the same inputs.
+ */
+const wouldCost = async (store: WorkspaceStore, DATA: string, domain: string): Promise<boolean> =>
+  (await categoryRecordIn(store, domain)) === null && classifyDomain(domain, allBanks(DATA), allCategories(DATA)).status !== 'classified'
 
 export async function POST(req: Request): Promise<Response> {
   const env = process.env
@@ -83,11 +128,21 @@ export async function POST(req: Request): Promise<Response> {
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
   const { domain: raw } = (await req.json().catch(() => ({}))) as { domain?: string }
-  const domain = normalise(String(raw ?? ''))
+  const domain = normaliseHost(String(raw ?? ''))
   if (!domain) return json({ kind: 'input', message: 'Enter a domain, for example pipedrive.com' }, 400)
 
-  const cfg = previewThrottleConfig(env)
-  const verdict = checkVisitorThrottle(extractClientIp(req), cfg, new Date())
+  // THE WORKSPACE IS THE SESSION'S (MVP_PLAN B3b): the record a preview
+  // reads, and the one it writes on a first look, are the session's store.
+  const access = await workspaceAccess(env)
+  if (!access.ok) return json({ kind: 'access', message: access.message }, access.status)
+  const { store, ledgers, dataDir: DATA } = access
+  // Any member of the workspace may preview an unrecorded domain: the first
+  // category record it writes is a measurement's precondition, not a
+  // decision (migration 0006, B3d item 2).
+  const now = new Date()
+  const cfg = previewThrottleConfig(access, env)
+  const visitorIp = extractClientIp(req, env)
+  const verdict = await checkVisitorThrottle(visitorIp, cfg, now)
   if (!verdict.ok) {
     return json(
       {
@@ -97,22 +152,46 @@ export async function POST(req: Request): Promise<Response> {
       429,
     )
   }
+  mkdirSync(DATA, { recursive: true })
+
+  // THE BOUND THAT DOES NOT TRUST THE CALLER. Only for a preview that would
+  // actually fetch or author; a recorded or host-classified domain is free and
+  // passes untouched, so an exhausted cap never stops the ordinary path.
+  const costs = await wouldCost(store, DATA, domain)
+  const global = globalCapConfig(access, env)
+  if (costs) {
+    const capVerdict = await checkVisitorThrottle(GLOBAL_KEY, global, now)
+    if (!capVerdict.ok) {
+      return json(
+        {
+          kind: 'preview-global-cap',
+          message: `This service has already read ${global.maxScansPerHour} new domains' homepages in the last hour, which is its ceiling for everyone combined. Nothing was fetched, collected or charged; it resets in about ${capVerdict.resetInMinutes} minutes. A domain that has already been looked up still previews instantly.`,
+        },
+        429,
+      )
+    }
+    if (inFlight >= MAX_IN_FLIGHT) {
+      return json({ kind: 'preview-busy', message: 'The preview service is busy reading other homepages. Try again in a moment; nothing was fetched.' }, 503)
+    }
+  }
   // Recorded BEFORE the work, not after. The cost this limit exists to bound is
   // the outbound fetch and the authoring call, and both happen below — counting
   // afterwards would let a burst of concurrent requests all pass the check and
   // then all spend. The scan route counts after for the opposite and equally
   // correct reason: there, a refusal genuinely spends nothing.
-  mkdirSync(DATA, { recursive: true })
-  recordVisitorScan(extractClientIp(req), cfg, new Date())
+  await recordVisitorScan(visitorIp, cfg, now)
+  if (costs) await recordVisitorScan(GLOBAL_KEY, global, now)
 
+  if (costs) inFlight += 1
   try {
     const resolved = await resolveCategory(domain, {
       dataDir: DATA,
+      records: recordsIn(store),
       // Model, provider and key all from the environment — ADR-0009 Amendment 1.
       // `loadApiKey` is passed as the reader so the author's key comes out of the
       // same repo-root `.env.local` as every other secret, with the same
       // precedence and the same CRLF handling.
-      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key) ?? undefined,
+      author: bankAuthorConfig(env, (n) => loadApiKey(ROOT, env, n)?.key, DATA, ledgers) ?? undefined,
       /*
        * TO THE SERVER CONSOLE, NOT SWALLOWED.
        *
@@ -130,12 +209,13 @@ export async function POST(req: Request): Promise<Response> {
       log: (m) => console.warn(`[preview] ${m}`),
     })
 
-    const gate = defaultGateConfig(DATA, env)
+    const gate = defaultGateConfig(DATA, env, ledgers)
     // The same filter and the same slice `runScan` applies, so what is shown is
     // what runs. Deriving it a second way here is how a preview drifts from the
     // scan it previews and becomes worse than no preview at all.
     const unprompted = resolved.bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
 
+    const competitorSet = (await competitorsIn(store, DATA, domain, resolved.bank, subjectFor(domain, resolved.bank, resolved.record.brandName).spec.id)) ?? { competitors: [], missing: [] }
     const body: PreviewResponse = {
       domain,
       category: resolved.bank.category,
@@ -147,14 +227,26 @@ export async function POST(req: Request): Promise<Response> {
       verified: resolved.bank.verified,
       generated: resolved.record.generated,
       decidedAt: resolved.record.decidedAt,
+      version: resolved.record.version,
+      ...(resolved.record.correction ? { correction: resolved.record.correction } : {}),
       ...(resolved.fallback ? { fallback: resolved.fallback } : {}),
       prompts: unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent })),
       engines: [...ENGINES],
-      competitors: resolved.bank.leaders.map((l) => l.name),
+      // The subject is not its own rival. `runScan` drops the leader the domain
+      // matched from the comparison set (scan.ts); a preview that listed it
+      // promised an eight-bar chart the scan draws with seven, with the reader's
+      // own brand named as one of the brands they will be ranked against.
+      // The domain's override laid over the category's set, when one is in force (ADR-0016): what a scan would measure against.
+      competitors: competitorSet.competitors.map((l) => l.name),
+      ...(competitorSet.set !== undefined ? { competitorSet: competitorSet.set } : {}),
     }
     return json(body)
   } catch (e) {
-    // Never a blank screen and never an invented category: say what broke.
-    return json({ kind: 'failed', message: `The preview could not be built: ${(e as Error).message}` }, 500)
+    // Never a blank screen and never an invented category, and never the raw
+    // error: the cause is logged server-side, the visitor gets a fixed line.
+    console.error('[preview] failed', domain, e)
+    return json({ kind: 'failed', message: PREVIEW_FAILED }, 500)
+  } finally {
+    if (costs) inFlight -= 1
   }
 }

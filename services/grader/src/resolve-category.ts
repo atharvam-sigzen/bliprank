@@ -57,7 +57,7 @@
  * reviewed.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   DEMO_BANKS,
@@ -72,6 +72,10 @@ import {
 } from '@bliprank/taxonomy'
 import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
 import { fetchSiteHtml, type FetchSiteOptions, type FetchSiteResult } from './fetch-site.js'
+import { readOverride } from './override-store.js'
+import { categoryRecordIn, overrideIn } from './store/documents.js'
+import type { WorkspaceStore } from './store/pg-store.js'
+import { readPromoted } from './promote-competitors.js'
 import {
   GENERATED_DISCOVERY,
   GENERATED_PROBLEM_LED,
@@ -97,7 +101,7 @@ export { GENERATED_DISCOVERY, GENERATED_PROBLEM_LED, type BankAuthorConfig, type
  * provenance is about the decision, freshness is about this lookup, and
  * collapsing them loses the one a reader actually wants first.
  */
-export type CategorySource = 'leader-domain' | 'domain-token' | 'site-content' | 'generated' | 'fallback'
+export type CategorySource = 'leader-domain' | 'domain-token' | 'site-content' | 'generated' | 'fallback' | 'correction'
 
 /** What gets written down, permanently, the first time a domain is seen. */
 export interface CategoryRecord {
@@ -120,7 +124,31 @@ export interface CategoryRecord {
    * the match on their own.
    */
   readonly brandName?: string
+  /**
+   * 1 when first decided, one more per correction (ADR-0016). A record written
+   * before corrections existed carries no version on disk and reads as 1.
+   */
+  readonly version: number
+  /** Every earlier record of this host, complete, oldest first. Present only once a correction has happened. */
+  readonly superseded?: readonly SupersededRecord[]
+  /** How this record replaced the one before it. Present only on a corrected record. */
+  readonly correction?: CategoryCorrection
 }
+
+/** A record as it was before a correction replaced it. Its own history is not nested: the current record's list holds all of it. */
+export type SupersededRecord = Omit<CategoryRecord, 'superseded'>
+
+export interface CategoryCorrection {
+  /** The slug this record replaced. */
+  readonly from: string
+  /** Who applied it. There is no identity in the product yet, so this is the operator's word. */
+  readonly by: string
+  readonly reason: string
+  readonly at: string
+}
+
+/** What a first decision writes. The version is stamped by `recordCategory`; history and correction cannot exist yet. */
+export type NewCategoryRecord = Omit<CategoryRecord, 'version' | 'superseded' | 'correction'>
 
 export interface ResolvedCategory {
   readonly record: CategoryRecord
@@ -138,9 +166,17 @@ export interface ResolvedCategory {
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
 }
 
+/** Where a domain's category record is read and first written: this machine's file by default, a workspace store on the deployment (MVP_PLAN B3b). */
+export interface CategoryRecordStore {
+  read(host: string): Promise<CategoryRecord | null>
+  /** Write-once: an existing record is returned unchanged. */
+  write(record: NewCategoryRecord): Promise<CategoryRecord>
+}
+
 export interface ResolveDeps {
-  /** Where records and generated banks live. Same dir the gate ledgers use. */
+  /** Where generated banks live (and the records, when `records` is absent). Same dir the gate ledgers use. */
   readonly dataDir: string
+  readonly records?: CategoryRecordStore
   /**
    * Which model authors a bank, and where it lives.
    *
@@ -163,21 +199,88 @@ export interface ResolveDeps {
  * ─────────────────────────────────────────────────────────────────────────────
  * THE STORE. Two files, both write-once, both plain JSON.
  *
- * A JSON file rather than Postgres because there is no Postgres on this path:
- * `apps/public` is a static deploy with one route handler and the gate ledgers
- * already live here. When accounts exist this becomes a table with the same two
- * columns and the same write-once rule.
+ * A JSON file rather than Postgres because there was no Postgres on this path
+ * when it was written, and the gate ledgers already lived here. MVP_PLAN B3
+ * makes this a table with the same two columns and the same write-once rule.
  *
- * ponytail: single-process, last-writer-wins. Two concurrent first-scans of the
- * same brand-new domain can both derive it; both derive the same answer from the
- * same signals, so the loss is one wasted fetch, not an inconsistent record.
- * Upgrade path when this is multi-process: an INSERT ... ON CONFLICT DO NOTHING.
+ * Two writers since ADR-0016: `recordCategory` (a first decision) and
+ * `correctCategory` (a person's replacement). Each is a read-modify-write of
+ * one file, and the two do NOT agree on the answer the way two first-scans
+ * did, so a lost write is no longer one wasted fetch: it is a correction gone
+ * with its request marked applied. Both writers therefore take the same lock,
+ * a `wx`-created file beside the store, held for the write only. A lock older
+ * than a few seconds is a crash's, and is taken over.
+ *
+ * ⚠️ NOT BYTE-PRESERVING FOR OTHER HOSTS. The store is validated on read and
+ * written back whole, so a write by either writer normalises every record it
+ * did not touch: a missing `version` becomes 1, an unknown field is dropped,
+ * keys are reordered. Semantically nothing changes; a hand-added field would.
+ *
+ * ponytail: a file lock, single machine. Upgrade path when this is
+ * multi-process: a row per record with INSERT ... ON CONFLICT and a version
+ * check on the correction.
  */
 
 const recordsFile = (dataDir: string): string => join(dataDir, 'domain-categories.json')
+const lockFile = (dataDir: string): string => join(dataDir, 'domain-categories.lock')
+const LOCK_STALE_MS = 5000
+const LOCK_TRIES = 200
+
+/** Run `fn` holding the store's lock. Synchronous, because every caller is: a route handler's write, or the CLI. */
+export function withRecordLock<T>(dataDir: string, fn: () => T): T {
+  mkdirSync(dataDir, { recursive: true })
+  const lock = lockFile(dataDir)
+  for (let i = 0; i < LOCK_TRIES; i++) {
+    let fd: number | null = null
+    try {
+      fd = openSync(lock, 'wx')
+    } catch {
+      // Held. A holder that died leaves a stale file; take it over after LOCK_STALE_MS.
+      try {
+        if (Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS) rmSync(lock, { force: true })
+      } catch {
+        /* vanished between the check and the stat: try again */
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10)
+      continue
+    }
+    try {
+      return fn()
+    } finally {
+      closeSync(fd)
+      rmSync(lock, { force: true })
+    }
+  }
+  throw new Error(`could not take the category record lock at ${lock} after ${LOCK_TRIES} tries`)
+}
 const banksDir = (dataDir: string): string => join(dataDir, 'generated-banks')
 
 type RecordStore = Record<string, CategoryRecord>
+
+/** One record's shape, checked field by field. Null when it is not a record. `superseded` is checked one level down and never nested. */
+function shapeRecord(host: string, value: unknown, withHistory: boolean): CategoryRecord | null {
+  if (typeof value !== 'object' || value === null) return null
+  const r = value as Partial<CategoryRecord>
+  if (typeof r.slug !== 'string' || !r.slug || typeof r.source !== 'string') return null
+  const c = r.correction
+  const correction: CategoryCorrection | undefined =
+    typeof c === 'object' && c !== null && typeof c.from === 'string' && typeof c.by === 'string' && typeof c.reason === 'string' && typeof c.at === 'string'
+      ? { from: c.from, by: c.by, reason: c.reason, at: c.at }
+      : undefined
+  const superseded = withHistory && Array.isArray(r.superseded) ? r.superseded.map((v) => shapeRecord(host, v, false)).filter((v): v is CategoryRecord => v !== null) : []
+  return {
+    host,
+    slug: r.slug,
+    source: r.source as CategorySource,
+    evidence: typeof r.evidence === 'string' ? r.evidence : '',
+    decidedAt: typeof r.decidedAt === 'string' ? r.decidedAt : '',
+    generated: r.generated === true,
+    ...(typeof r.brandName === 'string' && r.brandName ? { brandName: r.brandName } : {}),
+    version: typeof r.version === 'number' && Number.isInteger(r.version) && r.version >= 1 ? r.version : 1,
+    ...(superseded.length ? { superseded } : {}),
+    ...(correction ? { correction } : {}),
+  }
+}
 
 function readRecords(dataDir: string): RecordStore {
   const f = recordsFile(dataDir)
@@ -191,18 +294,8 @@ function readRecords(dataDir: string): RecordStore {
       // legal JSON. Same discipline as readAgencyDomains: validate, drop what
       // fails, never throw. A dropped record means the domain is re-derived,
       // which is recoverable; a malformed one crashing the route is not.
-      const r = value as Partial<CategoryRecord>
-      if (typeof r.slug === 'string' && r.slug && typeof r.source === 'string') {
-        out[host] = {
-          host,
-          slug: r.slug,
-          source: r.source as CategorySource,
-          evidence: typeof r.evidence === 'string' ? r.evidence : '',
-          decidedAt: typeof r.decidedAt === 'string' ? r.decidedAt : '',
-          generated: r.generated === true,
-          ...(typeof r.brandName === 'string' && r.brandName ? { brandName: r.brandName } : {}),
-        }
-      }
+      const record = shapeRecord(host, value, true)
+      if (record) out[host] = record
     }
     return out
   } catch {
@@ -218,6 +311,18 @@ export function readCategoryRecord(dataDir: string, domain: string): CategoryRec
 }
 
 /**
+ * Every domain placed in one category, with its recorded trading name.
+ *
+ * Exported so competitor promotion can ask "who is the SUBJECT here" without a
+ * second module learning where the record file lives or how a malformed one is
+ * tolerated. A domain must never be proposed as its own competitor, and the
+ * records are the only place that says which domains a category holds.
+ */
+export function recordedIn(dataDir: string, slug: string): readonly CategoryRecord[] {
+  return Object.values(readRecords(dataDir)).filter((r) => r.slug === slug)
+}
+
+/**
  * Write a domain's category, ONCE.
  *
  * An existing record is returned unchanged rather than overwritten, and that
@@ -226,13 +331,129 @@ export function readCategoryRecord(dataDir: string, domain: string): CategoryRec
  * with the version bump and history that implies, exactly as R5 requires of a
  * score row.
  */
-export function recordCategory(dataDir: string, record: CategoryRecord): CategoryRecord {
-  const store = readRecords(dataDir)
-  const existing = store[record.host]
-  if (existing) return existing
-  mkdirSync(dataDir, { recursive: true })
-  writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [record.host]: record }, null, 2) + '\n')
+export function recordCategory(dataDir: string, record: NewCategoryRecord): CategoryRecord {
+  return withRecordLock(dataDir, () => {
+    const store = readRecords(dataDir)
+    const existing = store[record.host]
+    if (existing) return existing
+    const first: CategoryRecord = { ...record, version: 1 }
+    writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [record.host]: first }, null, 2) + '\n')
+    return first
+  })
+}
+
+export interface CategoryCorrectionRequest {
+  readonly host: string
+  /** The slug a PERSON chose from the categories this build can measure. Never derived. */
+  readonly slug: string
+  readonly reason: string
+  readonly by: string
+  /** ISO time; now when absent. */
+  readonly at?: string
+}
+
+/**
+ * THE SECOND WRITER, and the only way a recorded category changes (ADR-0016).
+ *
+ * `recordCategory` refuses to overwrite, and still does. This does not
+ * overwrite either: it writes a NEW record, one version up, carrying every
+ * earlier record whole and a note of who replaced it, why, and from what. A
+ * correction is a decision a person took, so nothing here reads the homepage
+ * or runs the classifier; the slug is the one given, checked only for being a
+ * category this build can measure. Refusals are returned, never thrown, and
+ * each names what to do instead.
+ *
+ * What a correction does NOT touch: any stored cycle. A cycle names its own
+ * category and is read under it forever; the correction changes what the NEXT
+ * cycle measures, which is why the record shows the earlier cycles as kept
+ * and not drawn (lib/cycles.ts).
+ */
+export function correctCategory(dataDir: string, req: CategoryCorrectionRequest): CategoryRecord | { readonly refuse: string } {
+  const checked = checkCorrection(req, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const { host, slug } = checked
+  const overrideRefusal = correctionUnderOverride(host, readOverride(dataDir, host))
+  if (overrideRefusal) return overrideRefusal
+  return withRecordLock(dataDir, () => {
+    const store = readRecords(dataDir)
+    const existing = store[host]
+    const record = correctionOf(existing ?? null, checked, req.at ?? new Date().toISOString(), readGeneratedBanks(dataDir).some((g) => g.bank.category === slug))
+    if ('refuse' in record) return record
+    writeFileSync(recordsFile(dataDir), JSON.stringify({ ...store, [host]: record }, null, 2) + '\n')
+    return record
+  })
+}
+
+/** THE DECISION'S INPUT, pure: the request against the banks this build has (MVP_PLAN B4). */
+export function checkCorrection(req: CategoryCorrectionRequest, banks: readonly PromptBank[]): { readonly host: string; readonly slug: string; readonly reason: string; readonly by: string } | { readonly refuse: string } {
+  const host = normaliseHost(req.host)
+  if (!host) return { refuse: `${JSON.stringify(req.host)} is not a domain` }
+  const reason = plainText(req.reason)
+  if (reason.length < 10) return { refuse: 'a correction carries a reason of at least ten characters, because it is read years later beside the number it changed' }
+  const by = plainText(req.by)
+  if (!by) return { refuse: 'a correction names who applied it' }
+  const slug = req.slug.trim()
+  // The general bank is what a domain gets when NO category fits. Choosing it is
+  // not a correction to a category; the surfaces would then say "we could not
+  // identify a category" about a decision a person took.
+  if (slug === FALLBACK_SLUG) return { refuse: `${FALLBACK_SLUG} is the absence of a category, not one to choose; a correction names a category` }
+  if (!banks.some((b) => b.category === slug)) {
+    return { refuse: `no bank for ${JSON.stringify(slug)} in this build. A category this build cannot measure cannot be chosen; the choices are ${banks.map((b) => b.category).join(', ')}` }
+  }
+  return { host, slug, reason, by }
+}
+
+/**
+ * A competitor override was checked against the OLD category's set; under
+ * the new one its exclusions are no-ops and its inclusions unreviewed for
+ * this category. It is cleared first, by the same operator, on the record.
+ */
+export function correctionUnderOverride(host: string, override: { readonly version: number; readonly host: string } | null): { readonly refuse: string } | null {
+  if (!override) return null
+  return { refuse: `${host} has a competitor override in force (set ${override.version}) that was checked against ${override.host}'s current category. Clear it first: pnpm grader:competitors -- --domain ${host} --exclude --reason "category corrected" --apply` }
+}
+
+/** THE CORRECTED RECORD, pure: version N+1 carrying every earlier record whole and a note of who replaced it, why, and from what. */
+export function correctionOf(existing: CategoryRecord | null, c: { readonly host: string; readonly slug: string; readonly reason: string; readonly by: string }, at: string, generated: boolean): CategoryRecord | { readonly refuse: string } {
+  if (!existing) return { refuse: `${c.host} has no category record. A first scan decides one; a correction replaces a decision, not an absence.` }
+  if (c.slug === existing.slug) return { refuse: `${c.host} is already recorded as ${c.slug}; nothing to correct` }
+  const { superseded: history = [], ...prior } = existing
+  return {
+    host: c.host,
+    slug: c.slug,
+    source: 'correction',
+    evidence: `corrected from ${existing.slug} by ${c.by}: ${c.reason}`,
+    decidedAt: at,
+    generated,
+    ...(existing.brandName ? { brandName: existing.brandName } : {}),
+    version: existing.version + 1,
+    superseded: [...history, prior],
+    correction: { from: existing.slug, by: c.by, reason: c.reason, at },
+  }
+}
+
+/**
+ * The same correction through a `WorkspaceStore` (MVP_PLAN B4): the record
+ * and the override from the store, the decision above, the write against the
+ * version that was read, so a correction never lands on one it did not see.
+ */
+export async function correctCategoryIn(store: WorkspaceStore, dataDir: string, req: CategoryCorrectionRequest): Promise<CategoryRecord | { readonly refuse: string }> {
+  const checked = checkCorrection(req, allBanks(dataDir))
+  if ('refuse' in checked) return checked
+  const overrideRefusal = correctionUnderOverride(checked.host, await overrideIn(store, checked.host))
+  if (overrideRefusal) return overrideRefusal
+  const existing = await categoryRecordIn(store, checked.host)
+  const record = correctionOf(existing, checked, req.at ?? new Date().toISOString(), readGeneratedBanks(dataDir).some((g) => g.bank.category === checked.slug))
+  if ('refuse' in record) return record
+  const { superseded: _history, ...body } = record
+  await store.documents.put('category-record', checked.host, body, existing!.version)
   return record
+}
+
+/** Whitespace folded, control characters removed: a reason is read in a terminal and on a page, and must carry nothing but words. */
+export function plainText(s: string): string {
+  // Whitespace first: a newline is a control character too, and stripping it before folding would glue two words.
+  return s.replace(/\s+/g, ' ').replace(/[\p{Cc}\p{Cf}]/gu, '').trim()
 }
 
 /** A generated bank, on disk, paired with the category the classifier sees. */
@@ -241,7 +462,19 @@ export interface GeneratedBankFile {
   readonly bank: PromptBank
 }
 
-/** Every bank generated so far. Read on each resolve so a sibling process's writes are seen. */
+/**
+ * Every bank generated so far. Read on each resolve so a sibling process's
+ * writes are seen.
+ *
+ * ⚠️ THE LEADERS REFUSAL BELOW IS UNCHANGED AND STAYS UNCHANGED. ADR-0009's
+ * third refusal — a generated bank file that has acquired any leaders is
+ * DROPPED — is what stops a hand-edited file putting invented rivals on a
+ * chart, and promotion did not weaken it. Promoted competitors live in their
+ * own file, where every entry carries the collected answers it was learned from
+ * (`promote-competitors.ts`), and are merged in AFTER this check. So a leader
+ * reaches a chart by exactly one route, and it is the route with evidence
+ * attached.
+ */
 export function readGeneratedBanks(dataDir: string): readonly GeneratedBankFile[] {
   const dir = banksDir(dataDir)
   if (!existsSync(dir)) return []
@@ -257,12 +490,53 @@ export function readGeneratedBanks(dataDir: string): readonly GeneratedBankFile[
       // chart, which is the one outcome this module exists to prevent.
       if (!bank || !category || !Array.isArray(bank.prompts) || bank.prompts.length === 0) continue
       if (Array.isArray(bank.leaders) && bank.leaders.length > 0) continue
-      out.push({ category, bank: { ...bank, leaders: [] } as PromptBank })
+      out.push({ category, bank: withPromoted(dataDir, { ...bank, leaders: [] } as PromptBank) })
     } catch {
       /* a malformed bank file is skipped, not fatal */
     }
   }
   return out
+}
+
+/**
+ * Attach this category's PROMOTED competitors, if any have been promoted.
+ *
+ * ⚠️ THE ONLY WAY A GENERATED BANK EVER ACQUIRES A LEADER, and the reason it is
+ * safe is that it does not read the bank file. `readPromoted` reads a separate
+ * store in which every entry carries the collected answers it was learned from,
+ * and drops any entry that does not. So the three refusals ADR-0009 built around
+ * `leaders` are all still in force over the bank file, unweakened, and the one
+ * path that adds a rival is the one that cannot be walked without evidence.
+ *
+ * THE VERSION MOVES WITH THE LEADERS. `comparisonBasisFor` stamps
+ * `slug@version` into every metric, and adding competitors changes `position`
+ * and therefore the preview score. A scan from before promotion and one from
+ * after are not measurements of the same thing; carrying the promoted version
+ * here is what makes `compare()` refuse to put them side by side instead of
+ * reporting the difference as movement.
+ */
+function withPromoted(dataDir: string, bank: PromptBank): PromptBank {
+  const promoted = readPromoted(dataDir, bank.category)
+  if (!promoted || promoted.leaders.length === 0) return bank
+  // `evidence` is stripped: a `Leader` has no such field, and the store is where
+  // the evidence lives. Carrying it into the bank would put an unversioned blob
+  // into `comparison_basis`'s neighbourhood for no reader's benefit.
+  const leaders = promoted.leaders.map(({ id, name, aliases, domains }) => ({ id, name, aliases, domains }))
+  /*
+   * ⚠️ THE BUMP IS ENFORCED HERE, NOT TRUSTED FROM THE FILE — fixed 2026-09-02.
+   *
+   * `buildPromotion` writes a raised `bankVersion`, and this used to attach the
+   * leaders at whatever the file said. A file hand-edited back to the bank's own
+   * version therefore attached competitors while claiming an UNCHANGED basis —
+   * so `compare()` would have put a number scored against six rivals beside one
+   * scored against none and called the difference movement. That is the single
+   * thing the bump exists to prevent.
+   *
+   * Every sibling invariant in this store is re-checked on read: a leader with
+   * no evidence is dropped, `domains` is forced empty. This one was the
+   * exception, and there was no reason for it to be.
+   */
+  return { ...bank, version: Math.max(promoted.bankVersion, bank.version + 1), leaders }
 }
 
 function writeGeneratedBank(dataDir: string, file: GeneratedBankFile): void {
@@ -541,9 +815,10 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   const taxonomy = allCategories(deps.dataDir)
   const bankFor = (slug: string): PromptBank | undefined => banks.find((b) => b.category === slug)
   const categoryFor = (slug: string): CategoryDef | undefined => taxonomy.find((c) => c.slug === slug)
+  const records: CategoryRecordStore = deps.records ?? { read: async (h) => readCategoryRecord(deps.dataDir, h), write: async (r) => recordCategory(deps.dataDir, r) }
 
-  const fallbackResult = (reason: 'unclassified' | 'ambiguous', detail: string, candidates: readonly string[]): ResolvedCategory => {
-    const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: detail, decidedAt, generated: false })
+  const fallbackResult = async (reason: 'unclassified' | 'ambiguous', detail: string, candidates: readonly string[]): Promise<ResolvedCategory> => {
+    const record = await records.write({ host, slug: FALLBACK_SLUG, source: 'fallback', evidence: detail, decidedAt, generated: false })
     return {
       record,
       bank: bankFor(record.slug)!,
@@ -564,14 +839,14 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
    */
   let siteBrandName: string | undefined
 
-  const settle = (slug: string, source: CategorySource, evidence: string, generated = false): ResolvedCategory | null => {
+  const settle = async (slug: string, source: CategorySource, evidence: string, generated = false): Promise<ResolvedCategory | null> => {
     const bank = bankFor(slug)
     const category = categoryFor(slug)
     // A slug with no bank is a wiring fault, not a user outcome — the same
     // refusal scan.ts makes. Falling through to the fallback here is correct and
     // is NOT recorded, so the next scan re-derives once the wiring is fixed.
     if (!bank || !category) return null
-    const record = recordCategory(deps.dataDir, { host, slug, source, evidence, decidedAt, generated, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
+    const record = await records.write({ host, slug, source, evidence, decidedAt, generated, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
     const resolvedBank = bankFor(record.slug)
     const resolvedCategory = categoryFor(record.slug)
     if (!resolvedBank || !resolvedCategory) return null
@@ -583,7 +858,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // RUNG 0. Already decided. Nothing is fetched, nothing is generated, nothing
   // moves. This is the guarantee, and it is checked before anything else can
   // cost time or money.
-  const existing = readCategoryRecord(deps.dataDir, host)
+  const existing = await records.read(host)
   if (existing) {
     const bank = bankFor(existing.slug)
     const category = categoryFor(existing.slug)
@@ -603,7 +878,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // RUNGS 1 AND 2. Free and deterministic, so always first.
   const byDomain = classifyDomain(host, banks, taxonomy)
   if (byDomain.status === 'classified') {
-    const settled = settle(byDomain.slug, byDomain.signal, byDomain.evidence)
+    const settled = await settle(byDomain.slug, byDomain.signal, byDomain.evidence)
     if (settled) {
       log(`category: ${host} -> ${byDomain.slug} (${byDomain.signal}: ${byDomain.evidence})`)
       return settled
@@ -615,7 +890,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
     // content would resolve it by picking whichever product the homepage
     // happens to feature this quarter. Recorded as ambiguous so it stays that
     // way, and carried into the result so the page can say which three.
-    const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byDomain.evidence, decidedAt, generated: false })
+    const record = await records.write({ host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byDomain.evidence, decidedAt, generated: false })
     log(`category: ${host} -> fallback (ambiguous across ${byDomain.candidates.join(', ')})`)
     return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: false, fallback: { reason: 'ambiguous', detail: byDomain.evidence, candidates: byDomain.candidates } }
   }
@@ -647,14 +922,14 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
 
   const byContent = classifyContent(text, taxonomy)
   if (byContent.status === 'classified') {
-    const settled = settle(byContent.slug, 'site-content', byContent.evidence)
+    const settled = await settle(byContent.slug, 'site-content', byContent.evidence)
     if (settled) {
       log(`category: ${host} -> ${byContent.slug} (site-content: ${byContent.evidence})`)
       return settled
     }
   }
   if (byContent.status === 'ambiguous') {
-    const record = recordCategory(deps.dataDir, { host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byContent.evidence, decidedAt, generated: false })
+    const record = await records.write({ host, slug: FALLBACK_SLUG, source: 'fallback', evidence: byContent.evidence, decidedAt, generated: false })
     log(`category: ${host} -> fallback (page content ambiguous: ${byContent.evidence})`)
     return { record, bank: bankFor(FALLBACK_SLUG)!, category: categoryFor(FALLBACK_SLUG)!, fromRecord: false, fallback: { reason: 'ambiguous', detail: byContent.evidence, candidates: byContent.candidates } }
   }
@@ -705,7 +980,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // written — the domain joins the reviewed bank rather than a duplicate of it.
   const already = taxonomy.find((c) => c.slug === slug)
   if (already) {
-    const settled = settle(slug, 'site-content', `the homepage describes ${already.displayName}`)
+    const settled = await settle(slug, 'site-content', `the homepage describes ${already.displayName}`)
     if (settled) {
       log(`category: ${host} -> ${slug} (authoring named an existing category)`)
       return settled
@@ -724,7 +999,7 @@ export async function resolveCategory(domain: string, deps: ResolveDeps): Promis
   // artefacts, and a reader looking at a surprising bank two years from now
   // should be able to see which produced it. Same discipline as R8's
   // `algo_version` travelling with a metric.
-  const record = recordCategory(deps.dataDir, { host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
+  const record = await records.write({ host, slug, source: 'generated', evidence: `authored from ${host}'s homepage by ${candidate.model}`, decidedAt, generated: true, ...(siteBrandName ? { brandName: siteBrandName } : {}) })
   log(`category: ${host} -> ${slug} (generated by ${candidate.model}: ${candidate.displayName}, ${candidate.prompts.length} prompts, no competitors)`)
   return { record, bank: written.bank, category: written.category, fromRecord: false }
 }

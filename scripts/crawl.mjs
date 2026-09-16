@@ -12,8 +12,9 @@
  * from its own seeded storage.
  *
  * ⚠️ CANNOT SPEND: every request to the provider or /api/scan is aborted at the
- * browser level. The one scan it performs is pipedrive.com, answered from the
- * committed result client-side before any fetch.
+ * browser level. The one scan it performs is pipedrive.com: its preview is
+ * answered with a canned body, and confirming it is served from the record
+ * bundled with the build, so no fetch ever leaves the machine.
  *
  * Usage: node scripts/crawl.mjs
  */
@@ -21,9 +22,8 @@
 import { chromium } from 'playwright'
 
 const PUB = 'http://localhost:3001'
-const WEB = 'http://localhost:3000'
 
-/** Every route both servers actually serve. The target set. */
+/** Every route the server actually serves. The target set. */
 const SERVED = [
   `${PUB}/`,
   `${PUB}/dashboard`,
@@ -42,7 +42,6 @@ const SERVED = [
   `${PUB}/agency/pricing`,
   `${PUB}/agency/lifecycle`,
   `${PUB}/pricing`,
-  `${WEB}/`,
 ]
 
 const PERSONAS = {
@@ -54,7 +53,7 @@ const PERSONAS = {
 const normalise = (u) => {
   try {
     const url = new URL(u)
-    if (!/localhost:300[01]/.test(url.host)) return null
+    if (url.host !== 'localhost:3001') return null
     url.hash = ''
     url.search = ''
     let p = url.pathname.replace(/\/$/, '')
@@ -88,7 +87,7 @@ const CANNED_PREVIEW = {
 }
 
 /**
- * Submit a domain on the Grader and harvest what the resulting screen offers.
+ * Submit a domain on the Grader and harvest every screen the flow reaches.
  *
  * ⚠️ THE WAIT IS ON THE CONDITION, NOT ON A SELECTOR APPEARING.
  *
@@ -100,9 +99,6 @@ const CANNED_PREVIEW = {
  * one extra second and the "Open in dashboard" button is there. A gate that
  * reports phantom failures gets its failures ignored, which is worse than not
  * having the gate.
- */
-/**
- * Submit a domain on the Grader and harvest every screen the flow reaches.
  *
  * ⚠️ THE FLOW IS TWO STEPS NOW, AND THIS GATE WENT RED WHEN IT BECAME TWO.
  *
@@ -111,10 +107,10 @@ const CANNED_PREVIEW = {
  * result; this function submitted, harvested, and found "Open in dashboard"
  * there. After it, submitting lands on the PREVIEW — which offers "Run this
  * scan", not "Open in dashboard" — so the harvest stopped one screen short and
- * /dashboard, /dashboard/prompts and /dashboard/workspace were reported
- * unreachable by every persona. Nothing was wrong with the product: the crawl
- * was one product change behind, which is the second time this gate has cried
- * wolf and the second reason to distrust a gate that reports phantom failures.
+ * the three dashboard routes were reported unreachable by every persona.
+ * Nothing was wrong with the product: the crawl was one product change behind,
+ * which is the second time this gate has cried wolf and the second reason to
+ * distrust a gate that reports phantom failures.
  *
  * So: harvest the preview, then CONFIRM, then harvest the result. Both are real
  * screens a person sees and both carry links, so both are audited rather than
@@ -176,21 +172,33 @@ async function harvestGraderState(page, domain, label, from, reached, queue, edg
   await page.click('button[type=submit]').catch(() => {})
   await settle()
 
+  // The preview is a real screen with real links; it is harvested, not skipped.
   const onPreview = await take('preview')
 
-  // STEP TWO. Only when the preview actually offered it — a domain that was
-  // refused outright never reaches this, and clicking a button that is not there
-  // would fail silently and look like the flow was followed.
+  /*
+   * THE PREVIEW IS NOT THE END OF THE FLOW. Since 2179a54 every domain, the
+   * bundled ones included, stops at a preview whose headline is `.record__domain`
+   * and whose only way forward is "Run this scan". Harvesting there alone found
+   * the preview's links and reported /dashboard unreachable by click while the
+   * button that reaches it sat unpressed on the screen (both lines of this
+   * repository fixed that independently; merged 2026-09-15). So the button is
+   * pressed, exactly as a person would, and the wait runs again for the states
+   * a scan actually ends in: a rail, a refusal, or the handoff. Only when the
+   * preview actually offered it: a domain refused outright never reaches this,
+   * and clicking a button that is not there would fail silently and look like
+   * the flow was followed. Nothing is collected by pressing it: the bundled
+   * domain is served from the build, and any other request to /api/scan is
+   * aborted by this crawl's guard.
+   */
   if (!onPreview.some((b) => /run this scan/i.test(b))) return
+  if (await page.$('section.record .rail, section.record--refused')) return
 
   await page.click('button:has-text("Run this scan")').catch(() => {})
-  // The result is `.record__domain`; a refusal is `[role=alert]`. Either ends
-  // the flow, and both are screens worth having crawled.
   await page
     .waitForFunction(
       () =>
-        document.querySelector('.record__domain') !== null ||
-        document.querySelector('[role=alert]') !== null ||
+        document.querySelector('section.record .rail') !== null ||
+        document.querySelector('section.record--refused') !== null ||
         [...document.querySelectorAll('button')].some((b) => /open in dashboard|check another/i.test(b.textContent ?? '')),
       { timeout: 20000 },
     )

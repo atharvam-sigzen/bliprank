@@ -79,6 +79,30 @@ describe('every range an internal service plausibly sits on is refused', () => {
     expect(blockedReason('::ffff:93.184.216.34')).toBeNull()
   })
 
+  it('⚠️ refuses the same places however they are spelt — expanded, hex-mapped, 6to4, NAT64', () => {
+    // Every one of these is loopback or link-local under another spelling, and
+    // every one passed a check on the literal text (2026-09-09 audit).
+    expect(blockedReason('0:0:0:0:0:0:0:1')).not.toBeNull()
+    expect(blockedReason('0000:0000:0000:0000:0000:0000:0000:0000')).not.toBeNull()
+    expect(blockedReason('::ffff:7f00:1')).not.toBeNull()
+    expect(blockedReason('0:0:0:0:0:ffff:a9fe:a9fe')).not.toBeNull()
+    expect(blockedReason('::7f00:1')).not.toBeNull()
+    expect(blockedReason('2002:7f00:1::')).not.toBeNull()
+    expect(blockedReason('2002:a9fe:a9fe::1')).not.toBeNull()
+    expect(blockedReason('64:ff9b::7f00:1')).not.toBeNull()
+    expect(blockedReason('64:ff9b::0a00:0001')).not.toBeNull()
+    expect(blockedReason('FE80:0:0:0:0:0:0:1')).not.toBeNull()
+    // And the same forms pointing somewhere public are still fine.
+    expect(blockedReason('::ffff:5db8:d822')).toBeNull() // 93.184.216.34
+    expect(blockedReason('2002:5db8:d822::')).toBeNull()
+    expect(blockedReason('64:ff9b::5db8:d822')).toBeNull()
+    expect(blockedReason('2606:2800:0220:0001:0248:1893:25c8:1946')).toBeNull()
+    // Malformed is refused, not guessed at.
+    expect(blockedReason('1::2::3')).not.toBeNull()
+    expect(blockedReason('1:2:3:4:5:6:7:8:9')).not.toBeNull()
+    expect(blockedReason('::12345')).not.toBeNull()
+  })
+
   it('strips a zone index before deciding', () => {
     expect(blockedReason('fe80::1%eth0')).not.toBeNull()
   })
@@ -176,6 +200,25 @@ describe('fetchSiteHtml, end to end', () => {
     expect(r.reason).toBe('blocked')
     // The first hop was made; the second never was.
     expect(seen).toHaveLength(1)
+  })
+
+  it('closes each hop’s pinned agent before the next is built, and the last on return', async () => {
+    // One socket pool per hop, with only the last ever closed, was a leak per
+    // redirect on the public preview path (2026-09-09 audit).
+    const events: string[] = []
+    let n = 0
+    const r = await fetchSiteHtml('example.com', {
+      resolve: publicDns,
+      pinFactory: () => {
+        const id = (n += 1)
+        events.push(`open:${id}`)
+        return { close: async () => void events.push(`close:${id}`) }
+      },
+      fetchImpl: async (url) =>
+        String(url).endsWith('/two') ? html('<title>Two</title>') : new Response(null, { status: 302, headers: { location: 'https://example.com/two' } }),
+    })
+    expect(r.ok).toBe(true)
+    expect(events).toEqual(['open:1', 'close:1', 'open:2', 'close:2'])
   })
 
   it('refuses a redirect to a non-http scheme', async () => {

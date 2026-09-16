@@ -239,6 +239,61 @@ describe('QStashClient — publishing a cycle', () => {
     await expect(c.publish(jobFor())).rejects.toThrow(QStashError)
   })
 
+  it('publishJson carries the deduplication id, the delay and the destination timeout it was given, and reports a deduplicated answer (ADR-0018 D3)', async () => {
+    const seen: { url: string; headers: Record<string, string>; body: string }[] = []
+    const f: typeof fetch = async (input, init) => {
+      seen.push({ url: String(input), headers: (init?.headers ?? {}) as Record<string, string>, body: String(init?.body ?? '') })
+      return new Response(JSON.stringify({ messageId: 'msg_dup', deduplicated: seen.length > 1 }), { status: seen.length > 1 ? 202 : 200 })
+    }
+    const c = new QStashClient({ token: 'tok', destination: URL_, fetch: f })
+    const job = { v: 1, kind: 'domain', day: '2026-09-16', workspaceId: 'local', host: 'acme.example' }
+    const first = await c.publishJson(job, { deduplicationId: 'tick:2026-09-16:local:acme.example', timeoutSec: 300 })
+    expect(first).toEqual({ messageId: 'msg_dup', deduplicated: false })
+    expect(seen[0]?.url).toBe(`https://qstash.upstash.io/v2/publish/${encodeURIComponent(URL_)}`)
+    expect(seen[0]?.headers['upstash-deduplication-id']).toBe('tick:2026-09-16:local:acme.example')
+    expect(seen[0]?.headers['upstash-timeout']).toBe('300s')
+    expect(seen[0]?.headers['upstash-delay']).toBeUndefined()
+    expect(JSON.parse(seen[0]!.body)).toEqual(job)
+    // QStash answers a duplicate 202 with the existing id; the caller learns it was collapsed.
+    const again = await c.publishJson(job, { deduplicationId: 'tick:2026-09-16:local:acme.example' })
+    expect(again.deduplicated).toBe(true)
+  })
+
+  it('a caller-chosen schedule id, retries and timeout ride on the schedule request, so a second registration updates the one schedule (ADR-0018 D8)', async () => {
+    const { f, seen } = fakeQStash()
+    const c = new QStashClient({ token: 'tok', destination: URL_, fetch: f })
+    await c.schedule('15 6 * * *', { v: 1, kind: 'fan-out' }, { scheduleId: 'bliprank-daily-tick', retries: 2, timeoutSec: 300 })
+    expect(seen[0]?.url).toBe(`https://qstash.upstash.io/v2/schedules/${encodeURIComponent(URL_)}`)
+    expect(seen[0]?.headers['upstash-cron']).toBe('15 6 * * *')
+    expect(seen[0]?.headers['upstash-schedule-id']).toBe('bliprank-daily-tick')
+    expect(seen[0]?.headers['upstash-retries']).toBe('2')
+    expect(seen[0]?.headers['upstash-timeout']).toBe('300s')
+    expect(JSON.parse(seen[0]!.body)).toEqual({ v: 1, kind: 'fan-out' })
+  })
+
+  it('lists, pauses, resumes and deletes schedules against the documented paths, and surfaces a rejection', async () => {
+    const seen: { url: string; method: string }[] = []
+    const f: typeof fetch = async (input, init) => {
+      seen.push({ url: String(input), method: String(init?.method) })
+      if (String(input).endsWith('/v2/schedules')) return new Response(JSON.stringify([{ scheduleId: 'bliprank-daily-tick', cron: '15 6 * * *', destination: URL_, isPaused: false }]), { status: 200 })
+      return new Response('', { status: 200 })
+    }
+    const c = new QStashClient({ token: 'tok', destination: URL_, fetch: f })
+    expect(await c.listSchedules()).toEqual([{ scheduleId: 'bliprank-daily-tick', cron: '15 6 * * *', destination: URL_, isPaused: false }])
+    await c.pauseSchedule('bliprank-daily-tick')
+    await c.resumeSchedule('bliprank-daily-tick')
+    await c.deleteSchedule('bliprank-daily-tick')
+    expect(seen.map((x) => [x.method, x.url.replace('https://qstash.upstash.io', '')])).toEqual([
+      ['GET', '/v2/schedules'],
+      ['POST', '/v2/schedules/bliprank-daily-tick/pause'],
+      ['POST', '/v2/schedules/bliprank-daily-tick/resume'],
+      ['DELETE', '/v2/schedules/bliprank-daily-tick'],
+    ])
+    const bad = new QStashClient({ token: 'tok', destination: URL_, fetch: async () => new Response('nope', { status: 401 }) })
+    await expect(bad.listSchedules()).rejects.toThrow(QStashError)
+    await expect(bad.pauseSchedule('x')).rejects.toThrow(QStashError)
+  })
+
   it('registers the recurring cycle as a cron schedule', async () => {
     const { f, seen } = fakeQStash()
     const c = new QStashClient({ token: 'tok', destination: URL_, fetch: f })
@@ -301,5 +356,34 @@ describe('the handler feeds the collection heartbeat', () => {
     const res = await handleCollectJob({ body, signature: signed(body) }, { ...deps, heartbeat: broken })
     expect(res.status).toBe(200)
     expect(res.body.outcome).toBe('collected')
+  })
+})
+
+describe('handleCollectJob — an allowance stop is a shortfall of its own name', () => {
+  it('returns 200 (no retry), ok:false, the outcome verbatim, and one dead-letter entry that names it', async () => {
+    const { deps, deadLetter } = handlerDeps()
+    const ledger = join(mkdtempSync(join(tmpdir(), 'qstash-')), 'ledger.json')
+    const budget = new Budget(ledger, 100, () => 0.002, () => NOW, 1) // this run may make ONE attempt
+    const bounded = new CollectionOrchestrator({
+      index: new AnswerIndex(new MemoryKV(), 100 * 86_400, () => NOW),
+      blob: new MemoryBlobStore(),
+      rateBudget: LocalRateBudget.forSingleProcess({ chatgpt: { rps: 1000, burst: 1000 } }, { iUnderstandThisBudgetIsPerProcess: true, reason: 'unit test: one process, no fleet', env: { COLLECTOR_TOPOLOGY: 'single-process' } }),
+      budget: localLedger(budget),
+      deadLetter,
+      owner: 'w',
+      now: () => NOW,
+      collectionEnabled: () => true,
+    })
+    const body = JSON.stringify(jobFor('best crm', 3))
+    const res = await handleCollectJob({ body, signature: signed(body) }, { ...deps, orchestrator: bounded })
+    expect(res.status).toBe(200)
+    expect(res.body.ok).toBe(false)
+    expect(res.body.outcome).toBe('allowance-exhausted')
+    expect(res.body.providerCalls).toBe(1)
+    expect(budget.state.exhaustedAt).toBeUndefined() // the ledger is clean: it was the run's bound, not the cap
+    const entries = deadLetter.list()
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ kind: 'rate-limited', run: 1, attempts: 1 })
+    expect(entries[0]!.message).toContain('1 of 3 runs (allowance-exhausted)')
   })
 })
