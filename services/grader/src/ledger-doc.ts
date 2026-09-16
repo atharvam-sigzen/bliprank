@@ -19,6 +19,17 @@ import { RunAllowanceExceeded, type KV, type SpendLedger } from '@bliprank/colle
  * released with `delIfEquals`; two instances recording the same scan
  * therefore serialise instead of one overwriting the other's count.
  *
+ * ⚠️ THE WRITE IS FENCED TO THE LEASE (MVP_PLAN C2r item 1, the oversight cost
+ * review of C2). The lease is a TTL, and a round trip stalled past it is not a
+ * failure the holder can see: its `set` used to land whole on top of whatever
+ * a later holder had written under a fresh lease, erasing a `running`
+ * reservation, and a transport's retry in that window was admitted again and
+ * collected a second time. Now the document write and the lock-ownership
+ * check are ONE atomic step on the store (`setIfHeld`, the same script
+ * mechanism `delIfEquals` uses): a holder whose token is no longer on the
+ * lock writes nothing, and the refusal surfaces as a thrown error, never a
+ * silent success, so the caller does not proceed on a count it could not book.
+ *
  * ⚠️ HUMAN-OWNED area (CLAUDE.md §4: rate-limit and spend-control logic). The
  * dollar caps do not go through this: they are `SpendLedger`s with atomic
  * increments (the collector's `KvSpendLedger`), and a count here only ever
@@ -138,7 +149,11 @@ export function kvLedgerDoc(kv: KV, key: string, sleep: (ms: number) => Promise<
       if (!held) throw new Error(`ledger ${key}: could not take its lock in ${(LOCK_ATTEMPTS * LOCK_WAIT_MS) / 1000}s; another writer holds it or the store is unreachable`)
       try {
         const next = fn(await readOrCorrupt(read))
-        await kv.set(key, JSON.stringify(next))
+        // Fenced: the value lands only while this holder's token is still on
+        // the lock, in one server-side step. A stale holder is refused here.
+        if (!(await kv.setIfHeld(key, JSON.stringify(next), lockKey, token))) {
+          throw new Error(`ledger ${key}: its lock lapsed before the write (held longer than the ${LOCK_TTL_SEC}s lease); nothing was written, and what a later holder booked stands`)
+        }
         return next
       } finally {
         await kv.delIfEquals(lockKey, token)

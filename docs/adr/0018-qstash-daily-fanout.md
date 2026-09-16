@@ -170,7 +170,8 @@ not a transport's retry.
 
 Then, exactly as the loop: the burst-cap-and-quota gate (a refusal gives the
 reservation back), the per-run allowance (the smaller of the cycle's cells
-with headroom and what the cap has left at the mean price), `runGrader` in
+with headroom and what the cap has left at the dearest engine price, so the
+day's ceiling is hard; C2r item 2), `runGrader` in
 live mode with the workspace's store and the deployment's ledgers, the cycle
 filed through `ws_put_cycle`, `recordScan`, and the reservation settled to
 the realised figure. The answer is `200` with the outcome
@@ -390,6 +391,63 @@ with the day; the named test gaps are closed).
   let a second writer's whole-document write land last. The store's
   `cycle-today` guard covers a run that filed; a run that spent and did not
   file could be re-collected by the retry. A compare-and-set write closes it.
+  **Closed by C2r item 1 (below).**
+
+### C2r — the oversight cost review's items (2026-09-16)
+
+The independent cost review of C2 (docs/MVP_REVIEWS.md) held the build NOT
+SAFE TO ARM until four items landed. They have:
+
+1. **The ledger write is fenced to the lease.** `kvLedgerDoc.update` wrote the
+   document with an unconditional `set` after a `setnx` lease; a holder
+   stalled past the ten-second TTL overwrote a later holder's write, which
+   erased a `running` reservation, and a QStash retry in that window was
+   admitted again by `reserveJob` and collected a second time. The write and
+   the lock-ownership check are now ONE atomic step on the store
+   (`KV.setIfHeld`, the same script mechanism `delIfEquals` uses, on the
+   in-memory double, the file KV and Upstash), a stale holder's write is
+   refused and thrown, never a silent success, and a test with a deliberately
+   stalled holder proves the refusal and the surviving reservation on the
+   double, with the real EVAL command shape pinned.
+2. **The per-domain allowance is priced at the dearest engine.** At the mean
+   price the day could exceed `COLLECTION_BUDGET_USD_DAILY` by up to $0.02 per
+   domain run. Decided: the dearest price, so the ceiling is hard; the last
+   domain of a day may get less retry headroom, and the log line says so when
+   it happens.
+3. **A publish QStash refused is surfaced.** It was booked as `failed` on the
+   day's mark and read by nothing: the tick CLI's dry listing now prints
+   today's and yesterday's failed count when non-zero, and the fan-out's own
+   log line names the count.
+4. **The two small tenancy items** (an entry whose `by` is not an account id
+   is refused before minting; the result file follows the store's shape) had
+   landed in C2's own follow-up and are verified, not rebuilt.
+
+**Decided and recorded, not built here.** Loop jobs bypass the new-domain
+burst cap (`GRADER_MAX_NEW_SCANS_PER_DAY`): their bound is the daily cap, the
+per-run allowance and, from D2, the tracked-host entitlement; hand-started
+scans keep the burst cap. The fairness of one deployment-wide cap is rotation
+now (built in C2) and a per-workspace share under D2. Building the bypass is
+a spend-control change with its own review; it is listed against arming.
+Until it is built the shared cap can only under-collect a tracked set wider
+than it, never overspend.
+
+**The cost review of this build (2026-09-16)** found no blocker and one
+MAJOR, closed in the same commit: a settle the ledger refused AFTER the
+collect threw out of the per-domain path, and the route answered `503`
+"nothing was collected", untrue at that point. The settle is now tried again
+under a fresh lease and, refused twice, the run is answered as `ran` with the
+cause named (`unsettled`), the reservation standing at the expected cost with
+headroom. A retry then collects nothing for two independent reasons, the
+store's `cycle-today` guard and the standing ledger line, and
+`daily-loop.test.ts` proves each alone. Recorded, not changed: under
+CONCURRENT domain jobs a later reservation subtracts an earlier job's
+reservation, not its worst-case allowance, so several jobs in flight at once
+near an exhausted cap can together exceed it by a small per-domain slack (the
+same order as the old mean-price figure, now tighter); the sequential tick
+has no such slack. The CLI's tick now refuses in one line on a ledger error,
+and the dry listing names a reservation left running past a quarter of an
+hour. Verdict: safe to arm once the owner registers the schedule and arms the
+deployment, with the burst-cap decision applied at arming.
 
 ## Consequences
 

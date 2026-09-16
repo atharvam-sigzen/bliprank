@@ -624,6 +624,21 @@ tracked set or deciding loop jobs bypass it. ⚠️ HUMAN REVIEW REQUIRED: spend
 `runAdmitted`; `.claude/hooks/pre-spend.sh`; `schedule.ts`) and tenancy
 (`lib/tick.ts` `jobStoreFor`). **C2 is not complete until reviewed.** The
 next session takes the review findings, then C3.
+**C2r (2026-09-16, the cost review's four items, built):** the KV ledger
+write is fenced to its lease (`KV.setIfHeld`, one server-side step on the
+double, the file KV and Upstash; a stalled holder's write is refused and
+thrown, proven with a deliberately stalled holder and the EVAL shape pinned);
+the per-domain allowance is priced at the dearest engine so the daily ceiling
+is hard, and the log line names a truncation; a publish QStash refused is
+surfaced in the fan-out's log line and the tick CLI's dry listing (today and
+yesterday); a settle the ledger refuses after a collect no longer throws (the
+run is answered `ran` with `unsettled`, the reservation stands, and a retry
+collects nothing for two independently proven reasons). Decided and recorded
+in ADR-0018, not built: loop jobs bypass the new-domain burst cap at arming.
+The independent cost review moved C2's verdict to **safe to arm once the owner
+registers and arms**; still nothing registered, armed or spent. ⚠️ HUMAN
+REVIEW REQUIRED: spend control (`ledger-doc.ts`, `cache-index.ts`
+`setIfHeld`, `daily-loop.ts` `runAdmitted`/`runFanOut`, `tick.ts`).
 
 **⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
 allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS

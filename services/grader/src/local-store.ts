@@ -131,4 +131,11 @@ export class FileKV implements KV {
     this.flush()
     return true
   }
+
+  async setIfHeld(key: string, value: string, lockKey: string, token: string): Promise<boolean> {
+    if (this.live(lockKey) !== token) return false
+    this.m.set(key, { v: value, expiresAt: null })
+    this.flush()
+    return true
+  }
 }

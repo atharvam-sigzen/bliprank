@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryKV } from '@bliprank/collector'
+import { MemoryKV, type KV } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { applyCustomPrompts } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
@@ -152,31 +152,44 @@ describe('the loop, with a fake collector', () => {
 })
 
 describe('the loop’s allowance, live', () => {
-  it('is the cycle’s cells with headroom whenever the cap gate lets a domain start; at the dearest price it would have been truncated; a domain the cap cannot pay for is refused before any allowance', async () => {
+  it('is the cycle’s cells with headroom, or what is left of the day’s cap at the DEAREST engine price when that is fewer, and the log line says so; a domain the cap cannot pay for is refused before any allowance (C2r item 2)', async () => {
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
     const armed = { ...ONE, GRADER_DAILY_LOOP: 'armed', COLLECTION_ENABLED: 'true', GRADER_LIVE_SCAN: 'true', OPENWEBNINJA_API_KEY: 'k', OPENWEBNINJA_PLAN: 'payg', COLLECTION_BUDGET_USD_DAILY: '100' }
     const run = async (firstFactor: number) => {
       const allowances: number[] = []
+      const lines: string[] = []
       const outcome = await runTick(
         { dataDir: dir, env: armed, day: '2026-09-07', apply: true, mode: 'live', root: dir },
         {
           gate: async () => ({ ok: true, used: [], limit: 12, remaining: 12 }) as never,
           collect: async (d, o) => (allowances.push(o.allowanceCalls), scanned(d.host, o.day, d.host === 'acme.test' ? 17 * PER_PROMPT * firstFactor : 17 * PER_PROMPT, 85)),
           now: () => new Date('2026-09-07T06:00:00.000Z'),
+          log: (s) => lines.push(s),
         },
       )
       if ('refuse' in outcome) throw new Error(outcome.refuse)
-      return { allowances, outcome }
+      return { allowances, outcome, lines }
     }
-    // The first run realises 1.15× its expected cost. What is left, at the mean price per attempt, still pays for the second's full headroom.
+    // The first run realises 1.15× its expected cost. What is left, at the
+    // DEAREST engine price per attempt ($0.008 at pay-as-you-go), pays for 90
+    // attempts, not the second run's full 102: it is truncated, the ceiling
+    // holds, and the log line says both.
     const a = await run(1.15)
-    expect(a.allowances).toEqual([102, 102])
+    expect(a.allowances).toEqual([102, 90])
     const remaining = a.outcome.capUsd - 17 * PER_PROMPT * 1.15
+    expect(Math.floor(remaining / 0.008)).toBe(90)
+    expect(a.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^ {2}beta\.test: collecting 85 cells, expected \$0\.578, \$0\.72\d of the day's cap left, at most 90 attempts \(truncated from 102: what is left of the day's cap pays for 90 at the dearest engine price \$0\.008, so the ceiling holds and this run has less retry headroom\)$/),
+      ]),
+    )
+    expect(a.lines.filter((l) => l.includes('acme.test: collecting'))).toEqual([expect.stringMatching(/at most 102 attempts$/)])
+    // At the MEAN price the same remainder would have bought 106 attempts and
+    // every attempt beyond 90 could have landed on the dearest engine, past
+    // the hard ceiling by up to $0.02; that is why the dearest is used.
     expect(Math.floor(remaining / (PER_PROMPT / 5))).toBeGreaterThanOrEqual(102)
-    // At the dearest engine's price the same remainder would have bought 90 attempts and truncated the second run on its first retries; that is why the mean is used.
-    expect(Math.floor(remaining / 0.008)).toBeLessThan(102)
-    // The cap gate sits at expected × headroom, so whenever a domain starts, what is left pays for its full allowance at the mean price; a domain the cap cannot pay for never starts.
+    // The cap gate sits at expected × headroom, so a domain the cap cannot pay for never starts.
     rmSync(join(dir, 'daily-spend.json'), { force: true })
     rmSync(join(dir, 'results'), { recursive: true, force: true })
     const b = await run(1.35)
@@ -553,12 +566,15 @@ describe('the loop as two signed jobs (ADR-0018 D3, D4): the fan-out decides the
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
     const ledgers = kvLedgerStores(new MemoryKV())
     await trackedInto(ledgers)
+    const lines: string[] = []
     const out = await runFanOut(
       { dataDir: dir, env: ONE, ledgers, mode: 'fixture', day: '2026-09-07', storeFor: async () => fileWorkspaceStore(dir), publish: async (job) => { if (job.host === 'beta.test') throw new Error('QStash rejected the request: HTTP 429 daily message limit') } },
-      { now: () => T },
+      { now: () => T, log: (s) => lines.push(s) },
     )
     expect(out).toMatchObject({ outcome: 'fanned-out', published: 1, failed: 1 })
     expect((await readDailyLedger(dir, ledgers))['2026-09-07']!.fanOut).toMatchObject({ published: 1, failed: 1 })
+    // And the fan-out's own log line names the count, so an operator reading the log sees the under-published day without opening the ledger (C2r item 3).
+    expect(lines).toEqual(expect.arrayContaining([expect.stringMatching(/^fan-out 2026-09-07: 1 domain job\(s\) published, 1 not taken by QStash; those hosts will not run today, and the day's mark in .* records it$/)]))
   })
 
   it('a fan-out that died between opening the day and closing it is re-run by the next (the open mark is not a closed one), and its republished jobs are safe because a job refuses a host already booked', async () => {
@@ -606,5 +622,67 @@ describe('the loop as two signed jobs (ADR-0018 D3, D4): the fan-out decides the
     await other.doc('tick-lock.json').update(() => ({ holder: 'someone-else', pid: 1, at: T.toISOString() }))
     expect(await fanOut(other, published)).toMatchObject({ outcome: 'lease-held' })
     expect(await readDailyLedger(dir, other)).toEqual({})
+  })
+})
+
+describe("a settle the ledger refuses AFTER the collect (C2r, the cost review's finding 2): the spend is booked, nothing throws, and a retry collects nothing", () => {
+  const T = new Date('2026-09-07T06:00:00.000Z')
+  /** The KV double with the daily ledger's fenced write refused for the two writes after `allowed` (the settle and its one retry), as if those leases had lapsed mid-round-trip; every later write lands. */
+  const fencedAfter = (kv: MemoryKV, allowed: number): KV => {
+    let writes = 0
+    return {
+      get: (k) => kv.get(k),
+      mget: (k) => kv.mget(k),
+      set: (k, v, o) => kv.set(k, v, o),
+      setnx: (k, v, o) => kv.setnx(k, v, o),
+      incrByFloat: (k, d, o) => kv.incrByFloat(k, d, o),
+      incrManyByFloat: (ops, o) => kv.incrManyByFloat(ops, o),
+      delIfEquals: (k, e) => kv.delIfEquals(k, e),
+      setIfHeld: (k, v, l, t) => (k === 'ledger:daily-spend' && ++writes > allowed && writes <= allowed + 2 ? Promise.resolve(false) : kv.setIfHeld(k, v, l, t)),
+    }
+  }
+  const acme: DomainJob = { v: 1, kind: 'domain', day: '2026-09-07', workspaceId: 'local', host: 'acme.test' }
+
+  it('a collect that filed its cycle: answered ran with the cause, the reservation standing at the expected cost; the retry is not due, so the filed cycle alone refuses it', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    const kv = new MemoryKV()
+    // The fan-out opens and closes the day (two writes) and the job reserves (a third); the settle's writes are refused.
+    const ledgers = kvLedgerStores(fencedAfter(kv, 3))
+    await ledgers.doc('tracked.json').update(() => readTracked(dir))
+    const store = fileWorkspaceStore(dir)
+    const collected: string[] = []
+    const lines: string[] = []
+    const run = () => runDomainJob({ dataDir: dir, env: ONE, ledgers, store, job: acme, mode: 'fixture' }, { collect: async (d, o) => (collected.push(d.host), scanned(d.host, o.day, 0.41, 85)), now: () => T, log: (s) => lines.push(s) })
+    await runFanOut({ dataDir: dir, env: ONE, ledgers, mode: 'fixture', day: '2026-09-07', root: dir, storeFor: async () => store, publish: async () => {} }, { now: () => T })
+    const ran = await run()
+    expect(ran).toMatchObject({ outcome: 'ran', run: { host: 'acme.test', status: 'scanned', spentUsd: 0.41, calls: 85, unsettled: expect.stringMatching(/lock lapsed before the write/) } })
+    expect(collected).toEqual(['acme.test'])
+    expect(lines).toEqual(expect.arrayContaining([expect.stringContaining("acme.test: the day's ledger did not take the realised figure ($0.4100, 85 calls)")]))
+    // The cycle IS filed; the reservation stands, running, at the expected cost with headroom: the over-booking direction.
+    expect(listCycles(dir, 'acme.test').map((c) => c.day)).toEqual(['2026-09-07'])
+    const day = (await readDailyLedger(dir, kvLedgerStores(kv)))['2026-09-07']!
+    expect(day.domains['acme.test']).toMatchObject({ status: 'running', spentUsd: 17 * PER_PROMPT * RETRY_HEADROOM })
+    expect(day.spentUsd).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 9)
+    // The retry: the store holds today's cycle, so the host is not due; nothing collected.
+    expect(await run()).toMatchObject({ outcome: 'not-due', refuse: expect.stringContaining('cycle-today') })
+    expect(collected).toEqual(['acme.test'])
+  })
+
+  it('a collect that threw, so no cycle was filed: the standing line alone refuses the retry as already-booked', async () => {
+    setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
+    const kv = new MemoryKV()
+    const ledgers = kvLedgerStores(fencedAfter(kv, 3))
+    await ledgers.doc('tracked.json').update(() => readTracked(dir))
+    const store = fileWorkspaceStore(dir)
+    let attempts = 0
+    const run = () => runDomainJob({ dataDir: dir, env: ONE, ledgers, store, job: acme, mode: 'fixture' }, { collect: async () => (attempts++, Promise.reject(new Error('socket hung up'))), now: () => T })
+    await runFanOut({ dataDir: dir, env: ONE, ledgers, mode: 'fixture', day: '2026-09-07', root: dir, storeFor: async () => store, publish: async () => {} }, { now: () => T })
+    const ran = await run()
+    expect(ran).toMatchObject({ outcome: 'ran', run: { host: 'acme.test', status: 'failed: socket hung up', unsettled: expect.stringMatching(/lock lapsed/) } })
+    expect(attempts).toBe(1)
+    expect(listCycles(dir, 'acme.test')).toEqual([])
+    // Nothing filed, so the host is still due; the line the reservation left is what refuses the second job.
+    expect(await run()).toMatchObject({ outcome: 'already-booked', refuse: expect.stringContaining('running') })
+    expect(attempts).toBe(1)
   })
 })

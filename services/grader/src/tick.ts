@@ -22,8 +22,8 @@
 
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ARMED, dailyCapUsd, formulaCapUsd, hardCeilingUsd, runTick } from './daily-loop.js'
-import { declaredSingleProcess } from './ledger-stores.js'
+import { ARMED, dailyCapUsd, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
+import { declaredSingleProcess, ledgerStores } from './ledger-stores.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, monthlyEstimate, readTracked, setTracked } from './due.js'
 
@@ -82,21 +82,47 @@ export function parseTrackArgs(argv: readonly string[], env: NodeJS.ProcessEnv =
 
 const line = (s: string) => process.stdout.write(`${s}\n`)
 
-export function printDue(dataDir: string, env: NodeJS.ProcessEnv, day?: string): void {
+/** A reservation older than this and still `running` is named by the dry listing: no run lasts this long (the route's ceiling is 300 s). */
+const STUCK_RESERVATION_MS = 15 * 60 * 1000
+
+/** The UTC day before `day`, for the dry listing's look at yesterday's mark. */
+const dayBefore = (day: string): string => new Date(Date.parse(`${day}T00:00:00.000Z`) - 86_400_000).toISOString().slice(0, 10)
+
+/** Print the dry listing through `out` (stdout by default; a test passes an array). Collects nothing; reads the tracked list, the records and the day's ledger. */
+export async function printDue(dataDir: string, env: NodeJS.ProcessEnv, day?: string, out: (s: string) => void = line): Promise<void> {
   const list = dueToday(dataDir, env, day)
   const tracked = readTracked(dataDir)
-  line(`tick · ${list.day} · ${tracked.length} tracked domain(s) · ${list.due.length} due · ${list.cells} cells · about $${list.usd.toFixed(3)} at ${list.plan} before retries`)
+  out(`tick · ${list.day} · ${tracked.length} tracked domain(s) · ${list.due.length} due · ${list.cells} cells · about $${list.usd.toFixed(3)} at ${list.plan} before retries`)
   const hard = hardCeilingUsd(env)
-  line(`  the day's cap: $${dailyCapUsd(list, env).toFixed(3)} = min(formula $${formulaCapUsd(list).toFixed(3)} = every tracked domain's expected cycle ($${list.tracked.reduce((n, t) => n + t.usd, 0).toFixed(3)}) × ${RETRY_HEADROOM} retry headroom, hard ceiling COLLECTION_BUDGET_USD_DAILY ${hard === null ? 'UNSET (a live tick refuses)' : `$${hard.toFixed(3)}`})`)
-  line(`  armed: ${env['GRADER_DAILY_LOOP'] === ARMED ? 'YES (GRADER_DAILY_LOOP=armed)' : 'no'} · live collection flags: ${env['COLLECTION_ENABLED'] === 'true' && env['GRADER_LIVE_SCAN'] === 'true' ? 'on' : 'off'}`)
-  line('  This listing collects nothing and touches no ledger. Not checked here, and the loop meets them at --apply: the burst cap and the provider quota.')
-  if (list.config) line(`  refusing to size any cycle: ${list.config}`)
+  out(`  the day's cap: $${dailyCapUsd(list, env).toFixed(3)} = min(formula $${formulaCapUsd(list).toFixed(3)} = every tracked domain's expected cycle ($${list.tracked.reduce((n, t) => n + t.usd, 0).toFixed(3)}) × ${RETRY_HEADROOM} retry headroom, hard ceiling COLLECTION_BUDGET_USD_DAILY ${hard === null ? 'UNSET (a live tick refuses)' : `$${hard.toFixed(3)}`})`)
+  out(`  armed: ${env['GRADER_DAILY_LOOP'] === ARMED ? 'YES (GRADER_DAILY_LOOP=armed)' : 'no'} · live collection flags: ${env['COLLECTION_ENABLED'] === 'true' && env['GRADER_LIVE_SCAN'] === 'true' ? 'on' : 'off'}`)
+  out('  This listing collects nothing and touches no ledger. Not checked here, and the loop meets them at --apply: the burst cap and the provider quota.')
+  if (list.config) out(`  refusing to size any cycle: ${list.config}`)
   for (const d of list.due) {
-    line(`  due      ${d.host.padEnd(24)} ${d.category.padEnd(26)} ${d.curatedPrompts} curated${d.customPrompts ? ` + ${d.customPrompts} own` : ''} × ${d.cells / (d.curatedPrompts + d.customPrompts)} engines = ${d.cells} cells · $${d.usd.toFixed(3)} · at most ${runAllowanceFor(d.cells)} attempts`)
+    out(`  due      ${d.host.padEnd(24)} ${d.category.padEnd(26)} ${d.curatedPrompts} curated${d.customPrompts ? ` + ${d.customPrompts} own` : ''} × ${d.cells / (d.curatedPrompts + d.customPrompts)} engines = ${d.cells} cells · $${d.usd.toFixed(3)} · at most ${runAllowanceFor(d.cells)} attempts`)
   }
-  for (const n of list.notDue) line(`  not due  ${n.host.padEnd(24)} ${n.reason.padEnd(12)} ${n.detail}`)
+  for (const n of list.notDue) out(`  not due  ${n.host.padEnd(24)} ${n.reason.padEnd(12)} ${n.detail}`)
   const m = monthlyEstimate(list)
-  if (list.due.length) line(`  at one cycle a day this set costs about $${m.usdPerDay.toFixed(2)}/day, $${m.usdPerMonth.toFixed(2)}/month at ${list.plan}. The manual per-domain ceiling does not apply to the loop (ADR-0017).`)
+  if (list.due.length) out(`  at one cycle a day this set costs about $${m.usdPerDay.toFixed(2)}/day, $${m.usdPerMonth.toFixed(2)}/month at ${list.plan}. The manual per-domain ceiling does not apply to the loop (ADR-0017).`)
+  // A publish QStash refused past its plan is booked on the day's mark and was
+  // read by nothing an operator looks at (C2r item 3): today's and yesterday's
+  // counts, when non-zero. A read, not a write; the CLI declares itself one
+  // process for the file ledger as it does for the run (B3c item 4).
+  try {
+    const ledger = await readDailyLedger(dataDir, ledgerStores(dataDir, declaredSingleProcess(env)))
+    for (const d of [list.day, dayBefore(list.day)]) {
+      const mark = ledger[d]?.fanOut
+      if (mark && mark.failed > 0) out(`  fan-out ${d}: ${mark.failed} domain job(s) QStash did not take (${mark.published} published); those hosts did not run that day. The day's mark in daily-spend.json records it.`)
+    }
+    // A reservation left `running` well past any run's length is a run that died, or a settle the ledger refused after the collect (C2r): the line stands at the expected cost with headroom for a person to repair, and this is where a person sees it.
+    for (const [key, entry] of Object.entries(ledger[list.day]?.domains ?? {})) {
+      if (entry.status === 'running' && Date.now() - Date.parse(entry.at) > STUCK_RESERVATION_MS) {
+        out(`  in flight ${key}: reserved $${entry.spentUsd.toFixed(3)} since ${entry.at} and never settled; if that run died, repair daily-spend.json. The line stands at the expected cost with headroom, and a retry collects nothing.`)
+      }
+    }
+  } catch (e) {
+    out(`  daily ledger: ${(e as Error).message}`)
+  }
 }
 
 async function main(): Promise<void> {
@@ -122,12 +148,19 @@ async function main(): Promise<void> {
     process.stderr.write(`refusing: ${parsed.refuse}\n`)
     process.exit(2)
   }
-  printDue(parsed.dataDir, process.env, parsed.day)
+  await printDue(parsed.dataDir, process.env, parsed.day)
   if (!parsed.apply) return
   line('')
   line(parsed.fixture ? 'applying OFFLINE (fixture adapter): cycles are filed, nothing is spent' : 'applying LIVE: every gate below must pass, and this spends')
   // One command a person runs over a data directory: the CLI declares single-process for its ledgers when nothing is declared (B3c item 4).
-  const outcome = await runTick({ dataDir: parsed.dataDir, env: declaredSingleProcess(process.env), ...(parsed.day ? { day: parsed.day } : {}), apply: true, mode: parsed.fixture ? 'fixture' : 'live', root: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..') }, { log: line })
+  let outcome: Awaited<ReturnType<typeof runTick>>
+  try {
+    outcome = await runTick({ dataDir: parsed.dataDir, env: declaredSingleProcess(process.env), ...(parsed.day ? { day: parsed.day } : {}), apply: true, mode: parsed.fixture ? 'fixture' : 'live', root: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..') }, { log: line })
+  } catch (e) {
+    // A ledger that could not be read, locked or written before a domain ran: the loop fails closed and says so in one line, as every other refusal does (C2r cost review, MINOR 10).
+    process.stderr.write(`refusing: ${(e as Error).message}\n`)
+    process.exit(2)
+  }
   if ('refuse' in outcome) {
     process.stderr.write(`refusing: ${outcome.refuse}\n`)
     process.exit(2)

@@ -168,3 +168,39 @@ describe('UpstashKV.delIfEquals', () => {
     expect(calls[0]).toEqual([['EVAL', expect.stringMatching(/GET.*ARGV\[1\].*DEL/s), 1, 'claim:k', 'v']])
   })
 })
+
+describe('KV.setIfHeld — the lock-fenced write (MVP_PLAN C2r item 1)', () => {
+  it('on MemoryKV: writes only while the lock still holds the token; a lapsed or re-won lease writes nothing', async () => {
+    let t = 1_000
+    const kv = new MemoryKV(() => t)
+    expect(await kv.setnx('doc:lock', 'A', { ttlSec: 10 })).toBe(true)
+    expect(await kv.setIfHeld('doc', 'by A', 'doc:lock', 'A')).toBe(true)
+    expect(await kv.get('doc')).toBe('by A')
+    t += 10_001 // A's lease lapses
+    expect(await kv.setIfHeld('doc', 'by A, late', 'doc:lock', 'A')).toBe(false)
+    expect(await kv.get('doc')).toBe('by A')
+    expect(await kv.setnx('doc:lock', 'B', { ttlSec: 10 })).toBe(true) // B re-wins the lapsed lock
+    expect(await kv.setIfHeld('doc', 'by A, later still', 'doc:lock', 'A')).toBe(false)
+    expect(await kv.setIfHeld('doc', 'by B', 'doc:lock', 'B')).toBe(true)
+    expect(await kv.get('doc')).toBe('by B')
+  })
+
+  it('on UpstashKV: one server-side compare-the-lock-and-set, never a GET followed by a SET, with the real command shape pinned', async () => {
+    const calls: unknown[] = []
+    const results = [[1], [0]]
+    const f = (async (_url: string | URL | Request, init?: RequestInit) => {
+      calls.push(JSON.parse(String(init?.body)))
+      return new Response(JSON.stringify((results.shift() ?? []).map((result) => ({ result }))), { status: 200 })
+    }) as typeof fetch
+    const kv = new UpstashKV('https://x.upstash.io', 't', f)
+    expect(await kv.setIfHeld('ledger:daily-spend', '{"2026-09-16":{}}', 'ledger:daily-spend:lock', 'tok')).toBe(true)
+    expect(await kv.setIfHeld('ledger:daily-spend', '{"2026-09-16":{}}', 'ledger:daily-spend:lock', 'tok')).toBe(false)
+    expect(calls).toHaveLength(2)
+    // Two keys (the document, then the lock) and two arguments (the value, then
+    // the token): the script compares KEYS[2] with ARGV[2] and sets KEYS[1] to
+    // ARGV[1]. Pinned, because the order is the whole contract.
+    expect(calls[0]).toEqual([
+      ['EVAL', expect.stringMatching(/GET', KEYS\[2\]\) == ARGV\[2\][^]*SET', KEYS\[1\], ARGV\[1\]/), 2, 'ledger:daily-spend', 'ledger:daily-spend:lock', '{"2026-09-16":{}}', 'tok'],
+    ])
+  })
+})

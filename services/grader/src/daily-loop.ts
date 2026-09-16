@@ -86,7 +86,7 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { OwnPlan } from '@bliprank/collector'
+import { PRICE_USD_PER_CALL, type OwnPlan } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { CORRUPT } from './ledger-doc.js'
 import { ledgerStores, type LedgerStores } from './ledger-stores.js'
@@ -389,6 +389,8 @@ export interface DomainRun {
   readonly status: string
   readonly spentUsd: number
   readonly calls: number
+  /** set when the day's ledger refused the realised figure after the collect: the reservation stands at the expected cost for a person to repair (C2r) */
+  readonly unsettled?: string
 }
 
 export interface TickOutcome {
@@ -576,18 +578,26 @@ async function runAdmitted(d: DueDomain, remaining: number, ctx: RunContext): Pr
     }
   }
   // The allowance: the cycle's cells with headroom, or as many attempts as
-  // what is left of the day's cap pays for at the cycle's MEAN price per
+  // what is left of the day's cap pays for at the DEAREST engine price per
   // attempt, whichever is fewer. Offline the price is zero and the cells
-  // bound alone. Mean, not dearest: at the dearest engine's price the last
-  // domain of a day (whose remaining is about its own expected cost) would
-  // get ~1% headroom instead of 20% and be truncated on its first retry.
-  // What the mean leaves unbounded is the difference between the dearest and
-  // the mean price over the retries, at most (0.008 − 0.0068) × 17 = $0.02 a
-  // run at pay-as-you-go; the day's ledger books the realised figure.
-  const meanPrice = d.cells > 0 ? d.usd / d.cells : 0
-  const affordable = ctx.mode === 'live' && meanPrice > 0 ? Math.floor(remaining / meanPrice) : Number.POSITIVE_INFINITY
-  const allowanceCalls = Math.min(runAllowanceFor(d.cells), affordable)
-  ctx.log(`  ${d.host}: collecting ${d.cells} cells, expected $${d.usd.toFixed(3)}, $${remaining.toFixed(3)} of the day's cap left, at most ${allowanceCalls} attempts`)
+  // bound alone. Dearest, not mean (MVP_PLAN C2r item 2, the oversight cost
+  // review of C2): at the mean price every attempt beyond the mean-priced
+  // share could land on the dearest engine, so a day could exceed
+  // COLLECTION_BUDGET_USD_DAILY by (dearest − mean) × retries, up to about
+  // $0.02 per domain run at pay-as-you-go, and the hard ceiling is meant to be
+  // hard. The cost is that the last domain of a day, whose remainder is about
+  // its own expected cost, may get fewer retries than its 20% headroom; when
+  // that happens the log line says so, and the day's ledger books the
+  // realised figure as it always did.
+  const dearest = ctx.mode === 'live' ? Math.max(0, ...ctx.gateCfg.engines.map((e) => (PRICE_USD_PER_CALL[ctx.plan] as Record<string, number>)[e] ?? 0)) : 0
+  const affordable = dearest > 0 ? Math.floor(remaining / dearest) : Number.POSITIVE_INFINITY
+  const full = runAllowanceFor(d.cells)
+  const allowanceCalls = Math.min(full, affordable)
+  ctx.log(
+    `  ${d.host}: collecting ${d.cells} cells, expected $${d.usd.toFixed(3)}, $${remaining.toFixed(3)} of the day's cap left, at most ${allowanceCalls} attempts${
+      allowanceCalls < full ? ` (truncated from ${full}: what is left of the day's cap pays for ${allowanceCalls} at the dearest engine price $${dearest.toFixed(3)}, so the ceiling holds and this run has less retry headroom)` : ''
+    }`,
+  )
   let status = 'failed'
   let spent = expected
   let calls = 0
@@ -616,7 +626,34 @@ async function runAdmitted(d: DueDomain, remaining: number, ctx: RunContext): Pr
   // Settled before the next domain starts, into the ledger as it is
   // stored: a crash between two domains loses no spend, and a crash
   // inside one leaves its reservation standing at the expected cost.
-  const today = await settle(ctx.ledgers, ctx.ledgerAt, ctx.day, ctx.capUsd, lineOf(d), { spentUsd: spent, calls, status, at: ctx.now().toISOString() })
+  //
+  // A SETTLE THE LEDGER REFUSES AFTER THE COLLECT (C2r, the cost review's
+  // finding 2). The collect has run and may have spent, so nothing here may
+  // throw: a thrown error reached the route as a 503 saying nothing was
+  // collected, untrue at this point, and a transport retries a 5xx. The
+  // fenced write is tried again under a fresh lease with a fresh read (the
+  // fold is idempotent: it replaces this host's line and moves the totals by
+  // the difference); refused twice, the reservation stands at the expected
+  // cost with headroom, the over-booking direction, the run is answered as
+  // ran with `unsettled` naming the cause, and a person repairs the ledger.
+  // A retry then collects nothing for TWO reasons, each alone enough: the
+  // store's own `cycle-today` guard (a filed cycle makes the host not due),
+  // and the day's line, which stands in any status and refuses a second job
+  // (`reserveJob`). daily-loop.test.ts proves each on its own.
+  const entry: DomainEntry = { spentUsd: spent, calls, status, at: ctx.now().toISOString() }
+  let today: DailyLedgerDay | null = null
+  let unsettled: string | undefined
+  for (let attempt = 0; attempt < 2 && today === null; attempt++) {
+    try {
+      today = await settle(ctx.ledgers, ctx.ledgerAt, ctx.day, ctx.capUsd, lineOf(d), entry)
+    } catch (e) {
+      unsettled = (e as Error).message
+    }
+  }
+  if (today === null) {
+    ctx.log(`  ${d.host}: the day's ledger did not take the realised figure ($${spent.toFixed(4)}, ${calls} calls): ${unsettled}. The reservation stands at the expected cost with headroom in ${ctx.ledgerAt} for a person to repair; a retry collects nothing.`)
+    return { ran: { host: d.host, status, spentUsd: spent, calls, unsettled: unsettled ?? 'the ledger refused the write' }, spentAfter: ctx.capUsd - remaining + expected }
+  }
   return { ran: { host: d.host, status, spentUsd: spent, calls }, spentAfter: today.spentUsd }
 }
 
@@ -813,6 +850,9 @@ export async function runFanOut(opts: FanOutOptions, deps: Pick<TickDeps, 'now' 
       }
     }
     await closeDay(ledgers, ledgerAt, day, capUsd, published, failed, now())
+    // The count QStash did not take, in the operator's log as well as on the
+    // day's mark (C2r item 3): a host whose job was refused will not run today.
+    log(`fan-out ${day}: ${published} domain job(s) published, ${failed} not taken by QStash${failed > 0 ? `; those hosts will not run today, and the day's mark in ${ledgerAt} records it` : ''}`)
     return { outcome: 'fanned-out', day, capUsd, published, failed, refusedEntries, list }
   } finally {
     await release()

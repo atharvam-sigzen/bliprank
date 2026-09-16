@@ -48,6 +48,15 @@ export interface KV {
    * Returns true when the key was removed.
    */
   delIfEquals(key: string, expected: string): Promise<boolean>
+  /**
+   * Atomic write FENCED to a lease: set `key` to `value` only while `lockKey`
+   * still holds `token`, in one server-side step. The ledger document's write
+   * primitive (services/grader/src/ledger-doc.ts, MVP_PLAN C2r item 1): a
+   * holder whose round trip stalled past its lease, and whose lock a later
+   * holder has since re-won or released, writes nothing. Returns true when the
+   * value was written.
+   */
+  setIfHeld(key: string, value: string, lockKey: string, token: string): Promise<boolean>
 }
 
 export class MemoryKV implements KV {
@@ -91,10 +100,17 @@ export class MemoryKV implements KV {
     this.m.delete(key)
     return true
   }
+  async setIfHeld(key: string, value: string, lockKey: string, token: string): Promise<boolean> {
+    if (this.live(lockKey) !== token) return false
+    await this.set(key, value)
+    return true
+  }
 }
 
 /** Compare-and-delete as one server-side step; a GET here followed by a DEL could delete a claim re-won in between. */
 const DEL_IF_EQUALS = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end"
+/** Compare-the-lock-and-set as one server-side step: a GET of the lock followed by a SET could land after the lease lapsed and a later holder wrote. KEYS[1] the document, KEYS[2] the lock; ARGV[1] the value, ARGV[2] the token. */
+const SET_IF_HELD = "if redis.call('GET', KEYS[2]) == ARGV[2] then redis.call('SET', KEYS[1], ARGV[1]) return 1 else return 0 end"
 
 /**
  * Upstash Redis over REST. Uses the pipeline endpoint so mget is one round
@@ -159,6 +175,9 @@ export class UpstashKV implements KV {
   }
   async delIfEquals(key: string, expected: string): Promise<boolean> {
     return this.one((await this.pipeline([['EVAL', DEL_IF_EQUALS, 1, key, expected]]))[0]) === 1
+  }
+  async setIfHeld(key: string, value: string, lockKey: string, token: string): Promise<boolean> {
+    return this.one((await this.pipeline([['EVAL', SET_IF_HELD, 2, key, lockKey, value, token]]))[0]) === 1
   }
 }
 

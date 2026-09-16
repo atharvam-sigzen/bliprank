@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { BudgetExceeded, MemoryKV, RunAllowanceExceeded } from '@bliprank/collector'
+import { BudgetExceeded, MemoryKV, RunAllowanceExceeded, type KV } from '@bliprank/collector'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CORRUPT, fileLedgerDoc, kvLedgerDoc, withRunAllowance } from './ledger-doc.js'
 import { declaredSingleProcess, kvLedgerStores, ledgerStores } from './ledger-stores.js'
@@ -129,6 +129,71 @@ describe('a ledger document', () => {
     const doc = kvLedgerDoc(kv, 'ledger:y', async () => {})
     await expect(doc.update(() => 1)).rejects.toThrow(/could not take its lock/)
     expect(await kv.get('ledger:y')).toBeNull()
+  })
+
+  it('on KV: a holder stalled past its lease writes NOTHING, loudly, and the reservation a later holder booked stands (C2r item 1)', async () => {
+    // The scenario from the oversight cost review of C2: a domain job's
+    // reservation is written under a fresh lease while an earlier holder's
+    // round trip is stalled past the ten-second TTL; the stalled holder's
+    // whole-document write used to land last and erase the `running` line,
+    // and the transport's retry was then admitted again and collected twice.
+    let t = 1_000
+    const kv = new MemoryKV(() => t)
+    const KEY = 'ledger:daily-spend'
+    // Holder A's read is held back until the test lets it go: a round trip
+    // stalled inside the lease. Everything else goes straight to the store.
+    let release: () => void = () => {}
+    let gate = Promise.resolve()
+    let stalls = 0
+    const arm = () => {
+      gate = new Promise<void>((r) => (release = r))
+      stalls = 1
+    }
+    const slow: KV = {
+      get: async (k) => {
+        if (k === KEY && stalls-- > 0) await gate
+        return kv.get(k)
+      },
+      mget: (k) => kv.mget(k),
+      set: (k, v, o) => kv.set(k, v, o),
+      setnx: (k, v, o) => kv.setnx(k, v, o),
+      incrByFloat: (k, d, o) => kv.incrByFloat(k, d, o),
+      incrManyByFloat: (ops, o) => kv.incrManyByFloat(ops, o),
+      delIfEquals: (k, e) => kv.delIfEquals(k, e),
+      setIfHeld: (k, v, l, tok) => kv.setIfHeld(k, v, l, tok),
+    }
+    const docA = kvLedgerDoc(slow, KEY, async () => {})
+    const docB = kvLedgerDoc(kv, KEY, async () => {})
+    const booked = { '2026-09-16': { domains: { 'ws-1:acme.test': { status: 'running' } } } }
+
+    // A takes the lock and stalls inside its read; its write, when it comes, would carry NO reservation.
+    arm()
+    const a = docA.update(() => ({ '2026-09-16': { domains: {} } }))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(await kv.get(`${KEY}:lock`)).not.toBeNull()
+    t += 10_001 // the lease lapses while A is stalled
+    // B, a domain job: takes the lapsed lock, books its line, releases.
+    await docB.update(() => booked)
+    expect(await kv.get(`${KEY}:lock`)).toBeNull()
+    // A's round trip returns. Its write is refused, the refusal is thrown, and B's reservation stands.
+    release()
+    await expect(a).rejects.toThrow(/lock lapsed before the write/)
+    expect(await docB.read()).toEqual(booked)
+
+    // The variant where A returns while a later holder still HOLDS the lock:
+    // refused just the same, because the token differs, and A's release does
+    // not touch the later holder's lock either.
+    arm()
+    const a2 = docA.update(() => 'stale')
+    await new Promise((r) => setTimeout(r, 0))
+    t += 10_001
+    expect(await kv.setnx(`${KEY}:lock`, 'later-holder', { ttlSec: 10 })).toBe(true)
+    await kv.set(KEY, JSON.stringify(booked))
+    release()
+    await expect(a2).rejects.toThrow(/lock lapsed before the write/)
+    expect(await kv.get(`${KEY}:lock`)).toBe('later-holder')
+    expect(await docB.read()).toEqual(booked)
+    // And the double's primitive is the real store's shape: cache-index.test.ts pins the EVAL that Upstash runs.
   })
 
   it('the visitor throttle is the same throttle on either backend', async () => {
