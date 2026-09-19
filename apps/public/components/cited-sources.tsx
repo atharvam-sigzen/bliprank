@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { loadAnswers, type ScanAnswers } from '@/lib/answers'
-import { citationMix, type CitationMix } from '@/lib/citations'
+import { headlineAnswers, loadAnswers, type ScanAnswers } from '@/lib/answers'
+import { citationMix, SOURCE_ORDER, type CitationMix } from '@/lib/citations'
 import { engineName } from '@/lib/engines'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { formatFrequency, formatInterval, formatValue, MIN_N_FOR_COMPARISON, type Metric } from '@bliprank/stats'
@@ -85,11 +85,21 @@ export function CitedSources({ scan }: { scan: ScanResultFile }) {
 /** The presentational half, pure, so it can be rendered in a test without a browser. */
 export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: CitationMix; answers: ScanAnswers; subjectName: string; scan: ScanResultFile }) {
   const own = mix.classes.find((c) => c.sourceClass === 'owned')
+  /*
+   * ⚠️ THE HEADLINE'S OWN ANSWERS ONLY (review MAJOR 5). `mix` is already built
+   * from `headlineAnswers` inside `citationMix`, so `mix.total` and every reach
+   * are headline-only — but this count was taken over `answers` whole, custom
+   * prompts included, mixing two samples in one sentence: N and T count one
+   * thing, K counted a bigger one. `headlineAnswers` is the same filter
+   * `citationMix` itself applies, so this is the one denominator the rest of
+   * the sentence already assumes.
+   */
+  const distinctSites = mix.hosts.length === 0 ? 0 : hostCount(headlineAnswers(answers))
   return (
     <>
       <p className="prose">
         Across the <span className="num">{answers.answers.filter((a) => !a.custom).length}</span> answers the engines made <span className="num">{mix.total}</span>{' '}
-        {mix.total === 1 ? 'citation' : 'citations'} to <span className="num">{mix.hosts.length === 0 ? 0 : hostCount(answers)}</span> distinct sites:{' '}
+        {mix.total === 1 ? 'citation' : 'citations'} to <span className="num">{distinctSites}</span> distinct sites:{' '}
         <span className="num">{mix.answersWithAny}</span> answers cited at least one source and <span className="num">{mix.answersWithout}</span>{' '}
         cited none.
         {mix.unresolvable > 0 ? (
@@ -122,7 +132,7 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
       ) : (
         <>
           <SourceReach mix={mix} subjectName={subjectName} />
-          <MostCited mix={mix} />
+          <MostCited mix={mix} distinctSites={distinctSites} />
         </>
       )}
 
@@ -142,6 +152,15 @@ export function CitedSourcesBody({ mix, answers, subjectName, scan }: { mix: Cit
 
 /** Distinct sites cited, counting every host and not only the top of the table. */
 const hostCount = (answers: ScanAnswers): number => new Set(answers.answers.flatMap((a) => a.citations.map((k) => k.domain)).filter(Boolean)).size
+
+/**
+ * A plain share, rounded — and `Math.round` alone is the bug (review MINOR a):
+ * a class with real, counted citations rounded to "0%" reads as "none",
+ * which is a different claim than "less than one in two hundred". This is
+ * NOT a `Metric` and carries no interval (see the note at its call site), so
+ * this stays a plain function rather than a `packages/stats/format` export.
+ */
+const formatShare = (share: number): string => (share > 0 && share < 0.005 ? '<1%' : `${Math.round(share * 100)}%`)
 
 const c = (sourceClass: string): string =>
   ({ owned: 'your own site', competitor: 'a competitor', review: 'review site', community: 'community', video: 'video', earned_media: 'earned media', reference: 'reference', other: 'other' })[sourceClass] ?? sourceClass
@@ -168,7 +187,26 @@ const c = (sourceClass: string): string =>
 function SourceReach({ mix, subjectName }: { mix: CitationMix; subjectName: string }) {
   const own = mix.classes.find((cl) => cl.sourceClass === 'owned')
   const others = mix.classes.filter((cl) => cl.sourceClass !== 'owned')
-  const top = others.length > 0 ? [...others].sort((a, b) => b.reach.value - a.reach.value)[0]! : null
+  const topCandidate = others.length > 0 ? [...others].sort((a, b) => b.reach.value - a.reach.value)[0]! : null
+  /*
+   * ⚠️ NAMING A "TOP" CLASS IS A CLAIM OF SEPARATION (review MAJOR 4). Picking
+   * by point estimate alone and bolding it is exactly the emphasis-inside-the-
+   * interval R8 exists to refuse — IntentSplit already refuses it the same way
+   * (prompt-breakdown.tsx) for two groups; this generalises the same test to
+   * N: the candidate is named only when its own interval clears every OTHER
+   * class's, i.e. nothing else could plausibly reach further. When it does
+   * not, no one class is emphasised — they are listed in the sheet's own
+   * SOURCE_ORDER, which is not a ranking of anything.
+   */
+  const topSeparated = topCandidate ? others.every((cl) => cl.sourceClass === topCandidate.sourceClass || topCandidate.reach.ci_low > cl.reach.ci_high) : false
+  const top = topSeparated ? topCandidate : null
+  // Same fallback as `citationMix`'s own class ordering: a class nobody has
+  // named yet sorts last rather than throwing `indexOf` off the front.
+  const orderOf = (k: string) => {
+    const i = (SOURCE_ORDER as readonly string[]).indexOf(k)
+    return i === -1 ? SOURCE_ORDER.length : i
+  }
+  const bySourceOrder = [...others].sort((a, b) => orderOf(a.sourceClass) - orderOf(b.sourceClass))
   // The same floor `compare()` itself refuses below — not a comparison here,
   // but the same honest admission that a handful of answers makes any range
   // this wide unstable, and a reader should be told rather than left to guess.
@@ -196,6 +234,10 @@ function SourceReach({ mix, subjectName }: { mix: CitationMix; subjectName: stri
         {top ? (
           <>
             Engines pointed at <strong>{top.label.toLowerCase()}</strong> <ReachClause metric={top.reach} n={mix.answersInSample} />.{' '}
+          </>
+        ) : others.length > 1 ? (
+          <>
+            No one kind of site clearly leads by reach: {bySourceOrder.map((cl) => cl.label.toLowerCase()).join(', ')}.{' '}
           </>
         ) : null}
         {own ? (
@@ -263,7 +305,7 @@ function SourceReach({ mix, subjectName }: { mix: CitationMix; subjectName: stri
                       interval; this number has none to print, and dressing it
                       as a Metric to reach the formatter is what created the
                       trap this change removes. */}
-                  <td className="num">{Math.round(cl.share * 100)}%</td>
+                  <td className="num">{formatShare(cl.share)}</td>
                 </tr>
               ))}
             </tbody>
@@ -291,26 +333,51 @@ function SourceReach({ mix, subjectName }: { mix: CitationMix; subjectName: stri
  * frequency is both faithful and legible (packages/stats/format), so the
  * fallback is the percentage and its interval — never a rounded guess written
  * here instead.
+ *
+ * ⚠️ THE BOUNDS ARE PART OF THE CLAUSE, NOT LEFT TO THE GEOMETRY (review
+ * BLOCKER). The `ratio` branch used to print only the point estimate — every
+ * OTHER place this reach's bounds exist was `aria-hidden` positioning on the
+ * `.estrip` track, so a sighted reader saw a bare figure and a screen reader
+ * heard none of it. Mirrors `Headline`'s own collides guard exactly
+ * (headline.tsx): a tight interval can round its estimate onto one of its own
+ * bounds, and stating both then plus a third identical number is worse than
+ * stating the range once.
+ *
+ * ⚠️ THE DENOMINATOR IS NAMED, NOT IMPLIED (review MINOR h). Some engines cite
+ * nothing at all by construction (`mix.enginesWithNone`, stated once above),
+ * so "of answers" alone reads as though every engine's answers counted evenly
+ * toward this reach; naming `n` is the same discipline `formatFrequency`'s own
+ * `from` clauses use elsewhere on this product.
  */
 function ReachClause({ metric, n }: { metric: Metric; n: number }) {
   const spoken = formatFrequency(metric)
   if (spoken.kind === 'ratio') {
+    const collides = spoken.pointK === spoken.highK || spoken.pointK === spoken.lowK
+    if (collides) {
+      return (
+        <>
+          in <span className="num">{spoken.low}</span> to <span className="num">{spoken.high}</span> of the <span className="num">{n}</span> answers
+        </>
+      )
+    }
     return (
       <>
-        in about <span className="num">{spoken.point}</span> of answers
+        in about <span className="num">{spoken.point}</span> of the <span className="num">{n}</span> answers (could be as few as{' '}
+        <span className="num">{spoken.low}</span>, or as many as <span className="num">{spoken.high}</span>)
       </>
     )
   }
   if (spoken.kind === 'none') {
     return (
       <>
-        in none of the <span className="num">{n}</span> answers
+        in none of the <span className="num">{n}</span> answers (could be as many as <span className="num">{spoken.high}</span> at this sample size)
       </>
     )
   }
   return (
     <>
-      in <span className="num">{formatValue(metric)}</span> of answers (range <span className="num">{formatInterval(metric)}</span>)
+      in <span className="num">{formatValue(metric)}</span> of the <span className="num">{n}</span> answers (range{' '}
+      <span className="num">{formatInterval(metric)}</span>)
     </>
   )
 }
@@ -328,7 +395,7 @@ function ReachClause({ metric, n }: { metric: Metric; n: number }) {
    printed beside every bar, so nothing here trades on the eye alone.
    ========================================================================== */
 
-function MostCited({ mix }: { mix: CitationMix }) {
+function MostCited({ mix, distinctSites }: { mix: CitationMix; distinctSites: number }) {
   if (mix.hosts.length === 0) {
     return (
       <section aria-labelledby="most-cited-heading" style={{ marginTop: 'var(--space-5)' }}>
@@ -347,6 +414,14 @@ function MostCited({ mix }: { mix: CitationMix }) {
   return (
     <section aria-labelledby="most-cited-heading" style={{ marginTop: 'var(--space-5)' }}>
       <h3 id="most-cited-heading">Most cited sites</h3>
+      {/* MINOR g: the list is a TOP, not the whole picture — `citationMix`
+          caps it at 12 (`topHosts`), and a reader comparing this count with
+          the "distinct sites" figure above without being told so would take
+          a partial list for a complete one. */}
+      <p className="prose">
+        The <span className="num">{mix.hosts.length}</span> {mix.hosts.length === 1 ? 'site' : 'sites'} cited most often, of{' '}
+        <span className="num">{distinctSites}</span> in total:
+      </p>
       <ol className="hostbars">
         {mix.hosts.map((h) => (
           <li className="hostbar" key={h.domain}>
@@ -367,6 +442,12 @@ function MostCited({ mix }: { mix: CitationMix }) {
         Cited most often: <strong>{top.domain}</strong>, <span className="num">{top.count}</span> {top.count === 1 ? 'time' : 'times'} across{' '}
         <span className="num">{top.answers}</span> {top.answers === 1 ? 'answer' : 'answers'}.
       </p>
+      {mix.hosts.length > 1 ? (
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-2)' }}>
+          A gap of one or two citations between neighbouring sites is not a finding at this sample size — the order above is a fact about this
+          count, not a ranking to read weight into.
+        </p>
+      ) : null}
 
       <div className="detail">
         <div className="table-wrap" style={{ marginTop: 'var(--space-3)' }}>
