@@ -1,0 +1,6 @@
+{
+  "algoVersion": "det-3",
+  "note": "Every place the scorer and a golden label differ. A FINDING list for the scoring-rule owner: nothing here was resolved by editing a label to match the scorer. golden.test.ts fails when the live report and this file differ.",
+  "disagreements": [],
+  "silentOwned": []
+}
