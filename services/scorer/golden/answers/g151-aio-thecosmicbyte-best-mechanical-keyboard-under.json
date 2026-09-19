@@ -1,0 +1,196 @@
+{
+  "id": "g151-aio-thecosmicbyte-best-mechanical-keyboard-under",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: a Facebook group post as a citation: community thread or social network",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:29:46.324Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best mechanical keyboard under 3000 rupees with hot swappable switches",
+    "cell": {
+      "key": "c8a4a836e95158373697999dff3bf689ae24a768ed6204324b38c853e52a4223",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best hot-swappable mechanical keyboards under 3000 rupees in India include budget-friendly options like the Redragon Kumara K and Ola M75.\nTop Recommendations Under ₹3000\nWatch a video overview of budget mechanical keyboard choices under 3000 rupees:\nWhat to Look For",
+    "citations": [
+      {
+        "url": "https://www.reddit.com/r/IndianGaming/comments/1htbs0g/is_there_a_good_mechanical_keyboard_under_3k/",
+        "position": 0,
+        "title": "Is there a good mechanical Keyboard under 3K? - Reddit",
+        "meta": {
+          "snippet": "Redragon Kumara K552: The Redragon Kumara K552 is recommended in the sub-3k price range, particularly with a numpad, and is noted ...",
+          "source": "Reddit·r/IndianGaming",
+          "date": "Jan 4, 2025"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=EmySJ-m1PWM&t=95",
+        "position": 1,
+        "title": "Best Mechanical Keyboards Under ₹3000? Here Are Your ...",
+        "meta": {
+          "snippet": "and even 100% layout as well i have not personally tested it but I think the build quality will be on the lighter side. and it's t...",
+          "source": "YouTube·SANTA XP",
+          "date": "Feb 13, 2026"
+        }
+      },
+      {
+        "url": "https://www.facebook.com/groups/PcBuildersCommunity/posts/4131132280503455/",
+        "position": 2,
+        "title": "What are the best mechanical keyboards under 3000?",
+        "meta": {
+          "snippet": "\" KEYBOARD SUGGESTION \" Budget - ₹3000 Usage - Gaming, Blender 3d, UE5 #p4f Must needed features : • Backlit • Mechanical • 75% / ...",
+          "source": "Facebook·PC Builders Community (Official)",
+          "date": "Apr 7, 2025"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=357HKBIlI4k&t=115",
+        "position": 3,
+        "title": "Best Mechanical Keyboard Under ₹3000 in India (2025)",
+        "meta": {
+          "snippet": "but you might find it a tad hollow if you are an audio file next in the ring. often praised for its unique features the Ola M75. t...",
+          "source": "YouTube·techoid.",
+          "date": "Jul 19, 2025"
+        }
+      },
+      {
+        "url": "https://www.reddit.com/r/mkindia/comments/1o1h8cc/best_mechanical_keyboard_under_3000/",
+        "position": 4,
+        "title": "Best mechanical keyboard under 3000? : r/mkindia - Reddit",
+        "meta": {
+          "snippet": "* I wouldn't recommend buying it from Flipkart for reasons you can find on r/FuckFlipkart. * It does have bluetooth connectivity i...",
+          "source": "Reddit·r/mkindia",
+          "date": "Oct 8, 2025"
+        }
+      },
+      {
+        "url": "https://www.rtings.com/keyboard/reviews/best/cheap-mechanical-keyboards",
+        "position": 5,
+        "title": "The 4 Best Budget Mechanical Keyboards of 2026",
+        "meta": {
+          "snippet": "See our review Best Cheap Wired Mechanical Keyboard Track Keychron C1 Pro/C2 Pro0 SEE PRICE Amazon SEARCH B&H SEARCH BestBuy.com G...",
+          "source": "RTINGS.com",
+          "date": "Aug 20, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/shorts/RERgLui9F7w",
+        "position": 6,
+        "title": "Ant Esports MK4100: Overview of the Flagship Keyboard ...",
+        "meta": {
+          "snippet": "who needs unboxing when I can directly talk about why the MK4100. is my favorite keyboard in the antisports. lineup now this is al...",
+          "source": "YouTube·Ant Esports",
+          "date": "Apr 19, 2025"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "community",
+      "1": "video",
+      "2": "other",
+      "3": "video",
+      "4": "community",
+      "5": "earned_media",
+      "6": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "reddit.com thread: community platform",
+      "1": "youtube.com watch page: video platform",
+      "2": "unsure: facebook.com group post; Facebook is a social network, which the protocol lists under other",
+      "3": "youtube.com watch page: video platform",
+      "4": "reddit.com thread: community platform",
+      "5": "rtings.com is in the publisher registry",
+      "6": "youtube.com shorts page: video platform (the channel is a vendor, the site is YouTube)"
+    },
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the text; the short answer names only Redragon Kumara K and Ola M75. Citation 2 is a Facebook GROUP post, which reads like a community thread, but Facebook is primarily a social network, so other; unsure."
+  }
+}

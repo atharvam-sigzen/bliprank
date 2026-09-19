@@ -1,0 +1,260 @@
+{
+  "id": "g121-aio-sigzen-best-erp-software-small",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: competitor's own site cited (sap.com) but the competitor has no listed domains, so other",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:15:04.769Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "best ERP software for small manufacturing business under 50 employees",
+    "cell": {
+      "key": "3aae95df77d2aeb511d8a4dadbc69fcdcf79213a2e616365c974f76e4fc3ba0f",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best ERP software for a small manufacturing business under 50 employees depends heavily on your budget, manufacturing style (job shop vs. repetitive), and current tools, with MRPeasy, Odoo, and Microsoft Dynamics 365 Business Central standing out as top options.\nTop ERP Software Options\nKey Features to Look For",
+    "citations": [
+      {
+        "url": "https://www.erpresearch.com/erp-for-size/small-business",
+        "position": 0,
+        "title": "Best ERP Software for Small Businesses (1–50 Employees)",
+        "meta": {
+          "snippet": "What is the best manufacturing ERP for small factories under 50 employees? Small factories and job shops are the best-served segme...",
+          "source": "ERP Research"
+        }
+      },
+      {
+        "url": "https://www.headtonet.com/blogs/best-erp-for-small-manufacturing-business",
+        "position": 1,
+        "title": "Best ERP for a Small Manufacturing Business - HeadToNet",
+        "meta": {
+          "snippet": "For a small manufacturing shop with 10–30 employees moving off paper-based systems, the best starting ERP is Odoo (modular, starts...",
+          "source": "HeadToNet"
+        }
+      },
+      {
+        "url": "https://workcell.ai/blog/best-erp-small-manufacturers",
+        "position": 2,
+        "title": "Best ERP for Small Manufacturers (2026 Buyer's Guide)",
+        "meta": {
+          "snippet": "The 9 best ERP systems for small manufacturers in 2026 * JobBOSS²: best for job shops that want simplicity. JobBOSS has been a fix...",
+          "source": "workcell.ai",
+          "date": "Mar 19, 2026"
+        }
+      },
+      {
+        "url": "https://tecveq.com/best-erp-for-small-businesses-under-50-employees/",
+        "position": 3,
+        "title": "Best ERP for Small Businesses Under 50 Employees (2026 Guide)",
+        "meta": {
+          "snippet": "Table_title: Quick Comparison Table: Pricing, Best-Fit & Setup Complexity Table_content: | ERP | Starting Price (PKR) | Best For |",
+          "source": "Tecveq",
+          "date": "Jul 18, 2026"
+        }
+      },
+      {
+        "url": "https://www.sap.com/resources/erp-for-small-manufacturing-companies",
+        "position": 4,
+        "title": "How to choose the right ERP for your small manufacturing ...",
+        "meta": {
+          "snippet": "Top ERP features for small manufacturers * Inventory and supply chain management: Gain real-time visibility into your supply chain...",
+          "source": "SAP",
+          "date": "Jul 29, 2025"
+        }
+      },
+      {
+        "url": "https://www.top10erp.org/blog/the-best-manufacturing-software-for-your-small-business",
+        "position": 5,
+        "title": "The Best ERP Systems for Small Manufacturing Businesses (in 2026)",
+        "meta": {
+          "snippet": "The Best ERP Systems for Small Manufacturing Businesses * Our Recommended ERP Systems for Small Manufacturing Businesses. * Netsui...",
+          "source": "top10erp.org",
+          "date": "Jun 8, 2026"
+        }
+      },
+      {
+        "url": "https://dynamics.folio3.com/blog/erp-small-manufacturing-business/",
+        "position": 6,
+        "title": "Best ERP for Small Manufacturing Business in 2026",
+        "meta": {
+          "snippet": "Odoo",
+          "source": "Folio3",
+          "date": "Jun 19, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo",
+      "Microsoft Dynamics 365"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 188
+      },
+      {
+        "brand": "promoted:microsoftdynamics365",
+        "span": "Microsoft Dynamics 365",
+        "offset": 198
+      }
+    ],
+    "order": [
+      "Odoo",
+      "Microsoft Dynamics 365"
+    ],
+    "citations": {
+      "0": "erpresearch.com: ERP advisory/comparison site, unsure it is a review platform, not in registry",
+      "1": "headtonet.com blog: vendor/agency blog, not in registry",
+      "2": "workcell.ai blog: vendor blog, not in registry",
+      "3": "tecveq.com: vendor/agency blog, not in registry",
+      "4": "sap.com: SAP's own site, but SAP Business One has no listed domains, so it can never be competitor: other",
+      "5": "top10erp.org blog: ERP comparison/lead-gen site, not in registry",
+      "6": "dynamics.folio3.com: a Microsoft partner's (folio3.com) blog, not a Microsoft domain and no competitor domains are listed: other"
+    },
+    "notes": "Sigzen absent. Microsoft Dynamics 365 is named literally inside \"Microsoft Dynamics 365 Business Central\" at 198: counted. SAP is not named in the prose; sap.com appears only as a citation."
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "id": "g062-gpt-pipedrive-best-crm-solo-founder",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T04:58:46.348Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What is the best CRM for a solo founder just starting out?",
+    "cell": {
+      "key": "2bd38fb7b861f9fd9fb544f674be7ed202f0a1cd62197667ac40d13067ca5c24",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a **solo founder just starting out**, the best CRM is usually the one you will actually keep updated. You probably do not need a “full sales organization” CRM yet — you need something that captures relationships, reminds you to follow up, and gives you a simple view of your pipeline.\n\nMy shortlist:\n\n| CRM | Best for | Why it’s good early | Watch out for |\n| --- | --- | --- | --- |\n| HubSpot | Most first-time founders | Free CRM, easy setup, good ecosystem for sales + marketing | Can become expensive as you add advanced features |\n| Attio | Technical/B2B SaaS founders | Modern, flexible data model, feels built for startups | More setup thinking than a simple pipeline tool |\n| Pipedrive | Sales-focused founders | Very intuitive deal pipeline and follow-up tracking | Less useful if your business is relationship-heavy rather than deal-heavy |\n| Folk | Networking, partnerships, communities | Great for managing many personal relationships | Less suited to complex sales processes |\n\n## My default recommendation\n\n**Start with HubSpot CRM if you are unsure.** It has a generous free tier and lets you build the habit of tracking contacts, deals, notes, and follow-ups without paying upfront.\n\nChoose something else if:\n\n- **You are building B2B SaaS and expect complex customer relationships:** pick **Attio**. It is designed around flexible records and startup workflows rather than just a sales funnel.\n- **You are doing founder-led outbound sales (cold emails, demos, closing):** pick **Pipedrive**. The visual pipeline is its strength.\n- **Your business grows through introductions, investors, partnerships, and your network:** pick **Folk**.\n\n## A simple setup I’d use as a solo founder\n\nCreate only these stages:\n\n1. New lead\n2. Conversation started\n3. Qualified\n4. Proposal/demo\n5. Won\n6. Lost / later\n\nTrack only:\n\n- Name\n- Company\n- Email\n- Source (“How did we meet?”)\n- Last contact date\n- Next action\n- Deal value (if relevant)\n\nAvoid spending days customizing fields and automations. The CRM’s job at this stage is to prevent opportunities from disappearing.\n\nIf you tell me your business type (SaaS, agency, consulting, ecommerce, marketplace, etc.) and whether you sell **B2B or B2C**, I can narrow this to one choice.\n\nAGSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 390
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 688
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1501
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "Both brands first appear in table cells. Attio and Folk are not in the competitor set and are ignored. \"full sales organization\" and \"closing\" are ordinary words. No citations."
+  }
+}

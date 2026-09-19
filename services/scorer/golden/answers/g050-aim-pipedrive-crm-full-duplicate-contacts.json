@@ -1,0 +1,213 @@
+{
+  "id": "g050-aim-pipedrive-crm-full-duplicate-contacts",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: engine emitted no citations",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T06:09:56.076Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+    "cell": {
+      "key": "08f483519e79c700b3fb11ee70ff532d3724595071128acb7667f9d0988168a1",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Cleaning up a messy CRM and keeping it clean requires a two-pronged attack: a one-time data scrub followed by strict preventive guardrails.\nPhase 1: Clean Up Existing Duplicates\nAudit and Export Backup: - Export a full backup of your current CRM database before running any merges or deletions. If a merge goes wrong, you need a safe restore point.\nDefine Your \"Master\" Record: - Decide which fields determine a true duplicate (e.g., matching email address, or matching first name + last name + company domain). Determine rules for which record survives (e.g., the record with the most recent activity or the most complete field data).\nUse Native Deduplication Tools: - Most modern CRMs (like HubSpot, Salesforce, or Pipedrive) have built-in duplicate management tools that automatically scan and suggest or bulk-merge records. Run these tools iteratively.\nLeverage Third-Party Apps: - If your CRM's native tools are too basic, use specialized data-hygiene integrations (such as DemandTools, RingLead, or Insycle) to handle complex, multi-field fuzzy matching at scale.\nManual Review for Edge Cases: - Spot-check ambiguous matches where names are similar but companies differ, or where phone numbers match but emails don't, to avoid deleting legitimate distinct contacts (like family members sharing an address or distinct leads at the same account).\nPhase 2: Stop Duplicates from Recurring\nSet Strict Unique Identifiers: - Configure your CRM to treat fields like email address or phone number as unique identifiers that flag or block the creation of a second record.\nOptimize Import Protocols: - Enforce a rule that anyone importing lists must map incoming data against existing unique identifiers and choose \"update existing records\" rather than \"create new records\" by default.\nStandardize Data Entry: - Implement drop-down menus and auto-formatting for fields like Country, State, and Job Title. Discrepancies like \"USA\" vs \"United States\" often trick automated deduplication tools.\nIntegrate Real-Time Validation: - Add form-validation tools on your web lead capture forms to catch typos, fake emails, or duplicate submissions before they ever hit your database.\nAssign CRM Ownership: - Designate a data steward or owner responsible for periodic audits and approving bulk data imports.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 3,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 693
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 702
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 717
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "All three in one parenthetical: \"Most modern CRMs (like HubSpot, Salesforce, or Pipedrive)\". DemandTools, RingLead and Insycle are outside the set and ignored."
+  }
+}

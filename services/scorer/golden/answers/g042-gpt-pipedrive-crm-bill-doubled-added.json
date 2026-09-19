@@ -1,0 +1,190 @@
+{
+  "id": "g042-gpt-pipedrive-crm-bill-doubled-added",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations · seen on reading: no brand at all in a full-length answer",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:34:15.734Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+    "cell": {
+      "key": "da3f1f85c971cea7c54e3f1db3cab556b1d3bdc1acb57060b8723bea07e8c320",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If your CRM bill doubled after adding seats, you have a few levers to pull. Most CRM pricing is seat-based, so growth in users can increase cost quickly.\n\n## Options to reduce the bill\n\n1. **Audit who actually needs a paid seat**\n\nReview every user:\n\nDaily users → keep paid seats\nOccasional viewers → move to view-only/read-only access if your CRM supports it\nFormer employees, contractors, or inactive users → remove\n\nSome CRMs offer lower-cost or free access levels for people who only need visibility.\n2. **Change seat types**\n\nMany CRMs have different license levels:\n\nFull sales/service users\nBasic CRM users\nReporting-only users\nView-only users\n\nA common mistake is giving everyone the highest tier when some people only need limited access.\n3. **Negotiate with the vendor**\n\nAsk your account manager about:\n\nVolume discounts\nMoving to annual commitment pricing\nRenewal discounts\nConsolidating add-ons\nCredits for expansion commitments\n4. **Reduce unused capacity**\n\nCheck:\n\nSeats assigned but unused\nDuplicate accounts\nTemporary users who no longer need access\nIntegrations or modules you rarely use\n5. **Revisit your plan tier**\n\nSometimes the seat increase exposes a bigger issue: you may be paying for a tier where only a few features are actually needed. Compare:\n\nCurrent plan cost\nA lower tier with fewer features\nA competing CRM with similar workflows\n\nCRM pricing varies widely by vendor, plan, and user count, so it is worth modeling the annual cost rather than just the monthly invoice.\n6. **Consider a different pricing model**\n\nIf your organization will keep adding users, alternatives may include:\n\nFlat-rate CRMs\nCRMs with unlimited/viewer users\nTools that charge by usage rather than by seat\n\n## A practical review process\n\n- Export your user list.\n- Add columns for:\n\nRole\nLast login\nFeatures used\nRequired access level\n- Split users into:\n\nMust-have paid users\nReduced-access users\nRemove\n\nIf you tell me **which CRM you use, current seat count, old/new monthly bill, and which users were added**, I can help identify the most likely savings path.\n\nCHSSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "Generic advice; no vendor is named anywhere in the answer. Every stem search returned zero hits."
+  }
+}

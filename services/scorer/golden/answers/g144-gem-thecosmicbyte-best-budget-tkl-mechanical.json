@@ -1,0 +1,117 @@
+{
+  "id": "g144-gem-thecosmicbyte-best-budget-tkl-mechanical",
+  "covers": "real gemini answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: brand only in a table cell",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T10:33:16.678Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best budget tkl mechanical keyboard for gaming in india",
+    "cell": {
+      "key": "41757c9206f01a06bd4cb1e527966ea08b07d7d0e29b9ecd3d44aff59a4f8a42",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The **Redragon K552 Kumara** (approx. ₹2,000–₹2,500) remains the best budget Tenkeyless (TKL) mechanical keyboard in India. It offers an metal-reinforced frame, full anti-ghosting, and hot-swappable switch sockets. \n\n* **Best Overall Budget Pick:** **Redragon K552 Kumara**\n  * **Price:** ~₹2,200 – ₹2,500\n  * **Key Features:** Metal/ABS top plate, Outemu hot-swappable switches (opt for **Red Switches** for smooth linear gaming response), per-key RGB/Rainbow backlighting options.\n  * **Why it wins:** Durable build quality, easy switch replacing if a key fails, and dedicated arrow/navigation keys without the numpad space hog.\n\n---\n\n### Top Budget TKL Alternatives in India\n\n| Model | Approx Price | Key Features | Standout Advantage |\n| :--- | :--- | :--- | :--- |\n| **Cosmic Byte CB-GK-16 / GK-26 Pandora** | ₹1,500 – ₹2,000 | Outemu switches, aluminum body, full key rollover. | Most affordable true TKL board available. |\n| **AULA F87 / F75** *(Compact TKL variant)* | ₹3,500 – ₹4,200 | Gasket mount design, tri-mode wireless (2.4GHz/BT/Wired), pre-lubed switches. | Premium typing sound (\"thock\") & wireless connectivity. |\n| **EvoFox Katana X2** | ₹1,999 | Outemu switches, dynamic backlighting, volume knob. | Dedicated media/volume control knob. |\n\n---\n\n**Buying Tip for Gaming:** Always prefer **Red (Linear) switches** over Blue (Clicky) switches. Red switches actuate faster, quiet down keypresses, and provide a seamless rapid-tapping experience for FPS games like CS2 or Valorant.\n\n<FollowUp label=\"Want to compare Red vs. Blue switches or look at wireless TKL options?\" query=\"Compare Red vs Blue mechanical switches for gaming and show me the best budget wireless TKL options in India.\"/>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 774
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name). The only mention is in a Markdown table cell (\"**Cosmic Byte CB-GK-16 / GK-26 Pandora**\"): one stretch of text, one mention. No citations."
+  }
+}

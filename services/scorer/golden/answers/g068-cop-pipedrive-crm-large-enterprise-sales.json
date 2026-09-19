@@ -1,0 +1,345 @@
+{
+  "id": "g068-cop-pipedrive-crm-large-enterprise-sales",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: alias collision: \"SAP Sales Cloud\" contains Salesforce's alias \"Sales Cloud\" but names SAP's product",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:26:10.947Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM do large enterprise sales organisations typically use?",
+    "cell": {
+      "key": "3788d5a0623a319649c707734f64286117ad8e6ea327234596c0afc7ce6d7cdf",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Large enterprise sales organizations typically use Salesforce Sales Cloud, Microsoft Dynamics 365 Sales, and HubSpot Sales Hub Enterprise due to their scalability, customization, and integration capabilities.\nLeading Enterprise CRMs\n1. Salesforce Sales Cloud Salesforce remains the default choice for many global sales enterprises, offering high customization, comprehensive AppExchange ecosystem, and advanced AI features through Einstein and Agentforce tiers . It supports complex workflows, multi-product pipelines, account hierarchies, forecasting, and approval processes. It is particularly suited for organizations that require traceable pipeline reporting and robust integrations with marketing, service, and analytics platforms +1. Considerations: Setup and governance require experienced administrators; licenses range from $175–$550 per user per month with extensive add-ons and implementation costs .\n2. Microsoft Dynamics 365 Sales Microsoft Dynamics 365 Sales is ideal for enterprises standardizing on the Microsoft ecosystem (Teams, Outlook, Power BI, Azure). It integrates deeply with Microsoft productivity services, supports AI-assisted sales insights, forecasting, and workflow automation, and allows extensive customization via the Power Platform +2. Considerations: Premium licenses cost $150 per user per month, and setup can be complex without dedicated admin resources.\n3. HubSpot Sales Hub Enterprise HubSpot offers a clean, intuitive interface and rapid deployment, combining sales, marketing, and service data on a unified platform . It is suitable for inbound-led organizations and those seeking fast ROI with less need for heavy customization . Considerations: Customization ceilings exist for highly complex global workflows; Enterprise licenses start around $150 per seat per month plus mandatory onboarding fees.\n4. SAP Sales Cloud SAP Sales Cloud works best for enterprises already embedded in SAP ERP systems, providing guided selling, integrated forecasting, and upstream connection to back-office data +1. Considerations: Implementation is resource-intensive and pricing varies depending on SAP licensing.\n5. Oracle Fusion CX Sales Optimal for organizations already using Oracle ERP solutions, Oracle Fusion CX Sales delivers account planning, guided selling, and pipeline reporting integrated with backend ERP systems . Considerations: Complex setup and a steeper learning curve; pricing is typically $65–$300 per user per month depending on tier.\n6. Other notable platforms\nZoho CRM Enterprise: Budget-friendly, wide suite features, suitable for cost-conscious enterprises 2.\nCreatio: No-code platform for highly tailored workflows and automation deployment 1.\nPega Customer Decision Hub and ServiceNow CRM: Specialized for regulated industries or service-led enterprises with heavy workflow orchestration needs 1.\nKey Considerations for Enterprise Adoption\nIntegration with existing platforms (ERP, marketing automation, analytics). Microsoft → Dynamics, Oracle → Fusion, SAP → Sales Cloud, Salesforce → best-of-breed.\nScale and governance: Multi-department deployments, layered permissions, role-based approvals, and global data residency requirements.\nCustomization vs. speed of deployment: Salesforce or Pega for heavy customization, HubSpot or Dynamics for faster adoption.\nCost of ownership: Licenses range $40–$550/user/month; TCO includes implementation, maintenance, admin, data governance, and ongoing optimization 1.\nData quality: Accurate, enriched, and maintained CRM records heavily influence adoption, forecast reliability, and ROI in large sales teams 1.\nIn summary, Salesforce Sales Cloud, Microsoft Dynamics 365 Sales, and HubSpot Sales Hub Enterprise dominate in large enterprise sales organizations due to robust functionality, integration, and scalability. The ideal choice depends on the existing technology stack, regulation complexity, workflow requirements, and budget considerations. Smaller or budget-conscious teams may consider Zoho or Creatio, while highly regulated or service-heavy enterprises might benefit from Pega or ServiceNow CRM +2.",
+    "citations": [
+      {
+        "url": "https://bestforbusiness.org/crm/10-best-crms-for-enterprise-businesses/",
+        "position": 0,
+        "title": "10 Best CRMs for Enterprise Businesses - Best For Business",
+        "meta": {
+          "publisher": "bestforbusiness.org",
+          "icon_url": "blob:https://www.bing.com/72dd5757-b515-4220-befa-eebc4ef82d5c"
+        }
+      },
+      {
+        "url": "https://www.clarity-ventures.com/ecommerce-integrations/crm-enterprise-solutions-software",
+        "position": 1,
+        "title": "The 10 Best Enterprise CRM Systems for 2026 - Clarity Ventures",
+        "meta": {
+          "publisher": "clarity-ventures.com",
+          "icon_url": "blob:https://www.bing.com/46b7e371-392e-48da-9309-2d01945a7b98"
+        }
+      },
+      {
+        "url": "https://bestpage.ai/best-tools/sales/best-crm-enterprise",
+        "position": 2,
+        "title": "6 Best Enterprise CRM Platforms for Large Sales Teams in 2026",
+        "meta": {
+          "publisher": "bestpage.ai",
+          "icon_url": "blob:https://www.bing.com/a6f100ea-0735-4321-8964-70e5b1af9038"
+        }
+      },
+      {
+        "url": "https://croclub.com/tools/best-crm-enterprise-software/",
+        "position": 3,
+        "title": "10 Best CRM Enterprise Software Reviewed For 2026 - The CX Lead",
+        "meta": {
+          "publisher": "croclub.com",
+          "icon_url": "blob:https://www.bing.com/e4cbc94c-5524-4d11-8a34-872e9259cf02"
+        }
+      },
+      {
+        "url": "https://worldmetrics.org/best/crm-enterprise-software/",
+        "position": 4,
+        "title": "Top 10 Best CRM Enterprise Software | 20 Tools Ranked (2026)",
+        "meta": {
+          "publisher": "worldmetrics.org",
+          "icon_url": "blob:https://www.bing.com/7977a33d-09d1-4af2-9241-a2d46b9d3e1a"
+        }
+      },
+      {
+        "url": "https://www.growthtechspotlight.com/directory/crm/for-enterprise",
+        "position": 5,
+        "title": "Enterprise CRM Software: 10 Platforms for Large Teams (2026)",
+        "meta": {
+          "publisher": "growthtechspotlight.com",
+          "icon_url": "blob:https://www.bing.com/41ef5907-125e-435a-a3e6-fa46d2598a6d"
+        }
+      },
+      {
+        "url": "https://www.elevatiq.com/post/top-large-crms/",
+        "position": 6,
+        "title": "Top 10 Large CRMs In 2025 - elevatiq.com",
+        "meta": {
+          "publisher": "elevatiq.com",
+          "icon_url": "blob:https://www.bing.com/ae85f574-f1c0-426d-a27f-3fdb8cecb233"
+        }
+      },
+      {
+        "url": "https://prospeo.io/s/enterprise-sales-crm",
+        "position": 7,
+        "title": "7 Best Enterprise Sales CRMs in 2026 (Real Pricing)",
+        "meta": {
+          "publisher": "prospeo.io",
+          "icon_url": "blob:https://www.bing.com/5d68a249-f36c-4370-a4e1-f31a11ef0155"
+        }
+      },
+      {
+        "url": "https://gokuldhamodaran.com/enterprise-tech-leaders/best-enterprise-crm-software-large-companies/",
+        "position": 8,
+        "title": "Best Enterprise CRM Software for Large Companies in 2026",
+        "meta": {
+          "publisher": "gokuldhamodaran.com",
+          "icon_url": "blob:https://www.bing.com/2f2fbb69-014d-43e3-ab1f-cd6e9badefc2"
+        }
+      },
+      {
+        "url": "https://crmcompared.com/best/enterprise-crm/",
+        "position": 9,
+        "title": "Best Enterprise CRM Platforms 2026 - CRM Compared",
+        "meta": {
+          "publisher": "crmcompared.com",
+          "icon_url": "blob:https://www.bing.com/80af0bdd-7872-4614-a0a2-c0684f8ffb3e"
+        }
+      },
+      {
+        "url": "https://worldmetrics.org/best/enterprise-crm-software/",
+        "position": 10,
+        "title": "Top 10 Best Enterprise CRM Software | Top Picks 2026",
+        "meta": {
+          "publisher": "worldmetrics.org",
+          "icon_url": "https://th.bing.com/th/id/ODF.PXzZFPsZXTZiZxmQGz8Emg?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales",
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 51
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Microsoft Dynamics 365 Sales",
+        "offset": 75
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 109
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 2511
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales",
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citations": {
+      "0": "bestforbusiness.org: listicle site, not in registry",
+      "1": "clarity-ventures.com: agency / integrator site, not in registry",
+      "2": "bestpage.ai: listicle site, not in registry",
+      "3": "croclub.com: blog listicle, not in registry",
+      "4": "worldmetrics.org: ranking listicle site, not in registry",
+      "5": "growthtechspotlight.com directory page: unsure it is a user-review platform, so other",
+      "6": "elevatiq.com: consultancy blog, not in registry",
+      "7": "prospeo.io: vendor site, not in registry",
+      "8": "gokuldhamodaran.com: personal blog, not in registry",
+      "9": "crmcompared.com: comparison site, unsure it is a user-review platform, so other",
+      "10": "worldmetrics.org: ranking listicle site, not in registry"
+    },
+    "notes": "Subject absent. Alias collision: \"SAP Sales Cloud\" at 1851, 1867 and \"SAP -> Sales Cloud\" at 3016 contain Salesforce's listed alias \"Sales Cloud\" but name SAP's product, not Salesforce; this does not change the label because Salesforce is first named by its own name at 51. HubSpot first appears as \"HubSpot Sales Hub Enterprise\" (109), Zoho CRM as \"Zoho CRM Enterprise\" (2511). \"Microsoft ecosystem (Teams, Outlook, Power BI, Azure)\" is the company / other products."
+  }
+}

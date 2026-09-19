@@ -1,0 +1,214 @@
+{
+  "id": "g040-aim-pipedrive-track-leads-come-through",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: engine emitted no citations · seen on reading: competitor named only by its short form (\"Zoho\"); ordinary words \"closed\" and \"pipeline\"",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T06:18:52.471Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+    "cell": {
+      "key": "df7806fa18d8fa21022be79bd52877451aa4830fa223fa2e162f51f5425d604b",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Tracking WhatsApp leads in a CRM comes down to bridging the gap between a messaging app and your sales pipeline. Because WhatsApp is a closed ecosystem, you need a structured approach to capture, route, and update conversations automatically.\n1. Choose the Right Integration Path\nTo get WhatsApp data into your CRM, you have two primary routes:\nNative CRM Integrations:: Many modern CRMs (like HubSpot, Salesforce, or Zoho) offer native or marketplace integrations with the official WhatsApp Business Platform (API). This automatically syncs chats, creates contacts, and logs interactions.\nThird-Party Automation Tools:: If your CRM doesn't have a direct WhatsApp integration, platforms like Zapier or Make act as the glue. You can trigger a \"Create/Update Contact\" action in your CRM whenever a new message or lead form is submitted via WhatsApp.\n2. Standardize the Entry Point\nMake sure every incoming WhatsApp lead has a clear, trackable origin:\nClick-to-WhatsApp Ads:: Use official ad links from Facebook or Instagram. When users click, they send a pre-filled message (e.g., \"Hi, I’m interested in your pricing\"). You can use UTM parameters or specific pre-filled text strings to segment where the lead came from.\nWebsite Chat Widgets:: Embed a WhatsApp widget on your site. Configure the button to send a unique source tag text (e.g., \"Inquiry from Pricing Page\").\n3. Automate Initial Capture and Qualification\nDon't rely on manual data entry for the first touchpoint:\nAuto-Creation:: Set your CRM/integration to automatically generate a new Lead or Deal card the moment a new phone number messages your business account.\nChatbot Qualification:: Deploy an automated flow (via WhatsApp Business API providers like ManyChat or Twilio) to ask 2–3 qualifying questions (name, email, product interest) before handing the chat off to a human agent. Map these custom fields directly into your CRM properties.\n4. Keep the Communication and Data Synced\nTwo-Way Activity Logging:: Ensure that messages sent by your sales reps from the CRM or the WhatsApp Business app sync bidirectionally so your audit trail stays clean.\nPipeline Stage Triggers:: Define clear rules—for instance, if a lead replies with \"booked,\" an automation should move the CRM deal stage from New Lead to Meeting Scheduled.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 394
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 403
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 418
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "Subject not named: \"sales pipeline\" and \"Pipeline Stage Triggers\" are ordinary words, not Pipedrive. short form: \"Zoho\" at 418 for Zoho CRM in \"Many modern CRMs (like HubSpot, Salesforce, or Zoho)\". \"closed\" at 135 (\"a closed ecosystem\") is an ordinary word. Zapier, Make, ManyChat, Twilio are not in the brand set."
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "id": "g074-gem-pipedrive-crm-best-small-business",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:19:52.375Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is best for a small business in the UK?",
+    "cell": {
+      "key": "0df4b5d4344d836f8e8e3ca7217a390fe8c4f2331473a8474f58552056df1ca4",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The \"best\" CRM for a UK small business depends entirely on your primary goal—whether that is ease of use, deep local accounting integrations, sales pipeline tracking, or marketing automation. \n\n---\n\n### Top CRM Recommendations for UK Small Businesses\n\n| CRM | Best For | Standout Features | Starting Price (Billed Annually) |\n| :--- | :--- | :--- | :--- |\n| **Capsule CRM** | Simple contact & task management | Homegrown UK platform, native integrations with **Xero** and **Sage**, extremely clean UX. | Free plan available; paid plans from **~£20/user/mo**. |\n| **HubSpot CRM** | Marketing & inbound lead generation | Generous free plan, drag-and-drop landing pages, email marketing, and live chat widgets. | Free plan; Starter from **~£18/mo**. |\n| **Pipedrive** | Pure sales & visual pipeline tracking | Extremely intuitive deal boards, activity reminders, and automated sales follow-ups. | Starts at **~£12.50/user/mo**. |\n| **Zoho CRM** | Best value for advanced features | AI analytics (Zia), deep customization, workflow automation, and multi-currency support. | Free plan available; paid from **~£12/user/mo**. |\n| **Freshsales** | Budget-conscious sales teams | Built-in phone/calling system, AI lead scoring, and automated drip campaigns. | Free plan available; paid from **~£7/user/mo**. |\n\n---\n\n### Specific UK Factors to Consider\n\n* **Accounting Integrations:** UK businesses heavily rely on **Xero**, **Sage**, or **QuickBooks Online**. Capsule, Pipedrive, and HubSpot connect seamlessly to these to issue invoices directly from contact records.\n* **GDPR Compliance:** Ensure your CRM offers built-in consent management, \"Right to Be Forgotten\" single-click deletions, and UK/EU data storage options.\n* **Currency Support:** If trading across Europe, choose platforms like **Zoho** or **HubSpot** that handle multi-currency conversions and UK VAT tracking cleanly.\n\n---\n\n**Summary Guidance:**\n* Choose **Capsule** if you want a local, straightforward system that connects seamlessly to Xero/Sage.\n* Choose **HubSpot** if you want to grow leads through content marketing and email automation.\n* Choose **Pipedrive** if your primary focus is pushing sales deals through a pipeline.\n\n<FollowUp label=\"Want help narrowing down the best option based on your team size and accounting software?\" query=\"Help me choose the right CRM based on my UK business size, budget, and software stack.\"/>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 3,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 565
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 753
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1460
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2117
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 931
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 1125
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citations": {},
+    "notes": "All four brands first appear in table cells. Capsule CRM, Xero, Sage and QuickBooks are not in the set. The trailing <FollowUp .../> markup names no brand. No citations."
+  }
+}

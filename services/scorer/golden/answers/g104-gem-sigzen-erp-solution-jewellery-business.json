@@ -1,0 +1,168 @@
+{
+  "id": "g104-gem-sigzen-erp-solution-jewellery-business",
+  "covers": "real gemini answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: competitor named only in a table cell, as the platform another product is built on",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T11:23:11.079Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP solution for jewellery business with retail POS",
+    "cell": {
+      "key": "885da8650fa3cbc7e4ea35dfa6bfd764450caa8fd8b3d4d8687621acf5735500",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Generic retail ERP systems fail for jewelers because they cannot natively track dual units of measure (gram weight vs. piece count), dynamic metal market pricing, loose stone serials, or memo/consignment workflows. \n\n---\n\n### Non-Negotiable Features for Jewelry ERP + POS\n\n* **Dynamic Pricing:** Automatic price recalculations based on live daily spot rates for gold, platinum, and silver plus gemstone markups.\n* **Dual-Unit Tracking:** Simultaneous tracking of weight (grams, dwt, carats) and piece counts.\n* **Specialized POS Workflows:** Native handling of trade-ins, scrap purchasing, layaways, memo/consignment inventory, and customer repairs.\n* **Manufacturing & Custom Jobs:** Job-bag/ticket tracking for custom design work, casting, setting, and metal loss/scrap reconciliation.\n\n---\n\n### Top ERP Solutions with Retail POS\n\n| Solution | Best For | POS Capabilities | Key Strengths | Deployment |\n|---|---|---|---|---|\n| **PIRO Retail / ERP** | Full-service operations (Retail + Custom/Repair Bench) | Integrated POS, custom job ticketing, repair intake | Deep custom job tracking, casting/manufacturing workflows, live metal market rates | Cloud |\n| **Luxare (by Diaspark)** | Multi-store retail & high-end boutiques | Integrated POS with mobile clienteling & layaway schedules | Built-in CRM for anniversaries/sizes, memo tracking, robust inventory analytics | Cloud |\n| **Gem Logic** | Modern, all-in-one mid-market retail | Tablet-friendly POS, quick checkout, repair tracking | User-friendly cloud UI, RFID inventory counts, automated customer messaging | Cloud |\n| **The Edge** | Established single-to-few store traditional retail | Robust desktop POS with layaway, trade-ins, and appraisals | Extremely deep CRM features, industry-wide adoption, offline stability | On-Premise / Hybrid |\n| **E-Jewelry365** | Enterprise-scale operations needing full accounting | Integrates Microsoft POS or Shopify POS directly to ERP back-end | Built natively on Microsoft Dynamics 365 Business Central; enterprise financial compliance | Cloud (Azure) |\n\n---\n\n### Key System Evaluation Factors\n\n1. **Tagging & Scanning:** Verify native support for RFID tags or specialized jewelry barcode printers (rat-tail tags) to ensure fast stock takes without damaging delicate items.\n2. **Loss Prevention:** Look for role-based access controls on POS discounts, metal scrap entry, and vault transfers.\n3. **Omnichannel Sync:** Ensure real-time inventory deduction at POS to prevent selling a unique, one-of-a-kind piece simultaneously online and in-store.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Microsoft Dynamics 365"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:microsoftdynamics365",
+        "span": "Microsoft Dynamics 365",
+        "offset": 1963
+      }
+    ],
+    "order": [
+      "Microsoft Dynamics 365"
+    ],
+    "citations": {},
+    "notes": "Subject absent. Microsoft Dynamics 365 appears once, in a table cell, as \"Microsoft Dynamics 365 Business Central\" (the platform E-Jewelry365 is built on). \"Microsoft POS\" at 1889 and \"E-Jewelry365\" at 1807 are not Microsoft Dynamics 365."
+  }
+}

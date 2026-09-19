@@ -1,0 +1,349 @@
+{
+  "id": "g073-cop-pipedrive-crm-best-small-business",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: competitor named by its short form (\"Zoho\") before the subject; one citation is a registry publisher",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:20:02.632Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is best for a small business in the UK?",
+    "cell": {
+      "key": "ca895a56496125cd993a308b11c577125dc354ba7e35d52a4d9efda5565bfb3a",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For UK small businesses, the top recommended CRMs in 2026 are GoHighLevel for all-in-one automation, HubSpot for a strong free start, Zoho for best value, Capsule for simplicity, Pipedrive for a visual sales pipeline, and Freshsales for AI-assisted selling.\nTop CRM Recommendations\n1. GoHighLevel\nBest for: Businesses seeking an all-in-one solution.\nPricing: ~£77/month flat fee for unlimited users (trial available)\nPros: Replaces multiple tools (CRM, email, SMS, website, booking calendar), strong automation including missed-call text-back, scales without per-user fees.\nCons: Learning curve is steeper, SMS/email usage may incur additional costs.\nWhy choose it: Ideal for growing small businesses that want to consolidate tools and automate lead nurturing 1.\n2. HubSpot CRM\nBest for: Free entry-level start with scalability for growth.\nPricing: Free base plan; paid starter from ~£15/month\nPros: Powerful free tier, very user-friendly interface, rich marketing feature set, indefinite free usage.\nCons: Paid tiers can become expensive, per-contact costs may add up.\nWhy choose it: Perfect for businesses wanting zero initial financial commitment with potential to upgrade to full marketing and sales automation 2.\n3. Zoho CRM\nBest for: Businesses needing value and customization.\nPricing: Free up to 3 users; Standard from ~£12/user/month\nPros: Feature-rich, highly customizable, integrates with Zoho suite (finance, support, marketing), includes automation and AI.\nCons: Setup is more time-consuming, interface can feel busy.\nWhy choose it: Best long-term investment for small businesses anticipating growth and needing powerful automation on a budget 2.\n4. Capsule CRM\nBest for: Simple, UK-based CRM.\nPricing: Free plan available; paid from ~£14/user/month\nPros: Clean interface, straightforward contact and deal tracking, UK-based support, integrates with Xero.\nCons: Fewer advanced automation and marketing features.\nWhy choose it: Ideal for businesses prioritizing simplicity, basic sales pipeline, and easy UK support 1.\n5. Pipedrive\nBest for: Visual sales pipeline management.\nPricing: From ~£14/user/month\nPros: Easy visual pipeline, quick adoption for small teams, strong mobile app.\nCons: No free plan, limited native marketing tools.\nWhy choose it: Suited for sales-centric small businesses that want clear pipeline visibility and fast implementation 2.\n6. Freshsales (Freshworks)\nBest for: Small businesses wanting AI-assisted sales.\nPricing: Free plan available; Growth from ~£7/user/month\nPros: AI lead scoring, integrated phone/email, build follow-ups and sequences, affordable.\nCons: Smaller ecosystem than HubSpot/Zoho, reporting is basic at lower tiers.\nWhy choose it: Excellent for agencies, ecommerce teams, or small businesses looking for smart automation on a budget 2.\nChoosing the Right CRM\nWhen choosing a CRM, consider:\nBudget: Start with free or low-cost tiers and upgrade only when necessary.\nEase of Setup: Small teams benefit from CRMs that require minimal IT support.\nAutomation: Email/SMS reminders and follow-ups help reduce missed leads.\nUK Requirements: Ensure compatibility with GDPR, GBP invoicing, and common UK tools like Xero or Sage.\nMobile Use: Managing clients on the go ensures data stays up-to-date.\nRecommendation: For a small UK business just starting, HubSpot is recommended for a free, easy-to-use start. For businesses prioritizing automation and lead capture at scale, GoHighLevel is highly effective despite the learning curve. Zoho provides the most versatile combination of power and value for growing SMEs +1.",
+    "citations": [
+      {
+        "url": "https://gosmallbusiness.co.uk/best-crm-software-for-small-businesses-in-the-uk/",
+        "position": 0,
+        "title": "Best CRM software for small businesses in the UK | Go Small Business",
+        "meta": {
+          "publisher": "gosmallbusiness.co.uk",
+          "icon_url": "blob:https://www.bing.com/12ccfe4a-1ea2-4f5f-b968-538254ac09cb"
+        }
+      },
+      {
+        "url": "https://crmreviews.co.uk/best-crm-small-business-uk/",
+        "position": 1,
+        "title": "Best CRM for Small Business UK - Top UK CRM Picks 2026",
+        "meta": {
+          "publisher": "crmreviews.co.uk",
+          "icon_url": "blob:https://www.bing.com/90f59f25-8817-4210-9657-660e5f3061d5"
+        }
+      },
+      {
+        "url": "https://startups.co.uk/crm-software/best-crm-for-small-business-uk/",
+        "position": 2,
+        "title": "Best CRMs For Small Businesses (Recommended 2026) - Startups.co.uk",
+        "meta": {
+          "publisher": "startups.co.uk",
+          "icon_url": "blob:https://www.bing.com/3c14e166-8e4e-43a3-917e-9d67c25501a6"
+        }
+      },
+      {
+        "url": "https://www.sevensolvers.com/blog/best-crm-software-for-small-businesses-in-the-uk-2026-top-8-compared-including-custom-options",
+        "position": 3,
+        "title": "Best CRM Software for Small Businesses in the UK 2026: Top 8 Compared ...",
+        "meta": {
+          "publisher": "sevensolvers.com",
+          "icon_url": "blob:https://www.bing.com/e1dd8589-148a-41a8-881b-b57e08c3b47e"
+        }
+      },
+      {
+        "url": "https://www.milesmarketing.co.uk/best-crm-for-small-business-uk/",
+        "position": 4,
+        "title": "The 12 Best CRM for Small Business UK: Our 2026 Guide",
+        "meta": {
+          "publisher": "milesmarketing.co.uk",
+          "icon_url": "blob:https://www.bing.com/1113cbae-f20a-4987-88cf-c63f3f5011fd"
+        }
+      },
+      {
+        "url": "https://www.expertsure.com/uk/crm-software/best-crm-small-business/",
+        "position": 5,
+        "title": "Best CRM for Small Business UK 2026 - ExpertSure",
+        "meta": {
+          "publisher": "expertsure.com",
+          "icon_url": "blob:https://www.bing.com/b87e9738-871c-4cb4-a67e-9dd886e6245b"
+        }
+      },
+      {
+        "url": "https://goldentecno.co.uk/blog/best-crm-small-business-uk",
+        "position": 6,
+        "title": "Best CRM for Small Business UK 2026 — Full Comparison Guide",
+        "meta": {
+          "publisher": "goldentecno.co.uk",
+          "icon_url": "blob:https://www.bing.com/90049113-fe39-41c7-b664-b338ab1419be"
+        }
+      },
+      {
+        "url": "https://www.tradepick.co.uk/guides/best-crm-small-business-uk",
+        "position": 7,
+        "title": "Best CRM for UK Small Businesses (2026): Honest Comparison",
+        "meta": {
+          "publisher": "tradepick.co.uk",
+          "icon_url": "blob:https://www.bing.com/b4b3f518-f351-4625-83e8-243db63e46d4"
+        }
+      },
+      {
+        "url": "https://businessforever.co.uk/best-crm-small-business-uk/",
+        "position": 8,
+        "title": "Best CRM for Small Business UK: Compare Pricing & Features",
+        "meta": {
+          "publisher": "businessforever.co.uk",
+          "icon_url": "blob:https://www.bing.com/dcbeb60f-08a2-4f76-bc21-d70c5d785c47"
+        }
+      },
+      {
+        "url": "https://smallbusiness.co.uk/top-crm-software-providers-for-uk-small-businesses-2552988/",
+        "position": 9,
+        "title": "Top 6 CRM software providers for UK small businesses",
+        "meta": {
+          "publisher": "smallbusiness.co.uk",
+          "icon_url": "blob:https://www.bing.com/41e36889-fccf-490a-b065-8675482f7db2"
+        }
+      },
+      {
+        "url": "https://worktual.co.uk/insights/best-crm-for-small-business-uk/",
+        "position": 10,
+        "title": "Best CRM for Small Business UK 2026 | GDPR Compared",
+        "meta": {
+          "publisher": "worktual.co.uk",
+          "icon_url": "blob:https://www.bing.com/d3ac1f21-cb09-4757-b720-7d5899110770"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 3,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "earned_media",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 101
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 134
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 179
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2034
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 222
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Zoho CRM",
+      "Pipedrive",
+      "Freshsales"
+    ],
+    "citations": {
+      "0": "gosmallbusiness.co.uk: small-business advice site, not in registry",
+      "1": "crmreviews.co.uk \"best CRM\" article: unsure it is a user-review platform, so other",
+      "2": "startups.co.uk: business publication that is not in the publisher registry, so other (rule 5)",
+      "3": "www.sevensolvers.com blog: agency / vendor site, not in registry",
+      "4": "www.milesmarketing.co.uk: agency site, not in registry",
+      "5": "www.expertsure.com: comparison / lead-generation site, unsure it is a review platform, so other",
+      "6": "goldentecno.co.uk blog: not in registry",
+      "7": "www.tradepick.co.uk guide: not in registry",
+      "8": "businessforever.co.uk: not in registry",
+      "9": "smallbusiness.co.uk is in the publisher registry",
+      "10": "worktual.co.uk: vendor site, not in registry"
+    },
+    "notes": "short form: \"Zoho\" for Zoho CRM at 134 (\"HubSpot for a strong free start, Zoho for best value, Capsule ...\" in a list of recommended CRMs; the same answer's section 3 is headed \"Zoho CRM\" at 1221), and it comes BEFORE the subject at 179, which makes the subject third. \"integrates with Zoho suite\" at 1400 is the company's suite. \"Freshsales (Freshworks)\" at 2372 is a later occurrence. GoHighLevel, Capsule, Xero and Sage are not in the set."
+  }
+}

@@ -1,0 +1,243 @@
+{
+  "id": "g079-gem-pipedrive-crm-easiest-non-technical",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: subject named inside trailing follow-up-suggestion markup (ElicitationsGroup attributes); Bigin by Zoho precedes the real Zoho CRM mention",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:28:32.701Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+    "cell": {
+      "key": "16ebd12bd31aef2e191d1393b2c62457285e3664529227906b3a74a617320f9d",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "**Pipedrive** and **HubSpot CRM** are the easiest options for a non-technical team to set up independently, though the best choice depends on your primary focus.\n\n| CRM | Best For | Setup Time | Standout Feature |\n| --- | --- | --- | --- |\n| **Pipedrive** | Pure sales pipeline management | ~30 minutes | Visual drag-and-drop deal tracking |\n| **HubSpot CRM** | Sales + marketing & customer history | ~1–2 hours | Pre-built integrations & free plan |\n| **Bigin by Zoho** | Micro-teams with basic needs | ~15 minutes | Ultra-simple interface & low cost |\n\n---\n\n**1. Pipedrive (Best for Pure Sales)**\n* **Why it’s easy:** Designed around a visual Kanban board, Pipedrive requires virtually no configuration to start moving deals from stage to stage.\n* **Setup process:** Import your contacts via CSV, customize your deal stages (e.g., *Lead In → Meeting Scheduled → Proposal Sent*), and link your email.\n* **Watch out for:** Marketing automation features are lightweight compared to dedicated marketing tools.\n\n**2. HubSpot CRM (Best All-in-One)**\n* **Why it’s easy:** Offers guided onboarding flows and automatically logs emails and calls without complex rules.\n* **Setup process:** Create a free account, install the Gmail/Outlook browser extension, and import contacts. It automatically maps fields during CSV uploads.\n* **Watch out for:** Tiered pricing gets expensive quickly if you upgrade past the starter features.\n\n**3. Bigin by Zoho (Best for Tight Budgets & Simplicity)**\n* **Why it’s easy:** A stripped-down, lightweight version of Zoho CRM built specifically for small businesses that don't need heavy feature sets.\n* **Setup process:** Choose from pre-made industry templates and start tracking contacts right away.\n* **Watch out for:** Advanced analytics and heavy customization options are limited.\n\n---\n\n**Recommendation**\n* If your goal is strictly **sales tracking and deal management**, choose **Pipedrive**.\n* If you want **email marketing, website contact capture, and sales tracking in one place**, choose **HubSpot**.\n\n<ElicitationsGroup message=\"To narrow this down further:\">\n  <Elicitation label=\"Compare Pipedrive vs HubSpot pricing\" query=\"Compare the current pricing plans and hidden costs of Pipedrive vs HubSpot for small teams.\"/>\n  <Elicitation label=\"Get a checklist for setting up a CRM from a spreadsheet\" query=\"Provide a step-by-step checklist to clean and import client data from a spreadsheet into a CRM.\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 7,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 244
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 565
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 659
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1914
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2130
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2221
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 20
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 1542
+      }
+    ],
+    "order": [
+      "Pipedrive",
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "UNSURE on the count: the occurrences at 2130 and 2221 sit inside the trailing <ElicitationsGroup> follow-up markup (a label attribute and a query attribute), not in the answer body. They are in answer.text and are not URLs, so by the protocol's definition of prose they are counted (7). If that markup is excluded the count is 5 (2, 244, 565, 659, 1914). \"Bigin by Zoho\" at 455 (table) and 1427 (heading) is a different Zoho product and is NOT counted; Zoho CRM is detected from \"lightweight version of Zoho CRM\" at 1542. No citations."
+  }
+}

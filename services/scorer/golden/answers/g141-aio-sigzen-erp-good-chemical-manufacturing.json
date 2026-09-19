@@ -1,0 +1,252 @@
+{
+  "id": "g141-aio-sigzen-erp-good-chemical-manufacturing",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:21:21.553Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "which ERP is good for a chemical manufacturing company in India",
+    "cell": {
+      "key": "3496f1951b0fed39e9fb72a1cf75fe8938f3b43dfb365a743c254061c48e09d9",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best ERP for a chemical manufacturing company in India depends on your company size, budget, and specific process manufacturing needs, with BatchMaster ERP, eresource Bpro, and Sage X3 standing out as top industry choices.\nTop ERP Options for Chemical Manufacturing in India\nKey Features to Look For",
+    "citations": [
+      {
+        "url": "https://www.essindia.com/erp-system-software-chemical-industry",
+        "position": 0,
+        "title": "The Ultimate Guide to the Best ERP Systems for the Chemical ...",
+        "meta": {
+          "snippet": "Q: Which is the best ERP software for chemical industry companies in India? A: Dexciss ERP is widely recognized as the best ERP fo...",
+          "source": "LinkedIn·Dexciss Technology",
+          "date": "Jul 27, 2026"
+        }
+      },
+      {
+        "url": "https://www.eresourceerp.com/erp-software-for-chemical-manufacturing/",
+        "position": 1,
+        "title": "Best ERP Software for Chemical Manufacturing Industry",
+        "meta": {
+          "snippet": "Why Choose eresource Bpro ERP for Chemical Manufacturing? * Formulation & Reaction Management. Manage chemical recipes, reaction s...",
+          "source": "eresource ERP"
+        }
+      },
+      {
+        "url": "https://www.sagesoftware.co.in/erp-software-for-chemical-industry/",
+        "position": 2,
+        "title": "ERP for Chemical Industry in India - Sage Software Solutions",
+        "meta": {
+          "snippet": "What is ERP for Chemical Industry? Chemical ERP (Enterprise Resource Planning) software is an all-inclusive solution that reduces ...",
+          "source": "Sage Software Solutions"
+        }
+      },
+      {
+        "url": "https://www.batchmaster.co.in/industryserved/speciality-chemicals/erp-for-chemical-manufacturing.aspx",
+        "position": 3,
+        "title": "ERP for Chemical Manufacturing Industry",
+        "meta": {
+          "snippet": "BatchMaster ERP is a chemical manufacturing enterprise resource planning (ERP) system. It's designed for formula-driven and batch-",
+          "source": "BatchMaster Software Pvt. Ltd"
+        }
+      },
+      {
+        "url": "https://www.datanote.in/knowledge/blog/best-erp-software-for-your-chemical-manufacturing-industry",
+        "position": 4,
+        "title": "Choosing the Best ERP Software for Your Chemical Manufacturing ...",
+        "meta": {
+          "snippet": "Improvise Chemical Manufacturing Process DataNote ERP integrates all business activities into a unified platform, providing end-to...",
+          "source": "DataNote ERP",
+          "date": "Aug 5, 2024"
+        }
+      },
+      {
+        "url": "https://www.essindia.com/erp-system-software-chemical-industry",
+        "position": 5,
+        "title": "ERP System Software for Chemical Industry - Book A Free Demo",
+        "meta": {
+          "snippet": "Integrate And Automate Processes With ERP. Chemical companies often strive to earn profits due to increased competition from inter...",
+          "source": "Eastern Software Solutions"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESkQEB6zswFXBpL_pmuvHf_6vTBGpYuboI2zRCjULkiwUmXSRLMj-hOBIpA7QaXC2L4koatUNjJ-c_HhDnI9fxQoZwKq1R3sHc0E42j0tsb3YzLZKbi0U9hY3vXCozPPj_HqGOnilHDC3lRpL35LLbBqOqgIIJ-1FeLbcF6s-9exTpYmNWXXgXquv4fH5Yt4KK9XFz",
+        "position": 6,
+        "title": "Best ERP Software for Manufacturing Companies in India (2026 ...",
+        "meta": {
+          "snippet": "1. Eresource ERP * Designed specifically for Indian SMEs and manufacturers. * Strong modules for production, inventory, and supply...",
+          "source": "LinkedIn·eresource Infotech Pvt. Ltd. | ERP Software",
+          "date": "Apr 1, 2026"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESaQHrOzAVQZ2LSx6Fhp7M5Hu74lT4krgxyoHlbT_M3eMD1zQetSjgj8xedg-ued1lZNITxJ6LUIMl1gX9XyDgddHN4BTh2AN29jSK1M_drlIUYT2VCbNwjAfbJzHAEglY3xbfpW6NZ8mIrA",
+        "position": 7,
+        "title": "Best ERP Software For Chemicals, Pesticides & Fertilizers Industry",
+        "meta": {
+          "snippet": "Benefits of ERP for Chemicals Industry * Easily Manage Multi-Grade Formulations. Dynamic formulation ERP software helps create and...",
+          "source": "Lighthouse ERP"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "essindia.com: ERP vendor site (the title/meta name a LinkedIn article, but the URL host is essindia.com), not in registry",
+      "1": "eresourceerp.com: ERP vendor site, not in registry",
+      "2": "sagesoftware.co.in: ERP vendor/reseller site, not in registry",
+      "3": "batchmaster.co.in: ERP vendor site, not in registry",
+      "4": "datanote.in blog: ERP vendor blog, not in registry",
+      "5": "essindia.com: ERP vendor site, not in registry (same URL as 0)",
+      "6": "host google.com: opaque Google redirect; meta names LinkedIn, a social network, other in any case",
+      "7": "host google.com: opaque Google redirect; meta names Lighthouse ERP, a vendor, other in any case"
+    },
+    "notes": "The 303-char stub names BatchMaster ERP, eresource Bpro and Sage X3, all outside the set. No brand of the set appears; no citation is on sigzen.com."
+  }
+}

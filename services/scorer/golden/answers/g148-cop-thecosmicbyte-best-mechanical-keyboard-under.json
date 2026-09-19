@@ -1,0 +1,235 @@
+{
+  "id": "g148-cop-thecosmicbyte-best-mechanical-keyboard-under",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:29:13.203Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best mechanical keyboard under 3000 rupees with hot swappable switches",
+    "cell": {
+      "key": "9b4fbd01c18fd256bb8a6334771bee29d2cb84baf5650e64ebcaa882ab41960e",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If you’re looking for a budget-friendly mechanical keyboard under ₹3,000 with hot-swappable switches, options like the Kreo Hive 65 RGB, EvoFox Katana S Mini, and Cosmic Byte CB-GK-43 Phantom offer great customization and build quality.\nTop Recommendations\n1. Kreo Hive 65 RGB Mechanical Gaming Keyboard\nLayout: 65% compact keyboard\nSwitches: Pre-lubed, 5-pin hot-swappable\nFeatures: RGB backlight, anti-ghosting, detachable USB-C cable\nPros: Compact design ideal for small desk setups, hot-swap compatible for customizing switches 2\n2. EvoFox Katana S Mini Wired Mechanical Keyboard\nLayout: 68-key compact board\nSwitches: Hot-swappable silent red switches\nFeatures: Vivid rainbow RGB, 1000Hz polling rate, full anti-ghosting, wired design\nPros: Good for gaming, portable, quiet switches, hot-swappable for easy switch replacement 2\n3. Cosmic Byte CB-GK-43 Phantom TKL\nLayout: Tenkeyless mechanical keyboard (TKL)\nSwitches: Pre-lubed Outemu Red switches, swappable\nFeatures: 1000Hz polling, per-key RGB with software, USB-C connectivity, volume roller\nPros: TKL layout saves space, software customization for lighting, great for both typing and gaming 2\n4. Redragon K617 Fizz (60%)\nLayout: Ultra-compact 61 keys\nSwitches: Linear red, swap-ready socket for mods\nFeatures: RGB lighting, Pro driver/software supported, vibrant 20-mode lighting\nPros: Extremely compact, easy to replace switches, suitable for mobile setups or minimal desks 1\n5. Ant Esports MK1300 V2\nLayout: 60% wired mechanical keyboard, 61 keys\nSwitches: Hot-swappable red switches\nFeatures: RGB backlit, anti-ghosting, detachable USB-C, PC/Mac compatible\nPros: Solid entry-level option for budget users, customization-friendly 1\nBuying Tips\nLayout Choice: 60%-65% boards are portable, TKL (87 keys) saves space, but no dedicated numpad.\nSwitch Type: Linear (silent), tactile (bump), or clicky (audible) depending on typing or gaming preference.\nHot-Swap Compatibility: Ensures you can replace switches easily without soldering.\nConnectivity & Build: Consider detachable USB-C for convenience and keyboards with anti-ghosting for gaming.\nThese keyboards provide excellent hot-swappable capability, RGB customization, and pricing under ₹3,000, making them suitable for budget-conscious gamers and typists who like customizing their setup +1.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/Gaming-Keyboards-Up-to-%E2%82%B93-000/s?rh=n%3A1375414031%2Cp_36%3A-300000",
+        "position": 0,
+        "title": "Amazon.in: Up To ₹3,000 - Gaming Keyboards / PC Gaming Peripherals ...",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/44d5ef81-1219-453d-ab0c-56c7f70cc7fb"
+        }
+      },
+      {
+        "url": "https://salugaishop.com/best-mechanical-keyboards-under-3000-india-2026/",
+        "position": 1,
+        "title": "7 Best Mechanical Keyboards Under ₹3,000 in India (2026)",
+        "meta": {
+          "publisher": "salugaishop.com",
+          "icon_url": "blob:https://www.bing.com/64f6149d-597e-420e-b8ef-fb7aaa22f03c"
+        }
+      },
+      {
+        "url": "https://techtidetv.com/blog/best-mechanical-keyboards-under-3000-india-2026",
+        "position": 2,
+        "title": "Best Mechanical Keyboards Under 3000 India 2026: 5 Pro Picks",
+        "meta": {
+          "publisher": "techtidetv.com",
+          "icon_url": "blob:https://www.bing.com/2cc0b66c-c8b4-47dc-b506-e6b62f835f97"
+        }
+      },
+      {
+        "url": "https://kreo-tech.com/blogs/kreo-blog/best-mechanical-keyboards-under-3-000-in-india-the-ultimate-2026-buying-guide",
+        "position": 3,
+        "title": "Best Mechanical Keyboards Under ₹3,000 in India: The Ultimate 2026 ...",
+        "meta": {
+          "publisher": "kreo-tech.com",
+          "icon_url": "blob:https://www.bing.com/9817a777-fd79-4e4e-a340-8b7a8061a189"
+        }
+      },
+      {
+        "url": "https://pakkapick.in/office/best-mechanical-keyboard-under-3000",
+        "position": 4,
+        "title": "Best Mechanical Keyboards Under ₹3000 in India 2026",
+        "meta": {
+          "publisher": "pakkapick.in",
+          "icon_url": "blob:https://www.bing.com/fb1fa32a-7615-435f-b32f-6c9440c12e55"
+        }
+      },
+      {
+        "url": "https://reviehub.in/best-budget-mechanical-keyboard-india-2026-top-5-tested/",
+        "position": 5,
+        "title": "Best Budget Mechanical Keyboard India 2026: Top 5 Tested",
+        "meta": {
+          "publisher": "reviehub.in",
+          "icon_url": "blob:https://www.bing.com/aa3ee263-891b-4a19-81ec-b13f310d88e9"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-gaming-keyboard-under-3000/",
+        "position": 6,
+        "title": "Best Gaming Keyboard Under 3000 India 2026: Mechanical Picks",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/83ece36b-225a-4972-8365-884eb57dc434"
+        }
+      },
+      {
+        "url": "https://pcpartspicker.in/top-5-mechanical-gaming-keyboards-under-3000-in-india/",
+        "position": 7,
+        "title": "Top 5 Mechanical Gaming Keyboards Under ₹3,000 in India",
+        "meta": {
+          "publisher": "pcpartspicker.in",
+          "icon_url": "blob:https://www.bing.com/71baaa1c-ed11-4bb2-ab50-eee39a4008e8"
+        }
+      },
+      {
+        "url": "https://technosports.co.in/top-10-best-mechanical-keyboards-under-3000-inr/",
+        "position": 8,
+        "title": "Top 10 Best Mechanical Keyboards under 3000 INR in 2024",
+        "meta": {
+          "publisher": "technosports.co.in",
+          "icon_url": "blob:https://www.bing.com/04d6c027-db4e-4123-bc5b-9803e5653f28"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/hot-swappable-mechanical-keyboard/s?k=hot+swappable+mechanical+keyboard",
+        "position": 9,
+        "title": "Amazon.in: Hot Swappable Mechanical Keyboard",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "https://th.bing.com/th/id/ODF.R78Eph0Za3lAUNkY3fwTSg?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 163
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 836
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "amazon.in: retailer search page",
+      "1": "salugaishop.com: shop blog listicle, not in the publisher registry",
+      "2": "techtidetv.com: blog listicle, not in the publisher registry",
+      "3": "kreo-tech.com blog: vendor site (a rival keyboard maker), not in the publisher registry",
+      "4": "pakkapick.in: listicle blog, not in the publisher registry",
+      "5": "reviehub.in: buying-guide blog, not in the publisher registry",
+      "6": "gamingnation.in: listicle blog, not in the publisher registry",
+      "7": "pcpartspicker.in: listicle blog, not in the publisher registry",
+      "8": "technosports.co.in: news/listicle site, not in the publisher registry",
+      "9": "amazon.in: retailer search page"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name). Two mentions: the opening sentence and the numbered heading \"3. Cosmic Byte CB-GK-43 Phantom TKL\". No citation is on thecosmicbyte.com."
+  }
+}

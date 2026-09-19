@@ -1,0 +1,183 @@
+{
+  "id": "g100-aim-sigzen-erp-software-real-estate",
+  "covers": "real google-ai-mode answer, erp-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T11:19:51.035Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP software for real estate business with project tracking",
+    "cell": {
+      "key": "80b08505e3cab515ccb7354f08033ae92ac85d072c02f52689916d006769e607",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nWhen looking for an Enterprise Resource Planning (ERP) software tailored to a real estate business—specifically one that handles heavy project tracking, land development, construction, or multi-phase property lifecycles—you need a system that bridges the gap between job-cost accounting and milestone/project management.\nTop ERP solutions equipped with robust project tracking for real estate development and property operations include:\n1. Oracle NetSuite (with Real Estate/SuiteProjects)\nBest For:: Mid-size to large enterprise developers looking for a fully cloud-native ecosystem.\nProject Tracking Strengths:: NetSuite embeds robust project management directly into its financial ERP framework. It tracks project milestones, resource allocation, task management, and complex Work Breakdown Structures (WBS).\nWhy it fits Real Estate:: Tying project costs (subcontractors, raw land acquisition, materials) directly to general ledger accounting, revenue recognition, and forecasting in real-time. You can explore their approach on the Oracle NetSuite overview page.\n2. Acumatica Cloud ERP (Construction & Real Estate Edition)\nBest For:: Growing developers and general contractors who need mobile-friendly, flexible cloud tools with unlimited user licensing options.\nProject Tracking Strengths:: Highly regarded for project-aware accounts payable/receivable, automated cost allocations, and change-order tracking. It offers deep visibility into pre-development, pursuit costs, and active construction budgets.\nWhy it fits Real Estate:: Provides real-time dashboards tracking budget vs. actuals per property/project, compliance management, and subcontractor lien waivers. More details can be reviewed via Acumatica Cloud ERP insights.\n3. Odoo ERP (Customizable Modular Approach)\nBest For:: Cost-conscious or highly customized operations that want to scale module-by-module.\nProject Tracking Strengths:: Odoo features a dedicated Project app that integrates cleanly with Purchase, Inventory, Invoicing, and a specialized Project Properties Management extension.\nWhy it fits Real Estate:: Allows you to visually track project phases using Gantt charts or Kanban boards while keeping sales, leasing, and contractor milestones attached to the same database.\n4. specialized Project-Management + Accounting Stacks\nIf a full-scale corporate ERP feels overly complex for your current portfolio size, many real estate firms pair a core property accounting tool (like Buildium or AppFolio) with an advanced operational tracker like Monday.com or ClickUp via native integrations.",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/watch?v=kZh6VZFt9Rc",
+        "position": 0,
+        "title": "Best Project Tracking Software in 2026",
+        "meta": {
+          "snippet": "time manage attendance and streamline project tracking you can use Jibble to track projects across desktop and mobile devices with...",
+          "source": "YouTube·Jibble",
+          "date": "Jul 8, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo"
+    ],
+    "citationClasses": {
+      "0": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 1751
+      }
+    ],
+    "order": [
+      "Odoo"
+    ],
+    "citations": {
+      "0": "youtube.com watch page: video platform"
+    },
+    "notes": "Subject absent. Odoo first at 1751 (\"3. Odoo ERP\"), again at 1916. Oracle NetSuite, Acumatica, Buildium, AppFolio, Monday.com, ClickUp are not in the competitor set."
+  }
+}

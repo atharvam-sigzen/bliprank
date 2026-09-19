@@ -1,0 +1,271 @@
+{
+  "id": "g046-aio-pipedrive-crm-bill-doubled-added",
+  "covers": "real google-ai-overviews answer, crm-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (source) · seen on reading: competitor named only by its short form (\"Monday\" as a CRM)",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-08-25T05:35:20.719Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+    "cell": {
+      "key": "ac21369507e32305fc8e60e84b5d37211947bf798e42a858d73fd11d7704bb18",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "When a CRM bill doubles due to added seats, you can optimize licenses, renegotiate terms, or migrate to alternative pricing structures.\nAudit and Reclaim Inactive Licenses\nRight-Size User Roles and Tiers\nNegotiate or Adjust the Contract\nEvaluate Alternative Pricing Models\nIf you share which CRM you are using (e.g., HubSpot, Salesforce, Monday) and what roles your new users have (e.g., full sales vs. occasional viewers), I can give you the exact steps to trim the licenses.",
+    "citations": [
+      {
+        "url": "https://ardncloudsolutions.com/reduce-crm-licensing-costs",
+        "position": 0,
+        "meta": {
+          "source": "Ardn Cloud Solutions"
+        }
+      },
+      {
+        "url": "https://community.hubspot.com/t/additional-core-seats/130520",
+        "position": 1,
+        "meta": {
+          "source": "HubSpot Community"
+        }
+      },
+      {
+        "url": "https://www.sidekickstrategies.com/blog/hubspots-new-seats-the-complete-guide-for-users-and-admins",
+        "position": 2,
+        "meta": {
+          "source": "Sidekick Strategies"
+        }
+      },
+      {
+        "url": "https://knowledge.hubspot.com/account-management/manage-seats",
+        "position": 3,
+        "meta": {
+          "source": "HubSpot"
+        }
+      },
+      {
+        "url": "https://www.walkme.com/blog/crm-pricing/",
+        "position": 4,
+        "meta": {
+          "source": "WalkMe"
+        }
+      },
+      {
+        "url": "https://swellsystem.com/cost-savings-for-your-company-how-crm-software-can-help/",
+        "position": 5,
+        "meta": {
+          "source": "SWELLEnterprise"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "monday CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "competitor",
+      "2": "other",
+      "3": "competitor",
+      "4": "other",
+      "5": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 317
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 326
+      },
+      {
+        "brand": "monday-crm",
+        "span": "Monday",
+        "offset": 338
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "monday CRM"
+    ],
+    "citations": {
+      "0": "ardncloudsolutions.com: consultancy site, not in the publisher registry",
+      "1": "host community.hubspot.com is a subdomain of competitor HubSpot's domain hubspot.com (identity beats the community platform class)",
+      "2": "sidekickstrategies.com: agency blog, not in the publisher registry",
+      "3": "host knowledge.hubspot.com is a subdomain of competitor HubSpot's domain hubspot.com",
+      "4": "walkme.com blog: vendor site, not in the publisher registry",
+      "5": "swellsystem.com: vendor site, not in the publisher registry"
+    },
+    "notes": "Subject absent. short form: \"Monday\" for monday CRM at 338, named as a CRM in \"which CRM you are using (e.g., HubSpot, Salesforce, Monday)\"; unlisted form (not the name or a listed alias)."
+  }
+}

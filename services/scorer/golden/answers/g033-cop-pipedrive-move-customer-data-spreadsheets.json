@@ -1,0 +1,338 @@
+{
+  "id": "g033-cop-pipedrive-move-customer-data-spreadsheets",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: competitor named only by its short form inside a feature name (\"Zoho Data Migration\")",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:32:21.319Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+    "cell": {
+      "key": "4ce239c84f7a139fe149d751d8118e706c336f6b0a4171247317ac26d58e4ef7",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Successfully moving customer data from Excel or other spreadsheet tools into a CRM without losing historical context requires a structured, multi-step approach. The goal is to maintain data integrity, retain interaction history, and ensure your sales, marketing, and support teams can continue workflows without disruption. Below is a step-by-step framework based on best practices.\nStep 1: Audit and Clean Your Spreadsheet Data\nInventory Data Sources: Collect all spreadsheets, versions, and related files containing customer data.\nRemove Duplicates: Use Excel’s conditional formatting or dedicated data cleaning tools to identify duplicate contacts and merge them when appropriate.\nCorrect Errors: Standardize phone numbers, emails, addresses, and names. Fix inconsistent formats and typos to match CRM field requirements.\nFilter Relevant Data: Exclude outdated or irrelevant records (e.g., closed accounts or inactive leads) to reduce clutter during migration.\nStep 2: Map Spreadsheet Fields to CRM Structure\nIdentify CRM Fields: Understand which fields your CRM requires for Accounts, Contacts, Leads, Opportunities, and Activities.\nCreate a Field Mapping Document: Match Excel columns to CRM fields. Example: First Name → First Name, Last Name → Last Name, Notes → Activity History.\nPlan Historical Data Import: Decide how to migrate interaction history (emails, calls, meetings) as activity records rather than just a note. Many CRMs allow integration for past activities or attachments.\nStep 3: Backup Your Data\nMake a full backup of your spreadsheets and any related data before starting migration. This ensures you can restore information if formatting issues or mapping mistakes occur.\nStep 4: Perform a Test Migration\nSelect a Subset of Data: Choose a representative sample of customer records with history.\nImport into CRM Sandbox: Most CRMs provide a test environment to validate import and mapping accuracy.\nVerify Historical Entries: Ensure past activities, emails, and interactions appear correctly tied to the right customer records.\nAdjust Field Mapping: If certain data points fail to import correctly, refine the mapping configuration.\nStep 5: Execute Full Migration\nImport in Batches: Large datasets should be migrated in increments to catch errors early and prevent data corruption.\nMonitor Logs: Check the CRM import log for any unmapped fields, duplicate warnings, or failed records.\nValidate Data Integrity: Sample-check customer profiles, contact details, and historical activity to ensure complete transfer.\nStep 6: Post-Migration Verification\nData Accuracy: Confirm all fields match the source spreadsheets.\nHistorical Continuity: Check that calls, emails, and past notes are correctly attached to each contact record.\nUser Access & Permissions: Make sure team members can view and edit data according to their roles.\nStep 7: Leverage Automation and Ongoing Synchronization\nImplement CRM automation such as reminders, follow-ups, and workflows to maintain data consistency going forward.\nConsider periodic sync checks if some teams still maintain spreadsheets, to prevent fragmentation.\nKey Principles to Preserve History\nImport Activities Separately: Treat historical interactions as activity records, not static notes.\nUse Timestamps: Maintain original dates for emails, meetings, and interactions.\nReference Original Source: Keep a field linking back to the original spreadsheet for audit purposes.\nRecommended Tools and Practices\nBuilt-in CRM Migration Tools: Salesforce Data Import Wizard, HubSpot Import, Zoho Data Migration, etc.\nThird-party ETL tools: Talend, Workato, or Insycle can automate data cleaning and historical import.\nValidation Scripts: Automated scripts to reconcile source data with imported CRM records help ensure nothing is lost.\nSummary\nBy auditing your data, mapping fields carefully, performing test migrations, and treating historical activity as dedicated records, you can move spreadsheet data into a CRM without losing context or history. The combination of careful planning, backups, and incremental testing ensures a smooth migration and preserves data integrity for ongoing business operations.",
+    "citations": [
+      {
+        "url": "https://softabase.com/guides/migrate-spreadsheets-to-crm-tutorial",
+        "position": 0,
+        "title": "How to Migrate from Spreadsheets to CRM Without Losing Data (2026)",
+        "meta": {
+          "publisher": "softabase.com",
+          "icon_url": "blob:https://www.bing.com/de92ad0c-9ecb-4d6f-bce3-289ec30c569c"
+        }
+      },
+      {
+        "url": "https://www.thepaceinfosys.com/blog/crm-data-migration",
+        "position": 1,
+        "title": "CRM Data Migration: Move From Spreadsheets to CRM Without Data Loss",
+        "meta": {
+          "publisher": "thepaceinfosys.com",
+          "icon_url": "blob:https://www.bing.com/b1796a2b-bc15-4fb2-86e9-6f1dd1baedfc"
+        }
+      },
+      {
+        "url": "https://gain.io/blog/crm-migration-from-excel",
+        "position": 2,
+        "title": "CRM Migration From Excel Guide 2026 For Clean Data",
+        "meta": {
+          "publisher": "gain.io",
+          "icon_url": "blob:https://www.bing.com/24d0d5ac-d194-4b83-91fa-574f0a28aa65"
+        }
+      },
+      {
+        "url": "https://exeloop.com/in/blog/migrate-from-spreadsheets-to-crm/",
+        "position": 3,
+        "title": "How to Move From Spreadsheets to a CRM Without Losing Data",
+        "meta": {
+          "publisher": "exeloop.com",
+          "icon_url": "blob:https://www.bing.com/111f2874-87f8-4f75-8feb-8c16151790de"
+        }
+      },
+      {
+        "url": "https://www.tinyvation.com/blog/spreadsheet-to-crm-migration",
+        "position": 4,
+        "title": "How to move from spreadsheets to a CRM without losing your history",
+        "meta": {
+          "publisher": "tinyvation.com",
+          "icon_url": "blob:https://www.bing.com/e619129c-d1e8-4f4b-a6b6-e325d0d22715"
+        }
+      },
+      {
+        "url": "https://companyconnect.tech/crm-data-migration-guide/",
+        "position": 5,
+        "title": "CRM Data Migration: How to Move from Spreadsheets to a CRM Without ...",
+        "meta": {
+          "publisher": "companyconnect.tech",
+          "icon_url": "blob:https://www.bing.com/861194b3-12a0-4371-bf2b-ab95a943b911"
+        }
+      },
+      {
+        "url": "https://www.crmbeat.com/getting-started/how-to-move-from-spreadsheets-to-a-crm",
+        "position": 6,
+        "title": "How to Move From Spreadsheets to a CRM - CRM Beat",
+        "meta": {
+          "publisher": "crmbeat.com",
+          "icon_url": "blob:https://www.bing.com/49b11647-643d-4a27-abdd-62036b8f01a6"
+        }
+      },
+      {
+        "url": "https://www.pipecrush.tech/blog/migrate-spreadsheet-to-crm",
+        "position": 7,
+        "title": "Migrate Spreadsheet to CRM: Step-by-Step Guide 2026",
+        "meta": {
+          "publisher": "pipecrush.tech",
+          "icon_url": "blob:https://www.bing.com/4f53d4e7-568a-4091-a076-910b21413635"
+        }
+      },
+      {
+        "url": "https://indiacrm.in/how-to/how-to-switch-from-spreadsheets-to-crm",
+        "position": 8,
+        "title": "How to move from Excel spreadsheets to a CRM (without losing data)",
+        "meta": {
+          "publisher": "indiacrm.in",
+          "icon_url": "blob:https://www.bing.com/e5a394f1-ba67-4e78-a3eb-e798af20b1c7"
+        }
+      },
+      {
+        "url": "https://opsmadesimple.net/guides/how-to-migrate-from-spreadsheet-to-a-crm/",
+        "position": 9,
+        "title": "How to Migrate from Spreadsheet to a CRM | Ops Made Simple",
+        "meta": {
+          "publisher": "opsmadesimple.net",
+          "icon_url": "blob:https://www.bing.com/23789d65-c092-4882-a2ec-4b7b0eb68fb4"
+        }
+      },
+      {
+        "url": "https://www.quantlabusa.dev/blog/crm-data-migration-from-spreadsheets",
+        "position": 10,
+        "title": "CRM Data Migration from Spreadsheets: Step-by-Step Playbook",
+        "meta": {
+          "publisher": "quantlabusa.dev",
+          "icon_url": "blob:https://www.bing.com/0103b089-4766-4ce8-8044-97a05710699b"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 3492
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 3523
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 3539
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citations": {
+      "0": "softabase.com guide: unsure what the site is, not in the publisher registry",
+      "1": "thepaceinfosys.com blog: agency/vendor site, not in the publisher registry",
+      "2": "gain.io blog: vendor site, not in the publisher registry",
+      "3": "exeloop.com blog: vendor site, not in the publisher registry",
+      "4": "tinyvation.com blog: vendor/agency site, not in the publisher registry",
+      "5": "companyconnect.tech: vendor site, not in the publisher registry",
+      "6": "crmbeat.com: CRM blog, not in the publisher registry",
+      "7": "pipecrush.tech blog: vendor site (not pipedrive.com), not in the publisher registry",
+      "8": "indiacrm.in: CRM how-to site, unsure, not in the publisher registry",
+      "9": "opsmadesimple.net guide: blog, not in the publisher registry",
+      "10": "quantlabusa.dev blog: agency site, not in the publisher registry"
+    },
+    "notes": "Subject not named. Brands appear once each in \"Built-in CRM Migration Tools: Salesforce Data Import Wizard, HubSpot Import, Zoho Data Migration, etc.\" short form, unlisted form: \"Zoho\" at 3539 counted for Zoho CRM because the line lists each CRM's own built-in import tool and \"Zoho Data Migration\" is Zoho CRM's migration feature, not a separate Zoho product; not fully sure (if not counted, brandsDetected is 2). \"closed\" at 893 (\"closed accounts\") is an ordinary word. Talend, Workato, Insycle, Excel are not in the brand set."
+  }
+}

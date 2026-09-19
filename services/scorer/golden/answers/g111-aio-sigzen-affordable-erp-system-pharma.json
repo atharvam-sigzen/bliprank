@@ -1,0 +1,254 @@
+{
+  "id": "g111-aio-sigzen-affordable-erp-system-pharma",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: no tracked brand in prose; two citations are opaque google.com/goto redirects",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:16:49.447Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "affordable ERP system for pharma company with batch tracking",
+    "cell": {
+      "key": "afea21070301a09a74c221e9e405ff6b7df86dc3c6ffc781cc43a6567dce80bf",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "BatchMaster ERP is an affordable, formula-based manufacturing system that natively handles batch tracking, lot traceability, and FDA/cGMP compliance for small-to-midsize pharmaceutical companies.\nTop Affordable Options with Batch Tracking\nKey Pharma Features to Look For",
+    "citations": [
+      {
+        "url": "https://www.metaoption.com/blog/software/pharma-erp-systems/",
+        "position": 0,
+        "title": "11 Best Pharma ERP Systems and Software (Updated List)",
+        "meta": {
+          "snippet": "6. BatchMaster ERP. BatchMaster ERP is designed specifically for formula-based process industries like pharmaceuticals. It covers ...",
+          "source": "MetaOption",
+          "date": "Aug 13, 2026"
+        }
+      },
+      {
+        "url": "https://qt9software.com/erp/industry/pharmaceutical",
+        "position": 1,
+        "title": "The Best ERP Systems for the Pharmaceutical Industry ...",
+        "meta": {
+          "snippet": "quality and compliance what makes it great for small businesses though is the fastation. and lower cost qt9 only takes a couple of...",
+          "source": "YouTube·Software Connect",
+          "date": "Feb 13, 2026"
+        }
+      },
+      {
+        "url": "https://www.slingshotpharma.com/blog/best-erp-software-pharmaceutical-manufacturing",
+        "position": 2,
+        "title": "Best ERP Software for Pharmaceutical Manufacturing",
+        "meta": {
+          "snippet": "The following capabilities are essential: * 21 CFR Part 11 Compliance. The ERP system should include electronic records and electr...",
+          "source": "Slingshot Pharma",
+          "date": "Sep 24, 2025"
+        }
+      },
+      {
+        "url": "https://qt9software.com/erp/industry/pharmaceutical",
+        "position": 3,
+        "title": "Pharmaceutical ERP Software for FDA and cGMP Compliance",
+        "meta": {
+          "snippet": "ERP Features Built for the Pharmaceutical Manufacturers * Electronic Batch Records. Easily create, manage and access digital batch...",
+          "source": "QT9 Software",
+          "date": "Jul 21, 2026"
+        }
+      },
+      {
+        "url": "https://www.batchmaster.com/erp-for-pharmaceuticals-manufacturing/",
+        "position": 4,
+        "title": "BatchMaster ERP Software for Pharmaceutical Manufacturing",
+        "meta": {
+          "snippet": "BatchMaster Pharmaceutical ERP: FAQs ... It offers built-in features such as electronic signatures, secure audit trials, controlle...",
+          "source": "BatchMaster ERP Software"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=nXU4vB2zLFE",
+        "position": 5,
+        "title": "Pharma Batch Manufacturing Made Easy with eresource ERP",
+        "meta": {
+          "snippet": "in pharma manufacturing compliance batch tracking. and every decision impact your bottom line and product safety tracking complian...",
+          "source": "YouTube·eresource ERP",
+          "date": "Dec 12, 2024"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESgQEB6zswFScy49-d6pIIc8lupIj9XWzQrZpHqp9-9wysP2j3QWPGVUp1oJRoL2OOVv0yKSazKvm4WjNGFGKAtNMKh0QRCJ08NtySmhg4YAVvylIXksbSBSd3-3MbiuXaydIh0IixHPlMzFSD3Um__J_AlagZy4mCGC377Ip9xa1u3EM",
+        "position": 6,
+        "title": "Pharmaceutical ERP - Choosing and Implementing Pharma ...",
+        "meta": {
+          "snippet": "SAP ERP Solution Highlights for Life Sciences * Suite-In-A-Box. ERP covering all aspects of your business including: Finance, Sale...",
+          "source": "Navigator Business Solutions"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESZgHrOzAVbihDLinBQh3G1mx3w2RhBN2RZYjaMp_yAvtjqh07sWVQmwQVjR_pltNtu-5hPOl2L4RtJ8S9BjiNUJXF6Ew4sBs0kE9Yn9V3G1gM0Gnyk2LwSa-iXm2SVzJEsKpeQpkxIg",
+        "position": 7,
+        "title": "ERP for Pharma Manufacturing Industries - Dexciss Technology",
+        "meta": {
+          "snippet": "Core Features of Dexciss Pharmaceutical Manufacturing Software * GMP Compliance & 21 CFR Part 11 Audit Logs: Our pharma manufactur...",
+          "source": "Dexciss Technology"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "video",
+      "6": "other",
+      "7": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "metaoption.com blog: vendor/consultancy site, not in the publisher registry",
+      "1": "qt9software.com: vendor site (publisher field says YouTube, but the URL host is the vendor's)",
+      "2": "slingshotpharma.com blog: vendor site, not in registry",
+      "3": "qt9software.com: vendor site",
+      "4": "batchmaster.com: vendor site",
+      "5": "youtube.com watch page: video platform",
+      "6": "google.com/goto redirect, destination not visible in the URL; title points to a vendor (Navigator Business Solutions): other",
+      "7": "google.com/goto redirect, destination not visible in the URL; title points to a vendor (Dexciss Technology): other"
+    },
+    "notes": "Sigzen absent; the 270-char answer names only BatchMaster ERP, which is not in the brand set. No competitor in the prose. Citation 1's title/publisher do not match its URL; classed by host."
+  }
+}

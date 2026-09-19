@@ -1,0 +1,168 @@
+{
+  "id": "g191-aio-thecosmicbyte-tri-mode-wireless-gaming",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: brand named only in a citation's title and URL path on a third-party retailer; absent from prose, not cited",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:35:24.644Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "tri mode wireless gaming mouse with high polling rate india",
+    "cell": {
+      "key": "27ecc2c8c43486649143ae1da5455426a8ce2d5907190451f5c6ad63e4e1f169",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Tri-mode wireless gaming mice with high polling rates in India range from budget 1000Hz options to ultra-fast 8000Hz (8K) competitive models.\nPopular Tri-Mode Mice in India\nYou can check current stock and deals directly on Amazon India.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/Gaming-Mice/b?ie=UTF8&node=1375415031",
+        "position": 0,
+        "title": "Buy Gaming Mouse Online at Best Price in India - Amazon.in",
+        "meta": {
+          "snippet": "Hot new releases. See more · Zebronics Viper 100W Premium Wireless Gaming Mouse, Tri-Mode Rechargeable, 1000Hz Polling Rate, 5 Pro...",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "https://www.instagram.com/reel/DWwCRgsjwOB/?hl=en",
+        "position": 1,
+        "title": "₹999 me 1000Hz polling rate, software support aur onboard ...",
+        "meta": {
+          "snippet": "Did you know that all these gaming mice have all the features? 12800 DPI, 1000Hz polling rate, but one feature is missing, and tha...",
+          "source": "Instagram·Prashant Motwani",
+          "date": "Apr 5, 2026"
+        }
+      },
+      {
+        "url": "https://computechstore.in/product/cosmic-byte-atlas-mouse/",
+        "position": 2,
+        "title": "Cosmic Byte Atlas Wireless, Bluetooth, Wired Tri Mode Mouse ...",
+        "meta": {
+          "snippet": "Buy Cosmic Byte Atlas Wireless, Bluetooth, Wired Tri Mode Mouse (Black) at Best Price in India from Computech Store. It can be you...",
+          "source": "Computech Store"
+        }
+      },
+      {
+        "url": "https://bitkart.com/collections/mouse",
+        "position": 3,
+        "title": "MOUSE – Bitkart",
+        "meta": {
+          "snippet": "AULA SC900Pro 62g Tri-Mode Wireless Gaming Mouse White – 26,000 DPI, 8K. The AULA SC900Pro combines a lightweight 62g design with ...",
+          "source": "Bitkart"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Gaming-Mice/b?ie=UTF8&node=1375415031",
+        "position": 4,
+        "title": "350 - ₹3,700 - Gaming Mice / PC Gaming Peripherals - Amazon.in",
+        "meta": {
+          "snippet": "Cosmic Byte Ignis Wireless Tri-Mode Gaming Mouse | 2.4GHz + Bluetooth + Wired | PixArt 3311 Sensor | Ultra-Lightweight 54g | 12000...",
+          "source": "Amazon.in"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "amazon.in: retailer",
+      "1": "instagram.com reel: social network",
+      "2": "computechstore.in: third-party retailer selling a Cosmic Byte product; host is not the subject's domain, so not owned",
+      "3": "bitkart.com: retailer collection page",
+      "4": "amazon.in: retailer"
+    },
+    "notes": "Whole answer read (236 chars); no occurrence of \"cosmic\", \"byte\" or \"CB\" in the prose. The subject's name appears only in citation 2's title and URL path (\"Cosmic Byte Atlas\", computechstore.in/product/cosmic-byte-atlas-mouse/), a third-party retailer: not a mention, and not cited because the host is not thecosmicbyte.com."
+  }
+}

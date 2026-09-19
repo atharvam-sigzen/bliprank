@@ -1,0 +1,158 @@
+{
+  "id": "g124-gem-sigzen-cloud-erp-cement-factory",
+  "covers": "real gemini answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: different product of the same company (SAP S/4HANA Cloud is not SAP Business One)",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T11:21:54.479Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "cloud ERP for cement factory with quality control modules",
+    "cell": {
+      "key": "5ef3e96c0c3d19ada4fdde00ac269da6ff02beb606d66f6df16acecfed03b1a4",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Implementing a cloud ERP in cement manufacturing requires balancing raw material volatility (limestone composition, moisture levels) with strict chemical and physical compliance standards (ASTM/EN certifications). Quality control (QC) cannot exist as an isolated module—it must integrate directly with batching, LIMS (Laboratory Information Management System), and weighbridge automation.\n\n---\n\n### Top Cloud ERP Systems for Cement Manufacturing\n\n| ERP System | Key Strength | Quality Control (QC) Capabilities | Best Suited For |\n| :--- | :--- | :--- | :--- |\n| **Ramco Smart Plant** | Dedicated Cement Verticals | Real-time LIMS integration, automated raw-mix proportioning, and blend optimization (Optima BlendX). | Mid-to-Large Cement & Aggregates Plants |\n| **SAP S/4HANA Cloud** | Scalability & Global Compliance | Full Quality Management (QM) module, non-conformance tracking, batch traceability, and automated certificate generation. | Enterprise / Multi-Plant Operators |\n| **IFS Cloud** | Asset & Process Management | Integrated Quality Management linked directly to shop-floor maintenance, kiln operations, and material testing. | Heavy Manufacturing & Processing Plants |\n| **Epicor Kinetic** | Process Manufacturing | In-line inspection sampling, SPC (Statistical Process Control), and vendor quality management for raw materials. | Mid-Market Cement & Ready-Mix Producers |\n\n---\n\n### Essential Quality Control (QC) Features for Cement ERPs\n\n**1. Lab Information Management System (LIMS) & Automation Integration**\n* Real-time automated data capture from XRF/XRD analyzers, automated titrators, and blaine fineness testers.\n* Eliminates manual lab data entry errors when recording clinker quality and raw meal composition.\n\n**2. Raw Mix Optimization & Blend Control**\n* Dynamic calculation of raw mix proportions based on fluctuating stockpile chemistry (CaO, SiO₂, Al₂O₃, Fe₂O₃ ratios).\n* Automatic adjustment recommendations for feeder gates based on lab test results.\n\n**3. In-Process & Finished Product Inspection**\n* **Raw Meal & Clinker:** Real-time tracking of Lime Saturation Factor (LSF), Silica Ratio (SR), and Alumina Ratio (AR).\n* **Finished Cement:** Automated tracking of compressive strength (3-day, 7-day, 28-day tests), setting time, and fineness.\n\n**4. Non-Conformance (NC) & CAPA Workflows**\n* Automatic holding/quarantine of out-of-spec clinker or finished cement silos.\n* Corrective and Preventive Action (CAPA) routing to quality managers and process engineers.\n\n**5. Weighbridge & Dispatch Quality Enforcement**\n* Interlocking with weighbridge software to prevent trucks from loading or dispatching if the target silo hasn't passed quality clearance.\n* Automatic generation of Mill Test Certificates (MTC) attached to customer dispatches.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "Sigzen absent. \"SAP S/4HANA Cloud\" at 765 (table cell) is a different SAP product, not SAP Business One: not counted. Ramco, IFS Cloud, Epicor Kinetic are outside the brand set. No citations."
+  }
+}

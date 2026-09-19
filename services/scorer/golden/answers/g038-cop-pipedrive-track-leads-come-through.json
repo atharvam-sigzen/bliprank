@@ -1,0 +1,344 @@
+{
+  "id": "g038-cop-pipedrive-track-leads-come-through",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: help.zoho.com is off the listed competitor domain crm.zoho.com so it is other; review platform cited through its blog",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T06:18:24.419Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+    "cell": {
+      "key": "1727c1c81e4442c597dd17a5abac66741c1510ac9b7c657e8264936cafd188f6",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Tracking leads from WhatsApp in a CRM effectively requires integrating WhatsApp messaging channels into a structured CRM workflow. Here’s a comprehensive step-by-step approach derived from industry best practices and modern CRM platforms:\n1. Understand the Environment\nWhatsApp is a highly effective communication channel, but native messaging apps lack the scalability, reporting, and follow-up automation required for high-volume lead management.\nManual tracking often causes lost leads, poor response times, and lack of accountability.\n2. Choose the Appropriate Integration Method\nThere are two main approaches depending on your lead volume and business size:\nLow Volume: Use the WhatsApp Business App with labels and manual CRM entry; suitable for very small teams handling limited leads.\nHigh Volume / Scaled Operations: Use the WhatsApp Business API and integrate with a CRM (e.g., Zoho CRM, HubSpot, Salesforce, Pipedrive) through native connectors, webhooks, or middleware platforms (e.g., respond.io, HelloSend, Cooby, folk CRM, TeleCRM).\n3. Capture Leads Automatically\nIncoming WhatsApp messages trigger automatic lead creation in your CRM. Key data captured includes:\nPhone number / contact details\nName or user-provided details\nTimestamp of first message\nSource of enquiry (ad, QR code, website widget, etc.)\nInitial message content (for context)\nAutomation ensures no lead is missed and reduces manual entry errors.\n4. Assign Leads and Track Ownership\nOnce captured, leads should be automatically assigned based on rules such as geography, product type, lead priority, or agent availability.\nAssigning ownership ensures follow-ups are timely and prevents leads from falling through the cracks.\n5. Organize and Segment Leads\nApply tags and statuses: Hot, Warm, Needs Follow-Up, Nurture, Cold. This makes the pipeline searchable and automatable.\nSegment leads by campaign, product interest, response behavior, or any other custom CRM property.\n6. Automate Follow-Ups and Workflows\nCreate workflow triggers based on lead actions or inactivity:\nAuto-acknowledgement responses (e.g., “Thank you for contacting us, a rep will call shortly.”)\nScheduled reminder notifications for reps\nAutomated escalation for leads that remain uncontacted within a defined period\nUse drip campaigns and multi-step engagement sequences for nurturing leads before conversion.\n7. Centralize Conversations for Context\nIntegrate WhatsApp threads into the CRM timeline, ensuring sales reps see full conversation history alongside deal stages, notes, and related tasks.\nHelps maintain context in team handovers and ensures continuity even if leads are reassigned.\n8. Track Metrics and Optimize\nKey performance indicators include:\nResponse time: Time to first reply\nConversion rate from WhatsApp enquiry to deal closure\nLead stage progression and velocity\nAgent performance and follow-up compliance\nUse built-in CRM dashboards or reporting tools to monitor these metrics continuously and refine workflows.\n9. Compliance and Best Practices\nObtain explicit opt-in from customers before initiating WhatsApp contact.\nUse approved message templates for promotions and notifications.\nRespect quiet hours and avoid excessive messaging to prevent opt-outs.\n10. Recommended Platforms\nSmall to Medium Teams (20–50 seats): folk CRM, Cooby, TeleCRM – intuitive with automation and tagging features.\nGrowing Businesses: HubSpot CRM, Zoho CRM, Salesforce – native WhatsApp API integration with advanced workflow automation and analytics.\nAutomation + Multi-Channel Efficiency: respond.io, HelloSend – AI-assisted routing and lifecycle management for high-volume messaging.\nSummary Workflow Diagram (Conceptual)\nNew Incoming WhatsApp Message → 2. Auto-Creation in CRM → 3. Lead Assignment & Tagging → 4. Automated Follow-Up Schedules → 5. Sales Rep Engagement → 6. Track in Pipeline / KPI Reporting → 7. Conversion / Re-engagement\nBy following this structured approach, your team can capture every WhatsApp lead, maintain response accountability, automate routine workflows, and track comprehensive engagement within a CRM—dramatically improving conversion rates and operational efficiency.",
+    "citations": [
+      {
+        "url": "https://www.hubspot.com/centralize-automate-whatsapp-crm",
+        "position": 0,
+        "title": "WhatsApp CRM Integration: Complete HubSpot Guide",
+        "meta": {
+          "publisher": "hubspot.com",
+          "icon_url": "blob:https://www.bing.com/6c3877b9-c558-4db2-aa7d-5a95b2511521"
+        }
+      },
+      {
+        "url": "https://articles.vscrm.in/2026/05/20/how-to-manage-whatsapp-leads-in-crm-without-losing-high-intent-customers/",
+        "position": 1,
+        "title": "How to Manage WhatsApp Leads in CRM Without Losing High-Intent Customers",
+        "meta": {
+          "publisher": "articles.vscrm.in",
+          "icon_url": "blob:https://www.bing.com/62c9216a-5773-4631-aa9a-26d184fbe947"
+        }
+      },
+      {
+        "url": "https://www.hellosend.com/blog/whatsapp-crm-integration",
+        "position": 2,
+        "title": "WhatsApp CRM Integration: Step-by-Step Guide (2026)",
+        "meta": {
+          "publisher": "hellosend.com",
+          "icon_url": "blob:https://www.bing.com/fb26f07c-ccf0-4d20-a443-4345dc732484"
+        }
+      },
+      {
+        "url": "https://www.reform.app/blog/whatsapp-lead-forms-crm-integration-guide",
+        "position": 3,
+        "title": "WhatsApp Lead Forms: CRM Integration Guide - reform.app",
+        "meta": {
+          "publisher": "reform.app",
+          "icon_url": "blob:https://www.bing.com/7da0eb28-fcc9-4d48-a4c5-7ee0d22ae80b"
+        }
+      },
+      {
+        "url": "https://respond.io/blog/whatsapp-lead-management",
+        "position": 4,
+        "title": "WhatsApp Lead Management: Setup Guide - respond.io",
+        "meta": {
+          "publisher": "respond.io",
+          "icon_url": "blob:https://www.bing.com/5cef7175-621e-4a7b-9c8f-dc97217c8909"
+        }
+      },
+      {
+        "url": "https://help.zoho.com/portal/en/kb/zoho-lead-chain/creating-chains/whatsapp/articles/connecting-whatsapp-lead-ads-with-zoho-crm",
+        "position": 5,
+        "title": "Connecting WhatsApp lead ads with Zoho CRM",
+        "meta": {
+          "publisher": "help.zoho.com",
+          "icon_url": "blob:https://www.bing.com/94bf6ae3-f86c-4574-801e-f89fce0b6d87"
+        }
+      },
+      {
+        "url": "https://swiftcrm.in/whatsapp",
+        "position": 6,
+        "title": "SwiftCRM for WhatsApp — Capture & track leads from WhatsApp automatically",
+        "meta": {
+          "publisher": "swiftcrm.in",
+          "icon_url": "blob:https://www.bing.com/8cc796b1-e2f9-4268-a2c0-ef36b31788d5"
+        }
+      },
+      {
+        "url": "https://www.folk.app/articles/how-to-use-whatsapp-automation-for-your-crm",
+        "position": 7,
+        "title": "How to use WhatsApp automation for your CRM - folk.app",
+        "meta": {
+          "publisher": "folk.app",
+          "icon_url": "blob:https://www.bing.com/18c6316a-57f9-4463-804b-034654f4b70b"
+        }
+      },
+      {
+        "url": "https://telecrm.in/whatsapp-crm",
+        "position": 8,
+        "title": "WhatsApp CRM: Turn Your WhatsApp into a Sales Machine | telecrm",
+        "meta": {
+          "publisher": "telecrm.in",
+          "icon_url": "blob:https://www.bing.com/1b7c05b8-b5ec-4680-a811-96b7f38fe90e"
+        }
+      },
+      {
+        "url": "https://www.softwaresuggest.com/blog/whatsapp-crm-integration/",
+        "position": 9,
+        "title": "WhatsApp CRM Integration: Meaning, Methods, & Best Practices",
+        "meta": {
+          "publisher": "softwaresuggest.com",
+          "icon_url": "blob:https://www.bing.com/f52586b3-97d4-4d7f-b1cc-4e5c55b4fc2d"
+        }
+      },
+      {
+        "url": "https://www.cooby.co/en/whatsapp-lead-tracking-in-crm",
+        "position": 10,
+        "title": "WhatsApp Lead Tracking in Your CRM | Cooby",
+        "meta": {
+          "publisher": "cooby.co",
+          "icon_url": "https://th.bing.com/th/id/ODF.e8gEjXuvCRlIkwl7j5D9-w?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 4,
+    "competitorsMentioned": [
+      "Zoho CRM",
+      "HubSpot",
+      "Salesforce"
+    ],
+    "citationClasses": {
+      "0": "competitor",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "review",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 888
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 898
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 907
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 919
+      }
+    ],
+    "order": [
+      "Zoho CRM",
+      "HubSpot",
+      "Salesforce",
+      "Pipedrive"
+    ],
+    "citations": {
+      "0": "host www.hubspot.com is competitor HubSpot's domain",
+      "1": "articles.vscrm.in: vendor site, not in the publisher registry",
+      "2": "hellosend.com blog: vendor site, not in the publisher registry",
+      "3": "reform.app blog: vendor site, not in the publisher registry",
+      "4": "respond.io blog: vendor site, not in the publisher registry",
+      "5": "help.zoho.com: Zoho's help centre, but the host is not crm.zoho.com (the only listed Zoho CRM domain) nor a subdomain of it, so other per rule 5",
+      "6": "swiftcrm.in: vendor site, not in the publisher registry",
+      "7": "folk.app articles: vendor site, not in the publisher registry",
+      "8": "telecrm.in: vendor site, not in the publisher registry",
+      "9": "softwaresuggest.com: software review and listing platform (the cited page is its blog); fairly but not fully sure",
+      "10": "cooby.co: vendor site, not in the publisher registry"
+    },
+    "notes": "Pipedrive is named exactly once, last in \"(e.g., Zoho CRM, HubSpot, Salesforce, Pipedrive)\" at 919; the later platform list (\"HubSpot CRM, Zoho CRM, Salesforce\" at 3389) omits it. \"Pipeline\" (\"Track in Pipeline\") is an ordinary word, not the subject. respond.io, HelloSend, Cooby, folk CRM, TeleCRM are not in the brand set. No pipedrive.com citation."
+  }
+}

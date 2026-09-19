@@ -1,0 +1,354 @@
+{
+  "id": "g083-cop-pipedrive-crm-works-best-10",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: competitor cited (monday.com) but not mentioned in prose; Salesflare is not Salesforce",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:03:52.974Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM works best for a 10-person B2B sales team?",
+    "cell": {
+      "key": "3b3b2031c1c2d9be876bc0026d306883490ce96143a988010574fe351bd5293a",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a 10-person B2B sales team, Salesflare is the best option for its automation, ease of use, and B2B-focused features, while HubSpot CRM and Pipedrive are strong alternatives depending on specific needs and budget.\nTop Recommendations\n1. Salesflare – Best for automation and simplicity in B2B sales Salesflare\nStrengths: Fully focused on B2B sales, automated data enrichment, email and website tracking, LinkedIn integration, Gmail/Outlook compatibility, visual pipelines, and minimal manual data entry.\nEase of Use: Extremely user-friendly, helps maintain records automatically, integrated email/meeting tracking, notifications when leads engage.\nPricing: $49/user/month (annual billing) or $64/month (monthly billing) with a 30-day free trial.\nIdeal For: Teams that want an intuitive CRM with B2B-specific features without needing heavy setup or technical expertise.\n2. HubSpot CRM + Sales Hub – Best for all-in-one sales and marketing integration Salesflare+1\nStrengths: Offers a free CRM tier for up to 2 users with features like pipeline tracking, email engagement, meeting scheduling, and integration across sales/marketing. Higher plans unlock account-based insights, advanced reporting, and automation.\nEase of Use: Moderate learning curve due to broader functionality, but still highly adoptable by small teams.\nPricing: Free plan starts upfront; Sales Hub Professional starts at around $90–100/user/month plus onboarding.\nIdeal For: Teams seeking a unified sales and marketing platform with scalability options for future growth.\n3. Pipedrive – Best for visual pipeline and simple deal management Fit Small Business+1\nStrengths: Highly visual deal-focused interface, activity scheduling, email syncing, and streamlined pipeline management. Includes Smart Docs for proposals and e-signatures.\nEase of Use: Intuitive for small teams; requires minimal setup to track deals and activities.\nPricing: Plans start at $14/user/month (Lite), with different tiers for automation and forecasting.\nIdeal For: Small teams prioritizing simplicity, visual pipelines, and presales communication management.\nOther Considerations\nZoho CRM – Highly customizable at a lower cost ($14–23/user/month annually billed), suited for teams needing tailored workflows 1.\nFreshsales – Ideal for outbound-heavy teams with built-in calling and AI-powered lead scoring ($9/user/month), though less marketing-focused 1.\nHubSpot Free Plan – A good starting point if budget is tight, ensuring basic sales tracking without additional costs.\nRecommendation Summary\nIf automation, usability, and B2B focus are top priorities → Salesflare.\nIf you want integrated marketing and sales tools → HubSpot CRM + Sales Hub.\nIf your team prefers simple, visual deal pipelines → Pipedrive.\nFor a 10-person team in Montevideo, consider a CRM that offers easy onboarding, localized support if needed, and proper scalability, as these will improve adoption and ROI. Testing Salesflare or HubSpot Free Plan for a trial period is recommended to ensure it fits your team’s workflow and engagement tracking requirements Salesflare+2.",
+    "citations": [
+      {
+        "url": "https://blog.salesflare.com/best-b2b-crm",
+        "position": 0,
+        "title": "7 Best B2B CRM Software + Feature Comparison [2026]",
+        "meta": {
+          "publisher": "blog.salesflare.com",
+          "icon_url": "blob:https://www.bing.com/45119a1e-8873-48b2-bcd9-84437eaec2a4"
+        }
+      },
+      {
+        "url": "https://www.coevera.com/blog/best-crm-b2b-sales-teams-2026/",
+        "position": 1,
+        "title": "Best CRM for B2B Sales Teams in 2026",
+        "meta": {
+          "publisher": "coevera.com",
+          "icon_url": "blob:https://www.bing.com/c65888bd-a6fa-447e-b66e-a6c9458e3049"
+        }
+      },
+      {
+        "url": "https://fitsmallbusiness.com/best-b2b-crm/",
+        "position": 2,
+        "title": "Best CRM for B2B Sales Teams: Our Top 8 Picks - Fit Small Business",
+        "meta": {
+          "publisher": "fitsmallbusiness.com",
+          "icon_url": "blob:https://www.bing.com/7b528d3f-c8f5-47d2-acba-1c3c3bbce1f4"
+        }
+      },
+      {
+        "url": "https://sellingsignals.com/b2b-crm-software/",
+        "position": 3,
+        "title": "10 Best B2B CRM Software for Modern Sales Teams in 2026",
+        "meta": {
+          "publisher": "sellingsignals.com",
+          "icon_url": "blob:https://www.bing.com/04d7926a-f38c-43b0-9df7-8c522d7b93b5"
+        }
+      },
+      {
+        "url": "https://www.folk.app/articles/best-crm-b2b-sales",
+        "position": 4,
+        "title": "5 Best CRM for B2B Sales (2026)",
+        "meta": {
+          "publisher": "folk.app",
+          "icon_url": "blob:https://www.bing.com/5ca6fd4d-a1d4-46c0-b02e-7665f0747777"
+        }
+      },
+      {
+        "url": "https://monday.com/blog/crm-and-sales/b2b-crm/",
+        "position": 5,
+        "title": "B2B CRM: What Is It + 6 Best B2B CRMs For 2026 - monday.com",
+        "meta": {
+          "publisher": "monday.com",
+          "icon_url": "blob:https://www.bing.com/699d0344-6681-4507-a767-14d1b3ce2775"
+        }
+      },
+      {
+        "url": "https://toolradar.com/guides/best-crm-for-b2b",
+        "position": 6,
+        "title": "Best CRM for B2B 2026: 5 Platforms for Complex Sales Cycles",
+        "meta": {
+          "publisher": "toolradar.com",
+          "icon_url": "blob:https://www.bing.com/8bc53fdc-084c-4086-a758-ed576f159592"
+        }
+      },
+      {
+        "url": "https://worldmetrics.org/best/b2b-crm-software/",
+        "position": 7,
+        "title": "20 Tools Compared: Top 10 Best B2B CRM Software (2026)",
+        "meta": {
+          "publisher": "worldmetrics.org",
+          "icon_url": "blob:https://www.bing.com/04dfc4b7-310a-438d-a650-e9e674ee6565"
+        }
+      },
+      {
+        "url": "https://prospeo.io/s/crm-for-sales",
+        "position": 8,
+        "title": "Best CRM for Sales Teams in 2026 (Tested & Compared)",
+        "meta": {
+          "publisher": "prospeo.io",
+          "icon_url": "blob:https://www.bing.com/2da2a081-85d3-431e-912c-d438ff488434"
+        }
+      },
+      {
+        "url": "https://www.clarify.ai/blog/best-crms-for-b2b-sales-teams",
+        "position": 9,
+        "title": "Clarify - The top 16 CRMs for B2B sales teams in 2026",
+        "meta": {
+          "publisher": "clarify.ai",
+          "icon_url": "blob:https://www.bing.com/bb246e9e-b048-429d-b092-51fc99eb4ccd"
+        }
+      },
+      {
+        "url": "https://www.bigcontacts.com/blog/best-crm-for-b2b/",
+        "position": 10,
+        "title": "15 Best CRMs for B2B Companies in 2026 | BIGContacts",
+        "meta": {
+          "publisher": "bigcontacts.com",
+          "icon_url": "blob:https://www.bing.com/7cc1c6ec-fb98-46e4-9364-f2264f286b89"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 3,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "competitor",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 127
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 143
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1545
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2742
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 2124
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 2255
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citations": {
+      "0": "blog.salesflare.com: vendor blog (Salesflare is not in the competitor set)",
+      "1": "coevera.com: vendor/agency blog, not in registry",
+      "2": "fitsmallbusiness.com: editorial small-business site, not in the publisher registry",
+      "3": "sellingsignals.com: sales blog, not in registry",
+      "4": "folk.app: vendor site, not in registry",
+      "5": "host monday.com is the competitor monday CRM's domain",
+      "6": "toolradar.com: tool guide site, unsure, not in registry",
+      "7": "worldmetrics.org: listicle site, not in registry",
+      "8": "prospeo.io: vendor site, not in registry",
+      "9": "clarify.ai: vendor blog, not in registry",
+      "10": "bigcontacts.com: vendor blog, not in registry"
+    },
+    "notes": "\"Salesflare\" (the answer's top pick, named many times) is a different brand that is not in the competitor set and is NOT Salesforce; Salesforce does not appear. monday CRM is not named in the prose, but monday.com is cited (citation 5), so the class is competitor while the brand is not in competitorsMentioned."
+  }
+}

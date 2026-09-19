@@ -1,0 +1,228 @@
+{
+  "id": "g059-gem-pipedrive-crm-should-marketing-agency",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: ordinary-word collision: closed / closes / \"Closed-Won\" are not Close; subject first seen in a table cell",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:16:26.036Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+    "cell": {
+      "key": "18a92289764c79c4d75b33231bec14e8a9fdf40a10ed60317892d2d8d6580bfd",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The ideal CRM for a marketing agency depends heavily on whether your biggest operational hurdle is **closing sales**, **connecting marketing to revenue**, or **handing off deals to project execution**. \n\n---\n\n### Top Agency CRMs at a Glance\n\n| CRM | Best For | Key Advantage | Starting Price |\n| :--- | :--- | :--- | :--- |\n| **Pipedrive** | Pure Sales Pipeline | Drag-and-drop clarity; lightweight rep adoption | ~$14/user/mo |\n| **HubSpot CRM** | Inbound Marketing Integration | Unified lead generation, email automation, and deal tracking | Free tier; paid from $20/mo |\n| **Monday Sales CRM** | Sales-to-Project Handoff | Seamless transition from closed deal to creative workflow | ~$12/user/mo |\n| **Insightly** | Delivery-Focused Agencies | Built-in project management for immediate onboarding after sign-off | ~$29/user/mo |\n| **GoHighLevel** | All-in-One Whitelabeling | CRM, funnels, client portals, and reseller options built for agencies | ~$97/mo (flat) |\n\n---\n\n### Key Options Breakdown\n\n**1. Pipedrive — Best for Pure Pipeline Management**\nIf your agency struggles with deal visibility and rep follow-ups, Pipedrive offers an intuitive visual Kanban view. \n* **Strengths:** Minimal onboarding overhead, strong activity-based selling tools, and custom deal stages for pitch phases (e.g., *Lead In -> Discovery Call -> Proposal Sent -> Contract Negotiation*).\n* **Best suited when:** You already use dedicated tools like Asana or ClickUp for project delivery and just need a clean sales machine.\n\n**2. HubSpot CRM — Best for Inbound-Driven Agencies**\nIf your agency closes clients through content marketing, lead magnets, and automated email sequences, HubSpot bridges marketing analytics directly with pipeline stages.\n* **Strengths:** Tracks prospective client interactions across your website, forms, and email touches before they ever book a sales call. \n* **Best suited when:** You want your internal operations to mirror the inbound marketing services you deliver to clients.\n\n**3. Monday Sales CRM — Best for Sales & Creative Team Alignment**\nAgencies often suffer friction when passing a closed client from the sales team to account managers. \n* **Strengths:** Built on top of Monday.com's work OS, allowing a deal marked \"Closed-Won\" to automatically trigger project boards, task templates, and creative onboarding flows.\n* **Best suited when:** Account managers and creative directors need real-time line-of-sight into upcoming deals in the sales pipeline.\n\n**4. GoHighLevel — Best for Digital & Performance Marketing Agencies**\nUnlike traditional B2B CRMs, GoHighLevel is designed specifically as an agency platform.\n* **Strengths:** Includes native landing page builders, SMS/email automation, automated review generation, and client-facing dashboards. Allows white-labeling so clients can log in to view campaign leads.\n* **Best suited when:** You offer retainers involving lead gen, local SEO, or performance marketing and want to package software with your service.\n\n---\n\n### How to Choose\n\n1. **If your bottleneck is deal hygiene:** Choose **Pipedrive** for straightforward sales tracking.\n2. **If your bottleneck is client onboarding:** Choose **Monday CRM** or **Insightly** to avoid dropping the ball between contract signing and project kickoff.\n3. **If your bottleneck is lead attribution:** Choose **HubSpot** to see exactly which marketing efforts drive closed deals.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 4,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [
+      "HubSpot",
+      "monday CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 328
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1006
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1120
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 3070
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 433
+      },
+      {
+        "brand": "monday-crm",
+        "span": "Monday Sales CRM",
+        "offset": 578
+      }
+    ],
+    "order": [
+      "Pipedrive",
+      "HubSpot",
+      "monday CRM"
+    ],
+    "citations": {},
+    "notes": "Subject first appears in a table cell (328), then a heading (1006), running prose (1120) and the closing list (3070). monday CRM is first named by its listed alias \"Monday Sales CRM\" at 578 (capitalised). \"Monday.com's work OS\" at 2197 is a bare domain naming the work-OS platform; not needed for detection because monday CRM is already detected at 578. All five \"close\" hits (651 \"closed\", 1578 \"closes\", 2108 \"closed\", 2243 \"Closed-Won\", 3389 \"closed\") are ordinary words, not the brand Close. No citations."
+  }
+}

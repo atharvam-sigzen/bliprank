@@ -1,0 +1,241 @@
+{
+  "id": "g126-aio-sigzen-cloud-erp-cement-factory",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: subject cited (owned URL) but never named in prose; Google redirect citation whose meta names the subject's LinkedIn page",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:22:38.207Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "cloud ERP for cement factory with quality control modules",
+    "cell": {
+      "key": "53a04193c4745acc97156c820190ca47fe6eb7a4a0c2db6ffabccecbf27ac1ec",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Cloud ERP software for a cement factory connects production, inventory, logistics, and lab testing data into one online platform.\nTop Cloud ERP Options with Quality Control\nEssential Quality Control Features",
+    "citations": [
+      {
+        "url": "https://www.ramco.com/blog/erp/cementing-the-future-how-erp-systems-drive-efficiency-in-the-cement-sector",
+        "position": 0,
+        "title": "ERP in Cement Sector: Driving Operational Efficiency & Digital ...",
+        "meta": {
+          "snippet": "Manufacturers get quality control modules with an ERP system that allows them to monitor and track product quality, deviations in ...",
+          "source": "Ramco",
+          "date": "Aug 25, 2023"
+        }
+      },
+      {
+        "url": "https://www.batchmaster.co.in/industryserved/speciality-chemicals/erp-for-cement-industry.aspx",
+        "position": 1,
+        "title": "ERP for Cement Industry | Cement Manufacturer ERP",
+        "meta": {
+          "snippet": "Key Features of ERP Software for Cement Industry * Formula Design Based on Physical Properties analysis like strength of the ore. ...",
+          "source": "BatchMaster Software Pvt. Ltd"
+        }
+      },
+      {
+        "url": "https://www.sigzen.com/solutions/sigzencement/",
+        "position": 2,
+        "title": "Optimize Cement Operations with SigzenCEMENT ERP",
+        "meta": {
+          "snippet": "SigzenCEMENT. ... SigzenCEMENT is a powerful ERPNext-based solution tailored specifically for the cement industry, addressing comp...",
+          "source": "Sigzen Technologies"
+        }
+      },
+      {
+        "url": "https://www.ramco.com/blog/erp/cementing-the-future-how-erp-systems-drive-efficiency-in-the-cement-sector",
+        "position": 3,
+        "title": "ERP for increased cement industry efficiency - Ramco Systems",
+        "meta": {
+          "snippet": "• Quality control and compliance Manufacturers receive quality control modules with an ERP system that allows them to monitor and ...",
+          "source": "Ramco"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESnQEB6zswFSI8t5r5I6TWxM4SU-PjBHyBt4R9i9xoBXd62kUIrRdY0_jEEbMO_6eEKYb7OeBKvo_EwjniNnr771N06q0r7RkhVFrS6b27S0A4J6jLh4OGPcpJx7P1UZKyYPAwJOpXA8OXcrRESRKpAMtRyfuADylkCEpS0Uk65Zx9fQiix-vzfnXE9u_W_4bPuCzjOU2MHcHdK-ISup50",
+        "position": 4,
+        "title": "ERP for Cement: Streamline Production & Supply Chain - LinkedIn",
+        "meta": {
+          "snippet": "Key Features of ERP Solutions for Cement * Production Management. Automates batch scheduling and raw mix adjustments. Tracks machi...",
+          "source": "LinkedIn·Sigzen Technologies Private Limited",
+          "date": "Sep 24, 2025"
+        }
+      },
+      {
+        "url": "https://blog.fleetx.ai/the-hidden-costs-of-excel-fleet-management/",
+        "position": 5,
+        "title": "How ERP Software Drives Cement Efficiency – Part 2 - Fleetx",
+        "meta": {
+          "snippet": "ERP software for the cement industry is a centralized business management system that connects production, inventory, dispatch, tr...",
+          "source": "Fleetx",
+          "date": "Jun 27, 2025"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESZwHrOzAVgdol8e9bsFjO0iPIVCuVE5aaNKN1BHRfRKAep4nhYd6CUMCl0IMJGxQkWH-9NwcKLDzhfFxafOtUB6GANyH0CgMSc5ly12I12I8dCOxbgL1bhE0PG7Iur7qE_O_yHXAqCCM",
+        "position": 6,
+        "title": "Best ERP Software For Cement Industry",
+        "meta": {
+          "snippet": "Benefits of ERP for Cement Manufacturing Industry * Kiln Performance Synchronization & Clinker Traceability. ERP software for ceme...",
+          "source": "Lighthouse ERP"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": true,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "owned",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "ramco.com blog: ERP vendor site, not in registry",
+      "1": "batchmaster.co.in: ERP vendor site, not in registry",
+      "2": "host www.sigzen.com is on the subject's domain sigzen.com",
+      "3": "ramco.com blog: ERP vendor site, not in registry (same URL as 0)",
+      "4": "host google.com: opaque Google redirect; meta names LinkedIn (a social network, the subject's company page there), which is other in any case and is not sigzen.com",
+      "5": "blog.fleetx.ai: vendor blog, not in registry",
+      "6": "host google.com: opaque Google redirect; meta names Lighthouse ERP, a vendor, other in any case"
+    },
+    "notes": "The 207-char answer is a stub of three lines and names no brand at all. The subject appears only in the citation list: [2] is on sigzen.com (cited true). Citation [4] is a google.com/goto redirect whose publisher meta reads 'LinkedIn·Sigzen Technologies Private Limited'; its host is google.com and its target is LinkedIn, so it is not owned and does not by itself make cited true."
+  }
+}

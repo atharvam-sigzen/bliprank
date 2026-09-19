@@ -1,0 +1,182 @@
+{
+  "id": "g114-gem-sigzen-best-erp-travel-agency",
+  "covers": "real gemini answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: other-brand collision: \"Dolphin Dynamics\" is not Microsoft Dynamics 365",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T11:25:07.566Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "best ERP for travel agency with booking and accounting",
+    "cell": {
+      "key": "3c093eb7f80d24d85fcc6383586aeedb0e36490663e5dd02e75cbf5eda7dd036",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best ERP software for a travel agency depends on whether you run outbound leisure tours, corporate travel, or incoming destination management (DMC). Because travel accounting involves complex split-payments, supplier payables, and commission tracking, purpose-built systems beat generic accounting tools every time.\n\n| ERP Platform | Best For | Core Strengths | Accounting & Booking Focus |\n| :--- | :--- | :--- | :--- |\n| **Lemax** | Mid-to-large Tour Operators & DMCs | End-to-end itinerary builder, supplier management, dynamic pricing | Native travel accounting, direct supplier invoicing, commission tracking |\n| **Trawex** | B2B / B2C Agencies needing GDS integration | Massive API integrations (Amadeus, Sabre), multi-currency booking engine | Automated payment gateway reconciliation, dynamic markup management |\n| **Odoo (Travel ERP)** | Budget-conscious agencies wanting open-source flexibility | Highly customizable, modular structure, strong CRM integration | Enterprise-grade core accounting, custom invoice workflows |\n| **Dolphin Dynamics** | Mid-sized independent agencies & corporate travel | Exceptional back-office reconciliation, automated mid-office flows | Industry-standard BSP/ARC reconciliation, automated client invoicing |\n| **TravelWorks** | Small to mid-sized travel agencies | User-friendly, compliance-focused travel accounting | Automated BSP settlement, sub-agent commission distribution |\n\n---\n\n**1. Lemax**\n* **Why it fits:** It is one of the most complete travel ERPs on the market, handling both B2B and B2C workflows.\n* **Booking:** Pulls live inventory from GDS and hotel APIs, generates custom itineraries, and manages group reservations.\n* **Accounting:** Built-in multi-currency sub-ledgers. It tracks supplier deposits, client payments, partial balances, and profit margins per booking automatically.\n\n**2. Trawex**\n* **Why it fits:** Ideal for agencies looking for heavy booking engine capabilities paired with operational backend management.\n* **Booking:** Direct integration with major Global Distribution Systems (GDS) like Sabre and Amadeus, plus third-party hotel wholesalers.\n* **Accounting:** Tracks complex dynamic markups, sub-agent commission structures, and multi-currency payment processing.\n\n**3. Odoo (Custom Travel Module)**\n* **Why it fits:** Outstanding for companies that want full ownership of their software and lower subscription overhead.\n* **Booking:** Requires a travel-specific third-party Odoo app (e.g., from O2B Technologies or Webkul) to add tour management features.\n* **Accounting:** Includes one of the strongest built-in open-source accounting engines available, featuring automated bank feeds, general ledger management, and financial reporting.\n\n**4. Dolphin Dynamics**\n* **Why it fits:** Extremely popular among European and UK agencies for back-office accuracy and flight reconciliation.\n* **Booking:** Integrates mid-office reservation flows, managing flight tickets, hotel vouchers, and transfer bookings smoothly.\n* **Accounting:** Specialized in automated BSP (Billing and Settlement Plan) reconciliation, agency credit control, and supplier payables.\n\n---\n\n**Alternative Approach: Modular Setup**\nIf dedicated ERPs feel too complex, many agencies pair a specialized travel management/booking tool (**TBO, TravelCRM, or Travefy**) with standard accounting software (**QuickBooks Online** or **Xero** via API integration).\n\n<ElicitationsGroup message=\"To help narrow down the ideal software for your agency:\">\n  <Elicitation label=\"Tell me if you specialize in leisure, DMC, or corporate travel\" query=\"Help me pick a travel ERP based on my business model: we specialize in inbound leisure tours and DMCs.\"/>\n  <Elicitation label=\"Compare Lemax vs. Dolphin Dynamics features and pricing\" query=\"Compare Lemax and Dolphin Dynamics in detail including features, booking capabilities, and accounting workflows.\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo",
+      "QuickBooks",
+      "Xero"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 829
+      },
+      {
+        "brand": "promoted:quickbooks",
+        "span": "QuickBooks",
+        "offset": 3357
+      },
+      {
+        "brand": "promoted:xero",
+        "span": "Xero",
+        "offset": 3382
+      }
+    ],
+    "order": [
+      "Odoo",
+      "QuickBooks",
+      "Xero"
+    ],
+    "citations": {},
+    "notes": "Sigzen absent. \"Dolphin Dynamics\" (1049, 2742, 3745, 3809) is a different company's travel back-office product, not Microsoft Dynamics 365: not counted. Odoo first appears in a table cell (\"Odoo (Travel ERP)\"). No citations."
+  }
+}

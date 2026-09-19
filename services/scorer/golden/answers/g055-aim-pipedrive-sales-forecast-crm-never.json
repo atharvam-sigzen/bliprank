@@ -1,0 +1,190 @@
+{
+  "id": "g055-aim-pipedrive-sales-forecast-crm-never",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: engine emitted no citations · seen on reading: capitalised ordinary word \"Close Dates\" in a heading is not the brand Close",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T06:17:10.172Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+    "cell": {
+      "key": "27bbb987d61519f0bba39b2dae6c31b27d9be83f96b6d56e0a834d7a013772dd",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Fixing an inaccurate CRM sales forecast requires diagnosing where the data breaks down—usually at the intersection of human optimism, flawed pipeline definitions, and outdated stage probabilities.\nHere is a structured, step-by-step roadmap to align your CRM forecasts with reality:\nAudit and Redefine Your Pipeline Stages: Clear entry/exit criteria: Every stage (e.g., Discovery, Demo, Proposal) must have hard, objective requirements, not feelings. For example, moving to \"Proposal Sent\" requires a documented budget and a confirmed meeting with an economic buyer, not just an email sent.Eliminate ambiguous stages: Get rid of subjective catch-alls like \"interested\" or \"warm.\" If a stage doesn't have an action tied to it by the buyer, it doesn't belong in the pipeline.\nClear entry/exit criteria: Every stage (e.g., Discovery, Demo, Proposal) must have hard, objective requirements, not feelings. For example, moving to \"Proposal Sent\" requires a documented budget and a confirmed meeting with an economic buyer, not just an email sent.\nEliminate ambiguous stages: Get rid of subjective catch-alls like \"interested\" or \"warm.\" If a stage doesn't have an action tied to it by the buyer, it doesn't belong in the pipeline.\nDitch Gut-Feel Close Dates and Probabilities: Standardize probability percentages: Lock down your CRM so win probabilities are hardcoded by stage (e.g., Discovery = 10%, Proposal = 50%) rather than letting reps manually override them with wishful thinking.Enforce close-date hygiene: Implement a rule where any past-due close date automatically pushes out or triggers a manager review. Reps love to leave a deal closing \"last Tuesday\" sitting in the active forecast.\nStandardize probability percentages: Lock down your CRM so win probabilities are hardcoded by stage (e.g., Discovery = 10%, Proposal = 50%) rather than letting reps manually override them with wishful thinking.\nEnforce close-date hygiene: Implement a rule where any past-due close date automatically pushes out or triggers a manager review. Reps love to leave a deal closing \"last Tuesday\" sitting in the active forecast.\nIncentivize Accuracy Over Optimism: Track forecasting accuracy: Measure your reps' forecast reliability just as closely as you measure their quota attainment. Reps who chronically over-forecast need coaching on qualification.Reward conservative integrity: Create a culture where a rep is praised for cleanly closing or properly disqualifying a deal early rather than inflating the number to please management.\nTrack forecasting accuracy: Measure your reps' forecast reliability just as closely as you measure their quota attainment. Reps who chronically over-forecast need coaching on qualification.\nReward conservative integrity: Create a culture where a rep is praised for cleanly closing or properly disqualifying a deal early rather than inflating the number to please management.\nImplement Strict MEDDPICC (or BANT) Qualification: Qualify out early: Use a rigorous framework like MEDDPICC (Metrics, Economic Buyer, Decision Criteria, Decision Process, Paper Process, Identify Pain, Champion, Competition) to ensure deals in the pipeline actually have a path to revenue.Require manager sign-off on big deals: For enterprise or high-value opportunities, require a formal deal review before a rep can tag it as a high-probability commit for the current quarter.\nQualify out early: Use a rigorous framework like MEDDPICC (Metrics, Economic Buyer, Decision Criteria, Decision Process, Paper Process, Identify Pain, Champion, Competition) to ensure deals in the pipeline actually have a path to revenue.\nRequire manager sign-off on big deals: For enterprise or high-value opportunities, require a formal deal review before a rep can tag it as a high-probability commit for the current quarter.\nLayer in Historical Win-Rate Data: Use trailing data: Look at your actual historical conversion rates by segment, rep, or lead source over the last 4 to 8 quarters.Apply a discount factor: If your CRM automatically aggregates a $1M pipeline and your historical win rate is 20%, but reps are claiming 60%, apply a realistic operational multiplier to your board/executive forecasts.\nUse trailing data: Look at your actual historical conversion rates by segment, rep, or lead source over the last 4 to 8 quarters.\nApply a discount factor: If your CRM automatically aggregates a $1M pipeline and your historical win rate is 20%, but reps are claiming 60%, apply a realistic operational multiplier to your board/executive forecasts.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "No vendor is named. \"Close\" at 1239 is capitalised in a heading (\"Ditch Gut-Feel Close Dates and Probabilities\") and is the ordinary word; the other six \"close\" hits (close-date, close date, closely) are ordinary words too."
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "id": "g015-gem-pipedrive-best-crm-mid-market",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: subject only in a table cell; competitor by unlisted short form",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:04:55.256Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+    "cell": {
+      "key": "cde27261919a4126319a202c6e77be5c29f3dbc9bc36a5b80b9f35a361cac2f3",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "When a mid-market company (roughly 50 to 500 employees) outgrows spreadsheets, the primary objective is finding software that balances **scalability and control with rapid user adoption**. Enterprise platforms often cause low adoption rates if they require heavy administrative setup, while basic sales trackers lack multi-team collaboration tools.\n\n---\n\n**Mid-Market CRM Options**\n\n| CRM Platform | Best Fit | Monthly Cost per User | Standout Advantage | Primary Trade-off |\n| :--- | :--- | :--- | :--- | :--- |\n| **HubSpot (Sales Hub Professional)** | **Best Overall** for fast setup and team adoption | ~$90 - $150 | Extremely intuitive UX; seamless sync across sales, marketing, and support | Contact-based pricing jumps steeply as your database grows |\n| **Salesforce (Sales Cloud Enterprise)** | **Best for** complex processes & custom integrations | ~$165 | Unlimited workflow customizability and massive app ecosystem | High total cost of ownership; requires a dedicated admin |\n| **Zoho CRM (Ultimate / Enterprise)** | **Best Value** for broad feature sets on a budget | ~$40 - $52 | Built-in canvas design, extensive tool suite, and AI analytics | Setup can feel disjointed; reporting requires technical setup |\n| **Microsoft Dynamics 365** | **Best for** Microsoft 365 / Power BI heavy organizations | ~$65 - $105 | Deep native integration with Teams, Outlook, Excel, and Azure | Complex interface for non-technical users |\n| **Pipedrive (Power / Enterprise)** | **Best for** pure, simple sales pipeline tracking | ~$65 - $99 | Clean visual deal boards; minimal training required | Lacks native enterprise marketing and post-sales service tools |\n\n---\n\n**Selection Matrix**\n\n**1. Choose HubSpot if:**\n* Your sales team is resistant to complex software, making rapid adoption a priority.\n* You want marketing automation, deal tracking, and customer service unified out of the box.\n* You want to move off spreadsheets within 3 to 6 weeks without hiring full-time platform developers.\n\n**2. Choose Salesforce if:**\n* You have non-standard sales cycles, complex commission structures, or multi-currency/territory needs.\n* You have dedicated internal IT resources or budget for an external implementation partner.\n* You rely on custom-built legacy software that needs API integration.\n\n**3. Choose Zoho CRM if:**\n* You want enterprise-grade features (automations, custom modules, AI insights) at roughly half the cost of major competitors.\n* You are already using other applications in the Zoho application suite.\n\n---\n\n**Key Features for Spreadsheet Migration**\n\n* **Import mapping & deduplication:** Clean existing data before importing. Look for platforms with automated field mapping to avoid manual errors.\n* **Granular permission controls:** Moving from open spreadsheets to a CRM requires role-based access to keep sensitive revenue or client data secure.\n* **Bi-directional sync:** Choose a platform that natively connects to your existing ERP, billing software (e.g., QuickBooks, NetSuite), and email providers.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 5,
+    "cited": false,
+    "position": 5,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 517
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 762
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 991
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Microsoft Dynamics 365",
+        "offset": 1226
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1439
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM",
+      "Microsoft Dynamics 365 Sales",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "Subject named once, in a table cell only (\"**Pipedrive (Power / Enterprise)**\" at 1439). unlisted form / short form: \"Microsoft Dynamics 365\" for Microsoft Dynamics 365 Sales at 1226, its only occurrence. QuickBooks and NetSuite are not in the set."
+  }
+}

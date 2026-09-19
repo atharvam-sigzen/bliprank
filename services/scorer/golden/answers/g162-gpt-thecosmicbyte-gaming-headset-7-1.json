@@ -1,0 +1,122 @@
+{
+  "id": "g162-gpt-thecosmicbyte-gaming-headset-7-1",
+  "covers": "real chatgpt answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T10:31:23.435Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming headset with 7.1 surround sound under 2500",
+    "cell": {
+      "key": "480348ec25c02f7a2ae2132b4d7761b1892752143f25214c68e04b4cca46b459",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Assuming you mean **₹2,500**, these are the best 7.1-surround gaming headsets I’d look at right now:\n\nRazer BlackShark V2 X$29.99 · Micro CenterRedragon H350 Lamia RGB$39.99 · Micro CenterEdifier G35$29.99 · Best BuyFIFINE H9$32.29 · Best Buy\n\n### My picks\n\n- 🥇 **Best overall: Razer BlackShark V2 X** — excellent for FPS games, with 50mm drivers, 7.1 surround and a good noise-isolating mic. Current US listings are much higher than ₹2,500, but if you find it around ₹2.5K in India, **I'd buy this one**.\n- 🥈 **Best value: Cosmic Byte Proteus** — around **₹2,149**, with **USB 7.1 + 3.5mm**, making it useful for both PC and consoles/phones.\n- 🥉 **Best cheap option: EvoFox Hyperion 7.1** — around **₹2,199**, 50mm drivers and software-based 7.1 over USB.\n- 💰 **Cheapest decent 7.1: Zebronics USB 7.1** — around **₹1,499**. Good if you want to spend as little as possible.\n\n**For Valorant/CS2/BGMI:** I'd prioritize **Razer BlackShark V2 X → Cosmic Byte Proteus → EvoFox Hyperion**. Also, remember that budget “7.1” is generally **virtual surround**, not seven physical speakers; the quality of the spatial processing matters more than the 7.1 label.\n\nIf you tell me **PC, PS5, Xbox, or mobile**, I can narrow it down to the **best 2–3 under ₹2,500**.\n\nTGGSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 526
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 947
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name). Two mentions: \"Best value: Cosmic Byte Proteus\" and the priority chain \"Razer BlackShark V2 X → Cosmic Byte Proteus → EvoFox Hyperion\". The product-card line at the top does not name it. No citations."
+  }
+}

@@ -1,0 +1,313 @@
+{
+  "id": "g043-cop-pipedrive-crm-bill-doubled-added",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: competitor community subdomain cited (competitor beats community); source chips like \"HubSpot+1\" in the text",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:34:50.166Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+    "cell": {
+      "key": "4037b3245b8f67c174a06557a065915f40f506f26bcd5acb940c81305e07f47e",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "You can manage your CRM costs by optimizing seat assignments, using read-only seats for stakeholders, and exploring hybrid or add-on pricing structures.\nUnderstanding the problem: Many CRMs, including HubSpot, use a seat-based pricing model, meaning billing increases with every additional seat added +1. Total costs scale with the number of licensed users rather than system usage alone.\nKey cost control strategies:\n1. Review seat types and assign appropriately: Not every team member needs full access. Core Seats cover essential features, Sales and Service Seats provide advanced functions, while View-Only Seats allow read-only access at no additional cost +1. Assigning the correct seat ensures efficiency without overspending.\n2. Remove or unassign unused seats: Check your CRM for any seats that are unused or for employees who no longer need full access. Removing unassigned seats can reduce upcoming subscription costs at your next billing cycle HubSpot+1.\n3. Consider hybrid pricing or add-ons: Some CRMs and SaaS platforms allow a combination of seat-based and usage-based pricing or additional feature packs. This can optimize value per seat, especially for larger teams or when some users require limited access .\n4. Reallocate rather than purchase new seats: If new hires or team changes require CRM access temporarily, consider reassigning existing seats rather than automatically buying additional ones HubSpot.\n5. Use alternatives for non-critical users: For stakeholders who only need data oversight or reporting, View-Only Seats or reporting dashboards reduce costs without limiting visibility +1.\nBy strategically managing user access, leveraging seat types, and auditing active users, you can control CRM bills effectively while still providing adequate access across your team.",
+    "citations": [
+      {
+        "url": "https://conduyt.com/resources/crm-pricing-comparison-2026/",
+        "position": 0,
+        "title": "CRM Pricing Comparison 2026: 10 Platforms + Hidden Fees",
+        "meta": {
+          "publisher": "conduyt.com",
+          "icon_url": "blob:https://www.bing.com/0fffd32c-192e-494d-bb0b-a6d02de0ac67"
+        }
+      },
+      {
+        "url": "https://www.sidekickstrategies.com/blog/hubspots-new-seats-the-complete-guide-for-users-and-admins",
+        "position": 1,
+        "title": "HubSpot's New Seats: The Complete Guide for Users and Admins",
+        "meta": {
+          "publisher": "sidekickstrategies.com",
+          "icon_url": "blob:https://www.bing.com/7a5e0957-0bc7-461d-9b79-e79b8e4ae2a5"
+        }
+      },
+      {
+        "url": "https://schematichq.com/blog/seat-based-pricing-101-the-classic-saas-model-that-still-works-sometimes",
+        "position": 2,
+        "title": "Seat-Based Pricing 101: Full SaaS Model Overview",
+        "meta": {
+          "publisher": "schematichq.com",
+          "icon_url": "blob:https://www.bing.com/825616c0-e9e2-4bc1-bf8d-9861e72bdec1"
+        }
+      },
+      {
+        "url": "https://vantacrm.com/blog/crm-seat-pricing-explained",
+        "position": 3,
+        "title": "CRM seat pricing, explained without the spin · Vanta CRM",
+        "meta": {
+          "publisher": "vantacrm.com",
+          "icon_url": "blob:https://www.bing.com/e898605a-74e6-4a77-951c-184affe9ea43"
+        }
+      },
+      {
+        "url": "https://www.clientgo.app/resources/crm-pricing-explained",
+        "position": 4,
+        "title": "CRM Pricing Explained: Seats, Tiers, and Hidden Costs | ClientGo",
+        "meta": {
+          "publisher": "clientgo.app",
+          "icon_url": "blob:https://www.bing.com/c1501aa8-d13e-48a6-8411-a2d5f4d43fa5"
+        }
+      },
+      {
+        "url": "https://measuredresults.com/preparing-for-hubspots-new-pricing-model-what-you-need-to-know/",
+        "position": 5,
+        "title": "Preparing for HubSpot’s New Pricing Model: What You Need to Know",
+        "meta": {
+          "publisher": "measuredresults.com",
+          "icon_url": "blob:https://www.bing.com/282dc404-af37-4b26-b5e1-48ccfb35a500"
+        }
+      },
+      {
+        "url": "https://help.aiengagecrm.com/article/manage-seats-and-per-user-billing",
+        "position": 6,
+        "title": "Manage Seats & Per-User Billing · Knowledge",
+        "meta": {
+          "publisher": "help.aiengagecrm.com",
+          "icon_url": "blob:https://www.bing.com/b0b1c658-774f-4552-8381-cec34a900008"
+        }
+      },
+      {
+        "url": "https://community.hubspot.com/t/additional-core-seats/130520",
+        "position": 7,
+        "title": "Additional Core Seats - Account & Settings - HubSpot Community",
+        "meta": {
+          "publisher": "community.hubspot.com",
+          "icon_url": "blob:https://www.bing.com/92a0edf8-0aa4-49b3-8971-1be7daaa9c74"
+        }
+      },
+      {
+        "url": "https://agiled.app/blog/monday-pricing",
+        "position": 8,
+        "title": "monday CRM Pricing 2026: True Cost After Seat Tiers | Agiled",
+        "meta": {
+          "publisher": "agiled.app",
+          "icon_url": "blob:https://www.bing.com/ac6387fe-3a64-41f6-869d-f1bd8aa3a94d"
+        }
+      },
+      {
+        "url": "https://www.softwareglimpse.com/guides/crm-pricing-guide/",
+        "position": 9,
+        "title": "CRM Pricing Guide: Plans, Seats & Add-Ons | SoftwareGlimpse",
+        "meta": {
+          "publisher": "softwareglimpse.com",
+          "icon_url": "blob:https://www.bing.com/13d8c2d9-a902-4bba-a348-98471f7bf22b"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "competitor",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 201
+      }
+    ],
+    "order": [
+      "HubSpot"
+    ],
+    "citations": {
+      "0": "conduyt.com: vendor resource page, not in the publisher registry",
+      "1": "sidekickstrategies.com: agency blog, not in the publisher registry",
+      "2": "schematichq.com: vendor blog, not in the publisher registry",
+      "3": "vantacrm.com: vendor blog, not a listed competitor domain",
+      "4": "clientgo.app: vendor resource page, not in the publisher registry",
+      "5": "measuredresults.com: agency site, not in the publisher registry",
+      "6": "help.aiengagecrm.com: vendor help centre, not a listed competitor domain",
+      "7": "host community.hubspot.com is a subdomain of competitor HubSpot's domain hubspot.com (identity beats the community platform class)",
+      "8": "agiled.app: vendor blog about monday CRM pricing; the host is not monday.com",
+      "9": "softwareglimpse.com: unsure what this site is; not confident it is a review platform"
+    },
+    "notes": "Subject absent. HubSpot first named in plain prose at 201 (\"Many CRMs, including HubSpot\"). The later \"HubSpot+1\" (956) and \"HubSpot\" (1420) are source-attribution chips left in the text by the engine; they do not change the label because HubSpot is already detected at 201. Citation 8's title names monday CRM but the title is not the answer text, so monday CRM is not detected."
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "id": "g186-aio-thecosmicbyte-swappable-switch-mechanical-keyboard",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:42:21.727Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "swappable switch mechanical keyboard with usb c under 4000",
+    "cell": {
+      "key": "4c2dae4176093f33e5819b0031fca680f4b2f6f894e5437b78a20156f5278a55",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The HUO JI CQ and the Ajazz AC100 are hot-swappable mechanical keyboards featuring USB-C connectivity and a 4000mAh battery capacity.\nRecommended Keyboards\nWatch this video overview to see a close-up look at the build quality and features of a modern hot-swap mechanical keyboard:58sThe Hot-Swap Keyboard That Actually Delivers7 days agoYouTube · Kephren\nWould you prefer a compact 75% layout like the HUO JI or a 98% layout with a number pad like the Ajazz?",
+    "citations": [
+      {
+        "url": "https://www.amazon.com/Mechanical-Swappable-Pre-lubed-Structure-Multimedia/dp/B0DGCZFZ73",
+        "position": 0,
+        "title": "Amazon.com: HUO JI 75% Wireless Mechanical Gaming Keyboard, Creamy Sound, Hot Swappable | Pre-lubed Linear Switches, Gasket Structure, Multimedia Display, RGB Backlit, 2.4GHz/USB/BT5.0, Custom Keyboard for Win/Mac : Video Games",
+        "meta": {
+          "snippet": "Product: HUO JI CQ082 75% Wireless Mechanical Keyboard. Connectivity: Tri-mode (2.4GHz, USB, Bluetooth 5.0); supports 5 simultaneo...",
+          "source": "Amazon.com"
+        }
+      },
+      {
+        "url": "https://www.amazon.com/Odpaltoy%C3%97Ajazz-Swappable-Mechanical-Keyboard-Aluminum/dp/B0D5L3D944?source=ps-sl-shoppingads-lpcontext&ref_=fplfs&psc=1&smid=A2YCYLJK51GF0Y",
+        "position": 1,
+        "title": "Odpaltoy×Ajazz AC100 98% Hot Swappable Mechanical Keyboard ...",
+        "meta": {
+          "snippet": "* 【98% 100 keys Mechanical Keyboard】AC100 98% Mechanical Keyboard retains most of the function keys of a standard keyboard,which i...",
+          "source": "Amazon.com"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "amazon.com product page: retailer",
+      "1": "amazon.com product page: retailer"
+    },
+    "notes": "Whole answer read; no occurrence of \"cosmic\", \"byte\" or \"CB\". Subject absent."
+  }
+}

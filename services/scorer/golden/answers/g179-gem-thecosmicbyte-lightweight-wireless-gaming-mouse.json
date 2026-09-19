@@ -1,0 +1,117 @@
+{
+  "id": "g179-gem-thecosmicbyte-lightweight-wireless-gaming-mouse",
+  "covers": "real gemini answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: brand only in a table cell",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T10:30:21.285Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "lightweight wireless gaming mouse under 2000 rupees india",
+    "cell": {
+      "key": "b8bb48443685273c7b3b425268ad101db4673c79d5085bbf134d41752c6a39f4",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The **URX Core M1 Wireless** is the top overall lightweight option in this price range. Choosing a wireless gaming mouse under ₹2,000 in India requires balancing weight, sensor performance, and latency.\n\n---\n\n### Top Picks Under ₹2,000\n\n| Model | Weight | Connectivity | Sensor / Performance | Standout Feature |\n| --- | --- | --- | --- | --- |\n| **URX Core M1** | **54 g** | 2.4GHz / BT / Wired | PixArt PAW3311 | Ultra-lightweight, 100M optical switches (no double-clicking) |\n| **Cosmic Byte Atlas** | **~65 g** | 2.4GHz Wireless / Wired | Up to 10,000 DPI | Solid honeycomb/lightweight chassis, fast glide |\n| **Arctic Fox Alien-X** | **~65 g** | 2.4GHz / BT / Wired | 1000Hz Polling / 4800 DPI | Budget tri-mode, rechargeable Type-C |\n| **Redragon Trident Pro M693** | **~90 g** | 2.4GHz / BT / Wired | 8000 DPI | Highly durable build, comfortable shape |\n\n---\n\n### Key Things to Know Before Buying\n\n* **True Ultralight Performance (<65g):** The **URX Core M1** (54g) offers competitive-grade performance with its PixArt PAW3311 sensor and optical switches, which are immune to mechanical double-clicking issues.\n* **The \"Logitech G304\" Alternative:** The popular **Logitech G304 Wireless** often dips to ₹2,200–₹2,400 during sales. While it has a superior HERO sensor, it weighs around **99g** with an AA battery. It is not considered ultralight unless modded with an AAA battery adapter (~85g).\n* **Battery Type:** Look for rechargeable lithium-polymer models with Type-C connectivity if you want to avoid buying AA/AAA batteries.\n\n<FollowUp label=\"Want me to compare the URX Core M1 against the Logitech G304?\" query=\"Compare the URX Core M1 Wireless with the Logitech G304 Wireless in detail for gaming in India.\"/>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 483
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 483, in a Markdown table cell (\"**Cosmic Byte Atlas**\"); it appears nowhere else in the answer. No citations."
+  }
+}

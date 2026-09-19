@@ -1,0 +1,364 @@
+{
+  "id": "g058-cop-pipedrive-crm-should-marketing-agency",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: company name \"Freshworks\" is not the product Freshsales; look-alike citation host pipelinecrm.com is not the subject's domain",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:16:36.461Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+    "cell": {
+      "key": "c86390c22a101adb36ac835811ac0f823dd8232d74ca353ede724a057b684804",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Marketing agencies benefit most from CRMs that combine visual pipeline management, project delivery integration, and marketing automation—top choices include HubSpot, Insightly, Pipedrive, Zoho CRM, and Monday CRM.\nKey Considerations for Agencies\nWhen selecting a CRM, marketing agencies should prioritize:\nPipeline visibility: Clear stages for tracking deals from lead to close.\nProject delivery integration: Systems that transition smoothly from sales to project execution.\nMarketing automation: Tools for lead nurturing, email campaigns, and workflows.\nCollaboration and integrations: Connect with email, calendar, project management, accounting, and creative tools without redundant data entry.\nBudget and scalability: Fits agency size and growth plans.\nTop CRM Options for Marketing Agencies\n1. HubSpot CRM – Best for inbound marketing agencies Insightly+1\nIntegrated contact management, email automation, landing pages, and lead nurturing in one platform.\nStrong reporting dashboards and AI-powered content suggestions.\nFree tier available; paid plans scale to enterprise features.\nIdeal for agencies whose primary focus is marketing campaigns over project delivery.\n2. Insightly – Best for agencies balancing sales and project delivery Insightly\nNative deal-to-project conversion preserves client history after a deal closes.\nBuilt-in project management alongside sales pipeline.\nExcellent for creative and digital agencies needing visibility across both sales and delivery.\nSupports 2,000+ integrations for easy connection to existing tools.\n3. Pipedrive – Best for sales-focused teams Insightly+2\nVisual, drag-and-drop Kanban pipeline emphasizes deal tracking.\nActivity-based selling with reminders and task tracking.\nExtra project management may require additional tools.\nSuitable for agencies prioritizing business development and lead follow-up.\n4. Zoho CRM – Best for budget-conscious agencies Insightly+1\nOffers free plan for up to 3 users and competitive paid tiers.\nSupports forecasting, lead nurturing, workflows, and broad integration within Zoho apps.\nIdeal for small agencies seeking solid CRM functionality without premium costs.\n5. Monday CRM – Best for project-first teams Insightly+1\nCombines visual boards of projects and sales pipelines.\nSupports automations and dashboards for tracking deals and activities.\nWorks well for agencies already using Monday for project management, though CRM functionality is lighter than dedicated platforms.\nOther Notable Options\nOneSuite: All-in-one CRM, invoicing, and client portal for small service agencies, offering an integrated Kanban pipeline 1.\nActiveCampaign: Strong in automated customer journeys and marketing automation.\nSalesforce: Highly customizable enterprise-level workflows but requires setup expertise and higher cost 1.\nClickUp / Freshworks / Agile CRM / Copper: Useful depending on existing tools and focus on integrations, but may require additional modules for project delivery or advanced marketing automation 2.\nChoosing the Right CRM for Your Agency\nIdentify where client workflow difficulties occur: is it lead tracking, project handoffs, or marketing campaigns?\nMatch the CRM’s strengths to your agency’s priorities. For example, choose Insightly for strong sales-to-project handoff or HubSpot for inbound campaign support.\nConsider team size, budget, integration needs, and ease of adoption to minimize disruption during implementation.\nBy evaluating your agency’s workflow bottlenecks, you can select a CRM that not only tracks pipelines but also enhances client delivery and marketing performance Insightly+2.",
+    "citations": [
+      {
+        "url": "https://www.insightly.com/blog/best-crm-for-marketing-agencies/",
+        "position": 0,
+        "title": "5 best CRMs for marketing agencies in 2026 (compared)",
+        "meta": {
+          "publisher": "insightly.com",
+          "icon_url": "blob:https://www.bing.com/412b7dab-7759-4e8c-bb59-be15dbaa81b8"
+        }
+      },
+      {
+        "url": "https://toolradar.com/guides/best-crm-for-marketing-agencies",
+        "position": 1,
+        "title": "Best CRM for Marketing Agencies 2026: 5 Tools for Client and Pipeline ...",
+        "meta": {
+          "publisher": "toolradar.com",
+          "icon_url": "blob:https://www.bing.com/0e30d047-1af5-48da-a524-d5a524cfcc23"
+        }
+      },
+      {
+        "url": "https://onesuite.io/blog/crm-and-pipeline-management/",
+        "position": 2,
+        "title": "7 CRMs with Pipeline Management That Actually Close Deals (2026)",
+        "meta": {
+          "publisher": "onesuite.io",
+          "icon_url": "blob:https://www.bing.com/90db0aec-5326-46a3-b591-c964004a7f4a"
+        }
+      },
+      {
+        "url": "https://softwarefinder.com/resources/best-crm-for-marketing-agency",
+        "position": 3,
+        "title": "9 Best CRM for Marketing Agency - softwarefinder.com",
+        "meta": {
+          "publisher": "softwarefinder.com",
+          "icon_url": "blob:https://www.bing.com/abf66c54-abfd-44f7-9514-336172cd25ff"
+        }
+      },
+      {
+        "url": "https://productive.io/blog/crm-for-agencies/",
+        "position": 4,
+        "title": "Top 15 CRMs for Agencies (Paid & Free) – Decision Guide 2026",
+        "meta": {
+          "publisher": "productive.io",
+          "icon_url": "blob:https://www.bing.com/56839774-2489-4405-95b2-834b3322e861"
+        }
+      },
+      {
+        "url": "https://rankthestack.com/best-crm-for-agencies-in-2026-manage-clients-pipelines-and-projects/",
+        "position": 5,
+        "title": "Best CRM for Agencies in 2026: Manage Clients Pipelines and Projects ...",
+        "meta": {
+          "publisher": "rankthestack.com",
+          "icon_url": "blob:https://www.bing.com/3da1bc7f-687c-4f82-98f8-5f20a29ea01c"
+        }
+      },
+      {
+        "url": "https://cynthiaconcierge.com/blog/crm-for-agencies/",
+        "position": 6,
+        "title": "CRM for Marketing Agencies: Manage Clients, Leads, and Projects",
+        "meta": {
+          "publisher": "cynthiaconcierge.com",
+          "icon_url": "blob:https://www.bing.com/dd154b1c-e968-41ca-92b8-969662218ece"
+        }
+      },
+      {
+        "url": "https://hellogrowthcrm.com/agency-crm",
+        "position": 7,
+        "title": "Agency CRM: Client Pipelines, Projects | HelloGrowthCRM",
+        "meta": {
+          "publisher": "hellogrowthcrm.com",
+          "icon_url": "blob:https://www.bing.com/a4e216e2-4f1f-4d72-986c-5bc85031a235"
+        }
+      },
+      {
+        "url": "https://pipelinecrm.com/industries/agencies-crm/",
+        "position": 8,
+        "title": "Agency CRM for Marketing & Creative Teams | Pipeline CRM",
+        "meta": {
+          "publisher": "pipelinecrm.com",
+          "icon_url": "blob:https://www.bing.com/7fb2f37c-6c37-47ec-9f8e-1368ddc1738e"
+        }
+      },
+      {
+        "url": "https://myearlybird.ai/blog-posts/best-crm-for-agencies",
+        "position": 9,
+        "title": "The 12 Best CRM for Agencies to Scale Client Growth in 2026",
+        "meta": {
+          "publisher": "myearlybird.ai",
+          "icon_url": "blob:https://www.bing.com/a4e3f80f-e0ea-4903-8442-4431564ee019"
+        }
+      },
+      {
+        "url": "https://digitalagencynetwork.com/tools/crm/",
+        "position": 10,
+        "title": "CRM for Marketing Agencies | Compare Agency CRM Software",
+        "meta": {
+          "publisher": "digitalagencynetwork.com",
+          "icon_url": "blob:https://www.bing.com/b8588ed5-bafd-4df2-9a1b-45cb91537896"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 5,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "monday CRM",
+      "Salesforce"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 158
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 178
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 189
+      },
+      {
+        "brand": "monday-crm",
+        "span": "Monday CRM",
+        "offset": 203
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1553
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 2693
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM",
+      "monday CRM",
+      "Salesforce"
+    ],
+    "citations": {
+      "0": "insightly.com blog: CRM vendor site, not a listed competitor domain",
+      "1": "toolradar.com: unsure what kind of site (tool guides); not confident it is a review platform",
+      "2": "onesuite.io blog: vendor site, not in the publisher registry",
+      "3": "softwarefinder.com: software listing and user-review platform (the cited page is one of its articles); fairly but not fully sure · RULED other: see revisions",
+      "4": "productive.io blog: vendor site, not in the publisher registry",
+      "5": "rankthestack.com: listicle blog, not in the publisher registry",
+      "6": "cynthiaconcierge.com blog: vendor site, not in the publisher registry",
+      "7": "hellogrowthcrm.com: CRM vendor site, not a listed competitor domain",
+      "8": "pipelinecrm.com: a different CRM vendor (Pipeline CRM); the host is not pipedrive.com, so not owned",
+      "9": "myearlybird.ai blog: vendor site, not in the publisher registry",
+      "10": "digitalagencynetwork.com: agency directory, unsure; not confident it is a review platform"
+    },
+    "notes": "Pipedrive: intro list (178) and numbered heading \"3. Pipedrive\" (1553). \"Monday CRM\" at 203 is a casing variant of the name monday CRM. NOT counted: \"Freshworks\" at 2810 (\"ClickUp / Freshworks / Agile CRM / Copper\") is the company name, not Freshsales; it does not carry the brand's name and is not a listed alias, and Freshworks sells several products, so in doubt it is left out (Freshsales not detected). Later \"using Monday for project management\" (2373) and \"Zoho apps\" (2060) refer to other products and do not matter because both brands are already detected. Insightly, OneSuite, ActiveCampaign, ClickUp, Agile CRM and Copper are outside the set and ignored; \"Insightly+1\" style strings are source chips. No citation is on pipedrive.com; pipelinecrm.com is a look-alike host only.",
+    "revisions": [
+      {
+        "field": "citationClasses.3",
+        "from": "review",
+        "to": "other",
+        "reason": "consistency ruling made before the harness was run: softwarefinder.com was labelled review here and other in g098, and neither labeller was confident it is a user-review platform. The protocol says a site one is not confident about is other."
+      }
+    ]
+  }
+}

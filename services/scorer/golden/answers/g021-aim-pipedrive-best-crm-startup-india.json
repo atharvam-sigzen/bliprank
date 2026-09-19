@@ -1,0 +1,256 @@
+{
+  "id": "g021-aim-pipedrive-best-crm-startup-india",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: competitor's literal name first appears inside another product's name (Bigin by Zoho CRM)",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:24:23.547Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Best CRM for a startup in India with a small sales team",
+    "cell": {
+      "key": "58be81d1bc084b8763ac37d56d9103607509eb60a48b9624fae45c126d6ba1b6",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a startup in India with a small sales team, the ideal CRM needs to balance affordability (INR billing/GST invoices), ease of use (so your reps spend time selling instead of data-entry), and local integrations (like WhatsApp, IndiaMART, or local telephony).\nThe top CRM choices tailored for small Indian sales teams are broken down below by their strengths:\nBigin by Zoho CRM: — Best for absolute simplicity & ultra-low budget\nWhy it’s great:: Built specifically by Zoho Corporation as a deliberately micro-CRM. If your team just needs pipelines, contacts, tasks, and straightforward deal tracking without the bloat of an enterprise system, Bigin is lightning-fast to set up.\nPricing:: Highly cost-effective with local India pricing and GST support.\nBest for:: Early-stage startups or founder-led sales teams (1 to 5 people).\nZoho CRM: — Best overall value & deep scaling path\nWhy it’s great:: If Bigin feels too basic, full Zoho CRM gives you robust lead management, AI scoring (Zia), workflow automations, and native integration with the broader Zoho ecosystem. It is well-adapted for Indian business operations and natively provides GST-compliant invoicing options.\nPricing:: Very competitive tiering compared to Western counterparts.\nBest for:: Growing startups that need heavy automation and customization on a budget.\nFreshsales (by Freshworks) — Best for call-heavy and intuitive sales teams\nWhy it’s great: Freshworks is a home-grown Indian multinational success with an exceptionally clean, modern user interface. Freshsales excels if your team does a lot of outbound calling—it features built-in phone, email, activity tracking, and AI-driven lead scoring (\"Freddy\").\nPricing:: Offers a functional free tier (up to 3 users) and affordable paid tiers.\nBest for:: Inside-sales teams relying heavily on phone calls and email sequencing.\nHubSpot CRM: — Best free-to-start & inbound marketing integration\nWhy it’s great:: HubSpot has a world-class free tier that handles basic contact management and deal pipelines smoothly. If your startup relies heavily on inbound content, SEO, or web forms, HubSpot connects marketing and sales frictionlessly.\nPricing:: Generous free options, but paid tiers scale up steeply once you need advanced automation.\nBest for:: Tech/SaaS startups planning to scale inbound marketing alongside sales.\nLeadSquared: — Best for high-volume lead & local channel integration\nWhy it’s great:: An Indian-born unicorn, LeadSquared is built for high-velocity sales. It handles massive lead volumes from multiple aggregator channels, Facebook/Google ads, and marketplace leads instantly, auto-assigning them to your small team via round-robin rules.\nBest for:: EdTech, financial services, or high-lead-volume consumer startups.",
+    "citations": [
+      {
+        "url": "https://www.linkedin.com/pulse/affordable-crm-small-businesses-india-2025-insight-sme-iqgye",
+        "position": 0,
+        "title": "Affordable CRM for Small Businesses in India (2025 Insight for ...",
+        "meta": {
+          "snippet": "1️⃣ Zoho CRM",
+          "source": "LinkedIn·Cut Edge Technology Pvt. Ltd.",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.linkedin.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Dec 4, 2025"
+        }
+      },
+      {
+        "url": "https://unstopgrowth.com/blog/crm-software-for-small-business",
+        "position": 1,
+        "title": "Best CRM Software for Small Business India 2026",
+        "meta": {
+          "snippet": "* Why Indian SMBs Can't Afford to Skip CRM in 2026. * HubSpot CRM",
+          "source": "unstopgrowth.com",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://unstopgrowth.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 25, 2026"
+        }
+      },
+      {
+        "url": "https://www.elitetechcorp.com/blog/best-crm-small-business-india/",
+        "position": 2,
+        "title": "Best CRM Software for Small Businesses in India",
+        "meta": {
+          "snippet": "Everything you need to manage customer relationships, drive sales, and grow your business efficiently. * Lead Management. Capture ...",
+          "source": "Elite Tech Corp",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.elitetechcorp.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 10, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Zoho CRM",
+      "Freshsales",
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 370
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 1327
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 1847
+      }
+    ],
+    "order": [
+      "Zoho CRM",
+      "Freshsales",
+      "HubSpot"
+    ],
+    "citations": {
+      "0": "linkedin.com pulse article: social network",
+      "1": "unstopgrowth.com blog: agency blog, not in the publisher registry",
+      "2": "elitetechcorp.com blog: agency blog, not in the publisher registry"
+    },
+    "notes": "Subject absent. The first \"Zoho CRM\" at 370 sits inside the heading \"Bigin by Zoho CRM:\", which introduces Bigin (a different product) but writes the brand's literal name as whole tokens, so I take it as the first appearance. If that is rejected, the first is the heading \"Zoho CRM:\" at 829; the order and every label field are the same either way. \"Zoho Corporation\" at 469 is the company, not counted. LeadSquared is not in the set."
+  }
+}

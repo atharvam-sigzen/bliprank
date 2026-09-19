@@ -1,0 +1,276 @@
+{
+  "id": "g106-aio-sigzen-erp-solution-jewellery-business",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: no brand in text; google.com/goto redirect citations, one with a YouTube source field; URL/title mismatch on citation 6",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:24:39.960Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP solution for jewellery business with retail POS",
+    "cell": {
+      "key": "1c5696ffba2ddb6be7bd34f15b5062f38fec34d368dc6c71b28349fb50eec44e",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "An all-in-one Jewellery ERP solution with a retail POS connects back-office manufacturing, precious metal tracking, and accounting directly with showroom sales counters.\nKey Features to Look For\nPopular Software Options",
+    "citations": [
+      {
+        "url": "https://www.gopiro.com/",
+        "position": 0,
+        "title": "PIRO | ERP & POS Solutions for jewelry businesses",
+        "meta": {
+          "snippet": "PIRO is a jewelry inventory, ERP, and POS software that helps jewelry businesses run smoothly. PIRO's software is designed for jew...",
+          "source": "www.gopiro.com"
+        }
+      },
+      {
+        "url": "https://www.pavilionerp.com/",
+        "position": 1,
+        "title": "Pavilion POS: Jewelry Store POS Software for Retailers ...",
+        "meta": {
+          "snippet": "Yes. Pavilion supports diamond and gemstone inventory, including important details such as stone type, shape, weight, color, clari...",
+          "source": "Pavilion POS"
+        }
+      },
+      {
+        "url": "https://www.jsofterp.com/erp-software-the-complete-2026-guide/",
+        "position": 2,
+        "title": "Jewellery ERP Software: The Complete 2026 Guide",
+        "meta": {
+          "snippet": "Why Choose JSoft ERP. JSoft ERP is purpose-built for the jewellery trade, combining inventory, manufacturing, billing, CRM, and co...",
+          "source": "JSoft ERP",
+          "date": "Jun 29, 2026"
+        }
+      },
+      {
+        "url": "https://www.netsuite.com/portal/industries/jewelry-erp.shtml",
+        "position": 3,
+        "title": "NetSuite Jewelry ERP Software",
+        "meta": {
+          "snippet": "Jewelry ERP software integrates inventory tracking, production management, omnichannel sales, and financials into a single cloud s...",
+          "source": "Oracle NetSuite"
+        }
+      },
+      {
+        "url": "https://www.wjewel.com/jewelry-retail-software.php?srsltid=AfmBOooo2QEexf0we8cdeAPBR2leSKlfUJ21pVk1Hu2PpdQCIhqkpj-o",
+        "position": 4,
+        "title": "All-in-One Jewelry POS Software for Retailers - WJewel",
+        "meta": {
+          "snippet": "From jewelry inventory management software to jewelry repair tracking software, WJewel brings every part of your business into one...",
+          "source": "WJewel",
+          "date": "Aug 17, 2026"
+        }
+      },
+      {
+        "url": "https://www.getapp.com/retail-consumer-services-software/jewelry-store-management/f/vendor-management/",
+        "position": 5,
+        "title": "Top Rated Jewelry Store Management Software with Vendor ...",
+        "meta": {
+          "snippet": "ZSolTech. ... ZSolTech is an enterprise resource planning system designed for jewelry businesses, including retailers, manufacture...",
+          "source": "www.getapp.com"
+        }
+      },
+      {
+        "url": "https://www.netsuite.com/portal/industries/jewelry-erp.shtml",
+        "position": 6,
+        "title": "Top 10 software solutions for jewelers in 2025 - Gem Logic",
+        "meta": {
+          "snippet": "Best all-in-one ERP solution for modern jewelers Gem Logic is a comprehensive SaaS platform built specifically for jewelers. It co...",
+          "source": "Gem Logic",
+          "date": "Jul 30, 2025"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=Gdqi2wljxrE&t=9",
+        "position": 7,
+        "title": "Key Features Overview | All-in-One ERP for Jewelers",
+        "meta": {
+          "snippet": "Jewelsteps Jewelry Software – Key Features Overview | All-in-One ERP for Jewelers hello jewellers welcome to our 12steps YouTube c...",
+          "source": "YouTube·JewelSteps - Cloud Based Jewellery ERP Software",
+          "date": "Jun 27, 2025"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESYwHrOzAVfGaGl7-97AjB72e7BDJhhb_-B0eH1G-ZkPlv7loIV0wK9wYEDGcY8VFPSIqIi4qtwXE4LS6_kIh_4L1e0R6ICD06Q_T4epzR89chFjnoIQoT22MZvSybQrDp5C7-3A",
+        "position": 8,
+        "title": "Jewellery ERP Software for Retail, Manufacturing ...",
+        "meta": {
+          "snippet": "one shared. question Do you have the right information right. now. if you run a retail showroom. you know the cost of a slow stock...",
+          "source": "YouTube·WinGold Next | Jewellery ERP . Generation Next",
+          "date": "Aug 24, 2026"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESaQHrOzAVExQ58HNQY8kXvb0ku2PzNBZ9NoII4J9SLmEZ4JRNxFkFDPF8nKjIlFwa9btRXdkDbzw7KGxTalApa6oRzbzSIB2T-GNzX5nucjx-anPkSl0h04-5ZIoXddkDe4KbctUSRxr1Fw",
+        "position": 9,
+        "title": "ERP for Jewellery Industry - PiERP",
+        "meta": {
+          "snippet": "Solutions * Centralized ERP platform connecting inventory, manufacturing, procurement, retail, and finance. * Real-time tracking o...",
+          "source": "PiERP"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "review",
+      "6": "other",
+      "7": "video",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "gopiro.com: vendor site, not in registry",
+      "1": "pavilionerp.com: vendor site, not in registry",
+      "2": "jsofterp.com: vendor blog, not in registry",
+      "3": "netsuite.com: vendor site, not in registry",
+      "4": "wjewel.com: vendor site, not in registry",
+      "5": "getapp.com: review platform (user reviews and product listings)",
+      "6": "URL host is netsuite.com (vendor site) although the title/source field says Gem Logic; classed from the URL host, so other",
+      "7": "youtube.com watch page: video platform",
+      "8": "google.com/goto redirect: host is google.com; source field says YouTube but the URL does not show it; unsure, so other",
+      "9": "google.com/goto redirect: host is google.com, target not visible; other"
+    },
+    "notes": "The 219-char text names no brand at all (two empty headings). Citation 6's URL (netsuite.com, same as citation 3) disagrees with its title/source (Gem Logic). Citations 8 and 9 are google.com/goto redirects; 8's source field names YouTube but it is classed from the URL host."
+  }
+}

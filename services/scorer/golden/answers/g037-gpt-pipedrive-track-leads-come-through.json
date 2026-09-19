@@ -1,0 +1,225 @@
+{
+  "id": "g037-gpt-pipedrive-track-leads-come-through",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: brand as the title of a flattened link token (urlNAMEhttps://...), glued with no spaces; subject's site linked in the text with an empty citations list",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T06:17:33.498Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I track leads that come in through WhatsApp in a CRM?",
+    "cell": {
+      "key": "6e6913243e5c1fc84e47ee9fd6d58304d00f12f0e1bc48db1df928f6dd2409a0",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Tracking WhatsApp leads in a CRM usually requires connecting WhatsApp to your CRM so every conversation becomes a trackable lead record rather than staying trapped in an individual phone app. A typical setup looks like this:\n\n### 1. Use an official WhatsApp business connection\nUse the urlWhatsApp Business Platformhttps://business.whatsapp.com/products/platform (often through a provider) rather than a personal WhatsApp number. This lets you capture messages, automate workflows, and connect to CRM systems.\n\nCommon connection providers include:\n- urlTwilio WhatsApp APIhttps://www.twilio.com/whatsapp\n- url360dialog WhatsApp APIhttps://www.360dialog.com/whatsapp-business-platform/\n- urlWATI WhatsApp API Platformhttps://www.wati.io/\n\n### 2. Create a lead record automatically\nWhen someone messages your WhatsApp number, your integration should:\n\n1. Create or find a CRM contact\n2. Store:\n   - Name (if available)\n   - Phone number\n   - WhatsApp conversation history\n   - Lead source = \"WhatsApp\"\n   - Campaign/source details (if known)\n   - Date/time of first contact\n3. Assign the lead to a salesperson or queue\n\nExample:\n\n> New WhatsApp message → CRM creates Lead #10452 → Source: WhatsApp → Assigned to Sales Rep A → Follow-up task created\n\n### 3. Add lead source tracking\nDon't just use \"WhatsApp\" as the source. Add more detail:\n\n| Field | Example |\n|---|---|\n| Lead Source | WhatsApp |\n| Campaign | Summer Promo |\n| Entry Point | Facebook Ad |\n| Product Interest | Kitchen Remodel |\n| First Response Time | 4 minutes |\n| Status | New / Qualified / Won |\n\nFor ads, use WhatsApp links with tracking parameters so you know where the conversation originated.\n\n### 4. Sync conversations into the CRM\nDepending on your CRM, you can:\n- Attach WhatsApp chats to the contact record\n- Allow reps to reply from the CRM inbox\n- Search old conversations\n- Measure response times\n\nPopular CRMs with WhatsApp integrations include:\n- urlSalesforcehttps://www.salesforce.com (usually via partners or AppExchange integrations)\n- urlHubSpothttps://www.hubspot.com\n- urlZoho CRMhttps://www.zoho.com/crm/\n- urlPipedrivehttps://www.pipedrive.com\n\n### 5. Set up automation\nUseful workflows:\n\n**New WhatsApp lead**\n→ Create contact  \n→ Send acknowledgment message  \n→ Notify sales rep  \n→ Create follow-up task\n\n**No response after 24 hours**\n→ Reminder task\n\n**Qualified lead**\n→ Move pipeline stage  \n→ Schedule call/demo\n\n**Lost lead**\n→ Add reason and future follow-up date\n\n### 6. Measure WhatsApp performance\nTrack metrics such as:\n- Number of WhatsApp leads\n- Lead-to-opportunity conversion rate\n- Average response time\n- Sales generated from WhatsApp\n- Which campaigns generate WhatsApp conversations\n- Rep response performance\n\nA simple architecture is:\n\n**WhatsApp → WhatsApp API provider → CRM → Automation → Sales team → Reporting**\n\nIf you tell me which CRM you use (HubSpot, Salesforce, Zoho, Pipedrive, etc.) and whether leads come from ads, your website, or direct messages, I can outline the exact setup.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 4,
+    "cited": true,
+    "position": 4,
+    "competitorsMentioned": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 1949
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 2046
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 2086
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2129
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2925
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "The list \"Popular CRMs with WhatsApp integrations include:\" is stored as flattened link tokens that display as urlTITLEhttps://..., e.g. \"urlPipedrivehttps://www.pipedrive.com\". The offsets show the parts are not really glued: \"- \" ends at 2124, \"url\" sits at 2125-2127, \"Pipedrive\" at 2129-2137 and the URL starts at 2139, so one invisible separator character sits at 2124, at 2128 and at 2138 (the same one-character gaps surround Salesforce 1949, HubSpot 2046 and Zoho CRM 2086). I read TITLE as the link's visible text (prose), delimited by those separators, and the part from https:// on as the URL: a reader of this answer takes the bullet to name the CRM. So Salesforce (1949), HubSpot (2046), Zoho CRM (2086) and Pipedrive (2129) are counted there; NOT FULLY SURE, because on screen the name looks glued to \"url\" and \"https\" and a strict whole-token reading of the visible string would reject it. The lowercase hits inside the URLs (salesforce 1972, hubspot 2066, zoho 2107, pipedrive 2151) are not mentions. The second, unambiguous Pipedrive mention is at 2925 in \"(HubSpot, Salesforce, Zoho, Pipedrive, etc.)\". If the link titles were NOT counted: mentionCount 1, order HubSpot (2898), Salesforce (2907), Zoho (2919, short form), Pipedrive (2925); position is 4 either way. cited: the citations list is empty, but the subject's site https://www.pipedrive.com is linked inside the answer text at 2139, so cited is true per rule 1 and the protocol's instruction."
+  }
+}

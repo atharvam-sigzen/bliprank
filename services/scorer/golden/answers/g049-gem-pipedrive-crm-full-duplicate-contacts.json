@@ -1,0 +1,207 @@
+{
+  "id": "g049-gem-pipedrive-crm-full-duplicate-contacts",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: two brands joined by a slash with no space (\"Salesforce/HubSpot\"); brand names also inside engine markup attributes",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T06:09:05.734Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+    "cell": {
+      "key": "7f672c8e37862a35e7a3f082bd606e2cf1ed3421e3849a3c4ff91200c68bbad2",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Cleaning up CRM duplicates and stopping them from coming back requires a clear two-phase strategy: **Cleanup** (fixing existing data) and **Prevention** (fixing the processes). \n\n---\n\n### Phase 1: Clean Up Existing Duplicates\n\nTackling duplicate records all at once can corrupt reporting or overwrite critical history. Clean the database in structured layers:\n\n#### 1. Define Merge Rules First\nBefore merging any records, establish \"Master Record\" logic so your team or automation tools retain the correct data:\n* **Creation Date/Recency:** Usually, the oldest record holds the original source attribution, while the newest record contains up-to-date contact info.\n* **Activity & Associations:** Choose the record tied to open deals, active workflows, or synced integrations (e.g., Salesforce/HubSpot synced IDs).\n* **Field Completeness:** Prioritize records with filled-out custom fields over bare-bones entries.\n\n#### 2. Run Layered Merges\nExport a full database backup before running any bulk actions. Then clean in order of confidence:\n* **High Confidence (Exact Matches):** Merge records where unique identifiers match exactly (e.g., Email Address, CRM Record ID, or Company Domain).\n* **Medium Confidence (Fuzzy Matches):** Use CRM duplicate management tools (or specialized third-party tools like Insycle, Dedupely, or LeanData) to identify partial matches, such as identical First Name + Last Name + Company Name, or similar phone numbers.\n* **Low Confidence (Manual Review):** Set aside records with matching names but different emails/domains for a quick human review to avoid merging distinct individuals.\n\n---\n\n### Phase 2: Stop Duplicates from Recurring\n\nTo keep the CRM clean, lock down entry points across system configuration, integrations, and user behavior.\n\n| Entry Vector | Prevention Strategy |\n| :--- | :--- |\n| **Manual Rep Entry** | Enforce **Unique Field Rules** (e.g., requiring a unique email address or domain before saving). Require sales reps to search existing records before creating new ones. |\n| **Web Forms & Inbound** | Set forms to update existing records based on email address rather than creating new entries automatically. Standardize email field validation on website forms. |\n| **CSV Imports** | Require all team members to include Record IDs or unique matching keys when importing lists. Run imported files through deduplication pre-checks before pushing to the CRM. |\n| **Third-Party Integrations** | Audit bi-directional syncs (e.g., Marketing Automation or ERP connectors). Ensure integrations map to single unique identifiers across both systems. |\n\n---\n\n### Ongoing Governance Routine\n\n1. **Schedule Automated Audits:** Set up weekly or monthly automated deduplication scans (via native CRM tools or dedicated middleware) to catch edge-case duplicates early.\n2. **Assign Data Ownership:** Appoint a specific admin or Ops team member to review duplicate queues weekly.\n3. **Standardize Data Input:** Implement drop-down picklists for fields like State, Country, and Industry instead of open text fields to prevent subtle entry mismatches.\n\n<ElicitationsGroup message=\"To tailor this specifically to your setup:\">\n  <Elicitation label=\"Tell me which CRM you use (HubSpot, Salesforce, etc.)\" query=\"I am using [Insert CRM Name] - how do I set up duplicate prevention natively in this specific system?\"/>\n  <Elicitation label=\"Explore automated CRM cleaning tools\" query=\"What are the best automated deduplication tools for CRMs and how do they integrate?\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "HubSpot"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 782
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 793
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "HubSpot"
+    ],
+    "citations": {},
+    "notes": "Subject absent. The two competitors first appear joined by a slash, \"Salesforce/HubSpot synced IDs\" (782, 793); each is still a whole name. They appear again inside the engine's <Elicitation label=...> markup at 3210 and 3219, in the reverse order, which does not change first appearance. Insycle, Dedupely and LeanData are outside the set and ignored."
+  }
+}

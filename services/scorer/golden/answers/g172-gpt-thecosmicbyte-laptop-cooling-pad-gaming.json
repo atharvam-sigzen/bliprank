@@ -1,0 +1,109 @@
+{
+  "id": "g172-gpt-thecosmicbyte-laptop-cooling-pad-gaming",
+  "covers": "real chatgpt answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T10:38:25.968Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "laptop cooling pad for gaming under 1000 rupees",
+    "cell": {
+      "key": "2e9e45bb5f07299ab8cfc2ea29bc30a66b7415721dde5284a38fa386ebb9a41a",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a **gaming laptop under ₹1,000**, I’d prioritize **2+ fans, adjustable height, and a good-sized mesh surface** over RGB.\n\n### Best options right now\n\n- **LAPCARE DCX-A101 — ~₹679** ⭐ **Best overall**\n\n2 fans\nAdjustable height\n4.2/5 from ~19k reviews on Flipkart\nExcellent value for gaming laptops.\n- **EVOFOX Frost 15.6\" — ~₹699** — Good if your laptop is 15.6\"\n\n2 fans\nBlue LED\n4.2/5 from ~2,000 reviews.\n- **Ant Esports NC150 — ~₹749**\n\n2 fans\nAdjustable height\n4.0/5 rating.\n- **Ant Esports NC190 — ~₹839** — If you specifically want more fans\n\n5 fans\nAdjustable design\n4.0/5 from ~140 reviews.\n- **ZEBRONICS NC3500 — ~₹649**\n\n2 fans\nBlue LED\n4.0/5 from ~300 reviews.\n\n**My pick: LAPCARE DCX-A101 at ~₹679.** At this budget, I wouldn't spend the full ₹1,000 just for RGB or extra small fans.\n\nIf you tell me your **laptop model/size (e.g. ASUS TUF 15.6\")**, I can narrow it down to the **best cooling pad for your exact laptop**.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "Whole answer read; no occurrence of \"cosmic\" or \"byte\". Subject absent. No citations."
+  }
+}

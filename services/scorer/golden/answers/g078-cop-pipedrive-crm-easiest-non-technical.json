@@ -1,0 +1,344 @@
+{
+  "id": "g078-cop-pipedrive-crm-easiest-non-technical",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: different product of the same company (Bigin by Zoho) precedes the real Zoho CRM mention",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:28:42.816Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+    "cell": {
+      "key": "6cd84855a948e7072019c022bf346a3c4f8ceec2781bf9ae81af6906104825af",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "HubSpot CRM and monday CRM are among the easiest CRMs for non-technical teams to set up, offering intuitive interfaces, drag-and-drop pipelines, and guided onboarding without requiring technical expertise Fit Small Business+1.\nKey Options for Non-Technical Teams\n1. HubSpot CRM\nEase of use: Extremely intuitive with drag-and-drop pipelines and clear contact records 1.\nSetup: Very fast, with guided onboarding and sample files to import data from CSV or Excel 1.\nFeatures: Free plan supports basic sales, marketing, and service tools; no-code customization for fields, pipelines, and workflows 1.\nPros: Works well for teams that want an all-in-one platform; free tier available for small teams.\nCons: Terminology like “objects,” “records,” and “properties” may take a short period for first-time users to understand 1.\n1 Source\n2. monday CRM\nEase of use: Beginner-friendly with spreadsheet-style interface and multiple viewing options (Kanban, timeline, calendar, etc.) 1.\nSetup: Quick spreadsheet import from Excel or Google Sheets; ready-to-use templates for pipelines and contacts 1.\nPros: Clean interface for new CRM users; automation and mass email capabilities.\nCons: Some advanced features are locked into higher-tier plans, and the minimum plan requires three users 1.\n1 Source\n3. Pipedrive\nEase of use: Designed for basic sales automation with visual pipelines and lead prioritization 1.\nPros: Simple workflow automation and smart contact management; integration with 300+ apps.\nCons: No free plan; more advanced tools come with paid plans.\n1 Source\n4. Bigin by Zoho\nEase of use: Highly user-friendly for freelancers and solo operators 1.\nSetup: Offers a good free plan, quick contact/pipeline creation, and simple automations.\nPros: Low-cost, efficient, ideal for small teams or solo users.\nCons: Limited customer service and some advanced tools compared to Zoho CRM.\n1 Source\nOther Simple CRMs\nAgile CRM: Free plan supports up to 10 users, with end-to-end workflows.\nCapsule CRM: Straightforward interface; includes contact management and basic project tools.\nLess Annoying CRM: Intuitive, with unlimited contacts and pipelines; good for teams new to CRMs 1.\n1 Source\nRecommendations for a Non-Technical Team\nChoose a CRM with guided onboarding and drag-and-drop interfaces (HubSpot CRM or monday CRM).\nStart with a free or low-cost plan to test ease of use and team adoption.\nConsider spreadsheet integration if your team currently uses Excel or Google Sheets; tools like monday CRM and Bigin simplify this transition 2.\nPrioritize visual workflows and no-code customization to allow your team to adjust pipelines and automations without coding knowledge.\n2 Sources\nFor teams prioritizing fastest setup and minimal learning curve, HubSpot CRM is ideal for an all-in-one solution, while monday CRM excels for users transitioning from spreadsheets to a visually intuitive interface.",
+    "citations": [
+      {
+        "url": "https://www.crm.ph/guide/simple-crm/",
+        "position": 0,
+        "title": "Best Simple CRM for Non-Technical Teams in 2026",
+        "meta": {
+          "publisher": "crm.ph",
+          "icon_url": "blob:https://www.bing.com/f27528fa-e82b-401f-bda2-7ed2e8d847db"
+        }
+      },
+      {
+        "url": "https://emergent.sh/learn/best-no-code-crm-builders",
+        "position": 1,
+        "title": "6 Best No-Code CRM Builders for Non-Technical Founders in 2026",
+        "meta": {
+          "publisher": "emergent.sh",
+          "icon_url": "blob:https://www.bing.com/438b572f-8562-4d6f-aee5-c73d6946496a"
+        }
+      },
+      {
+        "url": "https://fitsmallbusiness.com/best-simple-crm/",
+        "position": 2,
+        "title": "Best Simple CRM Systems for Small Businesses 2026",
+        "meta": {
+          "publisher": "fitsmallbusiness.com",
+          "icon_url": "blob:https://www.bing.com/3e303443-fb2c-4ca7-96a2-991d2ade8635"
+        }
+      },
+      {
+        "url": "https://www.forbes.com/advisor/business/software/best-simple-crm/",
+        "position": 3,
+        "title": "10 Best Simple CRMs Of 2026 – Forbes Advisor",
+        "meta": {
+          "publisher": "forbes.com",
+          "icon_url": "blob:https://www.bing.com/45a6afa8-71c0-442b-8325-ac8a69ffaddc"
+        }
+      },
+      {
+        "url": "https://blog.salesflare.com/best-simple-crm",
+        "position": 4,
+        "title": "8 Best Simple CRMs in 2026 - Salesflare Blog",
+        "meta": {
+          "publisher": "blog.salesflare.com",
+          "icon_url": "blob:https://www.bing.com/f84d8e2a-d80b-4810-80be-ada4c19cd580"
+        }
+      },
+      {
+        "url": "https://www.maximizer.com/blog/best-simple-crm-software/",
+        "position": 5,
+        "title": "Best Simple CRM Software in 2026 (Easy & Lightweight Tools)",
+        "meta": {
+          "publisher": "maximizer.com",
+          "icon_url": "blob:https://www.bing.com/b8ad69f5-ab4a-4e4c-89aa-65779ffc2ff6"
+        }
+      },
+      {
+        "url": "https://nethunt.com/blog/best-simple-crm-solutions/",
+        "position": 6,
+        "title": "Best Easy CRM Software in 2026: Simple CRM Tools for Small Business",
+        "meta": {
+          "publisher": "nethunt.com",
+          "icon_url": "blob:https://www.bing.com/8e0fd610-ca07-407f-8b3a-c3604c07bb2d"
+        }
+      },
+      {
+        "url": "https://getdatabees.com/resources/thehive/what-is-the-easiest-crm-to-set-up/",
+        "position": 7,
+        "title": "What is the easiest CRM to set up? - DataBees",
+        "meta": {
+          "publisher": "getdatabees.com",
+          "icon_url": "blob:https://www.bing.com/f974e0e1-6827-4c86-995f-6ee0288dd379"
+        }
+      },
+      {
+        "url": "https://www.nutshell.com/blog/easy-to-use-crms",
+        "position": 8,
+        "title": "The Best Easy-to-Use CRMs for Small Businesses | Nutshell",
+        "meta": {
+          "publisher": "nutshell.com",
+          "icon_url": "blob:https://www.bing.com/1f4283a4-b3f4-4a1a-8a48-e1b64efe7232"
+        }
+      },
+      {
+        "url": "https://www.gohighlevel.com/post/top-crms-for-small-businesses-that-dont-want-a-complicated-setup",
+        "position": 9,
+        "title": "Top CRMs for small businesses that don’t want a complicated setup",
+        "meta": {
+          "publisher": "gohighlevel.com",
+          "icon_url": "blob:https://www.bing.com/2ded39b8-d287-407c-9c83-2d82542c1a5d"
+        }
+      },
+      {
+        "url": "https://technologyadvice.com/blog/crm/easiest-crm-to-use/",
+        "position": 10,
+        "title": "Best Easy to Use CRM Software (2026) | Top Picks",
+        "meta": {
+          "publisher": "technologyadvice.com",
+          "icon_url": "blob:https://www.bing.com/7b649d1c-a769-4726-85cb-de4b97f756cb"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 3,
+    "competitorsMentioned": [
+      "HubSpot",
+      "monday CRM",
+      "Zoho CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "earned_media",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 0
+      },
+      {
+        "brand": "monday-crm",
+        "span": "monday CRM",
+        "offset": 16
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1289
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 1868
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "monday CRM",
+      "Pipedrive",
+      "Zoho CRM"
+    ],
+    "citations": {
+      "0": "crm.ph: guide site, unsure what it is, not in registry",
+      "1": "emergent.sh: vendor site, not in registry",
+      "2": "fitsmallbusiness.com: editorial small-business site, not in the publisher registry",
+      "3": "forbes.com is in the publisher registry",
+      "4": "blog.salesflare.com: vendor blog (Salesflare is not in the competitor set)",
+      "5": "maximizer.com: vendor blog, not in registry",
+      "6": "nethunt.com: vendor blog, not in registry",
+      "7": "getdatabees.com: agency/vendor site, not in registry",
+      "8": "nutshell.com: vendor blog, not in registry",
+      "9": "gohighlevel.com: vendor site, not in registry",
+      "10": "technologyadvice.com: software advice/lead-gen site, unsure it is a review platform, not in registry"
+    },
+    "notes": "\"Bigin by Zoho\" at 1562 (heading 4) and \"Bigin\" at 2499 are a different Zoho product and are NOT counted; Zoho CRM is detected from \"compared to Zoho CRM\" at 1868. Every \"pipeline(s)\" hit is an ordinary word. The subject appears once, as list heading 3."
+  }
+}

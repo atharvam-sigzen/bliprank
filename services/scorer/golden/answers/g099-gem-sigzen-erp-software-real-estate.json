@@ -1,0 +1,168 @@
+{
+  "id": "g099-gem-sigzen-erp-software-real-estate",
+  "covers": "real gemini answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: competitor named only inside follow-up suggestion markup (ElicitationsGroup attributes), not in the answer body",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T11:19:03.564Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP software for real estate business with project tracking",
+    "cell": {
+      "key": "26f003db70bc7e5bcd1b0b4aced4c2a6a73ebd6598766c1e6af0f4f42bead26a",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Choosing the right ERP for real estate depends on whether your focus is real estate development (construction milestones, contractor management, job costing) or property portfolio management (leasing, asset management, capital projects).\n\n| Software | Best For | Key Project Tracking Features | Real Estate Specifics |\n| :--- | :--- | :--- | :--- |\n| **Sage 300 CRE** | Mid-to-Large Developers & Builders | Job costing, change order management, subcontracts, commitment tracking. | Full lease administration, tenant billing, property accounting. |\n| **Yardi Voyager** | Large Developers & Asset Managers | Construction management, capital project tracking, budget vs. actual monitoring. | End-to-end property lifecycle, investor management, commercial/residential leasing. |\n| **Oracle NetSuite** | Growing Mid-Market & Enterprise | Gantt charts, resource allocation, real-time project profitability, milestone tracking. | Flexible core ERP requiring real estate add-ons (e.g., SuiteApps) for property leasing. |\n| **Acumatica Construction Edition** | Mid-Market Developers & Contractors | Field reporting, compliance tracking, subcontracts, mobile job costing. | Integrated CRM, tenant portals, multi-entity financial consolidation. |\n| **MRI Software** | Commercial & Residential Portfolio Owners | Capital project planning, job cost tracking, contractor invoice approvals. | Comprehensive lease management, CAM reconciliations, asset tracking. |\n\n**Key Capabilities to Look For:**\n* **Job Costing & Budget Controls:** Track commitments, change orders, and forecasted vs. actual costs per property or site phase.\n* **Subcontractor & Vendor Management:** Streamline compliance (insurance, lien waivers) and purchase order processing.\n* **Milestone & Schedule Tracking:** Integration with tools like MS Project or Primavera to map construction timelines directly to project budgets.\n* **Multi-Entity Accounting:** Ability to manage separate SPVs (Single Purpose Entities) or LLCs under one consolidated financial ledger.\n\n<ElicitationsGroup message=\"To help narrow down the best options for your workflow:\">\n  <Elicitation label=\"Compare top software for real estate developers vs. property managers\" query=\"What is the difference between real estate ERPs built for property management vs. real estate development?\"/>\n  <Elicitation label=\"Explore open-source or lower-cost ERP options like Odoo\" query=\"How can Odoo or open-source ERPs be configured for real estate project tracking and accounting?\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 2391
+      }
+    ],
+    "order": [
+      "Odoo"
+    ],
+    "citations": {},
+    "notes": "Subject absent. Odoo appears ONLY inside the trailing <ElicitationsGroup> follow-up suggestion markup (label attribute at 2391, query attribute at 2412), not in the body of the answer. Counted because it is in answer.text and is not a URL; unsure whether follow-up chips should count as prose. \"MS Project\" at 1800 is a different Microsoft product, not Microsoft Dynamics 365."
+  }
+}

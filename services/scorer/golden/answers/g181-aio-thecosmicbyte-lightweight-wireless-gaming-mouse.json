@@ -1,0 +1,142 @@
+{
+  "id": "g181-aio-thecosmicbyte-lightweight-wireless-gaming-mouse",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:31:10.310Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "lightweight wireless gaming mouse under 2000 rupees india",
+    "cell": {
+      "key": "5cf89a1cc4c8a629a5682fba2a26ca7740548c50b9ca99faef0e328bfa912f7d",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The Cosmic Byte Ignis Wireless Tri-Mode Gaming Mouse is an ultra-lightweight wireless gaming option available in India for under ₹2,000.\nTop Lightweight Wireless Options Under ₹2,000\nTo help you pick the best match, what is your preferred grip style (palm, claw, or fingertip)?",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/wireless-mouse-under-2000/s?k=wireless+mouse+under+2000",
+        "position": 0,
+        "title": "Wireless Mouse Under 2000 - Amazon.in",
+        "meta": {
+          "snippet": "Cosmic Byte Ignis Wireless Tri-Mode Gaming Mouse | 2.4GHz + Bluetooth + Wired | PixArt 3311 Sensor | Ultra-Lightweight 54g | 12000...",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Gaming-Mice-Up-to-%E2%82%B92-000/s?rh=n%3A1375415031%2Cp_36%3A-200000&page=3",
+        "position": 1,
+        "title": "Amazon.in: Up To ₹2,000 - Gaming Mice / PC Gaming Peripherals: Computers & Accessories",
+        "meta": {
+          "snippet": "Wireless gaming mice under ₹2,000 include options with Bluetooth, 2.4GHz, and tri-mode wireless: * **SpinBot Clutch GT500 Wireless...",
+          "source": "Amazon.in"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 4
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "amazon.in: retailer",
+      "1": "amazon.in: retailer"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 4, the first product named in the answer. No citation on thecosmicbyte.com."
+  }
+}

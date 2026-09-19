@@ -1,0 +1,230 @@
+{
+  "id": "g057-gpt-pipedrive-crm-should-marketing-agency",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: every brand's first appearance is a table cell; \"Closed\" as a stage name is not Close",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:15:51.176Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+    "cell": {
+      "key": "6978d5615beb2c80294249508c71989689572c84f6f82ea9846bd3e1cdf7a326",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a marketing agency, the “best” CRM depends on whether you mean **managing your agency’s own sales pipeline** or **managing pipelines for your clients**. Those are different problems.\n\nHere are the strongest options:\n\n| CRM | Best for | Why agencies like it | Watch-outs |\n| --- | --- | --- | --- |\n| HubSpot | Most small-to-mid agencies | Excellent sales pipeline, marketing automation, email tracking, reporting, and a strong ecosystem | Can become expensive as contacts/features grow |\n| Pipedrive | Agencies focused mainly on winning new clients | Very clean deal pipeline, easy adoption, great for proposals, follow-ups, and sales stages | Less suited for managing many client delivery workflows |\n| Salesforce | Larger agencies with complex operations | Extremely customizable, enterprise reporting, deep integrations | Higher cost and requires admin resources |\n| Zoho CRM | Budget-conscious agencies needing customization | Strong value, many customization options | Interface can feel less polished |\n| GoHighLevel | Agencies managing client funnels, leads, SMS/email automation, or white-label services | Built around agency use cases with client sub-accounts and automation | Less ideal if you only need a simple internal sales CRM |\n\n## My typical recommendations\n\n- **1–10 person marketing agency:** Pipedrive if you mainly need sales visibility; HubSpot if you also want marketing automation.\n- **10–50 person agency:** HubSpot is usually the best balance of CRM, automation, and reporting.\n- **Lead-gen/performance marketing agency managing client funnels:** GoHighLevel is worth considering.\n- **Enterprise agency serving large brands:** Salesforce may justify the complexity.\n\nA good agency CRM setup usually has at least these pipelines:\n\n1. **New Business Pipeline**\n\nLead → Discovery Call → Proposal Sent → Negotiation → Won/Lost\n2. **Client Account Pipeline**\n\nOnboarding → Active Retainer → Renewal → Expansion → At Risk\n3. **Upsell Pipeline**\n\nExisting client opportunity → Proposal → Closed\n\nIf I had to pick one default choice for a typical marketing agency: **HubSpot for a growth-focused agency, Pipedrive for a lean sales-focused agency, and GoHighLevel for a client-funnel/automation agency.**\n\nI can also compare them specifically for **a 5-person agency, a paid ads agency, an SEO/content agency, or a full-service agency** if that’s your situation.\n\nTTRSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 3,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 304
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 494
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 708
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 874
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1316
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2126
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "Every brand first appears in the first column of a Markdown table. Pipedrive: table cell (494), recommendation bullet (1316), closing bold sentence (2126). GoHighLevel is outside the set and ignored. \"Closed\" at 2011 is a pipeline stage word, not the brand Close."
+  }
+}

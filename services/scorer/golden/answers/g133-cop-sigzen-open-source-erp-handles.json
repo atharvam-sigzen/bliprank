@@ -1,0 +1,270 @@
+{
+  "id": "g133-cop-sigzen-open-source-erp-handles",
+  "covers": "real copilot answer, erp-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T11:17:44.189Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "open source ERP that handles production and stock management",
+    "cell": {
+      "key": "f832e4b647828e66c152774c1d0b8a5f423930b6f782d196322bf780cfcbf8a2",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "ERPNext and Odoo Community Edition (CE) are two of the leading open-source ERP options that provide robust production and inventory management capabilities for manufacturers.\nERPNext\nERPNext is a comprehensive, 100% open-source ERP platform designed for manufacturing companies. Key features include Frappe:\nManufacturing Module: Track multi-level Bills of Materials (BOMs) for finished goods and sub-assemblies.\nInventory Management: Integrated stock management across warehouses, including automatic updates when items are consumed in production.\nProduction Planning: Build production queues based on customer orders, raw material availability, and machine capacity.\nWork Orders: Central documents to manage production processes, raw material transfers, job cards, and backflushing of finished goods.\nCapacity Planning: Optimize workload allocation across workstations to prevent bottlenecks and improve efficiency.\nSubcontracting Management: Track and manage items sent to subcontractors, including billing and stock updates.\nCustomizable Reports & Dashboards: Gain full visibility into production flow, inventory status, and cost estimates.\nIntegration: Seamlessly connects with sales, procurement, and vendor management for end-to-end visibility.\nERPNext is mobile-friendly, customizable, and API-first, allowing integration with other systems and easy automation of workflows for manufacturing and stock operations.\nOdoo Community Edition (CE)\nOdoo CE is another leading open-source ERP with strong manufacturing capabilities. Key features include :\nManufacturing Resource Planning (MRP): Plan production processes, manage work orders, and track raw materials.\nInventory Management: Real-time stock tracking, automated reordering rules, and warehouse management.\nBill of Materials (BOM): Define multi-level BOMs with routing instructions for efficient production.\nQuality & Maintenance: Track production quality, perform inspections, and manage equipment maintenance.\nCustom Modules & Integrations: Large repository of community-developed modules for specialized needs.\nOdoo CE is widely used due to its large community support, modular design, and flexibility for small to medium manufacturing businesses.\nChoosing Between ERPNext and Odoo CE\nERPNext tends to have a more manufacturing-focused core with built-in modules for production planning and subcontracting.\nOdoo CE is modular and flexible but may require extra configuration or third-party apps to fully match ERPNext’s production capabilities.\nCommunity & Documentation: ERPNext has extensive manuals and active community forums, while Odoo CE has a large ecosystem with extensive resources and third-party apps.\nBoth systems are actively maintained open-source ERPs suitable for manufacturers needing integrated production and stock management. The choice often depends on specific industry requirements, the need for customization, and ease of deployment.\nFor a detailed comparison of open-source ERP software for production and inventory management, refer to recent overviews of top ERP tools including ERPNext and Odoo CE +1.",
+    "citations": [
+      {
+        "url": "https://theretailexec.com/tools/best-open-source-inventory-management-software/",
+        "position": 0,
+        "title": "10 Best Open Source Inventory Management Software in 2026",
+        "meta": {
+          "publisher": "theretailexec.com",
+          "icon_url": "blob:https://www.bing.com/1fedfc18-8deb-4b36-9f1e-80409d137c3b"
+        }
+      },
+      {
+        "url": "https://mdcplus.fi/blog/top-free-erp-open-source-manufacturing/",
+        "position": 1,
+        "title": "Free Open-Source ERP for Manufacturing (2026): ERPNext vs Odoo vs 5 ...",
+        "meta": {
+          "publisher": "mdcplus.fi",
+          "icon_url": "blob:https://www.bing.com/2dd68041-25e1-46b2-a18c-88637530daae"
+        }
+      },
+      {
+        "url": "https://frappe.io/erpnext/open-source-manufacturing-erp-software",
+        "position": 2,
+        "title": "Open Source ERP Software for Manufacturing | ERPNext",
+        "meta": {
+          "publisher": "frappe.io",
+          "icon_url": "blob:https://www.bing.com/bf0fd1ec-3d65-46bf-86c5-1d2e8d68eff4"
+        }
+      },
+      {
+        "url": "https://webkul.com/blog/best-open-source-erp-software/",
+        "position": 3,
+        "title": "7 Best Open Source ERP Software (2026) – Comparison Guide",
+        "meta": {
+          "publisher": "webkul.com",
+          "icon_url": "blob:https://www.bing.com/50e87427-1dd7-4cb6-b6eb-f073cf358f8d"
+        }
+      },
+      {
+        "url": "https://medevel.com/free-manufacturing-software-25/",
+        "position": 4,
+        "title": "16 Open-source Free Manufacturing Management Solutions",
+        "meta": {
+          "publisher": "medevel.com",
+          "icon_url": "blob:https://www.bing.com/7505e8d3-1518-4add-ab3f-fcd3fd8e73bb"
+        }
+      },
+      {
+        "url": "https://ecosire.com/blog/open-source-erp-for-manufacturing-top-5-2026",
+        "position": 5,
+        "title": "Top 5 Open-Source ERPs for Manufacturing 2026: Honest Comparison",
+        "meta": {
+          "publisher": "ecosire.com",
+          "icon_url": "blob:https://www.bing.com/095c0171-392d-45cf-a47e-e159dcd7bd7e"
+        }
+      },
+      {
+        "url": "https://www.cleverence.com/articles/erp-reviews/top-10-open-source-erps-manufacturing-add-ons-4732/",
+        "position": 6,
+        "title": "Top 10 Open‑Source ERPs and Manufacturing Add‑Ons for Manufacturers",
+        "meta": {
+          "publisher": "cleverence.com",
+          "icon_url": "blob:https://www.bing.com/54e0e8b8-94f8-4908-a04e-dcdfe8474ecc"
+        }
+      },
+      {
+        "url": "https://github.com/frappe/erpnext",
+        "position": 7,
+        "title": "GitHub - frappe/erpnext: Free and Open Source Enterprise Resource ...",
+        "meta": {
+          "publisher": "github.com",
+          "icon_url": "blob:https://www.bing.com/168da34b-6fed-4d56-92a7-c65d9efcebda"
+        }
+      },
+      {
+        "url": "https://noitechnologies.com/top-open-source-erp-solutions-for-manufacturing/",
+        "position": 8,
+        "title": "Best Open-Source ERP for Manufacturing Businesses",
+        "meta": {
+          "publisher": "noitechnologies.com",
+          "icon_url": "blob:https://www.bing.com/703fca0d-c9f7-4008-bc41-8e90147e01cb"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 12
+      }
+    ],
+    "order": [
+      "Odoo"
+    ],
+    "citations": {
+      "0": "theretailexec.com: trade blog listicle, not in registry",
+      "1": "mdcplus.fi blog: vendor blog, not in registry",
+      "2": "frappe.io: ERPNext vendor site (ERPNext is not in the competitor set), not in registry",
+      "3": "webkul.com blog: vendor blog, not in registry",
+      "4": "medevel.com: blog listicle, not in registry",
+      "5": "ecosire.com blog: vendor/agency blog, not in registry",
+      "6": "cleverence.com articles: vendor site, not in registry",
+      "7": "github.com repository page: code hosting, not a discussion thread; unsure it fits community, so other",
+      "8": "noitechnologies.com: agency site, not in registry"
+    },
+    "notes": "Odoo named 8 times, first at 12 ('Odoo Community Edition (CE)'). Nothing else from the set. Citation [7] is a GitHub repository page: I did not class it as community because a repo landing page is not a user discussion thread (unsure)."
+  }
+}

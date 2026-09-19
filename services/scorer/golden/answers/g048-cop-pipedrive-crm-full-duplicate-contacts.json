@@ -1,0 +1,334 @@
+{
+  "id": "g048-cop-pipedrive-crm-full-duplicate-contacts",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: short forms \"Zoho\" and \"Dynamics\" in a list of CRMs; a different product of the same company (\"Zoho DataPrep\") later in the text",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T06:09:17.862Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+    "cell": {
+      "key": "1f151dfb842ba3d92b5348c1e3aee3272cce47b4b84374d78999c73ccc5c8508",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The fastest path is to dedupe your existing records with automated matching rules, then lock in prevention using strict data-entry rules, integration controls, and ongoing data governance.\n✅ Step 1: Prepare your data before deduplication\nCleaning works best when the data is standardized.\nNormalize formats: phone numbers, email casing, country codes, name capitalization.\nFill in missing fields where possible (e.g., import enrichment data).\nIdentify key fields that define uniqueness: email, phone, national ID, company domain, etc.\nThis ensures your dedupe tools match correctly instead of missing near-duplicates.\n✅ Step 2: Identify and merge existing duplicates\nMost CRMs (Salesforce, HubSpot, Zoho, Dynamics, etc.) offer built‑in or add‑on dedupe tools. Use a layered approach:\nExact-match scan: email, phone, or unique ID.\nFuzzy-match scan: name similarity, company similarity, partial phone match.\nMerge rules:\nKeep the record with the most complete data.\nPreserve activity history and deal associations.\nFlag uncertain matches for manual review.\nIf your CRM lacks strong dedupe tools, export to Excel or Google Sheets and use:\n=UNIQUE() for exact matches\nFuzzy matching add-ons (e.g., OpenRefine, Excel Fuzzy Lookup)\nThen re-import clean data.\n✅ Step 3: Fix the root causes so duplicates don’t return\nDuplicates usually come from people, integrations, or forms. Address each:\n1. Data-entry controls\nRequire email or phone as mandatory unique identifiers.\nEnable real-time duplicate warnings (“This contact already exists”).\nUse picklists instead of free text for fields like country, industry, or lead source.\n2. Integration hygiene\nMost duplicates come from:\nWeb forms\nLead providers\nMarketing automation tools\nManual imports\nTo prevent this:\nTurn on dedupe on import.\nEnsure all integrations use the same unique identifier (email is best for contacts).\nBlock integrations from creating a new record if a match already exists.\n3. User training & process\nEven the best rules fail if the team ignores them.\nTrain staff to search before creating a new contact.\nCreate a simple “How to add a new contact” SOP.\nAssign a data steward (even part-time) to review new records weekly.\n✅ Step 4: Establish ongoing data governance\nDuplicates will creep back unless you monitor them.\nRun a monthly dedupe report.\nSet up automated alerts for potential duplicates.\nReview integration logs for suspicious spikes in new contacts.\nMaintain a data dictionary so everyone uses fields consistently.\n✅ Step 5: Consider automation tools (optional)\nIf your CRM supports it, tools like:\nHubSpot Operations Hub\nSalesforce Duplicate Rules + Matching Rules\nZoho DataPrep\nOpenRefine\n…can automate 80–90% of the work.\n✅ Summary: What to do this week\nStandardize your data.\nRun automated dedupe scans.\nMerge with clear rules.\nTurn on duplicate prevention in your CRM.\nFix integrations.\nTrain your team.\nReview monthly.\nWould you like me to tailor this to your specific CRM (Salesforce, HubSpot, Zoho, Dynamics, or something else)?",
+    "citations": [
+      {
+        "url": "https://www.systoolsgroup.com/how-to/remove-duplicate-contacts-from-salesforce/",
+        "position": 0,
+        "title": "How to Remove Duplicate Contacts in Salesforce CRM in 4 Ways",
+        "meta": {
+          "publisher": "systoolsgroup.com",
+          "icon_url": "blob:https://www.bing.com/3f8f8402-1bd8-48ca-8b7d-b104fe1144b0"
+        }
+      },
+      {
+        "url": "https://www.cleansmartlabs.com/resources/crm-duplicate-contacts",
+        "position": 1,
+        "title": "CRM Duplicate Contacts: Fix the Revenue Leak Fast",
+        "meta": {
+          "publisher": "cleansmartlabs.com",
+          "icon_url": "blob:https://www.bing.com/aed49e23-20e5-4246-878a-28ea3f014af8"
+        }
+      },
+      {
+        "url": "https://www.cleanlist.ai/solutions/fix-duplicate-contacts",
+        "position": 2,
+        "title": "Fix Duplicate Contacts — CRM Deduplication Guide & Tool | Cleanlist",
+        "meta": {
+          "publisher": "cleanlist.ai",
+          "icon_url": "blob:https://www.bing.com/d4d218fc-4e41-4e78-b634-dc9e0541d58e"
+        }
+      },
+      {
+        "url": "https://www.leapdatahq.com/how-to-remove-duplicate-crm-records",
+        "position": 3,
+        "title": "How to Remove Duplicate CRM Records | LeapDataHQ",
+        "meta": {
+          "publisher": "leapdatahq.com",
+          "icon_url": "blob:https://www.bing.com/e17e4c01-988f-438f-9f5c-df266ad6d62c"
+        }
+      },
+      {
+        "url": "https://www.clay.com/guides/how-to-remove-duplicate-contacts",
+        "position": 4,
+        "title": "How to Find and Remove Duplicate Contacts in 2026 | Clay",
+        "meta": {
+          "publisher": "clay.com",
+          "icon_url": "blob:https://www.bing.com/20d757c4-fda3-4802-b4cf-90628e3d3812"
+        }
+      },
+      {
+        "url": "https://www.hitechdigital.com/blog/crm-data-cleansing-customer-database",
+        "position": 5,
+        "title": "CRM Data Cleansing: How To Clean Up Your Customer Database",
+        "meta": {
+          "publisher": "hitechdigital.com",
+          "icon_url": "blob:https://www.bing.com/f9a23b5d-9fb8-4cfc-8204-783e3beb7ee3"
+        }
+      },
+      {
+        "url": "https://databar.ai/blog/article/duplicate-record-management-in-crm-the-hidden-revenue-killer-and-how-to-fix-thousands-fast",
+        "position": 6,
+        "title": "Duplicate Record Management in CRM: The Hidden Revenue Killer (And How ...",
+        "meta": {
+          "publisher": "databar.ai",
+          "icon_url": "blob:https://www.bing.com/be0383d4-2e5d-4a80-be3e-efeaf04559fe"
+        }
+      },
+      {
+        "url": "https://knowledge.hubspot.com/records/manage-duplicate-records",
+        "position": 7,
+        "title": "Review and manage duplicate records - knowledge.hubspot.com",
+        "meta": {
+          "publisher": "knowledge.hubspot.com",
+          "icon_url": "blob:https://www.bing.com/8f9cfd07-57ae-47e6-bc9d-67329d456830"
+        }
+      },
+      {
+        "url": "https://winpure.com/data-cleansing-crm/",
+        "position": 8,
+        "title": "CRM Data Cleansing: How to Clean Your CRM Data - WinPure",
+        "meta": {
+          "publisher": "winpure.com",
+          "icon_url": "blob:https://www.bing.com/99744b62-9ecd-4676-8752-09f221d1237f"
+        }
+      },
+      {
+        "url": "https://crmbeat.com/data-reporting/cleaning-up-your-crm-data-a-practical-guide",
+        "position": 9,
+        "title": "Cleaning Up Your CRM Data: A Practical Guide - CRM Beat",
+        "meta": {
+          "publisher": "crmbeat.com",
+          "icon_url": "blob:https://www.bing.com/f30149b1-1d2a-43e9-974a-d251a8a3d9d3"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "competitor",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 678
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 690
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 699
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Dynamics",
+        "offset": 705
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citations": {
+      "0": "systoolsgroup.com: vendor how-to page about Salesforce; the host is not salesforce.com",
+      "1": "cleansmartlabs.com: vendor resource page, not in the publisher registry",
+      "2": "cleanlist.ai: vendor site, not in the publisher registry",
+      "3": "leapdatahq.com: vendor site, not in the publisher registry",
+      "4": "clay.com guide: vendor site, not in the publisher registry",
+      "5": "hitechdigital.com blog: services vendor, not in the publisher registry",
+      "6": "databar.ai blog: vendor site, not in the publisher registry",
+      "7": "host knowledge.hubspot.com is a subdomain of competitor HubSpot's domain hubspot.com",
+      "8": "winpure.com: vendor site, not in the publisher registry",
+      "9": "crmbeat.com: CRM blog, unsure what kind of site; not in the publisher registry"
+    },
+    "notes": "Subject absent. First appearances are all in \"Most CRMs (Salesforce, HubSpot, Zoho, Dynamics, etc.)\". short form: \"Zoho\" for Zoho CRM at 699. short form / unlisted form: bare \"Dynamics\" for Microsoft Dynamics 365 Sales at 705, listed as a CRM; less than fully sure, as in g047. Later \"Zoho DataPrep\" (2639) is a different Zoho product and would not count on its own; \"HubSpot Operations Hub\" (2572) carries the HubSpot name. Neither changes the label because both brands are already detected earlier."
+  }
+}

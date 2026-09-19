@@ -1,0 +1,243 @@
+{
+  "id": "g136-aio-sigzen-open-source-erp-handles",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: citations are google.com redirects whose meta names YouTube",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:18:29.386Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "open source ERP that handles production and stock management",
+    "cell": {
+      "key": "9dbb7ca467b527325f0313dba9479f0990b1b998a2305dece835e45591abea4a",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "ERPNext and Odoo are the top open-source ERP systems that handle both production and stock management.\nOpinions on Reddit are mixed regarding how \"open source\" some options truly are, as many modern platforms gate advanced manufacturing features behind paid enterprise tiers.\nTop Open-Source Options",
+    "citations": [
+      {
+        "url": "https://www.reddit.com/r/ERP/comments/x4m9jh/best_opensource_erp_for_manufacturing_industry/",
+        "position": 0,
+        "title": "Best open-source ERP for manufacturing industry? - Reddit",
+        "meta": {
+          "snippet": "Top Open-Source ERPs (2022): Odoo, Apache OFBiz, and xTuple PostBooks are considered top open-source ERP systems for 2022, each of...",
+          "source": "Reddit·r/ERP",
+          "date": "Sep 3, 2022"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESfQHrOzAVKKHPetnFFp7V-Sw5G98YkL-vDlkwzwcJRg7hHaBgZi5SSMa4ZYVRZxHe64exv7ji5yGSKvgEPizYpiaaSoPc6rm4CLZcw66PHEfa8FjFHuAeieXxZ6ZRPmJ9mpiG4zWcibHOImt87RH4H1-4l98opTzIVY510I3r",
+        "position": 1,
+        "title": "Top 5 Open-Source ERPs for Manufacturing 2026 - ECOSIRE",
+        "meta": {
+          "snippet": "Key Takeaways * For most discrete manufacturers under 200 employees, Odoo Enterprise is the strongest balance of features and ecos...",
+          "source": "ECOSIRE",
+          "date": "May 4, 2026"
+        }
+      },
+      {
+        "url": "https://opensource.com/tools/enterprise-resource-planning",
+        "position": 2,
+        "title": "Top 9 open source ERP systems to consider | Opensource.com",
+        "meta": {
+          "snippet": "Odoo. Odoo is an integrated suite of applications that includes modules for project management, billing, accounting, inventory man...",
+          "source": "Opensource.com",
+          "date": "Feb 7, 2020"
+        }
+      },
+      {
+        "url": "https://opensource.com/tools/enterprise-resource-planning",
+        "position": 3,
+        "title": "Best Open Source ERP Systems in 2026 - Adatasol",
+        "meta": {
+          "snippet": "Which open source ERP is best for manufacturing? Odoo provides the most comprehensive manufacturing capabilities among open source...",
+          "source": "Adatasol Inc.",
+          "date": "Mar 7, 2026"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESaAHrOzAVghfbmMNRbtytqC8xtr5WL7SyYXDBrbcnhMrabx1qqM5Udzhr_51c_D3DSgkgZi2pAeul6EnuvFBVB3FozwnTQvEPpqHtCFcSOaKCvcxQymd44Yltw0ftRLlL4YQ_kD9BtAJa",
+        "position": 4,
+        "title": "Open Source ERP: Our Top Recommendations for 2026",
+        "meta": {
+          "snippet": "that's why today I'm giving you my top three open source ERPs. that way you can determine if going open source is right for. you. ...",
+          "source": "YouTube·Software Connect",
+          "date": "Sep 4, 2025"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESZwHrOzAV8ldmJqLAId7OJWeWTYF7yfb2JjYlkvT1VBam8jTkWlvMGl14cnu7aZnFNe-ciKV3wpQ7lYKLzrZicI3D-XSYwsXGnR4WjYAY-fSFXQGqJSdpuUZe98HwOS_tPqtn8cYIEzI",
+        "position": 5,
+        "title": "Best Small Business Manufacturing ERP Software for 2026",
+        "meta": {
+          "snippet": "operation you already know how tough it is to keep up with everything manually whether it's inventory tracking scheduling or compl...",
+          "source": "YouTube·Speak About Digital",
+          "date": "Sep 17, 2025"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo"
+    ],
+    "citationClasses": {
+      "0": "community",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 12
+      }
+    ],
+    "order": [
+      "Odoo"
+    ],
+    "citations": {
+      "0": "reddit.com thread (r/ERP): community platform",
+      "1": "host google.com: opaque Google redirect; meta names ECOSIRE, a vendor/agency, other in any case",
+      "2": "opensource.com: articles site (Red Hat's publication), not a reference source in ADR-0005's sense, not in registry",
+      "3": "opensource.com: same URL as 2 (the title names Adatasol, but the host is opensource.com), other",
+      "4": "unsure: host google.com, opaque Google redirect; meta says 'YouTube·Software Connect' so it is probably a video, but the URL host is google.com, so other",
+      "5": "unsure: host google.com, opaque Google redirect; meta says 'YouTube·Speak About Digital' so it is probably a video, but the URL host is google.com, so other"
+    },
+    "notes": "Only Odoo (12) from the set; ERPNext is outside it. Citations [4] and [5] are google.com/goto redirects whose meta names YouTube: classed other by the URL-host rule, flagged as unsure."
+  }
+}

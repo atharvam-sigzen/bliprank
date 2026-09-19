@@ -1,0 +1,170 @@
+{
+  "id": "g156-aio-thecosmicbyte-best-rgb-gaming-mousepad",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: citation whose URL host (youtube.com) and publisher field (Reddit) disagree",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:38:20.963Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best rgb gaming mousepad india under 1500",
+    "cell": {
+      "key": "6e8cf990cc9f2665f31fc404893751c618f20621f965ff21cc2f89493a0f65ab",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best budget RGB gaming mousepads in India under ₹1500 include value options like the Ant Esports MP400R and generic/extended nano-textured RGB mats available on platforms like Amazon India.\nTop Budget RGB Mousepads Under ₹1500\nWhat to Look For\nWould you prefer an extended desk mat that covers your keyboard too, or a standard medium-sized RGB mousepad?",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/shorts/0bPrWd-RAmQ",
+        "position": 0,
+        "title": "️ RGB Gaming MousePad under ₹500 ⚡️",
+        "meta": {
+          "snippet": "we need an RGB mouse pad at a budget. so we have this and esports MP400R RGB gaming mouse pad it has waterproof surface. also it h...",
+          "source": "YouTube·The Inventar",
+          "date": "Oct 8, 2025"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Storite-RGB-Extended-Lighting-Mousepads/dp/B0CVWY38WH",
+        "position": 1,
+        "title": "Buy Storite RGB 900x400x3mm Gaming Mouse Pad, Extra Large ...",
+        "meta": {
+          "snippet": "Product description Brand:Storite Product Type: Gaming Mouse Pad Product Dimension: 800mm x 300mm x 4mm Description: RGB LED Mouse...",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "https://modxcomputers.com/blog/5-best-gaming-mousepads-for-indian-gamers/",
+        "position": 2,
+        "title": "5 Best Gaming Mousepads for Indian Gamers in 2026",
+        "meta": {
+          "snippet": "5 Best Gaming Mousepad in India in 2026 Redragon P030 XL Gaming Mousepad Approximate Cost: ₹799 Size: XL (Extended) Surface: Cloth...",
+          "source": "Modx Computers",
+          "date": "Apr 12, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/shorts/0bPrWd-RAmQ",
+        "position": 3,
+        "title": "Gaming mousepad under ₹1500 (India). Which of ... - Reddit",
+        "meta": {
+          "snippet": "Meckeys Arion Cordura Mousepad: The Meckeys Arion Cordura mousepad is described as very smooth and fast, suitable for speed-type u...",
+          "source": "Reddit·r/IndianGaming",
+          "date": "Jan 5, 2026"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Mouse-Pads-%E2%82%B91-000-500/s?rh=n%3A1375297031%2Cp_36%3A100000-150000",
+        "position": 4,
+        "title": "1500 - Mouse Pads / Keyboard & Mice Accessories - Amazon.in",
+        "meta": {
+          "snippet": "RGB Gaming Mouse Pad with Wireless Charging, 31.5\"x11.8\" Large Desk Mat, Keyboard Pad with Led Light, 9 Light Modes, Non-Slip Rubb...",
+          "source": "Amazon.in"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "video",
+      "1": "other",
+      "2": "other",
+      "3": "video",
+      "4": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "youtube.com shorts page: video platform",
+      "1": "amazon.in: retailer product page",
+      "2": "modxcomputers.com blog: retailer/vendor blog, not in the publisher registry",
+      "3": "unsure: URL host is youtube.com (video platform), but the title and source say Reddit r/IndianGaming; decided by the URL host",
+      "4": "amazon.in: retailer listing page"
+    },
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the text; the answer names only the Ant Esports MP400R. Citation 3's URL is the same YouTube shorts URL as citation 0 while its title and publisher field describe a Reddit thread: the record disagrees with itself. I followed the protocol (decide from the URL host) and labelled video; by the publisher field it would be community."
+  }
+}

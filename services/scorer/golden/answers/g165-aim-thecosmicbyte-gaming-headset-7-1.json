@@ -1,0 +1,147 @@
+{
+  "id": "g165-aim-thecosmicbyte-gaming-headset-7-1",
+  "covers": "real google-ai-mode answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T10:32:38.553Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming headset with 7.1 surround sound under 2500",
+    "cell": {
+      "key": "39468279371d48bdd45f3feb62a940547e7767e8ec9cf83afb42b38f07d73d99",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nThe Razer BlackShark V2 XGo to product viewer dialog for this item. is a top-rated wired gaming headset featuring 7.1 surround sound and 50mm drivers, available for under $50 (well under a 2500 budget).\nTop Budget-Friendly 7.1 Surround Sound Headsets\nKey Features to Look For\nPositional Audio:: 7.1 virtual surround sound helps you accurately hear enemy footsteps and directional cues.\nComfort:: Look for memory foam ear cushions and lightweight builds for long gaming sessions.\nCompatibility:: Ensure the headset works with your platform via a 3.5mm audio jack or USB sound card.\nYou can purchase the Razer BlackShark V2 XGo to product viewer dialog for this item. or explore other options at major retailers like Best Buy or Newegg.",
+    "citations": [
+      {
+        "url": "https://www.newegg.com/p/pl?d=7.1+surround+sound+headset#:~:text=Razer%20BlackShark%20V2,PS5%2C%20PS4%2C",
+        "position": 0,
+        "title": "7.1 surround sound headset | Newegg.com",
+        "meta": {
+          "snippet": "Razer BlackShark V2 X Gaming Headset: 7.1 Surround Sound - 50mm Drivers for PC, PS4, PS5, Switch, Xbox One, Xbox Series X|S, Mobil...",
+          "source": "Newegg"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=CiqexkwDtXc#:~:text=Wearing%20these%20headphones,and%20breathable%20materials.",
+        "position": 1,
+        "title": "[Top 7] Best Budget Gaming Headsets 2026",
+        "meta": {
+          "snippet": "Wearing these headphones for extended periods is comfortable due to the thick memory foam ear cushions and breathable materials.",
+          "source": "YouTube·Gadget Ten",
+          "date": "Jul 6, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=CiqexkwDtXc#:~:text=Wearing%20these%20headphones,and%20breathable%20materials.",
+        "position": 2,
+        "title": "5 Best Surround Sound Gaming Headsets for Immersive Audio",
+        "meta": {
+          "snippet": "The hardware-driven 7.1 virtual surround sound enhances spatial awareness, allowing for precise positioning of enemies in complex ...",
+          "source": "YouTube·Pure Link",
+          "date": "Apr 17, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "video",
+      "2": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "newegg.com: retailer search page",
+      "1": "youtube.com watch page: video platform",
+      "2": "youtube.com watch page: video platform"
+    },
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the text; the answer names only the Razer BlackShark V2 X. Citations 1 and 2 share one YouTube URL under two different titles; both are youtube.com watch pages."
+  }
+}

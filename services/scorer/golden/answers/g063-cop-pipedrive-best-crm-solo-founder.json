@@ -1,0 +1,337 @@
+{
+  "id": "g063-cop-pipedrive-best-crm-solo-founder",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: a different product of a competitor's company (\"Bigin by Zoho\") appears before the subject; the competitor proper (\"Zoho CRM\") only after it",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T04:59:48.052Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What is the best CRM for a solo founder just starting out?",
+    "cell": {
+      "key": "ab5a47d5134a0920e19829759a86f6de0dce3ea1d75cc3aed7360790e163c2a1",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For solo founders, the ideal CRM should be simple, affordable, and automate key tasks; top choices include DelveAnt for AI-driven automation, HubSpot for a robust free starting point, and Bigin by Zoho for lightweight pipeline management.\nKey Considerations for Solo Founders\nSimplicity over features: Avoid CRMs designed for large teams; extra features can be overwhelming and reduce actual usage 2.\nAutomation and follow-ups: Features like automated reminders, email sequences, and lead scoring help prevent missed opportunities 1.\nAffordability: Free or low-cost entry plans are advantageous when starting out and managing cash flow 1.\nEase of setup: Time-to-value matters—tools with minimal setup friction reduce decision fatigue and early abandonment 1.\nRecommended CRM Tools\n1. DelveAnt — AI-Driven Solo Sales\nBest for: Founders wanting minimal manual data entry and AI-powered follow-up.\nFeatures: Automatic lead scoring, contact enrichment, email sequences, workflow automation (limited on free plan), website visitor tracking 1.\nPricing: Free plan for 1,000 records; paid plan from $8/month.\nPros: Automates core sales tasks, reduces manual updates, free AI features rarely offered elsewhere.\nCons: Free plan limits automations; advanced AI requires paid upgrade.\n2. HubSpot CRM — Free and Scalable\nBest for: Starting with a free and reliable platform that can grow over time.\nFeatures: Contact and deal management, pipeline tracking, meeting scheduling, basic email logging 2.\nPricing: Free for up to 2 users; paid plans start from $15/seat/month.\nPros: No expiration on free plan, polished interface, easy Gmail/Outlook integration.\nCons: Some automation and marketing features require paid tiers; may feel feature-heavy for pure pipeline management.\n3. Bigin by Zoho — Lightweight Pipeline Management\nBest for: Moving off spreadsheets or simple pipeline tracking.\nFeatures: 1 pipeline, basic automations, email and telephony integration on free plan 1.\nPricing: Free for 1 user, 500 records; Express plan from $7/month.\nPros: Low barrier to entry, built-in calling, part of Zoho ecosystem for future expansion.\nCons: Limited record cap and pipeline functions on free plan.\n4. Less Annoying CRM — Radical Simplicity\nBest for: Solo founders who want minimal setup and a lean interface.\nFeatures: Contact management, task reminders, pipeline tracking, calendar integration 2.\nPricing: $15/month flat per user.\nPros: All features included in one plan, clean and intuitive interface, no hidden costs.\nCons: Lacks advanced automation and integrations compared to other CRMs.\nOther Notable Mentions:\nPipedrive: Excellent for visual sales pipelines; starts at $14/month but free option not available 1.\nZoho CRM: Highly customizable with broader integrations ($14/month); setup may require more time 1.\nStreak CRM: Ideal if Gmail-native workflow is preferred; free plan available for basic pipelines 1.\nSummary Recommendation\nIf automation and AI assistance are top priorities: choose DelveAnt.\nIf you want zero-cost, scalable starting point: HubSpot CRM is the safest choice.\nIf moving from spreadsheets with minimal setup: Bigin by Zoho is lightweight and functional.\nIf simplicity and ease of use are most important: Less Annoying CRM provides a clean, actionable pipeline without distractions.\nFor a solo founder, the best CRM balances simple setup, essential automation, and budget-friendliness, ensuring it’s used consistently without adding administrative overhead +2.",
+    "citations": [
+      {
+        "url": "https://crmcompared.com/blog/crm-for-one-person/",
+        "position": 0,
+        "title": "Best CRM for One Person: Solo Entrepreneur Guide",
+        "meta": {
+          "publisher": "crmcompared.com",
+          "icon_url": "blob:https://www.bing.com/f9694c62-b5aa-419d-8592-071b7164137b"
+        }
+      },
+      {
+        "url": "https://delveant.com/blog/best-crm-for-one-person-business/",
+        "position": 1,
+        "title": "Top 10 CRM Software for Solo Founders in 2026 - delveant.com",
+        "meta": {
+          "publisher": "delveant.com",
+          "icon_url": "blob:https://www.bing.com/c0511007-8ec6-4779-8be3-d3406e595663"
+        }
+      },
+      {
+        "url": "https://fluidcrm.io/blog/crm-for-solo-founders/",
+        "position": 2,
+        "title": "Best CRM For Solo Founders In 2026 - Fluid CRM Blog",
+        "meta": {
+          "publisher": "fluidcrm.io",
+          "icon_url": "blob:https://www.bing.com/04c5e187-67f6-442b-8d29-bc1e4d4fd11b"
+        }
+      },
+      {
+        "url": "https://www.zoye.io/blog/best-crm-for-one-person-business",
+        "position": 3,
+        "title": "Best CRM for a One-Person Business 2026: 7 Picks for Solo Founders",
+        "meta": {
+          "publisher": "zoye.io",
+          "icon_url": "blob:https://www.bing.com/b1e2b505-5831-4857-9a92-2ef93ad06709"
+        }
+      },
+      {
+        "url": "https://beginnersinai.org/crm-for-solo-founders/",
+        "position": 4,
+        "title": "Best CRM for Solo Founders - Beginners in AI",
+        "meta": {
+          "publisher": "beginnersinai.org",
+          "icon_url": "blob:https://www.bing.com/78d3b68d-c903-42f2-a7c7-a290b433fead"
+        }
+      },
+      {
+        "url": "https://getcoherence.io/blog/best-crm-solo-founders-2026",
+        "position": 5,
+        "title": "Best CRM for Solo Founders 2026: The Only Guide You Need",
+        "meta": {
+          "publisher": "getcoherence.io",
+          "icon_url": "blob:https://www.bing.com/0d3c15b1-70bb-4328-8940-ebbc6341fd20"
+        }
+      },
+      {
+        "url": "https://www.sasanova.com/guides/crm-solo-founder",
+        "position": 6,
+        "title": "The Best CRM Setup for a Solo Founder Who Hates CRMs",
+        "meta": {
+          "publisher": "sasanova.com",
+          "icon_url": "blob:https://www.bing.com/b5a33318-8a65-4519-92e8-1a9d7ac60aa5"
+        }
+      },
+      {
+        "url": "https://www.bigcontacts.com/blog/best-crm-for-solopreneur/",
+        "position": 7,
+        "title": "Best CRM for Solopreneurs in 2026 (Tested, Compared & Ranked)",
+        "meta": {
+          "publisher": "bigcontacts.com",
+          "icon_url": "blob:https://www.bing.com/068e9791-af7b-43c8-b13d-0f83a310ef53"
+        }
+      },
+      {
+        "url": "https://onesuite.io/blog/best-crm-for-solopreneurs/",
+        "position": 8,
+        "title": "9 Best CRMs for Solopreneurs in 2026 (Free + Paid)",
+        "meta": {
+          "publisher": "onesuite.io",
+          "icon_url": "blob:https://www.bing.com/a7a87475-3b01-4416-b478-9e904d607bd4"
+        }
+      },
+      {
+        "url": "https://www.breakcold.com/blog/crm-for-solopreneurs",
+        "position": 9,
+        "title": "7 Game-Changing CRMs for Solopreneurs in 2026",
+        "meta": {
+          "publisher": "breakcold.com",
+          "icon_url": "blob:https://www.bing.com/bb0ad77b-aeac-4a9d-92f8-67ec4c8a5b16"
+        }
+      },
+      {
+        "url": "https://sparkle.io/blog/crm-for-solopreneur/",
+        "position": 10,
+        "title": "11 CRM for Solopreneur in 2026 (Backed by 1,011+ Users)",
+        "meta": {
+          "publisher": "sparkle.io",
+          "icon_url": "blob:https://www.bing.com/aca8e738-7e60-4433-82df-ffb222164b35"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 142
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2605
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 2707
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM"
+    ],
+    "citations": {
+      "0": "crmcompared.com blog article: comparison blog, unsure it is a user-review platform, so other",
+      "1": "delveant.com blog: vendor site, not in registry",
+      "2": "fluidcrm.io blog: vendor site, not in registry",
+      "3": "zoye.io blog: vendor site, not in registry",
+      "4": "beginnersinai.org: blog, not in registry",
+      "5": "getcoherence.io blog: vendor site, not in registry",
+      "6": "sasanova.com guide: unrecognised site, other",
+      "7": "bigcontacts.com blog: vendor site, not in registry",
+      "8": "onesuite.io blog: vendor site, not in registry",
+      "9": "breakcold.com blog: vendor site, not in registry",
+      "10": "sparkle.io blog: vendor site, not in registry"
+    },
+    "notes": "NOT counted as Zoho CRM: \"Bigin by Zoho\" at 197, 1774 and 3138 (Bigin is a different Zoho product) and \"part of Zoho ecosystem\" at 2086 (the company, not the CRM product). Zoho CRM is first named, by its exact name, at 2707, which is AFTER the subject at 2605. If \"Bigin by Zoho\" at 197 were taken as Zoho CRM the subject's position would be 3 instead of 2; my reading is that it names Bigin. The bare digits after sentences (1, 2, +2) are citation markers."
+  }
+}

@@ -1,0 +1,220 @@
+{
+  "id": "g131-aio-sigzen-looking-erp-software-hr",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:27:44.723Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "looking for ERP software that has HR payroll and CRM in one",
+    "cell": {
+      "key": "b17fed0e84a82d43e3dcbebecd9774c2a90de13aa7e8d35b314d312a400bbd5e",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Oracle NetSuite combines ERP, native HR with payroll (SuitePeople), and CRM into a single unified cloud platform.\nTop ERP Options with HR, Payroll, and CRM",
+    "citations": [
+      {
+        "url": "https://www.netsuite.com/portal/resource/articles/erp/erp-hr-module.shtml",
+        "position": 0,
+        "title": "A Comprehensive Guide to the ERP HR Module | NetSuite",
+        "meta": {
+          "snippet": "NetSuite ERP's HR module is a solution that consolidates HR data for better recordkeeping and reporting. It also serves as a found...",
+          "source": "Oracle NetSuite",
+          "date": "Dec 4, 2025"
+        }
+      },
+      {
+        "url": "https://www.erpresearch.com/en-us/erp-for-human-resources",
+        "position": 1,
+        "title": "Best HR ERP Systems 2026: HCM & HRIS Modules Compared",
+        "meta": {
+          "snippet": "ERP for human resources is the HR (HCM) module inside an enterprise resource planning suite",
+          "source": "ERP Research",
+          "date": "Aug 19, 2026"
+        }
+      },
+      {
+        "url": "https://www.erpresearch.com/erp-modules/hr-payroll",
+        "position": 2,
+        "title": "Best ERP for HR & Payroll (2026) — 9+ Vendors Compared",
+        "meta": {
+          "snippet": "Oracle NetSuite * SuitePeople HR with employee records and org charts. * Payroll engine with multi-state and multi-country options...",
+          "source": "ERP Research",
+          "date": "Aug 22, 2026"
+        }
+      },
+      {
+        "url": "https://www.sage.com/en-us/sage-business-cloud/hr/",
+        "position": 3,
+        "title": "Sage HR - Human Resources Management Software",
+        "meta": {
+          "snippet": "Sage HR - Human Resources Management Software | Sage US Financials & ERP for midsize businesses Sage Intacct Sage X3 Brightpearl b...",
+          "source": "www.sage.com"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=sYDx7r8JdoM",
+        "position": 4,
+        "title": "5 Best HRM Software for Small Business in 2026",
+        "meta": {
+          "snippet": "running a company today takes focus and dealing with money records and employees. should never feel like another full-time task. t...",
+          "source": "YouTube·HR Toolbox",
+          "date": "Feb 8, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "netsuite.com: vendor site, not in registry",
+      "1": "erpresearch.com: ERP comparison/advisory site, not a user-review platform as far as I know (unsure), not in registry",
+      "2": "erpresearch.com: same site as 1, other (unsure)",
+      "3": "sage.com: vendor site, not in registry",
+      "4": "youtube.com watch page: video platform"
+    },
+    "notes": "The 155-char stub names only Oracle NetSuite, which is outside the set. No brand of the set appears; no citation is on sigzen.com."
+  }
+}

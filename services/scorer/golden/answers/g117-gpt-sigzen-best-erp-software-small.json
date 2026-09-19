@@ -1,0 +1,182 @@
+{
+  "id": "g117-gpt-sigzen-best-erp-software-small",
+  "covers": "real chatgpt answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: competitor name embedded in a longer product name (Microsoft Dynamics 365 Business Central); \"Microsoft 365\" is a different product",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T11:13:25.042Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "best ERP software for small manufacturing business under 50 employees",
+    "cell": {
+      "key": "c390bcee44d7a31b09bc53132438151c7a4c18a437c91f5aa83a95bc414bbdf2",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a **manufacturing business with fewer than 50 employees**, I’d shortlist **Odoo, ERPNext, Microsoft Dynamics 365 Business Central, and MRPeasy/Katana**. My default recommendation is **Odoo** because it gives you a surprisingly broad manufacturing stack without forcing you into an enterprise-scale ERP implementation.\n\n### My ranking\n\n| ERP | Best for | Manufacturing | Cost | Implementation | My take |\n| --- | --- | --- | --- | --- | --- |\n| **Odoo** | Most small manufacturers | ⭐⭐⭐⭐⭐ | $–\\| Medium \\| **Best overall** \\| \\| **ERPNext** \\| Very cost-conscious/technical companies \\| ⭐⭐⭐⭐ \\| $ \\| Medium–High \\| **Best open-source option** \\| \\| **Business Central** \\| Growing companies already using Microsoft \\| ⭐⭐⭐⭐⭐ \\| $$$ \\| High \\| Best for growth \\| \\| **MRPeasy** \\| Very small/simple manufacturers \\| ⭐⭐⭐⭐ \\| | Low | Best lightweight MRP |\n| **Katana** | Make-to-order / workshop manufacturing | ⭐⭐⭐⭐ | $$ | Low | Best for simplicity |\n| **SAP Business One** | More complex/distributed operations | ⭐⭐⭐⭐⭐ | $$$$ | High | Probably overkill <50 people |\n\n## 🥇 1. Odoo — best overall\n\nOdoo is probably where I'd start.\n\nIt covers **Manufacturing (MRP), BOMs, work centers, purchasing, inventory, quality, maintenance, sales, CRM, accounting and HR** in one platform. Odoo specifically targets companies in the **6–50 employee** range.\n\nThe manufacturing module can calculate manufacturing-order costs using components, operations, work-center costs and employee costs, which is particularly useful if you need to understand your **true production cost and margin**.\n\nCurrent published pricing is roughly:\n\n- **Standard:** $24.90/user/month when billed annually\n- **Custom:** $49/user/month when billed annually\n- Manufacturing is included in the all-app plans.\n\nFor a 20-user company, that's roughly **$6k–$12k/year in software licenses**, before implementation/customization.\n\n**Why I'd pick it:** excellent balance of manufacturing functionality, flexibility and price.\n\n## 🥈 2. ERPNext — best if keeping costs down is critical\n\nERPNext is worth serious consideration if you have someone technical who can manage the system.\n\nIt's open source, so you have much more control over hosting and customization. The tradeoff is that you're generally taking on more technical responsibility than with a fully managed commercial ERP.\n\n**Good fit if:**\n\n- You want to minimize licensing costs.\n- You have internal IT/development capability.\n- You dislike vendor lock-in.\n- Your manufacturing processes aren't extremely specialized.\n\nI'd choose **Odoo over ERPNext for most non-technical small businesses**, but ERPNext can be extremely attractive for a technically capable company.\n\n## 🥉 3. Microsoft Dynamics 365 Business Central — best for a company that expects to grow\n\nMicrosoft Dynamics 365 Business Central becomes interesting if you're already heavily invested in **Microsoft 365, Excel, Teams, Power BI and Azure**.\n\nThe Premium edition specifically adds manufacturing functionality. Microsoft's current U.S. list price is **$110/user/month for Premium**; the Brazilian Microsoft site currently lists Premium at **R$629.80/user/month**, billed annually, before taxes.\n\nIt's a much more substantial ERP than you may need at 20–30 employees, but it makes sense if you expect to become a **50–200+ employee manufacturer** and want something you won't outgrow quickly.\n\n## 4. MRPeasy — if manufacturing is the main thing\n\nMRPeasy is worth considering if you don't need a huge ERP ecosystem.\n\nIt's aimed at smaller manufacturers and focuses heavily on:\n\n- BOMs\n- Production planning\n- Inventory\n- Purchasing\n- MRP\n- Shop-floor operations\n- Production scheduling\n\nI'd consider it when you want **\"manufacturing software with ERP capabilities\"** rather than a huge business-management platform.\n\n## 5. Katana — easiest modern option\n\nKatana is particularly attractive for **small make-to-order, assembly, or workshop-style manufacturers** that want something modern and relatively quick to implement.\n\nThe advantage is simplicity. The disadvantage is that once your requirements become more sophisticated—complex accounting, multi-company operations, advanced manufacturing, extensive customization—you may start wishing you'd bought a more comprehensive ERP.\n\n## What I'd choose by situation\n\n**20–50 employee discrete manufacturer:**\n\n→ **Odoo**\n\n**5–20 employee manufacturer with simple production:**\n\n→ **MRPeasy or Katana**\n\n**Technical company wanting open source:**\n\n→ **ERPNext**\n\n**30–50 employees, Microsoft-heavy, expecting significant growth:**\n\n→ **Business Central**\n\n**Complex manufacturing / multiple locations / international operations:**\n\n→ **Business Central or SAP Business One**\n\n**Very complex production engineering:**\n\n→ Consider **Epicor Kinetic, Acumatica or a specialized manufacturing ERP** rather than automatically choosing Odoo.\n\n### One important warning\n\nDon't choose based on the feature checklist alone. For a manufacturer, I'd make every vendor demonstrate **your actual production process**:\n\n**Sales order → BOM → material availability → purchase → production order → shop-floor operations → quality inspection → finished goods → shipment → actual production cost → gross margin.**\n\nIf an ERP can't demonstrate that workflow cleanly using your real products, it isn't the right ERP—even if its feature list looks impressive.\n\n**If you tell me your manufacturing type** (e.g. metal fabrication, food, furniture, plastics, electronics, machining, assembly), **number of production workers, approximate number of SKUs, and whether you're in Brazil**, I can narrow this to the **top 2–3 and compare actual costs, Brazilian tax/accounting considerations, BOM/MRP, shop-floor, inventory, and implementation effort.**\n\nOMSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo",
+      "Microsoft Dynamics 365",
+      "SAP Business One"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 79
+      },
+      {
+        "brand": "promoted:microsoftdynamics365",
+        "span": "Microsoft Dynamics 365",
+        "offset": 94
+      },
+      {
+        "brand": "promoted:sapbusinessone",
+        "span": "SAP Business One",
+        "offset": 956
+      }
+    ],
+    "order": [
+      "Odoo",
+      "Microsoft Dynamics 365",
+      "SAP Business One"
+    ],
+    "citations": {},
+    "notes": "Sigzen absent. Microsoft Dynamics 365 is named literally inside the longer product name \"Microsoft Dynamics 365 Business Central\" (94, 2700, 2783): counted, the product line carries the brand's full name. \"Microsoft 365\" at 2883 is a different product and the bare \"Business Central\" occurrences were not needed for first appearance. The two \"quick\" hits are ordinary words (quickly, quick). No citations."
+  }
+}

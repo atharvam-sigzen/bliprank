@@ -1,0 +1,185 @@
+{
+  "id": "g110-aim-sigzen-affordable-erp-system-pharma",
+  "covers": "real google-ai-mode answer, erp-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: different product of the same company (SAP S/4HANA is not SAP Business One); citation metadata disagrees with the URL host",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T11:16:44.356Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "affordable ERP system for pharma company with batch tracking",
+    "cell": {
+      "key": "ba1d5a722ea1324f02e4090c191927f45e7ed51265fa0ee3b156abcf852808f8",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nFinding an affordable ERP system for a pharmaceutical company that features robust batch/lot tracking and regulatory compliance usually means looking at flexible open-source platforms, modular cloud ERPs, or specialized process-manufacturing add-ons rather than high-end enterprise giants like SAP S/4HANA or Veeva.\nTop Affordable ERP Systems with Pharma Batch Tracking\nCore Pharma Features to Verify Before Buying\nTraceability (Forward & Backward):: The system must instantly trace a finished product lot back to raw material suppliers, or isolate all finished goods affected by a compromised raw material batch.\nFEFO Control:: Look for First-Expiry-First-Out (FEFO) inventory picking rules rather than standard FIFO to prevent expired stock from shipping.\nCompliance Support:: Ensure it manages quality control checkpoints, Certificate of Analysis (CoA) generation, and electronic signatures if you require FDA/cGMP alignment.",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/watch?v=gWfTWLIRZQY&t=310",
+        "position": 0,
+        "title": "The Best ERP Systems for the Pharmaceutical Industry ...",
+        "meta": {
+          "snippet": "Batchmaster also allows tracking … supporting FDA compliance, and includes tools for in-process testing and certificate of analysi...",
+          "source": "YouTube·Software Connect",
+          "date": "Feb 13, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=gWfTWLIRZQY&t=310",
+        "position": 1,
+        "title": "11 Best Pharma ERP Systems and Software (Updated List)",
+        "meta": {
+          "snippet": "It covers the full manufacturing lifecycle: formulation and version control, production scheduling, lot/serial tracking, and compl...",
+          "source": "MetaOption",
+          "date": "Aug 13, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "video",
+      "1": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "youtube.com watch page: video platform",
+      "1": "youtube.com watch page: video platform (title/publisher say MetaOption, but the URL host is youtube.com and the class follows the host)"
+    },
+    "notes": "Sigzen absent. \"SAP S/4HANA\" at 308 is a different SAP product (an enterprise giant in the sentence's own words), not SAP Business One: not counted. Both citations carry the same YouTube URL; citation 1's title and publisher do not match its URL."
+  }
+}

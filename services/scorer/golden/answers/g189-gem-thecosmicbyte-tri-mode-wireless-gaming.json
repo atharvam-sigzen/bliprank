@@ -1,0 +1,109 @@
+{
+  "id": "g189-gem-thecosmicbyte-tri-mode-wireless-gaming",
+  "covers": "real gemini answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T10:34:33.675Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "tri mode wireless gaming mouse with high polling rate india",
+    "cell": {
+      "key": "26b89efaa935809df6c09b2007a6cfa57226cbb86d029c17b4c058bf0fd888ae",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "When selecting a tri-mode wireless gaming mouse (2.4GHz + Bluetooth + Wired USB-C) with a high polling rate (4K Hz to 8K Hz) in India, performance comes down to sensor efficiency and weight. Standard wireless mice run at 1000Hz (1ms response time), whereas high-polling mice push response times down to 0.125ms–0.25ms, making tracking visibly smoother on 240Hz+ high-refresh-rate monitors.\n\nThe top options currently available in India through direct distribution or import retailers:\n\n| Mouse Model | Max Polling Rate | Weight | Sensor | Approx. Price (INR) | Best For |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n| **AULA SC800** | 8000Hz (2.4G) | 37g | PAW3955 / PAW3395 | ₹3,500 – ₹4,500 | Extreme ultra-lightweight performance on a budget. |\n| **Attack Shark R5 Ultra / R6** | 8000Hz (2.4G) | ~39g - 49g | PAW3950MAX | ₹4,000 – ₹5,500 | Premium carbon-fiber composite feel & flagship tracking. |\n| **MCHOSE K7 Ultra** | 8000Hz (2.4G & Wired) | 59g | PAW3950 | ₹5,500 – ₹7,000 | Feature-packed with an included magnetic charging dock. |\n| **Keychron M2 4K / M3 Mini 4K** | 4000Hz (2.4G) | 53g - 55g | PAW3395 | ₹5,999 – ₹6,999 | Minimalist build, clean software, and solid ergonomics. |\n| **Rapoo VT7 Pro** | 8000Hz (2.4G) | 53g | PAW3395 | ₹4,500 – ₹6,000 | Battery life champion with Nordic MCU efficiency. |\n\n---\n\n### Important Considerations for High-Polling Wireless\n\n* **Dongle Requirements:** Most high-polling mice default to 1000Hz out of the box using their standard USB nano-dongle. Pushing the mouse to **4,000Hz or 8,000Hz requires a high-speed 4K/8K wireless dongle** (often bundled with \"Ultra\" or \"8K\" variants, but occasionally sold separately depending on the brand).\n* **CPU Load:** Running at 4K/8K Hz generates thousands of input signals every second. This puts noticeable strain on your CPU; ensure you have a modern mid-to-high-end processor (e.g., Ryzen 5000/Intel 12th gen or higher) to prevent frame drops in games like *Valorant* or *CS2*.\n* **Bluetooth Polling:** Tri-mode mice only achieve high polling rates (4K/8K Hz) over **2.4GHz wireless** or **wired mode**. Bluetooth mode is locked to standard 125Hz to save power for office/productivity tasks.\n\n---\n\n<ElicitationsGroup message=\"To help narrow down the best choice for your setup:\">\n  <Elicitation label=\"Filter recommendations by hand size and grip style\" query=\"Recommend the best tri-mode high polling rate mouse specifically for my hand size and grip style (Claw/Fingertip/Palm).\"/>\n  <Elicitation label=\"Compare PAW3395 vs. PAW3950 sensor performance\" query=\"What is the difference between PixArt PAW3395 and PAW3950 sensors in wireless gaming mice?\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "Whole answer read (incl. the table and the trailing elicitation markup); no occurrence of \"cosmic\", \"byte\" or \"CB\". Subject absent. No citations."
+  }
+}

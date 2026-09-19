@@ -1,0 +1,280 @@
+{
+  "id": "g075-aim-pipedrive-crm-best-small-business",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: competitor's exact name appears only inside another product's name (\"Bigin by Zoho CRM\"); famous outlet (PCMag) not in registry is other",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:20:29.582Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is best for a small business in the UK?",
+    "cell": {
+      "key": "32ed4971f462ef6d93521820756760853bfe32a15872346fcaf51a370d50fe40",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "There is no single \"best\" CRM for a UK small business because the right choice depends on your budget, team size, and goals. However, several platforms stand out for UK small-to-medium enterprises (SMEs) based on ease of use, local relevance, and value.\nTop CRM Options for UK Small Businesses\nCapsule CRM: Best for UK sole traders and small teams who want a straightforward, no-nonsense client management tool. Built in Manchester, it offers clean visual sales pipelines, robust contact history, and a reliable free tier as well as affordable local pricing. You can check their plans on Capsule CRM.\nHubSpot CRM: Best for teams wanting a generous free starting tier with massive room to scale. HubSpot is renowned for its user-friendly interface, contact management, and integrated marketing tools. Paid tiers scale up as your business grows. Learn more on the HubSpot CRM platform.\nPipedrive: Best for sales-driven teams who live by their pipeline. It features an intuitive, highly visual drag-and-drop interface that makes tracking deals fast and frictionless. Explore features via Pipedrive.\nBigin by Zoho CRM:: Best for micro-businesses and start-ups stepping up from spreadsheets. It strips away the overwhelming bloat of enterprise CRMs to offer a streamlined, budget-friendly pipeline manager. Details are available on Zoho.\nMonday CRM: Best for businesses that want project management and customer tracking unified under one flexible, highly visual dashboard.",
+    "citations": [
+      {
+        "url": "https://uk.pcmag.com/crm-software/67398/the-best-crm-software",
+        "position": 0,
+        "title": "The Best CRM Software for 2026 - PCMag UK",
+        "meta": {
+          "snippet": "HubSpot Smart CRM. Best for Salesforce Users. Best for Free Users. Best for Start-Ups. Less Annoying CRM.",
+          "source": "PCMag UK",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://uk.pcmag.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 17, 2026"
+        }
+      },
+      {
+        "url": "https://capsulecrm.com/blog/crm-for-small-business-uk/",
+        "position": 1,
+        "title": "The best CRM for small businesses in the UK: 7 tools ...",
+        "meta": {
+          "snippet": "Best for: UK sales teams that live by the pipeline and want speed over breadth. * Key features: drag-and-drop deal stages, activit...",
+          "source": "Capsule CRM",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://capsulecrm.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 9, 2026"
+        }
+      },
+      {
+        "url": "https://ttoydigital.agency/blog/best-small-business-crm",
+        "position": 2,
+        "title": "Best small business CRM for UK firms: 2026 guide",
+        "meta": {
+          "snippet": "HubSpot CRM",
+          "source": "ttoydigital.agency",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://ttoydigital.agency&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 21, 2026"
+        }
+      },
+      {
+        "url": "https://smallbusiness.co.uk/top-crm-software-providers-for-uk-small-businesses-2552988/",
+        "position": 3,
+        "title": "Top 6 CRM software providers for UK small businesses",
+        "meta": {
+          "snippet": "**Monday.com CRM** Flexible CRM with AI tools, customizable pipeline, and workflow and email automation. Easy-to-use interface, st...",
+          "source": "Small Business UK",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://smallbusiness.co.uk&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 7, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "monday CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "earned_media"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 601
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 884
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1085
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 1105
+      },
+      {
+        "brand": "monday-crm",
+        "span": "Monday CRM",
+        "offset": 1333
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM",
+      "monday CRM"
+    ],
+    "citations": {
+      "0": "uk.pcmag.com: PCMag is a known outlet but pcmag.com is not in the publisher registry, so other (rule 5)",
+      "1": "capsulecrm.com blog: vendor site (Capsule is not in the competitor set), not in registry",
+      "2": "ttoydigital.agency blog: agency site, not in registry",
+      "3": "smallbusiness.co.uk is in the publisher registry"
+    },
+    "notes": "UNSURE, counted: \"Zoho CRM\" at 1105 is the brand's exact name, but it sits inside the heading \"Bigin by Zoho CRM::\", whose subject is Bigin, a different Zoho product. I count it because the full name \"Zoho CRM\" is written as a whole stretch and names that brand as Bigin's maker; if it were not counted, brandsDetected would be 3 and competitorsMentioned [HubSpot, monday CRM] (the subject's position stays 2 either way). \"Details are available on Zoho.\" at 1327 is the bare company name and would not count by itself. The second subject mention at 1085 (\"Explore features via Pipedrive.\") reads like the visible text of a stripped link and is prose. \"Monday CRM\" at 1333 is a capitalisation variant of the name."
+  }
+}

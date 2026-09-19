@@ -1,0 +1,213 @@
+{
+  "id": "g025-aim-pipedrive-connect-crm-gmail-calendar",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: engine emitted no citations · seen on reading: subject last in a one-line parenthetical list; stray non-English fragment in an English answer",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T06:14:42.028Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+    "cell": {
+      "key": "cd18b026fcf9f9c7c5eb005ffa0e3327b7e4413915dd783a40b7304b9761adaf",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Connecting your CRM to Gmail and Google Calendar so data syncs bi-directionally (preventing double entry) usually involves one of three main paths, depending on your CRM and tech stack.\nHere is how you can set it up, ranked from easiest to most flexible:\nNative CRM Integrations\nName: Built-in Workspace Sync\nHow it works: Most major CRMs (like HubSpot, Salesforce, or Pipedrive) have official, one-click extensions or native settings for Google Workspace. Once authenticated, emails sent from Gmail log to the CRM contact automatically, and meetings booked or scheduled in Google Calendar sync instantly to the deal or contact timeline.\nActionability: Check your CRM's marketplace or settings panel for a \"Google Workspace\" or \"Gmail Integration\" toggle and follow the OAuth login prompts.\nThird-Party Automation Platforms\nName: Zapier or Make\nHow it works: If your CRM doesn't have a robust native sync or you want custom behavior (e.g., only sync calendar events with a specific keyword like \"Client\"), you can build an automated workflow. A trigger like \"New Event in Google Calendar\" creates or updates a \"Record in CRM.\"\nActionability: Explore pre-made automation templates on Zapier or Make to connect your specific CRM to Google Apps without writing code.\nDedicated Email/Calendar Sync Tools\nName: Cronofy, Nylas, or専用 Sync Add-ons\nHow it works: For enterprise setups or niche CRMs, specialized calendar and email sync engines sit between Google and your database to handle real-time, conflict-free bi-directional updates.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 3,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 345
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 354
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 369
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "All three brands appear once, in one parenthetical list \"(like HubSpot, Salesforce, or Pipedrive)\". No citations and no URLs in the text. Zapier, Make, Cronofy, Nylas are not in the brand set and are ignored. The text carries a stray non-English fragment (\"専用\") that names no brand."
+  }
+}

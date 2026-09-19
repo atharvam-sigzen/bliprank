@@ -1,0 +1,109 @@
+{
+  "id": "g169-gem-thecosmicbyte-gaming-microphone-under-2000",
+  "covers": "real gemini answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T10:40:19.675Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming microphone under 2000 for streaming india",
+    "cell": {
+      "key": "8e6ab455cc3f07c2275a56f9d4f334e537645d936ceb7ff193e09e3957be6321",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Finding a solid USB condenser microphone under ₹2,000 for gaming and streaming is all about picking a model with a **cardioid polar pattern** (rejects background noise/keyboard clicks) and a dedicated gain knob or quick-mute button. \n\n---\n\n### **Top Microphones Under ₹2,000 in India**\n\n| Model | Price (Approx.) | Key Features | Stand/Mount Included | Best For |\n| :--- | :--- | :--- | :--- | :--- |\n| **Maono AU-PM461TR** | ₹1,699 – ₹1,899 | Cardioid pattern, gain control knob, 192kHz/24-bit sampling, USB plug & play | Desktop Tripod | **Overall Audio Quality & Voice Clarity** |\n| **CLAW Studio One / Ant Esports Streamer** | ₹1,299 – ₹1,599 | Cardioid USB condenser, volume control, mute button, lightweight design | Adjustable Stand | **Budget Value & Simple Discord Comm-setup** |\n| **Audio Array AA-02 / AA-06** | ₹1,499 – ₹1,899 | Metallic build, built-in noise filter, gain adjustment, RGB models available | Heavy Base Tripod | **Durable Build & Clean Setup Looks** |\n| **FIFINE K669B** *(Wait for Sale)* | ₹2,100 – ₹2,399 | All-metal body, gain knob, rich full sound | Tripod Stand | **Entry-Level Gold Standard** *(If budget stretches ₹200-₹300)* |\n\n---\n\n### **Key Buying Tips for Streaming**\n* **Focus on Cardioid Pattern:** Mics with a cardioid pattern pick up sound directly in front of them and block noise coming from behind the mic (like mechanical keyboard clicks or PC fan noise).\n* **Avoid Clip-on Lavalier Mics for PC Streaming:** Lavalier (collar) mics capture too much room echo and ambient noise compared to desk USB condenser mics.\n* **Add Krisp or OBS Noise Suppression:** Under ₹2,000, condenser mics are sensitive. Pair your mic with free software noise suppression like **OBS RNNoise** or **NVIDIA Broadcast** to make your stream sound like a pro setup.\n\nIf you can stretch your budget by ₹200–₹300, the **FIFINE K669B** is the undisputed king for sound quality. Otherwise, the **Maono AU-PM461TR** offers the most natural voice capture under the ₹2,000 mark.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "Whole answer read (incl. the table); no occurrence of \"cosmic\" or \"byte\". Subject absent. No citations."
+  }
+}

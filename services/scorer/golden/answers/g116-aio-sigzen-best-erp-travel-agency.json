@@ -1,0 +1,232 @@
+{
+  "id": "g116-aio-sigzen-best-erp-travel-agency",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: no brand in prose; opaque google.com/goto redirect whose metadata says YouTube",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:25:57.305Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "best ERP for travel agency with booking and accounting",
+    "cell": {
+      "key": "afb01e71f69802c902470f99e73302792c3c331127147d22494f1840412afdb8",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best approach for a travel agency is combining a travel-specific booking/mid-office system with a robust enterprise ERP or specialized financial platform.\nTop Enterprise and Specialized Options\nCore Features to Look For",
+    "citations": [
+      {
+        "url": "https://www.travelopro.com/travel-erp.php",
+        "position": 0,
+        "title": "ERP for Travel Agencies & Tour Operators 2026",
+        "meta": {
+          "snippet": "What is the difference between a GDS back-office tool and an ERP for travel agencies? GDS back-office tools (such as Amadeus Agenc...",
+          "source": "ERP Research",
+          "date": "Aug 15, 2026"
+        }
+      },
+      {
+        "url": "https://www.travelopro.com/travel-erp.php",
+        "position": 1,
+        "title": "Travel ERP System - Travelopro",
+        "meta": {
+          "snippet": "Travelopro is one of the world's most advanced innovative Travel ERP systems for the travel industry, to improve the office manage...",
+          "source": "Travelopro"
+        }
+      },
+      {
+        "url": "https://www.altexsoft.com/blog/travel-agency-software-choosing-tools-for-booking-accounting-marketing-and-tour-building/",
+        "position": 2,
+        "title": "Travel Agency Software: Booking, Management and Tour ...",
+        "meta": {
+          "snippet": "Dolphin is an all-in-one booking and management platform designed for travel agencies of all sizes. It provides a mid/back-office ...",
+          "source": "AltexSoft",
+          "date": "Sep 23, 2025"
+        }
+      },
+      {
+        "url": "https://www.agencyauto.net/blog/travel-tech/best-travel-agency-accounting-software/",
+        "position": 3,
+        "title": "Best Travel Agency Accounting Software | Wallet by AgencyAuto",
+        "meta": {
+          "snippet": "Frequently Asked Questions * What is the best accounting software for travel agencies. Wallet by AgencyAuto stands out as the best...",
+          "source": "Agency Auto",
+          "date": "May 2, 2025"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESnwEB6zswFcgkb1e6MXvMxxCCfi9Wfnt5Rns5GwfQ5-txdXrsvBQVd_i5RkJvkLzcN7beQ6V4Vhdlt0hye0DjcVKfZeEs3Wd1VlznnUUrmHy1cltzJ5v8fzG9vHpmjlfA4dWZOdXlyLSrvjMco2nhAkSOKtEHrAp9ZEIExB6eQk4ccCbjhj9WA1qbQ5Br0mt5FoXKBAInL-yFk1HTR2SB6Oo",
+        "position": 4,
+        "title": "Top Accounting Tools for Travel and Tourism Businesses in ...",
+        "meta": {
+          "snippet": "1. QuickBooks Online – Simplifying Everyday Accounting. QuickBooks Online remains one of the most trusted choices among travel com...",
+          "source": "www.mindspaceoutsourcing.com",
+          "date": "Nov 18, 2025"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESYwHrOzAVLORmQK02Oug9_IYIE81hIua7NobFbPe-q1jJKiLbbfWTZhZcuF8NbIZTte2OfH2r7f9x_crXDNsuqz_T8dRDLexG_jp9TP7GC98v9yFxiIHzKi6GGXl75gldXaEPXQ",
+        "position": 5,
+        "title": "Travacco – ERP Management System for Travel Agencies",
+        "meta": {
+          "snippet": "provocco makes travel agency. management smooth and professional imagine this you create a tour package your client pays a deposit...",
+          "source": "YouTube·Travacco - Travel Agent's ERP",
+          "date": "Aug 26, 2025"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "travelopro.com: vendor site (title/publisher say ERP Research, but the URL host is the vendor's)",
+      "1": "travelopro.com: vendor site",
+      "2": "altexsoft.com blog: vendor blog, not in registry",
+      "3": "agencyauto.net blog: vendor site, not in registry",
+      "4": "google.com/goto redirect, destination not visible in the URL; publisher field names mindspaceoutsourcing.com, a vendor: other",
+      "5": "google.com/goto redirect, destination not visible in the URL; publisher field says YouTube but the host is google.com and this payload's metadata is misaligned elsewhere: unsure, so other"
+    },
+    "notes": "The 223-char answer names no brand at all. Citation 5 may really be a YouTube video (its publisher field says so), but the URL is an opaque google.com redirect, so I could not confirm it from the URL: labelled other, unsure."
+  }
+}

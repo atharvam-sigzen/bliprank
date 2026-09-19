@@ -1,0 +1,327 @@
+{
+  "id": "g019-cop-pipedrive-best-crm-startup-india",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher)",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:23:53.530Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Best CRM for a startup in India with a small sales team",
+    "cell": {
+      "key": "6ec6396634abe60666860af19c0f6ff85a391b532c428255251d91a4c7a883cc",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For startups in India with a small sales team, LeadNXT, Zoho CRM, Freshsales, and HubSpot CRM are top choices, offering affordability, mobile-first design, WhatsApp integration, and easy lead management.\nTop CRM Options for Small Teams\n1. LeadNXT CRM – Best Overall for Indian SMBs LeadNXT is purpose-built for Indian startups and small businesses. It supports automatic lead capture from India-specific platforms like JustDial, IndiaMART, Facebook Lead Ads, and Google Ads. It integrates WhatsApp Business with AI chatbots, IVR and telephony features, and a mobile CRM app suitable for field teams. Key benefits include GST-compliant invoicing, real-time lead scoring, and visual sales pipeline management. Pricing: Starter ₹499/user/month; Growth ₹1,799; Pro ₹2,999 .\n2. Zoho CRM – Best for Feature-Rich Automation Zoho CRM is Indian-headquartered and widely used. It supports workflow automation, lead scoring with AI (Zia), mobile access, and integration with WhatsApp and other sales channels. Its free plan suits very small teams. Pricing: Free for up to 3 users; Standard ₹800/user/month .\n3. Freshsales – Best for Telesales-Oriented Teams Freshsales by Freshworks is ideal for small sales teams that rely on calls and WhatsApp messaging. Features include built-in telephony, auto-dialer, AI-powered lead scoring (Freddy AI), visual pipeline, and mobile app. Pricing: Growth ₹999/user/month; Pro ₹2,799 .\n4. HubSpot CRM – Best Free Option for Startups HubSpot offers a completely free plan for unlimited users, including contact management, email sequences, meeting scheduler, reporting dashboards, and live chat. Suitable for startups starting without a budget, especially inbound marketing-focused sales teams. Pricing: Free; Starter ₹1,300/user/month .\nKey Features to Consider for Small Indian Teams\nWhatsApp Business Integration: Essential for lead follow-ups in India.\nMobile CRM App: Supports field sales and remote work, including offline sync and geo-tagging.\nLead Capture from Indian Platforms: JustDial, IndiaMART, web forms, and social ads.\nSales Pipeline and Follow-Up Automation: Helps small teams track leads efficiently.\nGST-Compliant Invoicing: Useful for billing and tax compliance.\nEase of Use: Minimal onboarding so your team can adopt quickly.\nRecommendation\nFor a small startup sales team (3–10 members) in India:\nIf you want a CRM designed specifically for Indian SMBs, LeadNXT offers the best combination of local integrations, affordability, and mobile-first tools.\nIf your team prefers a feature-rich ecosystem with scalability, Zoho CRM is a strong alternative with workflow automation.\nFor phone/WhatsApp-driven sales, Freshsales streamlines telesales workflows efficiently.\nIf your team is just starting with zero budget, HubSpot CRM’s free plan can manage contacts and deals while you grow.\nSelecting a CRM that aligns with your sales workflows, budget, and the platforms your leads use will ensure your small team stays organized, responsive, and productive Techimply+2.",
+    "citations": [
+      {
+        "url": "https://www.cleomitra.com/blog/top-10-best-crm-for-small-business-in-india-2026",
+        "position": 0,
+        "title": "Top 10 Best CRM for Small Business in India 2026",
+        "meta": {
+          "publisher": "cleomitra.com",
+          "icon_url": "blob:https://www.bing.com/45b97a6d-3578-46d6-ae0a-5575e820b714"
+        }
+      },
+      {
+        "url": "https://www.techimply.com/software/crm-software-for-small-business/india",
+        "position": 1,
+        "title": "20 Best CRM Software For Small Business in India 2026",
+        "meta": {
+          "publisher": "techimply.com",
+          "icon_url": "blob:https://www.bing.com/8b998e44-a5ae-46e4-a79e-ea4ed3c71451"
+        }
+      },
+      {
+        "url": "https://telecrm.in/blog/affordable-crm-software-india/",
+        "position": 2,
+        "title": "Affordable CRM Software In India For SMBs [2026] | Telecrm",
+        "meta": {
+          "publisher": "telecrm.in",
+          "icon_url": "blob:https://www.bing.com/064518f1-5968-408d-b440-d5125d05ea9f"
+        }
+      },
+      {
+        "url": "https://www.techjockey.com/blog/crm-software-list",
+        "position": 3,
+        "title": "15 Best CRM Software for Small Business in India 2026",
+        "meta": {
+          "publisher": "techjockey.com",
+          "icon_url": "blob:https://www.bing.com/64c5e6d2-6ddc-47b9-80dc-e5c24718a923"
+        }
+      },
+      {
+        "url": "https://www.leadnxt.com/blog/2026/04/best-crm-software-small-business-india-2026/",
+        "position": 4,
+        "title": "Best CRM Software for Small Business in India 2026: Top 10 Compared",
+        "meta": {
+          "publisher": "leadnxt.com",
+          "icon_url": "blob:https://www.bing.com/ad067a60-45af-48f1-b7c0-9bbd093f709f"
+        }
+      },
+      {
+        "url": "https://kylas.io/blog/top-10-sales-crm-software-in-india",
+        "position": 5,
+        "title": "Top 10 Sales CRM Software in India in 2026 - Kylas",
+        "meta": {
+          "publisher": "kylas.io",
+          "icon_url": "blob:https://www.bing.com/369e7b58-0a73-4378-ad59-a1c64a0726ee"
+        }
+      },
+      {
+        "url": "https://www.itforsme.in/best/crm-software-for-small-business-india",
+        "position": 6,
+        "title": "Best CRM Software for Small Business in India 2026",
+        "meta": {
+          "publisher": "itforsme.in",
+          "icon_url": "blob:https://www.bing.com/ea8aa0c3-0619-4926-8418-d39d38ffc232"
+        }
+      },
+      {
+        "url": "https://www.groweon.com/blog/top-10-best-crm-software-for-indian-msmes-2026/",
+        "position": 7,
+        "title": "Top 10 Best CRM Software for Indian MSMEs: 2026 Guide",
+        "meta": {
+          "publisher": "groweon.com",
+          "icon_url": "blob:https://www.bing.com/eba13c05-9f66-4e87-81ad-9066a4346567"
+        }
+      },
+      {
+        "url": "https://aidukan.in/best-crm-small-business-india/",
+        "position": 8,
+        "title": "Best CRM Software for Small Business in India — 7 Options Compared (2026)",
+        "meta": {
+          "publisher": "aidukan.in",
+          "icon_url": "blob:https://www.bing.com/e0425bf3-c587-4a4e-88e9-6e2f070b1843"
+        }
+      },
+      {
+        "url": "https://ujss.in/blog/best-crm-software-small-business-india-2026",
+        "position": 9,
+        "title": "Best CRM Software for Small Business in India 2026",
+        "meta": {
+          "publisher": "ujss.in",
+          "icon_url": "blob:https://www.bing.com/722698db-3878-43b2-bd1b-dc885d4824db"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Zoho CRM",
+      "Freshsales",
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 56
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 66
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 82
+      }
+    ],
+    "order": [
+      "Zoho CRM",
+      "Freshsales",
+      "HubSpot"
+    ],
+    "citations": {
+      "0": "cleomitra.com blog: vendor blog, not in the publisher registry",
+      "1": "techimply.com: unsure, probably a software listing/review site but I am not confident",
+      "2": "telecrm.in blog: CRM vendor blog, not in the publisher registry",
+      "3": "techjockey.com blog: unsure, software marketplace/reseller with a blog; not confident it is a review platform",
+      "4": "leadnxt.com blog: CRM vendor blog, not in the publisher registry",
+      "5": "kylas.io blog: CRM vendor blog, not in the publisher registry",
+      "6": "itforsme.in: unsure, unrecognised listicle site",
+      "7": "groweon.com blog: vendor blog, not in the publisher registry",
+      "8": "aidukan.in: unrecognised blog, not in the publisher registry",
+      "9": "ujss.in blog: unrecognised blog, not in the publisher registry"
+    },
+    "notes": "Subject absent. LeadNXT is not in the set. Citations 1 (techimply.com) and 3 (techjockey.com) may be listing/review sites; labelled other because I am not confident."
+  }
+}
