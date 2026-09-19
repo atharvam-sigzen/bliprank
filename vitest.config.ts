@@ -1,6 +1,6 @@
 import { realpathSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 // The canonical repo root, spelled the way `root` below needs it — see the note
 // there about the drive letter's case being load-bearing on win32. Every path
@@ -85,6 +85,13 @@ export default defineConfig({
     // that asserts the refusal passes its own environment object, which this
     // does not reach.
     env: { COLLECTOR_TOPOLOGY: 'single-process' },
+    // A session's git worktree lives under `.claude/worktrees/` INSIDE this
+    // directory, on another branch. Collected, it is that branch's suite run
+    // against this tree's config: on 2026-09-19 two of them turned 139 files
+    // into 413, tripled the run, and failed 36 tests that are not this tree's,
+    // so the gate's exit code said nothing about the code being gated. A
+    // worktree runs its own suite from its own root; CI has none.
+    exclude: [...configDefaults.exclude, '.claude/**'],
     // packages/db/src/deploy-check.test.ts stands up a fresh PGlite instance and
     // runs three migrations per case — the states it tests (role attributes,
     // ad-hoc grants, a legacy signing key present before 0002) cannot be undone
