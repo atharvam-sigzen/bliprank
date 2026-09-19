@@ -122,7 +122,12 @@ export function GapReportBody({ report }: { report: Report }) {
             {report.bytes.toLocaleString()} bytes{report.truncated ? ' · truncated at the fetch ceiling' : ''}
           </span>
           <span className="note__line">about {report.words.toLocaleString()} words</span>
-          <span className="note__line detail">cycle of {report.day} · {report.promptCount} prompts</span>
+          {/* MINOR i: the basis this report was made against sits beside the
+              day and the prompt count it already carried — the auditor's
+              three facts about WHICH measurement this is, together. */}
+          <span className="note__line detail">
+            cycle of {report.day} · {report.promptCount} prompts · basis {report.comparisonBasis}
+          </span>
           <span className="note__gloss">
             One read of the homepage, through the same boundary the classifier uses. The page is the page as it was at that moment; it may have
             changed since.
@@ -131,6 +136,13 @@ export function GapReportBody({ report }: { report: Report }) {
       </div>
 
       <h3 style={{ marginTop: 'var(--space-5)' }}>Does the page address the questions being asked about it?</h3>
+      {/* MINOR d: worst-first was said only in the ladder's aria-label
+          (below); a sighted reader gets no equivalent word anywhere on the
+          page. Said once, visibly, matching the identical clause in
+          prompt-grid.tsx. */}
+      <p className="prose" style={{ marginTop: 0, marginBottom: 'var(--space-2)' }}>
+        Least-covered questions first.
+      </p>
       <p className="prose">
         <CoveragePlainReading report={report} />
       </p>
@@ -209,11 +221,23 @@ function CoveragePlainReading({ report }: { report: Report }) {
   const withTerms = report.coverage.filter((c) => c.covered.length + c.missing.length > 0)
   const worstOne = withTerms.length > 0 ? [...withTerms].sort((a, b) => a.ratio - b.ratio)[0]! : null
   const worstTotal = worstOne ? worstOne.covered.length + worstOne.missing.length : 0
+  // MINOR c, part one: a worst ratio of 1 means EVERY question is fully
+  // covered, so singling one out as "the least covered" would misname a tie
+  // among equals as a finding. Part two: a genuine tie below 1 is still worth
+  // naming, but "THE least covered" claims a uniqueness the data does not
+  // have, so it reads "one of" instead.
+  const worstIsPerfect = worstOne ? worstOne.ratio >= 1 : true
+  const tiedForWorst = worstOne ? withTerms.filter((c) => c.ratio === worstOne.ratio).length > 1 : false
 
   return (
     <>
-      On average the page uses about <span className="num">{meanPct}%</span> of the words across the <span className="num">{total}</span> {noun}{' '}
-      we checked it against.{' '}
+      {/* MINOR b: `meanCoverage` (aeo-audit.ts) is the UNWEIGHTED MEAN of each
+          question's own ratio, not a pooled share of every word across every
+          question — those are different quantities whenever term counts
+          differ per question, and "of the words across the N questions" reads
+          as the pooled one. */}
+      On average across the <span className="num">{total}</span> {noun}, the page uses about <span className="num">{meanPct}%</span> of each
+      question&apos;s main words.{' '}
       {bad === 0 ? (
         <>Every one of them reaches at least half.</>
       ) : bad === total ? (
@@ -223,11 +247,11 @@ function CoveragePlainReading({ report }: { report: Report }) {
           <span className="num">{bad}</span> of the {total} {noun} are missing more than half their terms.
         </>
       )}
-      {worstOne && worstTotal > 0 ? (
+      {worstOne && worstTotal > 0 && !worstIsPerfect ? (
         <>
           {' '}
-          The least covered is &ldquo;{worstOne.prompt}&rdquo;, using <span className="num">{worstOne.covered.length}</span> of its{' '}
-          <span className="num">{worstTotal}</span> terms.
+          {tiedForWorst ? 'One of the least covered is' : 'The least covered is'} &ldquo;{worstOne.prompt}&rdquo;, using{' '}
+          <span className="num">{worstOne.covered.length}</span> of its <span className="num">{worstTotal}</span> terms.
         </>
       ) : null}
     </>
