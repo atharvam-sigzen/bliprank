@@ -233,7 +233,9 @@ describe('the sheet on disk — docs/runbooks/golden-spot-check.md', () => {
   const cases = loadGoldenCases()
   const anyProposed = cases.some(isProposed)
 
-  it.runIf(anyProposed && existsSync(SPOT_CHECK_SHEET))('is the sheet for the labels on file: the current seeded sample, every fingerprint current', () => {
+  it.runIf(anyProposed)('exists, and is the sheet for the labels on file: the current seeded sample, every fingerprint current', () => {
+    // Proposed labels with no sheet for a person to check them on are labels nobody can ever accept.
+    expect(existsSync(SPOT_CHECK_SHEET)).toBe(true)
     const sheet = parseSpotCheckSheet(readFileSync(SPOT_CHECK_SHEET, 'utf8'))
     // Whatever the owner has or has not ticked is theirs. What the suite holds is that the sheet is about THESE labels.
     const structural = runGoldenSet(cases, sheet).spotCheck.problems.filter((p) => /seeded sample|changed after|sample seed|listed? a case twice/.test(p))
