@@ -10,29 +10,12 @@
 import { createHash } from 'node:crypto'
 import { ENGINES, type EngineId } from './engines.js'
 import { canonicalGeo } from './geo.js'
+import { NORMALISATION_VERSION, normalisePrompt } from './normalise.js'
 
-/**
- * Bump whenever `normalisePrompt` changes behaviour. Stored next to every row
- * so a key can be reproduced from its raw prompt later; deliberately NOT part
- * of the hash (see ADR-0003, "what is excluded").
- */
-export const NORMALISATION_VERSION = 1
-
-/**
- * v1: NFKC → lowercase → collapse whitespace → strip terminal punctuation.
- * NFKC folds full-width and compatibility forms and also symbol-to-letter
- * forms (™ → "tm"), so "Acme™" and "AcmeTM" share a cell — accepted.
- * Alias resolution to canonical brand names arrives with the alias table
- * (P2.2) as v2. Deterministic across machines: no locale-aware casing.
- */
-export function normalisePrompt(prompt: string): string {
-  return prompt
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/\s+/gu, ' ')
-    .trim()
-    .replace(/[\s.!?…,;:]+$/u, '')
-}
+// The normaliser lives in `normalise.ts` (no Node-only import, so the basis can
+// share it in a browser bundle) and is re-exported here, where every caller
+// already finds it. Same function, same version, same keys.
+export { NORMALISATION_VERSION, normalisePrompt }
 
 export interface CacheKeyInput {
   /** Raw prompt as authored; normalised here for keying only. */

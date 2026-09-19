@@ -34,7 +34,7 @@
  *    "not comparable" for every row.
  */
 
-import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis, normalisePrompt } from '@bliprank/contracts'
+import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, customBasisOf, formatBasis, parseBasis, normalisePrompt } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
 import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, PUBLISHER_REGISTRY, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type Intent, type PromptBank } from '@bliprank/taxonomy'
@@ -371,12 +371,14 @@ export function subjectFor(domain: string, bank: PromptBank, siteTitle?: string)
  * includes prompts that name brands — and `compare()` must refuse to put them
  * side by side rather than reporting the difference as movement.
  */
-export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number, competitorSet?: number, custom?: { readonly count: number; readonly version: number }): string {
+export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[], promptCount: number, runsPerCell: number, competitorSet?: number, custom?: { readonly prompts: readonly string[]; readonly version: number }): string {
   // The shape lives in @bliprank/contracts (ADR-0016), shared with the reader
   // that explains a refused comparison, so the two cannot drift. `set=` is
   // appended only when a per-domain override is in force, and `custom=` only
-  // on the custom block's own basis, so a measurement without either formats
-  // exactly as it always did.
+  // on a measurement over a person's own set, so a measurement without either
+  // formats exactly as it always did. The custom tail is handed the LIST, not a
+  // count: `customBasisOf` fingerprints it, so the basis names the sample and
+  // not only "K prompts at version V" (MVP_PLAN C3r item 1).
   return formatBasis({
     format: 'grader',
     engines,
@@ -386,7 +388,7 @@ export function comparisonBasisFor(bank: PromptBank, engines: readonly EngineId[
     unprompted: promptCount,
     runs: runsPerCell,
     ...(competitorSet !== undefined ? { set: competitorSet } : {}),
-    ...(custom ? { custom } : {}),
+    ...(custom ? { custom: customBasisOf(custom.prompts, custom.version) } : {}),
   })
 }
 
@@ -653,7 +655,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   // version change is a change of basis, so the trend breaks there and a
   // head-to-head refuses across it, exactly as for any other segment.
   const comparisonBasis = set
-    ? comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { count: set.prompts.length, version: set.version })
+    ? comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { prompts: set.prompts, version: set.version })
     : comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell, competitorSet?.version)
   /*
    * The bank's classification, keyed by the prompt TEXT the cells were built
@@ -678,7 +680,7 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   // say "asked, nothing came back" rather than nothing at all.
   const customPrompts: CustomPromptsBlock | undefined = !set && req.customPrompts?.prompts.length
     ? (() => {
-        const basis = comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { count: req.customPrompts.prompts.length, version: req.customPrompts.version })
+        const basis = comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { prompts: req.customPrompts.prompts, version: req.customPrompts.version })
         // No map: the customer wrote these and nobody classified them. See
         // `PromptRow.intent` for why that is an absent field, not a 'custom' one.
         const block = customAnswers.length ? scoreBlock(customAnswers, scored, subject, competitors, basis) : { brands: [], promptRows: [] }

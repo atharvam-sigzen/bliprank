@@ -8,7 +8,7 @@ import {
   MemoryKV,
   type DeadLetter,
 } from '@bliprank/collector'
-import type { AnswerBody, CollectRequest, EngineAdapter, EngineId, RawAnswer } from '@bliprank/contracts'
+import { parseBasis, promptSetFingerprint, type AnswerBody, type CollectRequest, type EngineAdapter, type EngineId, type RawAnswer } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, findMentions, normaliseForMatch } from '@bliprank/scorer'
 import { DEMO_BANKS, DEMO_TAXONOMY } from '@bliprank/taxonomy'
 import { mkdtempSync } from 'node:fs'
@@ -545,7 +545,7 @@ describe('the customer’s own prompts are a second measurement, never the headl
     // The custom block: its own basis, its own answers, its own rows.
     const c = withCustom.customPrompts!
     expect(c.version).toBe(2)
-    expect(c.comparisonBasis).toBe(`${plain.comparisonBasis.replace(/unprompted=\d+/, 'unprompted=0')}|custom=2@2`)
+    expect(c.comparisonBasis).toBe(`${plain.comparisonBasis.replace(/unprompted=\d+/, 'unprompted=0')}|custom=2@2#${promptSetFingerprint(c.prompts)}`)
     expect(c.counts).toEqual({ cellsRequested: 2 * ENGINES.length, answersScored: 2 * ENGINES.length })
     expect(c.promptRows.every((r) => r.prompt.startsWith('custom:'))).toBe(true)
     expect(c.brands.find((b) => b.isSubject)!.mentions).toBe(2 * ENGINES.length)
@@ -640,7 +640,8 @@ describe("ADR-0016 Amendment 1 — the person's edited set IS the measurement", 
     // The cells: the set's two prompts on each engine, nothing of the bank's seventeen.
     expect([...new Set(seen)].sort()).toEqual([kept.text, own].sort())
     // The basis says whose questions these are, so a version change is a change of basis the trend breaks at.
-    expect(r.comparisonBasis).toMatch(/\|unprompted=0\|runs=1\|custom=2@2$/)
+    expect(r.comparisonBasis).toMatch(/\|unprompted=0\|runs=1\|custom=2@2#[0-9a-f]{12}$/)
+    expect(parseBasis(r.comparisonBasis)?.custom?.fingerprint).toBe(promptSetFingerprint([kept.text, own]))
     for (const b of r.brands) expect(b.metric.comparison_basis).toBe(r.comparisonBasis)
     // The rows are the set's; the kept prompt carries the bank's intent, the person's own carries none.
     const rows = r.promptRows as readonly { prompt: string; intent?: string }[]

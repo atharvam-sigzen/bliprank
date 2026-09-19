@@ -8,7 +8,8 @@
  */
 
 import type { Metric } from '@bliprank/stats'
-import { compare, type Comparison } from '@bliprank/stats'
+import type { Comparison } from '@bliprank/stats'
+import { compareCycles } from '@/lib/compare-cycles'
 import { cycleDayOf, whyNotComparable } from '@/lib/cycles'
 import type { ScanBrand, ScanResultFile as Base } from '@/lib/scan-result'
 
@@ -57,6 +58,6 @@ export function customMovement(cycles: readonly Base[]): { readonly current: str
   const previous = withBlock[withBlock.length - 2]!
   const a = customSubjectOf(current)!.metric
   const b = customSubjectOf(previous)!.metric
-  const verdict = compare(a, b)
+  const verdict = compareCycles(a, b)
   return { current: cycleDayOf(current), previous: cycleDayOf(previous), verdict, why: verdict.significance === 'not-comparable' ? whyNotComparable(a, b) : null }
 }

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ENGINES } from '@bliprank/contracts'
-import { parseBasis } from '@bliprank/contracts'
+import { parseBasis, promptSetFingerprint } from '@bliprank/contracts'
 
 /**
  * THE ENTRY FLOW, AS THE OWNER DESCRIBED IT ON 2026-09-16 (MVP_PLAN C3,
@@ -108,8 +108,8 @@ describe('enter, edit, set the days, first cycle now, three daily ticks, then ex
     const r = await runGrader({ domain: 'acme.test', plan: 'payg', day: D, engines: [...ENGINES], capUsd: 10, mode: 'fixture', apiKey: '', dataDir: dir, log: () => {} })
     expect(r.status).toBe('scanned')
     if (r.status !== 'scanned') return
-    expect(r.comparisonBasis).toMatch(/\|unprompted=0\|runs=1\|custom=3@1$/)
-    expect(parseBasis(r.comparisonBasis)?.custom).toEqual({ count: 3, version: 1 })
+    expect(r.comparisonBasis).toMatch(/\|unprompted=0\|runs=1\|custom=3@1#[0-9a-f]{12}$/)
+    expect(parseBasis(r.comparisonBasis)?.custom).toEqual({ count: 3, version: 1, fingerprint: promptSetFingerprint(edited) })
     const asked = [...new Set((r.promptRows as readonly { prompt: string }[]).map((x) => x.prompt))].sort()
     expect(asked).toEqual([...edited].sort())
     expect(r.run.source).toBe('hand')
@@ -159,7 +159,7 @@ describe('enter, edit, set the days, first cycle now, three daily ticks, then ex
     const r = await runGrader({ domain: 'acme.test', plan: 'payg', day: D, engines: [...ENGINES], capUsd: 10, mode: 'fixture', apiKey: '', dataDir: dir, log: () => {} })
     expect(r.status).toBe('scanned')
     if (r.status !== 'scanned') return
-    expect(parseBasis(r.comparisonBasis)?.custom).toEqual({ count: 6, version: 2 })
+    expect(parseBasis(r.comparisonBasis)?.custom).toEqual({ count: 6, version: 2, fingerprint: promptSetFingerprint(bank.slice(0, 6)) })
     // The identical list is refused as no change, so a version is never spent on nothing.
     expect(await post(customPrompts, 'custom-prompts', { domain: 'acme.test', prompts: bank.slice(0, 6), reason: 'the same six, sent twice' })).toMatchObject({ status: 400, body: { kind: 'no-change' } })
   })

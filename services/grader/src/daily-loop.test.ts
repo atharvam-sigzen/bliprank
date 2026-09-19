@@ -410,14 +410,14 @@ describe('the loop through the real runner, offline', () => {
     expect(first.ran.map((r) => [r.host, r.status])).toEqual([['pipedrive.com', 'scanned']])
     const day1 = JSON.parse(readFileSync(listCycles(dir, 'pipedrive.com')[0]!.file, 'utf8')) as { comparisonBasis: string; counts: { cellsRequested: number } }
     // Version 1, the two prompts the day was sized on: not the three the store held by the time the runner read it.
-    expect(day1.comparisonBasis).toMatch(/\|custom=2@1$/)
+    expect(day1.comparisonBasis).toMatch(/\|custom=2@1#[0-9a-f]{12}$/)
     expect(day1.counts.cellsRequested).toBe(2 * ENGINES.length)
     // The next day is version 2's: a new basis, and the day's list says the size it will be.
     expect(dueToday(dir, ONE, '2026-09-08').due[0]).toMatchObject({ customPrompts: 3, promptSet: 2, cells: 3 * ENGINES.length })
     const next = await runTick({ dataDir: dir, env: ONE, day: '2026-09-08', apply: true, mode: 'fixture' })
     if ('refuse' in next) throw new Error(next.refuse)
     const day2 = JSON.parse(readFileSync(listCycles(dir, 'pipedrive.com')[1]!.file, 'utf8')) as { comparisonBasis: string; counts: { cellsRequested: number } }
-    expect(day2.comparisonBasis).toMatch(/\|custom=3@2$/)
+    expect(day2.comparisonBasis).toMatch(/\|custom=3@2#[0-9a-f]{12}$/)
     expect(day2.counts.cellsRequested).toBe(3 * ENGINES.length)
   })
 })

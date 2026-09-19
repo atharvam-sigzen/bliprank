@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import type { Metric } from '@bliprank/stats'
-import { compare, formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
+import { formatInterval, formatProvenance, formatValue } from '@bliprank/stats'
+import { compareCycles, continuousCycles } from '@/lib/compare-cycles'
 
 export interface TrendPoint {
   /** Cycle label, e.g. an ISO date. */
@@ -59,10 +60,8 @@ export function CiTrendChart({ points, title, height = 200 }: { points: readonly
    * derivations of "may these points be joined" is what let them disagree in
    * the first place, and a second copy would drift again.
    */
-  const continuous = (a: TrendPoint, b: TrendPoint) =>
-    a.metric.algo_version === b.metric.algo_version &&
-    a.metric.collection_path === b.metric.collection_path &&
-    a.metric.comparison_basis === b.metric.comparison_basis
+  // The basis is read by its own rule (`sameBasis`, through `continuousCycles`): a revert to a list asked before is one sample under a new version number, and the line joins it.
+  const continuous = (a: TrendPoint, b: TrendPoint) => continuousCycles(a.metric, b.metric)
 
   /** Contiguous runs of comparable points, as indices into `points`. */
   const runs: number[][] = []
@@ -250,7 +249,7 @@ function TrendTip({ points, active }: { points: readonly TrendPoint[]; active: n
   }
   const p = points[active]!
   const prev = active > 0 ? points[active - 1] : undefined
-  const verdict = prev ? compare(p.metric, prev.metric) : null
+  const verdict = prev ? compareCycles(p.metric, prev.metric) : null
 
   return (
     <div className="tip" aria-live="polite">

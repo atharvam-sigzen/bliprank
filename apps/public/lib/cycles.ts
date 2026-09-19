@@ -17,7 +17,8 @@
  */
 
 import { basisDifference } from '@bliprank/contracts/basis'
-import { compare, type Comparison, type Metric } from '@bliprank/stats'
+import type { Comparison, Metric } from '@bliprank/stats'
+import { compareCycles } from './compare-cycles'
 import { isScanResultFile, rememberScan, runInfoOf, scans, subjectOf, normaliseTyped, type ScanResultFile } from './scan-result'
 
 /** What the trend chart draws: one cycle, one metric. Same shape the worked example uses. */
@@ -91,7 +92,8 @@ export function latestMovement(
   const previous = cycles[cycles.length - 2]!
   const a = subjectOf(current).metric
   const b = subjectOf(previous).metric
-  const verdict = compare(a, b)
+  // Through `compareCycles`, so a revert to a list asked before is read as the same sample (C3r item 1); every other guard is `compare()`'s.
+  const verdict = compareCycles(a, b)
   return { current: cycleDayOf(current), previous: cycleDayOf(previous), verdict, why: verdict.significance === 'not-comparable' ? whyNotComparable(a, b) : null }
 }
 

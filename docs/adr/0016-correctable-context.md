@@ -343,3 +343,90 @@ version each was asked under. Tested end to end offline
 Not built, deliberately: a floor on set size; any parallel collection of the
 bank's set for a domain with its own; any pooling of answers across versions;
 any rewrite of a stored cycle; the METHODOLOGY text.
+
+## Addendum to Amendment 1 — the basis names the sample, not only its label (MVP_PLAN C3r item 1, 2026-09-19)
+
+⚠️ HUMAN REVIEW REQUIRED: METHODOLOGY. What follows changes what two numbers
+must share before they are compared.
+
+**The defect.** The custom tail was `custom=K@V`: how many prompts, at which
+stored version. A version number is unique per host and per store and nowhere
+else. Two different lists saved as "3 prompts, version 1" on two domains, or
+in two workspaces, produced byte-identical basis strings, and `compare()`,
+which refuses on the string and does not open it, would have put their numbers
+side by side (the oversight statistics pass on C3, MAJOR 1).
+
+**The decision.** The tail ends in a fingerprint of the list itself:
+`custom=K@V#<12 hex>`. The recipe, whole, so anyone holding the list can
+reproduce it with a standard tool: put each prompt through the cache key's own
+normaliser (`normalisePrompt`, now in `packages/contracts/src/normalise.ts` so
+the basis can share it in a browser bundle; the function, its version and
+every stored key are unchanged); sort the results by code unit; take the
+SHA-256 of the UTF-8 JSON text of `[NORMALISATION_VERSION, [the sorted
+prompts]]`; keep the first twelve hex characters. It is made and read in
+`packages/contracts/src/basis.ts` and nowhere else (`customBasisOf`,
+`promptSetFingerprint`); the writer in `scan.ts` hands the list over and no
+longer states a count of its own.
+
+Order and spelling are left out because they are left out of the measurement:
+the cache key normalises a prompt before it keys the cell, and a cycle's
+answers are pooled whatever order the cells were asked in. **Repeats are
+kept**, because a cycle asks one cell per list ENTRY (`customCellsFor`,
+`scan.ts`): a prompt listed twice is a question weighted twice, so [A, A, B]
+and [A, B, B] are two samples at one K. The first draft of this addendum
+dropped repeats and claimed "one cell per normalised prompt"; the independent
+statistics review measured that pair sharing one basis string, which is the
+defect this addendum exists to close, and the claim was false about the code.
+The saved path never stores a repeat (`checkCustomPromptsWith`), and C3r item
+8 makes the reader drop them too; the fingerprint is what holds when a list
+arrives some other way. The normaliser's version is inside the hash, so a
+change of normaliser, which changes the cells, moves the fingerprint because
+its definition says so.
+
+**The fingerprint is the identity; the version is the pointer.** `@V` stays in
+the string because it is how a stored cycle is read back under the list it was
+asked (`customPromptsAt`). But a person who goes back to a list they asked
+before is given a NEW version number (version 1 is list A, version 2 is list
+B, version 3 is list A again), so on the string alone a revert would break the
+trend for good, over a sample that did not change. `sameBasis` (basis.ts) is
+the one rule: two strings are the same basis when they are equal, or when both
+are canonical, both carry a fingerprint, the fingerprints and the counts
+agree, and no other segment differs. `basisDifference` is null in exactly
+those cases, so the record can never print "nothing differs" under a refused
+comparison, nor a reason under an accepted one.
+
+`compare()` is untouched (packages/stats is human-owned). The callers that
+compare ACROSS cycles ask `sameBasis` first and hand `compare()` the pair
+under one string when it says yes (`compareCycles`, `continuousCycles`,
+`apps/public/lib/compare-cycles.ts`: the latest movement, the trend chart's
+line and its per-point verdict, decision 4's block movement). Every other
+guard `compare()` has still speaks on such a pair: the scoring version, the
+collection path, the floor on n, the precision check. A caller that does not
+ask gets a refusal, which is the safe way to be wrong.
+
+**What is stored already.** A cycle stored before this addendum carries
+`custom=K@V` with no fingerprint. It still parses, byte for byte, and it is
+the same basis only as a string equal to it: what never recorded its list
+cannot have it vouched for afterwards, so such a cycle and a fingerprinted one
+are refused, in words that state what the two strings show ("one of them does
+not record which questions it held") and claim no history, since nothing in a
+basis says which of two cycles is older. A re-score under a NEW scoring
+version re-derives such a cycle over the stored list at the stored version and
+stamps the fingerprint of that list; the superseded file is kept at its audit
+path, as for any re-score, and `compare()` refuses across the version anyway.
+A re-score under the SAME version may not restamp a basis (it would break a
+trend over an identical sample wherever one cycle of a domain could be
+re-derived and its neighbour could not): it is refused for such a cycle, and
+said so (C3r item 7, with the statistics review's MINOR 4). No stored cycle
+carries a custom tail at the time of writing (`basis.test.ts` lists every
+stored string), so the window is the cycles collected between C3 and this
+change.
+
+**What it costs.** One more thing a reader of a raw basis string has to be
+told: twelve characters after a `#`. Forty-eight bits: the case that matters
+is two lists meeting by chance within one domain's history at the same count,
+the birthday bound, about 2 in 10^11 at a hundred versions; and nobody gains by
+forging one, since the only comparison a forged fingerprint unlocks is between
+two of the forger's own numbers. A revert re-joins a trend only between
+NEIGHBOURING cycles: if a cycle was collected under the version in between,
+both of its boundaries still break, which is correct.

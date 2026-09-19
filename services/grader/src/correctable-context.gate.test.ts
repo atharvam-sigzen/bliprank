@@ -155,8 +155,8 @@ describe('one cycle carrying both corrections, through the real runner, offline'
     expect(parseBasis(second.comparisonBasis)?.set).toBe(2)
     expect(second.brands.map((b) => b.id)).toContain('zoho-crm')
     // The version change is ON THE HEADLINE's basis now: that is where the trend breaks and compare() refuses.
-    expect(parseBasis(second.comparisonBasis)?.custom).toEqual({ count: 1, version: 2 })
-    expect(parseBasis(first.comparisonBasis)?.custom).toEqual({ count: 2, version: 1 })
+    expect(parseBasis(second.comparisonBasis)?.custom).toMatchObject({ count: 1, version: 2 })
+    expect(parseBasis(first.comparisonBasis)?.custom).toMatchObject({ count: 2, version: 1 })
     expect(first.comparisonBasis).not.toBe(second.comparisonBasis)
 
     // The first cycle's evidence and re-score still resolve under set 1 and prompt set 1, not today's.
