@@ -3669,3 +3669,81 @@ h3.record__title,
     grid-column: 1 / -1;
   }
 }
+
+/* ============================================================================
+   D4 — THREE PURPOSE-BUILT VISUALS, APPENDED (frontend-designer, 2026-09-19)
+   ============================================================================
+   apps/public/components/prompt-grid.tsx, cited-sources.tsx, gap-report.tsx —
+   replacing the three table-only insights named in MVP_PLAN D4. All three
+   reuse what already exists wherever the data is the same KIND of claim:
+   `SourceReach` in cited-sources.tsx draws with `.estrip` above, unchanged,
+   and the surviving exact tables draw with `.range`, also unchanged. The
+   three blocks below are the only marks genuinely new to this sheet: the
+   question x engine matrix, the magnitude bars for "most cited sites", and
+   the coverage ladder's row layout (`CoverageStrip` itself is untouched).
+   ============================================================================ */
+
+/* --- prompt-grid.tsx: every question against every engine, at a glance ---- */
+
+.pgrid__head {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  fill: var(--color-muted-foreground);
+}
+
+.pgrid__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  fill: var(--color-foreground);
+}
+
+.pgrid__count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  fill: var(--color-muted-foreground);
+}
+
+/*
+ * THREE STATES, NEVER BY OPACITY ALONE. `none` (no answer collected) and
+ * `miss` (collected, not named) share one stroke colour and differ only in
+ * DASH, so a colour-blind or greyscale reader still tells "nothing happened
+ * here" from "an answer said no" without reading a single label. The three
+ * named tiers are three real inks from the sheet's own data vocabulary —
+ * primary, secondary, neutral — never one hue thinned by opacity: a tint
+ * faint enough to read as a third tier is also faint enough to fail the 3:1
+ * a non-text mark owes (WCAG 1.4.11), which a discrete ink never risks.
+ * Every one of the five states clears 3:1 on the card in both themes, the
+ * same tokens the rest of this file already carries that guarantee for.
+ */
+.pgrid__cell {
+  stroke-width: 1.25;
+}
+
+.pgrid__cell--none {
+  fill: none;
+  stroke: var(--color-field-border);
+  stroke-dasharray: 2 2;
+}
+
+.pgrid__cell--miss {
+  fill: none;
+  stroke: var(--color-field-border);
+}
+
+.pgrid__cell--rank1 {
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
+}
+
+.pgrid__cell--rank2 {
+  fill: var(--color-secondary);
+  stroke: var(--color-secondary);
+}
+
+.pgrid__cell--rank3 {
+  fill: var(--color-neutral-ink);
+  stroke: var(--color-neutral-ink);
+}
+

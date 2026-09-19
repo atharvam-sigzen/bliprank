@@ -7,6 +7,7 @@ import { MIN_N_FOR_COMPARISON, wilson } from '@bliprank/stats'
 import { engineName } from '@/lib/engines'
 import { byEngine, byIntent, promptBreakdown, type BreakdownLine, type PromptBreakdown } from '@/lib/prompt-breakdown'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
+import { PromptGrid } from './prompt-grid'
 
 /**
  * PHASES 3.3 — WHICH QUESTIONS, ON WHICH ENGINE. One cycle, opened up.
@@ -136,6 +137,16 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
           </>
         )}
       </p>
+
+      {/* SIMPLE DEPTH, AND THE FIRST PICTURE ON THE PAGE FOR THIS QUESTION.
+          "Which questions am I in" is what the heading promises, and until now
+          the only thing a simple-depth reader got for it was the sentence above
+          and a second cut by buyer intent — never the shape of the coverage
+          itself. The matrix is that shape: every question against every engine,
+          worst first, at a glance. The exact ranks and citation marks stay in
+          the full table below, in `.detail` — this is the picture, not a second
+          copy of the numbers. */}
+      <PromptGrid rows={rows} engines={breakdown.engines} subjectName={subject.name} />
 
       {/*
         EVERYTHING TECHNICAL, UNDER ONE MARK.
@@ -502,8 +513,14 @@ function Cites({ citations }: { citations: readonly StoredCitation[] }) {
    and which a colour-blind or greyscale reader would lose.
    ========================================================================== */
 
-/** `#1 of 5`. Null position: named, but the pass recorded no rank for it. */
-function rankLabel(position: number | null, brands: number): string {
+/**
+ * `#1 of 5`. Null position: named, but the pass recorded no rank for it.
+ *
+ * Exported for `prompt-grid.tsx`: the matrix needs the identical wording for
+ * its per-cell tooltip, and a second copy of "what a rank means in words" is
+ * exactly the kind of drift this file's own commentary warns about elsewhere.
+ */
+export function rankLabel(position: number | null, brands: number): string {
   if (position === null || position <= 0) return 'named'
   return `#${position} of ${brands}`
 }
@@ -512,8 +529,11 @@ function rankLabel(position: number | null, brands: number): string {
  * Three steps, not a gradient. The distinction a reader needs is "first",
  * "near the front" and "also mentioned"; grading every rank separately would
  * imply the sample can tell #4 from #5, which at these cell counts it cannot.
+ *
+ * Exported for the same reason as `rankLabel`: the matrix draws the identical
+ * three tiers and must not re-derive the boundary between them.
  */
-function rankClass(position: number | null): string {
+export function rankClass(position: number | null): string {
   if (position === null || position <= 0) return 'mark--rank3'
   if (position === 1) return 'mark--rank1'
   if (position === 2) return 'mark--rank2'
