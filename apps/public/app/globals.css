@@ -3747,3 +3747,69 @@ h3.record__title,
   stroke: var(--color-neutral-ink);
 }
 
+/* --- cited-sources.tsx: magnitude bars for "most cited sites" ------------- */
+
+.hostbars {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hostbar {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 8rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hostbar__name {
+  font-size: 0.8125rem;
+  color: var(--color-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hostbar__track {
+  position: relative;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-muted);
+}
+
+/*
+ * ⚠️ SCALED TO ITS OWN MAXIMUM — deliberately unlike every proportion on this
+ * sheet. A citation count is a tally, not an estimate with a margin that
+ * fitting the axis could misrepresent; see the note above `MostCited` in
+ * cited-sources.tsx. Secondary ink, not primary, because this is volume and
+ * primary stays reserved for an estimate and the interval around it.
+ */
+.hostbar__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  min-width: 2px;
+  border-radius: 2px;
+  background: var(--color-secondary);
+}
+
+.hostbar__count {
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .hostbar {
+    grid-template-columns: minmax(0, 1fr) 8rem;
+  }
+
+  .hostbar__name {
+    grid-column: 1 / -1;
+  }
+}
+
