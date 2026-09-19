@@ -192,8 +192,16 @@ describe('the gap report', () => {
      ──────────────────────────────────────────────────────────────────────── */
 
   it('draws one division per term and fills the covered ones', () => {
+    /*
+     * SCOPED TO THE LADDER (D4). `CoverageStrip` itself is unchanged, but it
+     * now renders twice: once in the `.covladder` picture every depth shows,
+     * and once beside the exact missing terms in the `.detail` table for a
+     * technical reader. Counting the whole document would find both and
+     * report double; the ladder is the one this test was written to pin.
+     */
     const html = renderToStaticMarkup(<GapReportBody report={parseGapReport(base)!} />)
-    const strips = [...html.matchAll(/<span class="cov__strip"[^>]*>([\s\S]*?)<\/span><span class="cov__count/g)]
+    const ladder = /<ol class="covladder"[^>]*>[\s\S]*?<\/ol>/.exec(html)?.[0] ?? ''
+    const strips = [...ladder.matchAll(/<span class="cov__strip"[^>]*>([\s\S]*?)<\/span><span class="cov__count/g)]
     expect(strips.length).toBe(parseGapReport(base)!.coverage.length)
     // Worst first: 1 of 2, then 2 of 2.
     const counts = strips.map((m) => ({
@@ -220,8 +228,11 @@ describe('the gap report', () => {
   })
 
   it('puts the mean rule at the mean, on every row', () => {
+    // Scoped to the ladder for the same reason as the test above: the same
+    // strip, and the same mean rule, is drawn a second time in `.detail`.
     const html = renderToStaticMarkup(<GapReportBody report={parseGapReport(base)!} />)
-    const means = [...html.matchAll(/class="cov__mean" style="left:([^"]+)"/g)].map((m) => m[1]!.trim())
+    const ladder = /<ol class="covladder"[^>]*>[\s\S]*?<\/ol>/.exec(html)?.[0] ?? ''
+    const means = [...ladder.matchAll(/class="cov__mean" style="left:([^"]+)"/g)].map((m) => m[1]!.trim())
     expect(means.length).toBe(parseGapReport(base)!.coverage.length)
     // One position, every row: read down the column it is a single upright.
     expect(new Set(means).size).toBe(1)

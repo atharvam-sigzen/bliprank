@@ -3813,3 +3813,37 @@ h3.record__title,
   }
 }
 
+/* --- gap-report.tsx: the coverage ladder ----------------------------------- */
+
+.covladder {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.covladder__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.covladder__q {
+  font-size: 0.8125rem;
+  color: var(--color-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .covladder__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .covladder__q {
+    white-space: normal;
+  }
+}

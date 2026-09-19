@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { loadGaps, type GapReport as Report } from '@/lib/gaps'
+import { loadGaps, type GapCoverage, type GapReport as Report } from '@/lib/gaps'
 import type { ScanResultFile } from '@/lib/scan-result'
 
 /**
@@ -132,38 +132,48 @@ export function GapReportBody({ report }: { report: Report }) {
 
       <h3 style={{ marginTop: 'var(--space-5)' }}>Does the page address the questions being asked about it?</h3>
       <p className="prose">
-        Mean term coverage <span className="num">{Math.round(report.meanCoverage * 100)}%</span> across <span className="num">{report.coverage.length}</span>{' '}
-        questions, least covered first. A word check, not a relevance score: these are the terms in the questions we send the engines, and whether
-        the page&apos;s own text uses them anywhere. Each row is divided into that question&apos;s own terms, filled for the ones the page uses;
-        the upright rule marks the mean.
+        <CoveragePlainReading report={report} />
       </p>
       {report.truncated ? (
         <p className="prose prose--flag">
           This page is larger than the fetch ceiling and was cut off, so a term below is absent from what we read, not necessarily from the page.
         </p>
       ) : null}
-      <div className="table-wrap">
-        <table>
-          <caption className="visually-hidden">Term coverage per question, least covered first</caption>
-          <thead>
-            <tr>
-              <th scope="col">Terms covered</th>
-              <th scope="col">Question</th>
-              <th scope="col">Terms {absent}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {worst.map((c) => (
-              <tr key={c.prompt}>
-                <td>
-                  <CoverageStrip covered={c.covered.length} missing={c.missing.length} mean={report.meanCoverage} />
-                </td>
-                <td>{c.prompt}</td>
-                <td className="num">{c.missing.length ? c.missing.join(', ') : '—'}</td>
+
+      {/* THE VISUAL. A list of the sheet's own segmented strips (CoverageStrip,
+          unchanged below), worst first — the "table of glyphs" this replaces
+          was the same content wrapped in <table><td>, with no synthesis above
+          it and a missing-terms column dense enough to read as a data dump
+          rather than a picture. The exact terms stay, in .detail. */}
+      <CoverageLadder coverage={worst} mean={report.meanCoverage} />
+
+      <div className="detail">
+        <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
+          The same rows, with the exact terms the page never uses.
+        </p>
+        <div className="table-wrap">
+          <table>
+            <caption className="visually-hidden">Term coverage per question, least covered first</caption>
+            <thead>
+              <tr>
+                <th scope="col">Terms covered</th>
+                <th scope="col">Question</th>
+                <th scope="col">Terms {absent}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {worst.map((c) => (
+                <tr key={c.prompt}>
+                  <td>
+                    <CoverageStrip covered={c.covered.length} missing={c.missing.length} mean={report.meanCoverage} />
+                  </td>
+                  <td>{c.prompt}</td>
+                  <td className="num">{c.missing.length ? c.missing.join(', ') : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
@@ -172,6 +182,79 @@ export function GapReportBody({ report }: { report: Report }) {
         things that work. Nothing here writes or publishes anything.
       </p>
     </>
+  )
+}
+
+/**
+ * THE PLAIN READING OF THE COVERAGE SECTION — built only from `report.coverage`
+ * and `report.meanCoverage`, the same numbers the ladder below draws.
+ *
+ * Zero and small-n get their own branch rather than falling through the
+ * general one: a report with no questions is not "0 of 0 questions are
+ * missing more than half their terms", it is a statement that there was
+ * nothing to check, and a report with exactly one question can never land in
+ * the "N of M" branch without the plural reading of "1 questions".
+ */
+function CoveragePlainReading({ report }: { report: Report }) {
+  const total = report.coverage.length
+  if (total === 0) return <>There were no questions to check this page&apos;s coverage against.</>
+
+  const meanPct = Math.round(report.meanCoverage * 100)
+  const noun = total === 1 ? 'question' : 'questions'
+  const bad = report.coverage.filter((c) => c.ratio < 0.5).length
+  // The worst NAMED question skips a prompt with no content terms at all —
+  // CoverageStrip's own "nothing to divide" case. Such a row still carries
+  // ratio 0 and would otherwise win the sort by a tie a real, badly-covered
+  // question loses, silencing the one fact this sentence exists to surface.
+  const withTerms = report.coverage.filter((c) => c.covered.length + c.missing.length > 0)
+  const worstOne = withTerms.length > 0 ? [...withTerms].sort((a, b) => a.ratio - b.ratio)[0]! : null
+  const worstTotal = worstOne ? worstOne.covered.length + worstOne.missing.length : 0
+
+  return (
+    <>
+      On average the page uses about <span className="num">{meanPct}%</span> of the words across the <span className="num">{total}</span> {noun}{' '}
+      we checked it against.{' '}
+      {bad === 0 ? (
+        <>Every one of them reaches at least half.</>
+      ) : bad === total ? (
+        <>None of them reach half.</>
+      ) : (
+        <>
+          <span className="num">{bad}</span> of the {total} {noun} are missing more than half their terms.
+        </>
+      )}
+      {worstOne && worstTotal > 0 ? (
+        <>
+          {' '}
+          The least covered is &ldquo;{worstOne.prompt}&rdquo;, using <span className="num">{worstOne.covered.length}</span> of its{' '}
+          <span className="num">{worstTotal}</span> terms.
+        </>
+      ) : null}
+    </>
+  )
+}
+
+/**
+ * THE LADDER — every question's `CoverageStrip`, worst first, without the
+ * table scaffolding around it. `CoverageStrip` itself is unchanged: it was
+ * already the right instrument (discrete segments, no invented interval — see
+ * the note on it below), the table wrapped around it was the defect.
+ *
+ * The exact missing terms are not repeated here — they stay in the `.detail`
+ * table below, next to the same strip, so a technical reader gets the terms
+ * beside the picture rather than the picture appearing twice.
+ */
+function CoverageLadder({ coverage, mean }: { coverage: readonly GapCoverage[]; mean: number }) {
+  if (coverage.length === 0) return null
+  return (
+    <ol className="covladder" aria-label="Term coverage per question, least covered first">
+      {coverage.map((c) => (
+        <li className="covladder__row" key={c.prompt}>
+          <span className="covladder__q">{c.prompt}</span>
+          <CoverageStrip covered={c.covered.length} missing={c.missing.length} mean={mean} />
+        </li>
+      ))}
+    </ol>
   )
 }
 
