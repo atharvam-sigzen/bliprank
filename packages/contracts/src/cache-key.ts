@@ -10,12 +10,12 @@
 import { createHash } from 'node:crypto'
 import { ENGINES, type EngineId } from './engines.js'
 import { canonicalGeo } from './geo.js'
-import { NORMALISATION_VERSION, normalisePrompt } from './normalise.js'
+import { NORMALISATION_VERSION, distinctPrompts, normalisePrompt } from './normalise.js'
 
 // The normaliser lives in `normalise.ts` (no Node-only import, so the basis can
 // share it in a browser bundle) and is re-exported here, where every caller
 // already finds it. Same function, same version, same keys.
-export { NORMALISATION_VERSION, normalisePrompt }
+export { NORMALISATION_VERSION, distinctPrompts, normalisePrompt }
 
 export interface CacheKeyInput {
   /** Raw prompt as authored; normalised here for keying only. */

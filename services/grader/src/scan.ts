@@ -598,6 +598,14 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
   // carried it: those cells ride the same loop and their answers are kept APART.
   const customCells = !set && req.customPrompts?.prompts.length ? customCellsFor(bank, req.engines, req.day, req.customPrompts.prompts) : []
   const cells = [...curatedCells.map((c) => ({ ...c, custom: false })), ...customCells.map((c) => ({ ...c, custom: true }))]
+  // ONE CELL, ASKED ONCE, IN EACH MEASUREMENT (C3r item 8). A repeated prompt is one cache key asked twice, and its answers
+  // would be pushed into the sample twice: an n inflated by a repeat, under an interval that narrows for no reason. Both
+  // readers of a set now drop repeats, so this can only fire for a caller that built its own list; it fires BEFORE the first
+  // cell is asked, so nothing is spent on a cycle that would have been wrong.
+  for (const [what, block] of [['the headline', curatedCells], ['the second measurement', customCells]] as const) {
+    const keys = new Set(block.map((c) => c.cell.key))
+    if (keys.size !== block.length) throw new Error(`scan: ${req.domain}'s prompts for ${what} repeat a question (${block.length} cells, ${keys.size} distinct); a repeat would count its answers twice`)
+  }
 
   const answers: RawAnswer[] = []
   const customAnswers: RawAnswer[] = []

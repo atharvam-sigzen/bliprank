@@ -47,11 +47,25 @@ export interface HeadToHead {
   readonly rows: readonly HeadToHeadRow[]
   readonly subject: HeadToHeadRow
   /**
-   * True when NOT ONE competitor could be separated from the subject.
+   * How many competitors `compare()` actually compared with the subject: ahead,
+   * behind, or indistinguishable. The rest were REFUSED a comparison (too few
+   * answers, or a pair too unlike in precision), which is a different fact
+   * from "compared, and no difference found" (MVP_PLAN C3r item 4).
+   */
+  readonly compared: number
+  /**
+   * True when at least one competitor WAS compared and not one of those could
+   * be separated from the subject.
    *
    * This is the expected result on a free-tier sample and the page says so out
    * loud rather than rendering a chart that looks like a ranking and hoping the
    * reader checks the overlaps. It is a fact about the sample, not a failure.
+   *
+   * ⚠️ It used to be true whenever nothing was ahead and nothing behind, which
+   * includes the case where NO comparison was possible at all: a short set of
+   * a person's own questions puts every row under the floor on n, and the page
+   * then said "not one brand can be told apart from you", a finding, over a
+   * chart on which nothing had been compared.
    */
   readonly allIndistinguishable: boolean
 }
@@ -124,10 +138,13 @@ export function buildHeadToHead(subject: Contender, competitors: readonly Conten
   /* c8 ignore next */
   if (!subjectRow) throw new Error('buildHeadToHead: unreachable — the subject row was just inserted')
 
+  const rivals = rows.filter((r) => !r.isSubject)
+  const compared = rivals.filter((r) => r.verdict === 'ahead' || r.verdict === 'behind' || r.verdict === 'indistinguishable')
   return {
     rows,
     subject: subjectRow,
-    allIndistinguishable: rows.every((r) => r.isSubject || r.verdict !== 'ahead') && rows.every((r) => r.isSubject || r.verdict !== 'behind'),
+    compared: compared.length,
+    allIndistinguishable: compared.length > 0 && compared.every((r) => r.verdict === 'indistinguishable'),
   }
 }
 

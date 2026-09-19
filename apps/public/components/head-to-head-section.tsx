@@ -3,6 +3,7 @@
 import { HeadToHeadChart } from '@/components/head-to-head-chart'
 import { promptSetOf, promptSetWords } from '@/lib/prompt-set'
 import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
+import { MIN_N_FOR_COMPARISON } from '@bliprank/stats'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
 /**
@@ -84,6 +85,7 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
     competitors.map((b) => ({ label: b.name, metric: b.metric })),
   )
   const uncompared = data.rows.filter((r) => r.verdict === 'insufficient-data' || r.verdict === 'not-comparable')
+  const thinScan = data.compared === 0 && uncompared.length > 0 && uncompared.every((r) => r.verdict === 'insufficient-data')
 
   return (
     <section className="section" aria-labelledby="h2h-heading">
@@ -111,7 +113,10 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
         <aside className="note detail">
           <span className="note__cap">Basis</span>
           <span className="note__line">every brand scored over</span>
-          <span className="note__line">the same {scan.counts.answersScored} answers</span>
+          {/* The brands' OWN sample, the n every row's rate was measured over (C3r item 9), never the cycle's whole tally. */}
+          <span className="note__line">
+            the same {subject.metric.n} {subject.metric.n === 1 ? 'answer' : 'answers'}
+          </span>
           <span className="note__gloss">
             {/* The prompt subset is the honest part: a share-of-voice number
                 taken from prompts that name brands would measure our own
@@ -124,12 +129,21 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
       </div>
 
       <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-        {data.allIndistinguishable
-          ? `On this scan, not one brand in the category can be told apart from ${subject.name}. That is a fact about the sample size, not about the brands.`
-          : `Where a range crosses the shaded band, that brand and ${subject.name} cannot be told apart on this scan — whatever order they appear in.`}
+        {/* THREE DIFFERENT FACTS (C3r item 4). "Nothing could be compared" is not "compared, and no difference found", and the
+            first is routine for a short set of a person's own questions. Under an own-set heading "in the category" is dropped:
+            these rivals are ranked on the person's questions, not the category's. */}
+        {data.compared === 0
+          ? thinScan
+            ? `This scan holds ${subject.metric.n} ${subject.metric.n === 1 ? 'answer' : 'answers'}, and ranking one brand against another needs at least ${MIN_N_FOR_COMPARISON}, so no brand could be compared with ${subject.name} and nothing is said about who is ahead. That is not the same as comparing them and finding no difference.`
+            : `No brand here could be compared with ${subject.name} on this scan, so nothing is said about who is ahead. That is not the same as comparing them and finding no difference: the reason for each is given below.`
+          : data.allIndistinguishable
+            ? `On this scan, not one ${ownSet ? 'of these brands' : 'brand in the category'}${data.compared < data.rows.length - 1 ? ' that could be compared' : ''} can be told apart from ${subject.name}. That is a fact about the sample size, not about the brands.`
+            : `Where a range crosses the shaded band, that brand and ${subject.name} cannot be told apart on this scan — whatever order they appear in.`}
       </p>
 
-      {uncompared.length > 0 ? (
+      {/* Every brand in a scan shares one sample, so when the SCAN is what is thin the reason is one fact about the scan, said once
+          above; listing "too few answers" beside each rival read as a fault in each rival's data (stats review, MINOR 7). */}
+      {uncompared.length > 0 && !thinScan ? (
         <p className="prose" style={{ marginTop: 'var(--space-2)' }}>
           {/* The reason is DERIVED, not guessed. This previously printed
               "different engine set" for every uncompared row, which was simply

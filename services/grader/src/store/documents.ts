@@ -1,3 +1,4 @@
+import { distinctPrompts } from '@bliprank/contracts'
 import type { CustomPromptSet, SupersededSet } from '../custom-prompts.js'
 import type { CompetitorOverride, SupersededOverride } from '../override-store.js'
 import type { CategoryRecord, CategoryRecordStore, NewCategoryRecord } from '../resolve-category.js'
@@ -31,14 +32,20 @@ export async function overrideAtIn(store: WorkspaceStore, host: string, version:
   return v ? { ...v.body, version: v.version } : null
 }
 
+// A set is read the way the file twin reads one (`shapeSet`, custom-prompts.ts): each question once (C3r item 8). The
+// database's writer takes the body the checker produced, so a repeat here means a document that reached the table some other way.
+const oncePer = <T extends { readonly prompts: readonly string[] }>(set: T): T => ({ ...set, prompts: distinctPrompts(Array.isArray(set.prompts) ? set.prompts.filter((p): p is string => typeof p === 'string') : []) })
+
 export async function customPromptsIn(store: WorkspaceStore, host: string): Promise<CustomPromptSet | null> {
   const v = await store.documents.latest<Omit<CustomPromptSet, 'version' | 'superseded'>>('custom-prompts', host)
-  return v ? (assemble(v) as CustomPromptSet) : null
+  if (!v) return null
+  const set = assemble(v) as CustomPromptSet
+  return { ...oncePer(set), ...(set.superseded ? { superseded: set.superseded.map(oncePer) } : {}) }
 }
 
 export async function customPromptsAtIn(store: WorkspaceStore, host: string, version: number): Promise<SupersededSet | null> {
   const v = await store.documents.at<Omit<CustomPromptSet, 'version' | 'superseded'>>('custom-prompts', host, version)
-  return v ? { ...v.body, version: v.version } : null
+  return v ? oncePer({ ...v.body, version: v.version }) : null
 }
 
 /**

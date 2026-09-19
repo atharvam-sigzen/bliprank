@@ -10,9 +10,11 @@
  * number for a request that did not happen.
  */
 
+import { servedFactsOf, type ServedSetFacts } from './served-set'
+
 export type ScanEvent =
   | { kind: 'stage'; stage: string }
-  | { kind: 'cached'; domain: string }
+  | { kind: 'cached'; domain: string; served?: ServedSetFacts }
   | { kind: 'begin'; domain: string; total: number; engines: number; prompts: number }
   | { kind: 'progress'; done: number; total: number; cell: string; outcome: string; providerCalls: number }
   | { kind: 'result'; result: unknown }
@@ -81,7 +83,10 @@ export async function runLiveScan(domain: string, onEvent: (e: ScanEvent) => voi
       }
       if (event === 'error') onEvent({ kind: 'error', errorKind: String(parsed['kind'] ?? 'failed'), message: String(parsed['message'] ?? 'The scan failed.') })
       else if (event === 'result') onEvent({ kind: 'result', result: parsed })
-      else if (event === 'cached') onEvent({ kind: 'cached', domain: String(parsed['domain'] ?? domain) })
+      else if (event === 'cached') {
+        const served = servedFactsOf(parsed['served'])
+        onEvent({ kind: 'cached', domain: String(parsed['domain'] ?? domain), ...(served ? { served } : {}) })
+      }
       else if (event === 'begin') onEvent({ kind: 'begin', domain, total: Number(parsed['total'] ?? 0), engines: Number(parsed['engines'] ?? 0), prompts: Number(parsed['prompts'] ?? 0) })
       else if (event === 'stage') onEvent({ kind: 'stage', stage: String(parsed['stage'] ?? '') })
       else if (event === 'progress')

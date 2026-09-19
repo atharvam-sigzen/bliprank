@@ -5,6 +5,8 @@ import { assertProvisionalAllowed, confidenceGrade, formatInterval, formatProven
 import { ProductBar } from '@/components/chrome'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { Headline } from '@/components/headline'
+import { ZeroMentions } from '@/components/zero-mentions'
+import { servedSetNotice } from '@/lib/served-set'
 import { CitedSources } from '@/components/cited-sources'
 import { GapReport } from '@/components/gap-report'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
@@ -58,7 +60,7 @@ type State =
   | { phase: 'previewing'; domain: string }
   | { phase: 'preview'; domain: string; preview: PreviewResponse; trackable: boolean }
   | { phase: 'scanning'; domain: string; stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string; cached: boolean }
-  | { phase: 'done'; domain: string; scan: ScanResultFile }
+  | { phase: 'done'; domain: string; scan: ScanResultFile; notice?: string }
   | { phase: 'refused'; domain: string; kind: string; message: string }
 
 export default function Grader() {
@@ -156,7 +158,10 @@ export default function Grader() {
 
     setState({ phase: 'scanning', domain: value, stage: 'starting', done: 0, total: 0, engines: 0, prompts: 0, lastCell: '', cached: false })
 
+    // What the server said about a STORED cycle it served: which questions it asked, and which are in force now (C3r item 5).
+    let servedNotice: string | null = null
     void runLiveScan(value, (e) => {
+      if (e.kind === 'cached') servedNotice = e.served ? servedSetNotice(e.served) : null
       if (e.kind === 'stage') setState((s) => (s.phase === 'scanning' ? { ...s, stage: e.stage } : s))
       else if (e.kind === 'cached') setState((s) => (s.phase === 'scanning' ? { ...s, cached: true, stage: 'already collected' } : s))
       else if (e.kind === 'begin') setState((s) => (s.phase === 'scanning' ? { ...s, total: e.total, engines: e.engines, prompts: e.prompts, stage: 'collecting' } : s))
@@ -201,7 +206,7 @@ export default function Grader() {
           // paid to measure.
           const scan = e.result as ScanResultFile
           rememberScan(scan)
-          setState({ phase: 'done', domain: value, scan })
+          setState({ phase: 'done', domain: value, scan, ...(servedNotice ? { notice: servedNotice } : {}) })
         }
       }
     })
@@ -362,7 +367,17 @@ export default function Grader() {
           </aside>
         </div>
       ) : (
-        <Result scan={state.scan} onReset={() => setState({ phase: 'idle' })} />
+        <>
+          {/* AN EDIT ON A DAY WHOSE CHECK ALREADY RAN IS NOT COLLECTED, AND THE PAGE SAYS SO (C3r item 5). One check runs per
+              day; the record below is that check, over the questions it was asked, which are not the ones now in force. Above
+              the number, at both depths, because it changes what the number is a measurement OF. */}
+          {state.notice ? (
+            <p className="prose prose--flag" role="status" data-served-set>
+              {state.notice}
+            </p>
+          ) : null}
+          <Result scan={state.scan} onReset={() => setState({ phase: 'idle' })} />
+        </>
       )}
     </main>
   )
@@ -430,6 +445,11 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
           that draws it. A reader who stops here has the estimate, both bounds
           and the sample size, in a sentence. */}
       <Headline subject={subject.name} metric={metric} engines={run.engines.length} promptSet={promptSetOf(scan.comparisonBasis)} />
+      {/* Zero is a finding, not a missing value, and it still carries a range: the upper limit is what says how confidently zero.
+          One component with the workspace record, so the two surfaces cannot word it differently (C3r item 3). It sits WHERE THE LEDE
+          WOULD HAVE BEEN, above the rail: below it, a simple-depth reader met a bare 0.0% and a Precision grade before any sentence
+          (stats review, MINOR 8). It renders nothing above zero. */}
+      <ZeroMentions metric={metric} promptSet={promptSetOf(scan.comparisonBasis)} subjectSource={scan.subjectSource} />
 
       {/*
         A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the
@@ -480,8 +500,10 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         <aside className="note">
           <span className="note__cap">Record</span>
           <span className="note__line">{scan.categoryName}</span>
+          {/* The number's OWN n, as on the workspace record (C3r item 9): `counts.answersScored` is the whole cycle's tally. */}
           <span className="note__line">
-            {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
+            {metric.n} {metric.n === 1 ? 'answer' : 'answers'}
+            {run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
           {/* WHOSE QUESTIONS, here as well as in the lede: the lede yields to the
@@ -545,17 +567,6 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         number off a sample this size is guessing.
       </p>
 
-      {subject.mentions === 0 ? (
-        <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
-          {/* Zero is a finding, not a missing value, and it still carries an
-              interval: the upper bound is what says how confidently zero. */}
-          Not mentioned in any of the <span className="num">{metric.n}</span> answers. That is a real result with a real upper bound of{' '}
-          <span className="num">{formatInterval(metric).split('–')[1]}</span>, not an error.
-          {scan.subjectSource === 'domain-label'
-            ? ' Note the brand was identified from the domain label alone, so a trading name that differs from the domain would be undercounted.'
-            : ''}
-        </p>
-      ) : null}
 
       <HeadToHeadSection scan={scan} />
 

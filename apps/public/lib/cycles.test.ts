@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { wilson, type Metric } from '@bliprank/stats'
-import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, nextCycleDay, syncCycles, trendOf, whyNotComparable } from './cycles'
+import { basisChangeWords, basisDifference, customBasisOf, formatBasis, type Basis } from '@bliprank/contracts/basis'
+import { compare, wilson, type Metric } from '@bliprank/stats'
+import { cycleDayOf, cyclesFor, dayMarker, earlierCategoryCycles, latestMovement, nextCycleDay, syncCycles, trendOf, whyNotComparable } from './cycles'
 import { rememberScan, scanFor, SCAN, type ScanResultFile } from './scan-result'
 import { NO_RUN_BLOCK_SCAN } from './__fixtures__/no-run-block-scan'
 
@@ -207,5 +208,51 @@ describe('why two cycles are not comparable, in words', () => {
     rememberScan(cycle('acme.test', '2026-09-01', 10))
     rememberScan(cycle('acme.test', '2026-09-08', 50))
     expect(latestMovement(cyclesFor('acme.test'))!.why).toBeNull()
+  })
+})
+
+describe('dayMarker: every reason compare() refuses for, in plain words (MVP_PLAN C3r item 2; stats review MAJOR 3, MINOR 10)', () => {
+  const ENG = ['chatgpt', 'copilot', 'gemini', 'google-ai-mode', 'google-ai-overviews']
+  const basisOf = (over: Partial<Basis>): string => formatBasis({ format: 'grader', engines: ENG, locale: 'en-US', geo: 'US', bank: { slug: 'crm-software', version: 1 }, unprompted: 17, runs: 1, ...over })
+  const at = (k: number, n: number, basis: string, over: Partial<Metric> = {}): Metric => ({ ...wilson(k, n), algo_version: 'det-3', collection_path: 'third-party-grounded', comparison_basis: basis, ...over })
+  const A = ['which crm suits a small team', 'which crm has the best mobile app', 'which crm is cheapest to start', 'which crm do accountants use', 'which crm works offline', 'which crm imports from a spreadsheet']
+  const own = (v: number) => basisOf({ unprompted: 0, custom: customBasisOf(A, v) })
+
+  it('THE COMMONEST TRANSITION: the category\u2019s questions one day, the person\u2019s own the next. It used to read "the prompt count (17 against 0), the custom prompt set (absent against 6@1)"', () => {
+    const m = dayMarker(at(6, 30, own(1)), at(20, 85, basisOf({})))
+    expect(m).toEqual({ kind: 'refused', text: 'not comparable with the day before: the day before was asked the category\u2019s 17 questions, and this day your own 6 questions (version 1)' })
+    // Nothing on the line says a day "asked 0", and nothing is in basis notation.
+    expect(m!.text).not.toMatch(/against 0|\d@\d|absent/)
+  })
+
+  it('a scoring-version boundary, a collection-path boundary and an engine change each say what changed', () => {
+    expect(dayMarker(at(30, 100, basisOf({}), { algo_version: 'det-4' }), at(30, 100, basisOf({})))?.text).toBe('not comparable with the day before: the two days were scored by different versions of our scoring rules (det-3, then det-4), so they are not the same measurement')
+    expect(dayMarker(at(30, 100, basisOf({}), { collection_path: 'official-api' }), at(30, 100, basisOf({})))?.text).toContain('the answers were collected in a different way')
+    expect(dayMarker(at(30, 100, basisOf({ engines: ['chatgpt'] })), at(30, 100, basisOf({})))?.text).toContain('it was asked on a different set of AI engines')
+    expect(dayMarker(at(30, 100, basisOf({ bank: { slug: 'crm-software', version: 2 } })), at(30, 100, basisOf({})))?.text).toContain('the category\u2019s question bank moved from version 1 to version 2')
+    expect(dayMarker(at(30, 100, basisOf({ set: 1 })), at(30, 100, basisOf({})))?.text).toContain('the list of competitors it is scored against was changed')
+  })
+
+  it('THE PRECISION FALLBACK is the one sentence that depends on whyNotComparable finding nothing, and it holds ACROSS A REVERT, where the basis strings differ and the sample does not', () => {
+    // Separated intervals, very unlike in width: compare() refuses on precision. Same basis...
+    const thin = at(1, 30, basisOf({}))
+    const thick = at(900, 3000, basisOf({}))
+    expect(compare(thick, thin).label).toContain('differ too much in precision')
+    expect(dayMarker(thick, thin)?.text).toBe('not comparable with the day before: one day\u2019s range is far narrower than the other\u2019s, so a gap between them could not be judged fairly')
+    // ...and across a revert: version 3 holds version 1's list, so the basis is the SAME and the reason must still be precision, never "a different basis".
+    const m = dayMarker(at(900, 3000, own(3)), at(1, 30, own(1)))
+    expect(m?.text).toContain('far narrower than the other')
+    expect(m?.text).not.toContain('questions')
+  })
+
+  it('too few answers is a refusal in its own words; a like-for-like pair is no mark; the first day has no day before it', () => {
+    expect(dayMarker(at(3, 15, own(1)), at(4, 15, own(1)))).toEqual({ kind: 'refused', text: 'too few answers to compare with the day before: the smaller of the two days holds 15 answers, and a comparison needs at least 30 on each' })
+    expect(dayMarker(at(3, 30, own(1)), at(1, 1, own(1)))?.text).toContain('holds 1 answer,')
+    expect(dayMarker(at(10, 30, own(1)), at(11, 30, own(1)))).toBeNull()
+  })
+
+  it('the plain reading and the auditor\u2019s reading agree on WHETHER anything changed, over every pairing', () => {
+    const forms = [basisOf({}), basisOf({ unprompted: 10 }), own(1), own(3), basisOf({ unprompted: 0, custom: customBasisOf(A.slice(0, 5), 2) }), basisOf({ engines: ['chatgpt'] }), basisOf({ set: 2 }), 'legacy|x|y']
+    for (const x of forms) for (const y of forms) expect(basisChangeWords(x, y) === null, `${x} / ${y}`).toBe(basisDifference(x, y) === null)
   })
 })

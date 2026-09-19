@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cacheCell, cacheKey, normalisePrompt, NORMALISATION_VERSION } from './cache-key.js'
+import { cacheCell, cacheKey, distinctPrompts, normalisePrompt, NORMALISATION_VERSION } from './cache-key.js'
 import { canonicalGeo, ISO_3166_1_ALPHA2 } from './geo.js'
 
 describe('canonicalGeo', () => {
@@ -91,5 +91,17 @@ describe('cacheCell', () => {
     [{ ...base, engine: 'google-ai-overviews' as const, locale: 'en-GB', geo: 'GB', dateBucket: '2026-01-01' }, 'eeedc78f71c74802030d85a1ceb6873a6937ebc277699c11263929d0eb5be27c'],
   ])('golden %j', (input, key) => {
     expect(cacheKey(input)).toBe(key)
+  })
+})
+
+describe('distinctPrompts: each question once, by the key\u2019s own judgement (MVP_PLAN C3r item 8)', () => {
+  it('keeps the first spelling in first-seen order, and leaves out what normalises to nothing', () => {
+    expect(distinctPrompts(['Best CRM?', 'best crm', '  BEST   CRM!! ', 'best erp', '??????????', ''])).toEqual(['Best CRM?', 'best erp'])
+    expect(distinctPrompts([])).toEqual([])
+  })
+
+  it('the list it returns never repeats a cell key', () => {
+    const list = distinctPrompts(['Best CRM?', 'best crm.', 'Which ERP is best', 'which erp is best?'])
+    expect(new Set(list.map((p) => cacheKey({ prompt: p, engine: 'chatgpt', locale: 'en-US', geo: 'US', dateBucket: '2026-09-19' }))).size).toBe(list.length)
   })
 })

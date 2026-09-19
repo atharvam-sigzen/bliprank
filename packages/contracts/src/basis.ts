@@ -186,6 +186,25 @@ function parseLoosely(s: string): Basis | null {
   }
 }
 
+/**
+ * IS THIS MEASUREMENT OVER A PERSON'S OWN SET, and which one: the custom tail
+ * of a HEADLINE basis, or null. One predicate (MVP_PLAN C3r item 6), because
+ * three readers each had their own and one of them had dropped half of it: the
+ * re-score read any `custom=` tail as a headline set without asking for
+ * `unprompted=0`.
+ *
+ * Both halves are the definition (ADR-0016 Amendment 1): the tail says whose
+ * questions, and `unprompted=0` says the bank's were not asked beside them.
+ * ⚠️ Call it on the HEADLINE's basis, the scan's own `comparisonBasis`.
+ * Decision 4's second block carried a basis of the same shape on its own
+ * field; the two are told apart by the field they live in, not by the string,
+ * so a caller holding a block's basis must not ask this.
+ */
+export function headlineSetOf(headlineBasis: string | undefined): CustomBasis | null {
+  const b = parseBasis(headlineBasis ?? '')
+  return b?.custom && b.unprompted === 0 ? b.custom : null
+}
+
 /** One segment's value in words, for the difference line. */
 function shown(b: Basis, key: keyof Basis): string {
   const v = b[key]
@@ -266,6 +285,52 @@ export function basisDifference(current: string, previous: string): string | nul
     if (x !== y) diffs.push(`${BASIS_LABELS[key]} (${y} against ${x})`)
   }
   return diffs.length ? `measured on a different basis: ${diffs.join(', ')}` : null
+}
+
+/**
+ * THE SAME DIFFERENCE, FOR A READER WHO HAS NEVER SEEN A BASIS STRING (stats
+ * review of C3r, MAJOR 3). `basisDifference` names segments for an auditor:
+ * "the prompt count (17 against 0), the custom prompt set (absent against
+ * 6@1)". On the record's day list, which is the plain reading of the trend,
+ * that line told a client their second day "asked 0 prompts" directly after
+ * telling them it asked "your 6 prompts": the segment counts the BANK's
+ * questions, and `6@1` is notation. This says what changed between the two
+ * days in the words a person would use, from the same parsed segments, so the
+ * two readings cannot disagree about WHETHER something changed: it is null
+ * exactly when `basisDifference` is.
+ */
+export function basisChangeWords(current: string, previous: string): string | null {
+  if (basisDifference(current, previous) === null) return null
+  const a = parseBasis(current)
+  const b = parseBasis(previous)
+  if (!a || !b) return 'the two days were measured in ways this record cannot line up'
+  const said: string[] = []
+  const questions = (x: Basis): string => (x.custom && x.unprompted === 0 ? `your own ${x.custom.count} ${x.custom.count === 1 ? 'question' : 'questions'} (version ${x.custom.version})` : `the category\u2019s ${x.unprompted} ${x.unprompted === 1 ? 'question' : 'questions'}`)
+  if (b.unprompted !== a.unprompted || customDifference(a.custom, b.custom) !== null) {
+    said.push(questions(a) === questions(b) ? 'the questions asked were not the same list, though saved under the same count and version' : `the day before was asked ${questions(b)}, and this day ${questions(a)}`)
+  }
+  if (b.bank.slug !== a.bank.slug) said.push('the category it was measured under changed')
+  else if (b.bank.version !== a.bank.version) said.push(`the category\u2019s question bank moved from version ${b.bank.version} to version ${a.bank.version}`)
+  if ([...a.engines].sort().join(',') !== [...b.engines].sort().join(',')) said.push('it was asked on a different set of AI engines')
+  if (a.locale !== b.locale || a.geo !== b.geo) said.push('it was asked for a different language or country')
+  if (a.runs !== b.runs) said.push('each question was asked a different number of times')
+  if (a.set !== b.set) said.push('the list of competitors it is scored against was changed')
+  if (a.format !== b.format) said.push('it was measured by a different method')
+  return said.length ? said.join('; ') : 'the two days were measured in ways this record cannot line up'
+}
+
+/**
+ * IS THE LIST A STORE HOLDS NOW THE LIST A STORED CYCLE ASKED? The version in a
+ * basis is a pointer into a store a person can edit; the count, and since C3r
+ * item 1 the fingerprint, say what the pointer pointed at. One check, for every
+ * reader that re-reads a set by version (the re-score pre-flight, the evidence
+ * reader): a reader that skipped it would re-derive, or show evidence for, a
+ * different sample under the old cycle's name. A tail stored before the
+ * fingerprint can only be held to its count, and that is said where it is used.
+ */
+export function customBasisMismatch(stored: CustomBasis, prompts: readonly string[]): 'count' | 'fingerprint' | null {
+  if (prompts.length !== stored.count) return 'count'
+  return stored.fingerprint !== undefined && promptSetFingerprint(prompts) !== stored.fingerprint ? 'fingerprint' : null
 }
 
 // ------------------------------------------------------------ the fingerprint

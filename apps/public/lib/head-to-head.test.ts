@@ -123,10 +123,37 @@ describe('ordering is deterministic and includes the subject', () => {
     ).toThrow(/duplicate competitor label/)
   })
 
-  it('a subject with no competitors is a chart of one row, not an error', () => {
+  it('a subject with no competitors is a chart of one row, not an error, and NOTHING was compared, so nothing is called indistinguishable', () => {
     const h = buildHeadToHead(SUBJECT, [])
     expect(h.rows).toHaveLength(1)
-    expect(h.allIndistinguishable).toBe(true)
+    expect(h.compared).toBe(0)
+    expect(h.allIndistinguishable).toBe(false)
+  })
+
+  it('"COMPARED, NO DIFFERENCE FOUND" IS NOT "TOO FEW ANSWERS TO COMPARE" (MVP_PLAN C3r item 4)', () => {
+    // A short set of a person's own questions: three questions on five engines is fifteen answers, under the floor on n for every
+    // row. compare() refuses each pair, and the page used to say "not one brand can be told apart from you" over that: a finding,
+    // where no comparison had been made at all.
+    const thin = buildHeadToHead({ label: 'acme.com', metric: m(4, 15) }, [
+      { label: 'HubSpot', metric: m(9, 15) },
+      { label: 'Attio', metric: m(1, 15) },
+    ])
+    expect(Object.values(verdicts(thin)).filter((v) => v !== 'you')).toEqual(['insufficient-data', 'insufficient-data'])
+    expect(thin.compared).toBe(0)
+    expect(thin.allIndistinguishable).toBe(false)
+    // Enough answers, overlapping ranges: compared, and no difference found.
+    const soft = buildHeadToHead(SUBJECT, [{ label: 'HubSpot', metric: m(18, 60) }])
+    expect(soft.compared).toBe(1)
+    expect(soft.allIndistinguishable).toBe(true)
+    // One compared and overlapping, one refused for too few answers: the finding is about the one that could be compared.
+    const mixed = buildHeadToHead(SUBJECT, [
+      { label: 'HubSpot', metric: m(18, 60) },
+      { label: 'Tiny', metric: m(2, 9) },
+    ])
+    expect(mixed.compared).toBe(1)
+    expect(mixed.allIndistinguishable).toBe(true)
+    // A separated row ends it, whatever else was refused.
+    expect(buildHeadToHead(SUBJECT, [{ label: 'Above', metric: m(36, 60) }, { label: 'Tiny', metric: m(2, 9) }]).allIndistinguishable).toBe(false)
   })
 })
 

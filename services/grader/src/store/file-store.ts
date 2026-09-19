@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { allPending, requestsFor } from '../category-requests.js'
 import { allPendingCompetitorRequests, competitorRequestsFor } from '../competitor-overrides.js'
 import { allPendingPromptRequests, promptRequestsFor, readCustomPromptSet } from '../custom-prompts.js'
-import { latestCycle, listCycles, readCycle, writeCycle, type CycleResult, type StoredCycle as FileCycle } from '../cycles.js'
+import { auditPathForFile, latestCycle, listCycles, readCycle, writeCycle, type CycleResult, type StoredCycle as FileCycle } from '../cycles.js'
 import { readOverride } from '../override-store.js'
 import { resolveTopology } from '../ledger-stores.js'
 import { readCategoryRecord, withRecordLock } from '../resolve-category.js'
@@ -128,6 +128,19 @@ export function fileWorkspaceStore(dataDir: string): WorkspaceStore {
           if (String(r['algoVersion'] ?? '') === c.algoVersion && (String(r['comparisonBasis'] ?? '') !== c.comparisonBasis || (runSourceOf(r) ?? 'hand') !== source)) {
             throw new Error(`workspace store: ${c.host} on ${c.day} under ${c.algoVersion} is already stored on another basis or from another source; a different measurement is not a re-write`)
           }
+          /*
+           * R5 ON THIS STORE (MVP_PLAN C3r item 11). A day's file is named by
+           * the day alone, so a write under a NEW scoring version replaces it,
+           * where the database keeps the old row beside the new one. Replacing
+           * it with no copy is a historical score silently gone: exactly what
+           * the rule forbids and what this twin did until now. So the standing
+           * file is first copied, byte for byte, to its audit path, the same
+           * rule and the same naming the re-score tool uses, and only then is
+           * the day re-written. The copy is never listed as a cycle and is
+           * never overwritten by a later supersession.
+           */
+          const standingAlgo = String(r['algoVersion'] ?? '')
+          if (standingAlgo !== c.algoVersion && existsSync(standing.file)) writeFileSync(auditPathForFile(standing.file, standingAlgo), readFileSync(standing.file))
         }
         const filed = writeCycle(dataDir, withSource(c.result, source) as unknown as CycleResult)
         if ('refuse' in filed) throw new Error(`workspace store: ${filed.refuse}`)

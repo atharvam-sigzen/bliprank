@@ -32,17 +32,17 @@
  * Pure: reads the stores, computes, writes nothing, spends nothing.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PRICE_USD_PER_CALL, type OwnPlan } from '@bliprank/collector'
 import { normaliseHost } from '@bliprank/taxonomy'
 import { readCustomPromptSet } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
 import { LOCAL_WORKSPACE } from './domain-ceiling.js'
-import { CORRUPT } from './ledger-doc.js'
+import { CORRUPT, updateFileLedgerSync } from './ledger-doc.js'
 import type { LedgerStores } from './ledger-stores.js'
 import { defaultGateConfig, type GateConfig } from './live-gate.js'
-import { allBanks, readCategoryRecord, withRecordLock, type CategoryRecord } from './resolve-category.js'
+import { allBanks, readCategoryRecord, type CategoryRecord } from './resolve-category.js'
 import { basisOf, promptsFor } from './scan.js'
 import { categoryRecordIn, customPromptsIn } from './store/documents.js'
 import type { WorkspaceStore } from './store/pg-store.js'
@@ -158,15 +158,94 @@ export class TrackedCeilingReached extends Error {
 }
 
 /**
+ * The hosts one workspace may re-check daily until plans gate the count (B6,
+ * D2). A tracked host is a DAILY spend, so this is a spend bound, and it lives
+ * here, beside the decision both twins make, not in the app: the operator's
+ * command runs over the same list and owes it the same ceiling (C3r item 12).
+ */
+export const DEFAULT_MAX_TRACKED_PER_WORKSPACE = 3
+
+/**
+ * The ceiling from the environment (`GRADER_MAX_TRACKED_PER_WORKSPACE`), or
+ * the default. A value that is not a positive integer KEEPS THE DEFAULT:
+ * `Number('ten')` is NaN, every comparison with NaN is false, and a limit read
+ * that way is a limit a typo switches off (C3 tenancy review, MINOR 4).
+ */
+export function maxTrackedPerWorkspace(env: Record<string, string | undefined>): number {
+  const raw = env['GRADER_MAX_TRACKED_PER_WORKSPACE']
+  const n = raw === undefined || raw === '' ? NaN : Number(raw)
+  return Number.isInteger(n) && n >= 1 ? n : DEFAULT_MAX_TRACKED_PER_WORKSPACE
+}
+
+/**
+ * THE SWITCH, pure: one workspace's entries after switching `entry.host` on or
+ * off, or `unchanged` when the write would change nothing. Throws
+ * `TrackedCeilingReached` when the workspace already re-checks `max` OTHER
+ * hosts. Both twins call it (`setTrackedIn` inside the ledger document's
+ * locked update, `setTracked` inside the record lock), so the route and the
+ * operator's command admit and refuse by one function, and `max` is not
+ * optional here: a caller cannot switch a host on without naming the ceiling
+ * it was held to.
+ *
+ * The ceiling counts what is LIVE: an entry past its `until` runs nothing and
+ * costs the day's cap nothing, so it may not hold a slot either, or three
+ * lapsed instructions block a workspace whose status says nothing is tracked
+ * (C3 tenancy re-check). Switching a host that is already tracked back on is a
+ * replacement, not an addition, and is never refused for the ceiling.
+ */
+export function decideTrackedSwitch(
+  own: readonly TrackedEntry[],
+  entry: TrackedEntry,
+  on: boolean,
+  opts: { readonly max: number; readonly today: string },
+): { readonly next: readonly TrackedEntry[] } | { readonly unchanged: readonly TrackedEntry[] } {
+  const live = own.filter((t) => t.until === undefined || opts.today <= t.until)
+  if (on && !live.some((t) => t.host === entry.host) && live.length >= opts.max) throw new TrackedCeilingReached(live.length, opts.max)
+  const kept = own.filter((t) => t.host !== entry.host)
+  // Switching off a host this workspace does not track changes nothing, so nothing is written (C3 tenancy review, MINOR 5).
+  if (!on && kept.length === own.length) return { unchanged: own }
+  return { next: on ? [...kept, entry] : kept }
+}
+
+/** Thrown inside a locked update to leave the document untouched when the switch would change nothing. */
+class TrackedUnchanged extends Error {
+  constructor(readonly own: readonly TrackedEntry[]) {
+    super('unchanged')
+  }
+}
+
+/**
+ * THE FOLD BOTH WRITERS RUN INSIDE THEIR LOCK: the stored document in, the
+ * document to store out. Everything that is a rule about the tracked list
+ * lives here, once: a corrupt or non-list document is an error and never an
+ * empty list; entries of OTHER workspaces pass through VERBATIM (parsing them
+ * would strip a field this build does not know and drop a malformed one: one
+ * writer rewriting another tenant's list, the C3 tenancy review's MAJOR 3);
+ * only this workspace's entries are parsed, decided on and replaced
+ * (`decideTrackedSwitch`). Throws `TrackedCeilingReached`, or
+ * `TrackedUnchanged` when nothing would change.
+ */
+function foldTracked(current: unknown, where: string, workspaceId: string, entry: TrackedEntry, on: boolean, opts: { readonly max: number; readonly today: string }): readonly unknown[] {
+  if (current === CORRUPT) throw new Error(`${where} is not readable JSON; nothing is tracked or untracked until a person repairs it`)
+  if (current !== null && current !== undefined && !Array.isArray(current)) throw new Error(`${where} is not a list; nothing is tracked or untracked until a person repairs it`)
+  const raw = (current ?? []) as readonly unknown[]
+  const isMine = (x: unknown): boolean => typeof x === 'object' && x !== null && workspaceOf(x as TrackedEntry) === workspaceId
+  const decided = decideTrackedSwitch(parseTracked(raw.filter(isMine), where), entry, on, opts)
+  if ('unchanged' in decided) throw new TrackedUnchanged(decided.unchanged)
+  return [...raw.filter((x) => !isMine(x)), ...decided.next]
+}
+
+/**
  * The store twin of `setTracked` (C3): switch a host's daily collection on or
  * off in the deployment's `tracked.json` ledger document, for ONE workspace.
  * The entry replaced or removed is the one for this host in this workspace
  * and no other: two workspaces tracking one host each keep their own entry
  * (ADR-0018 D10), and a workspace can neither see nor remove another's. A
  * corrupt document is an error, never an empty list (see `parseTracked`).
- * With `max`, a workspace already tracking that many OTHER hosts is refused
- * (`TrackedCeilingReached`), decided inside the locked update, so the count
- * and the append are one step: a read-then-write pair let two concurrent
+ * A workspace already tracking `max` OTHER hosts is refused
+ * (`TrackedCeilingReached`; `max` defaults to the build's ceiling, never to
+ * none), decided by `decideTrackedSwitch` inside the locked update, so the
+ * count and the append are one step: a read-then-write pair let two concurrent
  * switches both pass the ceiling (the C3 cost review, measured). Returns the
  * workspace's own entries after the write, never the others'.
  */
@@ -174,70 +253,55 @@ export async function setTrackedIn(ledgers: LedgerStores, where: string, w: Trac
   const host = normaliseHost(w.host)
   if (!host) throw new Error('not a domain')
   const isMine = (x: unknown): boolean => typeof x === 'object' && x !== null && workspaceOf(x as TrackedEntry) === w.workspaceId
-  /** Thrown inside the update to leave the document untouched when nothing would change. */
-  class Unchanged extends Error {
-    constructor(readonly own: readonly TrackedEntry[]) {
-      super('unchanged')
-    }
+  const entry: TrackedEntry = {
+    host,
+    since: w.at,
+    by: w.by,
+    reason: w.reason,
+    ...(w.workspaceId === LOCAL_WORKSPACE ? {} : { workspaceId: w.workspaceId }),
+    ...(w.role ? { role: w.role } : {}),
+    ...(w.until ? { until: w.until } : {}),
+    ...(w.prompts ? { prompts: w.prompts } : {}),
   }
   try {
-    const written = await ledgers.doc(TRACKED).update((current) => {
-      if (current === CORRUPT) throw new Error(`${where} is not readable JSON; nothing is tracked or untracked until a person repairs it`)
-      if (current !== null && current !== undefined && !Array.isArray(current)) throw new Error(`${where} is not a list; nothing is tracked or untracked until a person repairs it`)
-      const raw = (current ?? []) as readonly unknown[]
-      // OTHER WORKSPACES' ENTRIES PASS THROUGH VERBATIM (C3 tenancy review,
-      // MAJOR 3). Parsing them here would strip a field this build does not
-      // know and drop a malformed one: a stranger's switch rewriting another
-      // tenant's list. Only this workspace's entries are parsed and replaced.
-      const foreign = raw.filter((x) => !isMine(x))
-      const own = parseTracked(raw.filter(isMine), where)
-      // The ceiling counts what is LIVE: an entry past its `until` runs nothing and
-      // costs the cap nothing, so it may not hold a slot either, or three lapsed
-      // instructions block a workspace whose status says nothing is tracked (C3
-      // tenancy re-check). The same predicate the route's status count uses.
-      const today = opts.today ?? w.at.slice(0, 10)
-      const live = own.filter((t) => t.until === undefined || today <= t.until)
-      if (on && opts.max !== undefined && !live.some((t) => t.host === host) && live.length >= opts.max) throw new TrackedCeilingReached(live.length, opts.max)
-      const kept = own.filter((t) => t.host !== host)
-      // Switching off a host this workspace does not track changes nothing, so nothing is written (C3 tenancy review, MINOR 5).
-      if (!on && kept.length === own.length) throw new Unchanged(own)
-      const entry: TrackedEntry = {
-        host,
-        since: w.at,
-        by: w.by,
-        reason: w.reason,
-        ...(w.workspaceId === LOCAL_WORKSPACE ? {} : { workspaceId: w.workspaceId }),
-        ...(w.role ? { role: w.role } : {}),
-        ...(w.until ? { until: w.until } : {}),
-        ...(w.prompts ? { prompts: w.prompts } : {}),
-      }
-      return on ? [...foreign, ...kept, entry] : [...foreign, ...kept]
-    })
+    // The one fold both twins run (C3r item 12), inside the document's own lock.
+    const written = await ledgers.doc(TRACKED).update((current) => foldTracked(current, where, w.workspaceId, entry, on, { max: opts.max ?? DEFAULT_MAX_TRACKED_PER_WORKSPACE, today: opts.today ?? w.at.slice(0, 10) }))
     return parseTracked((written as readonly unknown[]).filter(isMine), where)
   } catch (e) {
-    if (e instanceof Unchanged) return e.own
+    if (e instanceof TrackedUnchanged) return e.own
     throw e
   }
 }
 
-/** Switch a domain's daily collection on or off. A person's act; it refuses a domain with no record, because there is nothing to collect under. */
+/**
+ * Switch a domain's daily collection on or off. A person's act; it refuses a
+ * domain with no record, because there is nothing to collect under, and it is
+ * held to the SAME ceiling the route is (`decideTrackedSwitch`, C3r item 12):
+ * before this, the operator's command could put any number of hosts on a list
+ * whose every entry is a daily spend. `max` defaults to the build's ceiling.
+ */
 export function setTracked(
   dataDir: string,
   domain: string,
   on: boolean,
-  who: { readonly by: string; readonly reason: string; readonly at?: string; readonly until?: string; readonly prompts?: number },
+  who: { readonly by: string; readonly reason: string; readonly at?: string; readonly until?: string; readonly prompts?: number; readonly max?: number },
 ): readonly TrackedEntry[] | { readonly refuse: string } {
   const host = normaliseHost(domain)
   if (!host) return { refuse: 'not a domain' }
   if (on && !readCategoryRecord(dataDir, host)) return { refuse: `${host} has no category on record; a first scan decides one, and only then is there something to re-check daily` }
-  return withRecordLock(dataDir, () => {
-    const current = readTracked(dataDir).filter((t) => t.host !== host)
-    const next = on
-      ? [...current, { host, since: who.at ?? new Date().toISOString(), by: who.by, reason: who.reason, ...(who.until ? { until: who.until } : {}), ...(who.prompts ? { prompts: who.prompts } : {}) }]
-      : current
-    writeFileSync(trackedFile(dataDir), JSON.stringify(next, null, 2) + '\n')
-    return next
-  })
+  const at = who.at ?? new Date().toISOString()
+  const entry: TrackedEntry = { host, since: at, by: who.by, reason: who.reason, ...(who.until ? { until: who.until } : {}), ...(who.prompts ? { prompts: who.prompts } : {}) }
+  const f = trackedFile(dataDir)
+  try {
+    // THE SAME LOCK THE ROUTE'S WRITER TAKES (`tracked.json.lock`, the file ledger document's), not the record store's: two
+    // lock files over one document exclude nobody, and with the app open and this command in a shell both writers could pass
+    // the ceiling or lose the other's entry (C3r cost review, MAJOR). And the same fold, so foreign entries pass through verbatim.
+    return parseTracked(updateFileLedgerSync(f, (current) => foldTracked(current, f, LOCAL_WORKSPACE, entry, on, { max: who.max ?? DEFAULT_MAX_TRACKED_PER_WORKSPACE, today: at.slice(0, 10) })), f)
+  } catch (e) {
+    if (e instanceof TrackedCeilingReached) return { refuse: e.message }
+    if (e instanceof TrackedUnchanged) return readTracked(dataDir)
+    throw e
+  }
 }
 
 // ---------------------------------------------------------------- the due list

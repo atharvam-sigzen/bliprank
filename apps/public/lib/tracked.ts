@@ -9,8 +9,7 @@
  * export fails `next build`'s type guard while `pnpm typecheck` stays green).
  */
 
-/** The hosts one workspace may re-check daily until D2 gates the count by plan (B6). Overridden by `GRADER_MAX_TRACKED_PER_WORKSPACE`. */
-export const DEFAULT_MAX_TRACKED_PER_WORKSPACE = 3
+// The ceiling on tracked hosts per workspace is NOT defined here any more: it is a spend bound and lives with the one decision both the route and the operator's command make (`decideTrackedSwitch`, `maxTrackedPerWorkspace`, services/grader/src/due.ts; MVP_PLAN C3r item 12).
 /** The longest instruction a person can give in one go, in days. A longer re-check is a second instruction, given later, with the trend in view. */
 export const MAX_TRACK_DAYS = 90
 export const DEFAULT_TRACK_DAYS = 7
@@ -77,6 +76,3 @@ export function positiveIntOr(raw: string | undefined, fallback: number): number
   const n = Number(raw)
   return Number.isInteger(n) && n >= 1 ? n : fallback
 }
-
-/** The per-workspace ceiling from the environment, or the default. */
-export const maxTrackedPerWorkspace = (env: NodeJS.ProcessEnv): number => positiveIntOr(env['GRADER_MAX_TRACKED_PER_WORKSPACE'], DEFAULT_MAX_TRACKED_PER_WORKSPACE)

@@ -52,7 +52,7 @@ export function PromptBreakdown({ scan }: { scan: ScanResultFile }) {
       <section className="section detail">
         <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }}>
           There is no per-question breakdown for this cycle. The answers were scored together into one rate of{' '}
-        <span className="num">{scan.counts.answersScored}</span> answers, and this file does not carry which question or which engine each of
+        <span className="num">{subjectOf(scan).metric.n}</span> answers, and this file does not carry which question or which engine each of
         them came from. That is a statement about this stored payload, not a finding: it does not mean the questions went unanswered, and
           splitting the total five ways to fill the gap would be arithmetic presented as evidence.
         </p>

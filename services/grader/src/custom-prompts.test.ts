@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -13,6 +13,9 @@ import {
   readCustomPromptSet,
   resolvePromptRequest,
 } from './custom-prompts.js'
+import { ENGINES } from '@bliprank/contracts'
+import { DEFAULT_CELLS_PER_CYCLE } from './domain-ceiling.js'
+import { DEFAULT_PROMPTS_PER_SCAN } from './live-gate.js'
 import { recordCategory } from './resolve-category.js'
 
 /**
@@ -105,5 +108,38 @@ describe('requests', () => {
     expect(resolvePromptRequest(dir, 'acme.test', { status: 'applied', by: 'operator', expectRequestedAt: '2026-09-03T09:00:00.000Z' })).toMatchObject({ refuse: expect.stringContaining('changed since') })
     expect(resolvePromptRequest(dir, 'acme.test', { status: 'declined', by: 'operator', note: 'too vague', expectRequestedAt: '2026-09-03T09:05:00.000Z' })).toMatchObject({ status: 'declined', note: 'too vague' })
     expect(pendingPromptRequest(dir, 'acme.test')).toBeNull()
+  })
+})
+
+describe('the largest set a person may save is one cycle’s prompts, by definition and not by coincidence (MVP_PLAN C3r item 13)', () => {
+  it('the two figures are one figure: lowering the cycle’s prompt count for cost lowers the set’s bound with it', () => {
+    expect(MAX_CUSTOM_PROMPTS).toBe(DEFAULT_PROMPTS_PER_SCAN)
+  })
+
+  it('what the pin protects: a full-size set buys exactly the cells every per-cycle bound was sized on, never more', () => {
+    // The per-domain ceiling's derived default and the daily cap's expected cost are both built from DEFAULT_CELLS_PER_CYCLE.
+    expect(MAX_CUSTOM_PROMPTS * ENGINES.length).toBe(DEFAULT_CELLS_PER_CYCLE)
+    const full = Array.from({ length: MAX_CUSTOM_PROMPTS }, (_, i) => `a perfectly ordinary question number ${i}`)
+    expect(checkCustomPrompts(dir, 'acme.test', full, REASON)).toMatchObject({ prompts: full })
+    expect(checkCustomPrompts(dir, 'acme.test', [...full, 'and one question more than a cycle holds'], REASON)).toMatchObject({ kind: 'too-many' })
+  })
+})
+
+describe('each question is asked once, on READ as on write (MVP_PLAN C3r item 8)', () => {
+  it('a hand-edited store file that repeats a prompt under another spelling reads back as the distinct list, in both readers', () => {
+    const applied = applyCustomPrompts(dir, { host: 'acme.test', prompts: GOOD, reason: REASON, by: 'operator' })
+    expect(applied).toMatchObject({ version: 1, prompts: GOOD })
+    // The writer never stores a repeat. A person with an editor can: the same question three ways, and one that is only punctuation.
+    const file = join(dir, 'custom-prompts.json')
+    const stored = JSON.parse(readFileSync(file, 'utf8')) as Record<string, { prompts: string[] }>
+    stored['acme.test']!.prompts = [GOOD[0]!, `${GOOD[0]!.toUpperCase()}?`, `  ${GOOD[0]}  `, GOOD[1]!, '??????????']
+    writeFileSync(file, JSON.stringify(stored))
+    expect(readCustomPromptSet(dir, 'acme.test')?.prompts).toEqual(GOOD)
+    expect(customPromptsAt(dir, 'acme.test', 1)?.prompts).toEqual(GOOD)
+  })
+
+  it('a prompt that is only punctuation is refused when it is saved: it passed the length check and could never be collected', () => {
+    const r = checkCustomPrompts(dir, 'acme.test', [...GOOD, '??????????'], REASON)
+    expect(r).toMatchObject({ kind: 'input', refuse: expect.stringContaining('has no words in it, only punctuation') })
   })
 })

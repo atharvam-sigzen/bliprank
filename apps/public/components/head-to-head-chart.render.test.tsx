@@ -48,7 +48,7 @@ const rows = [
   row('Close', 'not-comparable', 0, 85),
   row('Thin Data', 'insufficient-data', 2, 11),
 ]
-const data: HeadToHead = { rows, subject: rows[0]!, allIndistinguishable: false }
+const data: HeadToHead = { rows, subject: rows[0]!, compared: rows.length - 1, allIndistinguishable: false }
 const html = renderToStaticMarkup(<HeadToHeadChart data={data} subjectLabel="You Inc" />)
 
 describe('the chart renders every verdict it can produce', () => {

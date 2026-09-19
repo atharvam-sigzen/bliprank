@@ -1,4 +1,4 @@
-import { parseBasis } from '@bliprank/contracts/basis'
+import { headlineSetOf } from '@bliprank/contracts/basis'
 
 /**
  * THE PROMPT SET A MEASUREMENT WAS TAKEN OVER, read off its own basis string
@@ -23,9 +23,9 @@ export interface PromptSetRef {
 }
 
 export function promptSetOf(comparisonBasis: string | undefined): PromptSetRef | null {
-  const b = parseBasis(comparisonBasis ?? '')
-  // `unprompted=0` is what makes it the HEADLINE's set: decision 4's second block carried `custom=` on its own basis, never on the headline's.
-  return b?.custom && b.unprompted === 0 ? { count: b.custom.count, version: b.custom.version } : null
+  // The ONE predicate for "is this a headline set", shared with the re-score and the evidence reader (`headlineSetOf`, packages/contracts/src/basis.ts; C3r item 6).
+  const set = headlineSetOf(comparisonBasis)
+  return set ? { count: set.count, version: set.version } : null
 }
 
 /**
@@ -35,8 +35,12 @@ export function promptSetOf(comparisonBasis: string | undefined): PromptSetRef |
  * says whose questions these were; a screenshot also has to say that this is
  * not a position in the category.
  */
+// "No other domain" used to stand directly above a chart of rival domains (C3r item 4). What may not be compared is another
+// domain's OWN measurement, taken over its own questions; rivals charted on the page were scored on THESE questions in THIS scan,
+// which is exactly why they may sit beside the number (said of "any rivals", because a record with no competitor set shows none). And it is the same QUESTIONS that make two cycles comparable, not the
+// same version number: a list asked again under a new version is the same sample (C3r item 1).
 export const PROMPT_SET_SCOPE =
-  'This number is measured over your own questions, so it compares with your own earlier cycles asked the same version of them, and with nothing else: not with another domain, and not with a scan asked the category bank.'
+  'This number is measured over your own questions, so it compares with your own earlier cycles that asked the same questions and hold enough answers to compare, and with no other measurement: not with another domain’s own number, and not with a scan asked the category bank. Any rivals shown on this page were scored on these same questions in this same scan, which is why they can sit beside it.'
 
 /** "your 5 prompts, version 2" — the words the owner asked for, one definition for every surface. */
 export const promptSetWords = (s: PromptSetRef): string => `your ${s.count} ${s.count === 1 ? 'prompt' : 'prompts'}, version ${s.version}`

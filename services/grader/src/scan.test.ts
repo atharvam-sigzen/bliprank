@@ -634,6 +634,11 @@ describe("ADR-0016 Amendment 1 — the person's edited set IS the measurement", 
       seen.push(p)
       return 'HubSpot is a common answer.'
     })
+    // A REPEATED QUESTION IS REFUSED BEFORE ANYTHING IS ASKED (C3r item 8): one cache key asked twice would count its answers
+    // twice. Both readers of a set drop repeats, so this is the backstop for a caller that built its own list.
+    const before = seen.length
+    await expect(runScan(req('pipedrive.com', { promptSet: { version: 2, prompts: [own, `${own.toUpperCase()}?`] } }), d)).rejects.toThrow(/repeat a question \(\d+ cells, \d+ distinct\)/)
+    expect(seen.length).toBe(before)
     const r = await runScan(req('pipedrive.com', { promptSet: { version: 2, prompts: [kept.text, own] } }), d)
     expect(r.status).toBe('scanned')
     if (r.status !== 'scanned') return

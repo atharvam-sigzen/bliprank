@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev -H 127.0.0.1 -p 3001",
     "build": "next build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "start": "next start -p 3001"
+    "start": "next start -H 127.0.0.1 -p 3001"
   },
   "dependencies": {
     "@bliprank/contracts": "workspace:*",

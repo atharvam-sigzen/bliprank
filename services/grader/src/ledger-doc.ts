@@ -78,22 +78,74 @@ const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeou
  * a waiter tries for as long as a KV waiter does and then fails CLOSED. The
  * shape is the KV one: setnx with a TTL, release after the write.
  */
+/** The lock's descriptor, or null while another writer holds a fresh one. One definition for the asynchronous document and its synchronous twin below, so the two can never come to mean different files or different lifetimes. */
+function tryLockFile(lock: string): number | null {
+  try {
+    if (existsSync(lock) && Date.now() - statSync(lock).mtimeMs > LOCK_TTL_SEC * 1000) rmSync(lock, { force: true })
+  } catch {
+    /* vanished between the check and the stat: the open below decides */
+  }
+  try {
+    return openSync(lock, 'wx')
+  } catch {
+    return null
+  }
+}
+
+const lockRefusal = (file: string): string => `ledger ${file}: could not take its lock in ${(LOCK_ATTEMPTS * LOCK_WAIT_MS) / 1000}s; another writer holds ${file}.lock, or a process left it behind less than ${LOCK_TTL_SEC}s ago`
+
+/** Block this thread for `ms` without spinning. Only the synchronous twin waits this way, and only a command a person runs calls it. */
+const sleepSync = (ms: number): void => void Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+
+/**
+ * THE SYNCHRONOUS TWIN of `fileLedgerDoc(file).update`: the SAME lock file,
+ * the same time to live, the same wait, the same synchronous critical
+ * section, for a writer that is not asynchronous (C3r cost review, MAJOR).
+ *
+ * `tracked.json` has two writers on a machine: the route, through the ledger
+ * document above, and the operator's command, which is synchronous and took
+ * the record store's lock instead. Two lock files over one document exclude
+ * nobody: with the app open and the command in a shell, both could read "two
+ * of three tracked", both pass the ceiling, and the later write erased the
+ * earlier one's entry. A tracked host is a daily spend, so that ceiling is a
+ * spend bound and one lock is the fix, not a second careful reader.
+ *
+ * `fn` may throw to leave the document untouched (a refusal, a no-op); the
+ * lock is released either way. A corrupt document is handed over as `CORRUPT`.
+ */
+export function updateFileLedgerSync<T>(file: string, fn: (current: unknown) => T): T {
+  mkdirSync(dirname(file), { recursive: true })
+  const lock = `${file}.lock`
+  let fd: number | null = null
+  for (let i = 0; i < LOCK_ATTEMPTS && fd === null; i++) {
+    fd = tryLockFile(lock)
+    if (fd === null) sleepSync(LOCK_WAIT_MS)
+  }
+  if (fd === null) throw new Error(lockRefusal(file))
+  try {
+    let current: unknown
+    try {
+      current = existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as unknown) : null
+    } catch {
+      current = CORRUPT
+    }
+    const next = fn(current)
+    writeFileSync(file, JSON.stringify(next, null, 2) + '\n')
+    return next
+  } finally {
+    try {
+      closeSync(fd)
+    } catch {
+      /* already closed */
+    }
+    rmSync(lock, { force: true })
+  }
+}
+
 export function fileLedgerDoc(file: string, sleep: (ms: number) => Promise<void> = defaultSleep): LedgerDoc {
   const read = (): unknown => (existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as unknown) : null)
   const lock = `${file}.lock`
-  /** The lock's descriptor, or null while another writer holds a fresh one. */
-  const tryLock = (): number | null => {
-    try {
-      if (existsSync(lock) && Date.now() - statSync(lock).mtimeMs > LOCK_TTL_SEC * 1000) rmSync(lock, { force: true })
-    } catch {
-      /* vanished between the check and the stat: the open below decides */
-    }
-    try {
-      return openSync(lock, 'wx')
-    } catch {
-      return null
-    }
-  }
+  const tryLock = (): number | null => tryLockFile(lock)
   return {
     async read() {
       return read()
@@ -105,7 +157,7 @@ export function fileLedgerDoc(file: string, sleep: (ms: number) => Promise<void>
         fd = tryLock()
         if (fd === null) await sleep(LOCK_WAIT_MS)
       }
-      if (fd === null) throw new Error(`ledger ${file}: could not take its lock in ${(LOCK_ATTEMPTS * LOCK_WAIT_MS) / 1000}s; another writer holds ${lock}, or a process left it behind less than ${LOCK_TTL_SEC}s ago`)
+      if (fd === null) throw new Error(lockRefusal(file))
       try {
         // No await from here to the write.
         let current: unknown

@@ -52,7 +52,7 @@
 import { copyFileSync, existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { AnswerIndex, type OwnPlan } from '@bliprank/collector'
-import { ENGINES, parseBasis, type EngineId } from '@bliprank/contracts'
+import { ENGINES, customBasisMismatch, headlineSetOf, parseBasis, type EngineId } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION } from '@bliprank/scorer'
 import { DEFAULT_CAP_USD, defaultGateConfig } from './live-gate.js'
 import { loadApiKey } from './load-key.js'
@@ -62,7 +62,7 @@ import { runGrader } from './run.js'
 import { basisOf, cellsFor, customCellsFor } from './scan.js'
 import { customPromptsAt } from './custom-prompts.js'
 import { overrideAt } from './override-store.js'
-import { latestPath, listCycles, storedResults } from './cycles.js'
+import { auditPathForFile, latestPath, listCycles, storedResults } from './cycles.js'
 
 const here = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
@@ -119,12 +119,8 @@ export function auditPathFor(dataDir: string, domain: string, algo: string): str
   return auditPathForFile(latestPath(dataDir, domain), algo)
 }
 
-/** The same rule for any result file, so a cycle file's audit row sits beside it (ADR-0013). */
-export function auditPathForFile(file: string, algo: string): string {
-  const base = `${file.replace(/\.json$/, '')}.${algo || 'unversioned'}`
-  if (!existsSync(`${base}.audit.json`)) return `${base}.audit.json`
-  for (let n = 2; ; n++) if (!existsSync(`${base}.${n}.audit.json`)) return `${base}.${n}.audit.json`
-}
+// The rule for any result file lives with the cycle store (`cycles.ts`), because the store's own writer keeps a superseded day by it too (MVP_PLAN C3r item 11); re-exported here, where the re-score and its tests have always found it.
+export { auditPathForFile }
 
 /** The ledger's own cap. See the header: opening with a smaller one lowers it for good. */
 function ledgerCap(dataDir: string): number {
@@ -167,6 +163,15 @@ interface Plan {
    * derivation, never the sample (C3 stats review, BLOCKER 1).
    */
   readonly promptSetRole: 'headline' | 'block' | null
+  /**
+   * True when the stored custom tail carries no fingerprint, so re-deriving
+   * this cycle would stamp one and CHANGE ITS BASIS STRING. Under a new
+   * scoring version that is a truthful addition across a boundary `compare()`
+   * draws anyway; under the SAME version it would break a trend over an
+   * identical sample wherever a neighbour could not be re-derived, so the
+   * same-version path refuses it (stats review of C3r item 1, MINOR 4).
+   */
+  readonly restampsBasis: boolean
 }
 
 
@@ -218,11 +223,29 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
   // prompts at the recorded count, plus decision 4's second block when the
   // stored cycle carried one. Either way every cell must already be in the
   // store, or the re-derivation would buy it; and the version is pinned.
-  const headlineSet = parseBasis(stored.comparisonBasis ?? '')?.custom
-  const customBasis = headlineSet ? null : parseBasis((stored as { customPrompts?: { comparisonBasis?: string } }).customPrompts?.comparisonBasis ?? '')
-  const customVersion = headlineSet?.version ?? customBasis?.custom?.version ?? null
+  // The ONE predicate for a headline set (`headlineSetOf`, C3r item 6). This line read any `custom=` tail as one, without
+  // asking for `unprompted=0`, which the other two readers did ask for.
+  const headlineSet = headlineSetOf(stored.comparisonBasis)
+  const block = (stored as { customPrompts?: { comparisonBasis?: string } }).customPrompts
+  const blockSet = headlineSet || !block ? null : (parseBasis(block.comparisonBasis ?? '')?.custom ?? null)
+  // A SECOND MEASUREMENT WHOSE BASIS CANNOT BE READ IS A REFUSAL (C3r item 7). This used to fall through with no custom
+  // version at all, so the cycle was re-derived WITHOUT its second measurement and written back over the file that had one.
+  if (block && !headlineSet && !blockSet) return { refuse: `${domain}: this cycle carries a second measurement whose basis cannot be read, so it cannot be re-derived as it was; re-deriving without it would drop a measurement from the record` }
+  const storedSet = headlineSet ?? blockSet
+  const customVersion = storedSet?.version ?? null
   const customSet = customVersion === null ? null : customPromptsAt(dataDir, domain, customVersion)
   if (customVersion !== null && !customSet) return { refuse: `${domain}: this cycle was measured over prompt set ${customVersion}, which the store no longer holds` }
+  // THE SET RE-READ MUST BE THE SET THAT WAS ASKED (C3r item 7). The version is a pointer into a store a person can edit; the
+  // stored basis says how many prompts the cycle asked and, since C3r item 1, which. A store whose version N no longer holds
+  // that list would re-derive a DIFFERENT sample under the old file's name, which is the rebasing R5 forbids.
+  // A tail stored BEFORE the fingerprint can be held to its count only. What still protects such a cycle from a same-length edit:
+  // every cell of the re-read list must already be in the answer store for that day (`missing`, below), and an edited prompt's
+  // cells are not, so the plan reports them missing and nothing is re-derived (stats review of C3r, NOTE 4).
+  if (storedSet && customSet) {
+    const mismatch = customBasisMismatch(storedSet, customSet.prompts)
+    if (mismatch === 'count') return { refuse: `${domain}: this cycle asked ${storedSet.count} prompts at set ${storedSet.version}, and the store's set ${storedSet.version} now holds ${customSet.prompts.length}; re-deriving over a different list is a different measurement` }
+    if (mismatch === 'fingerprint') return { refuse: `${domain}: the store's prompt set ${storedSet.version} is no longer the list this cycle asked (its fingerprint differs); re-deriving over a different list is a different measurement` }
+  }
   const maxPrompts = headlineSet ? 0 : (basis.maxPrompts ?? fallbackPrompts)
   const cells = headlineSet && customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [...cellsFor(bank, engines, day, maxPrompts), ...(customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [])]
   const index = new AnswerIndex(answerStores(dataDir).kv)
@@ -243,7 +266,15 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
     competitorSet,
     customPrompts: customVersion,
     promptSetRole: customVersion === null ? null : headlineSet ? 'headline' : 'block',
+    restampsBasis: storedSet !== null && storedSet.fingerprint === undefined,
   }
+}
+
+/** Why a SAME-VERSION re-score of this plan is refused, or null. A re-score under one scoring version may add fields; it may not move a basis. */
+export function restampRefusal(plan: Pick<Plan, 'restampsBasis'>, sameVersion: boolean): string | null {
+  return sameVersion && plan.restampsBasis
+    ? 'this cycle\u2019s basis was stored before a prompt set recorded which questions it held; re-deriving it under the SAME scoring version would change its basis string and break its trend against neighbours that cannot be re-derived. It is restamped only by a re-score under a new scoring version (R5, ADR-0016 Amendment 1 addendum)'
+    : null
 }
 
 async function main(): Promise<void> {
@@ -282,7 +313,7 @@ async function main(): Promise<void> {
         process.stdout.write(`  SKIP  ${domain.padEnd(22)} ${plan.refuse}\n`)
         continue
       }
-      const same = sameVersionRefusal(plan.algoVersion, o.sameVersion)
+      const same = sameVersionRefusal(plan.algoVersion, o.sameVersion) ?? restampRefusal(plan, o.sameVersion)
       if (same) {
         process.stdout.write(`  SKIP  ${domain.padEnd(22)} ${same}\n`)
         continue

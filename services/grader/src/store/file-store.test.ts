@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -50,13 +50,25 @@ describe('cycles', () => {
     expect((await s.cycles.read('acme.example', '2026-09-05'))?.source).toBe('loop')
     // The same measurement again (a retry, a re-derivation) re-writes.
     await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-3', comparisonBasis: 'b', result: stamped({ rewritten: true }), source: 'loop' })
-    // A NEW algorithm version on the same day is not refused by either twin. WHERE THEY DIFFER, and have since before this rule
-    // (cycles.ts names a day's file by the day alone): Postgres keeps both rows (R5's new row beside the old), the file store
-    // REPLACES the day's one file, so the det-3 body is gone from `cycles/` here. The re-score tool keeps its own audit copy of
-    // what it replaces; this store does not. Asserted as it is, so nobody reads the comment above as a promise the file twin
-    // keeps. ⚠️ HUMAN REVIEW: an R5 retention divergence between the twins, for the scoring owner to accept or close.
+    // A NEW algorithm version on the same day is not refused by either twin, and NEITHER LOSES THE OLD SCORE (R5, MVP_PLAN C3r item 11).
+    // Postgres keeps both rows. This store names a day's file by the day alone, so the det-3 body used to be gone from disk the
+    // moment det-4 was written; now it is first copied, byte for byte, to its audit path, by the rule the re-score tool uses.
+    const standingFile = join(dir, 'results', 'cycles', 'acme.example', '2026-09-05.json')
+    const det3Bytes = readFileSync(standingFile, 'utf8')
+    expect(JSON.parse(det3Bytes)).toMatchObject({ algoVersion: 'det-3', rewritten: true })
     await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-4', comparisonBasis: 'b', result: stamped({ algoVersion: 'det-4' }), source: 'hand' })
     expect((await s.cycles.list('acme.example')).filter((c) => c.day === '2026-09-05').map((c) => c.algoVersion)).toEqual(['det-4'])
+    const audit = join(dir, 'results', 'cycles', 'acme.example', '2026-09-05.det-3.audit.json')
+    expect(readFileSync(audit, 'utf8')).toBe(det3Bytes)
+    // A same-version re-write supersedes nothing, so it leaves no copy; a SECOND supersession gets its own slot and the first stands.
+    await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-4', comparisonBasis: 'b', result: stamped({ algoVersion: 'det-4', again: true }), source: 'hand' })
+    expect(existsSync(join(dir, 'results', 'cycles', 'acme.example', '2026-09-05.det-4.audit.json'))).toBe(false)
+    await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-3', comparisonBasis: 'b', result: stamped({ back: true }), source: 'hand' })
+    await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-4', comparisonBasis: 'b', result: stamped({ algoVersion: 'det-4' }), source: 'hand' })
+    expect(readFileSync(audit, 'utf8')).toBe(det3Bytes)
+    expect(JSON.parse(readFileSync(join(dir, 'results', 'cycles', 'acme.example', '2026-09-05.det-3.2.audit.json'), 'utf8'))).toMatchObject({ algoVersion: 'det-3', back: true })
+    // The copies are never cycles: the day still lists once.
+    expect((await s.cycles.list('acme.example')).filter((c) => c.day === '2026-09-05')).toHaveLength(1)
   })
 
   it('keeps the database writer\'s guards: the host, the day and the status must agree with the result', async () => {

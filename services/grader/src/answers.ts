@@ -48,7 +48,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { AnswerIndex, r2KeyFor } from '@bliprank/collector'
-import { ENGINES, parseBasis, type EngineId } from '@bliprank/contracts'
+import { ENGINES, customBasisMismatch, headlineSetOf, type EngineId } from '@bliprank/contracts'
 import { PUBLISHER_REGISTRY } from '@bliprank/taxonomy'
 import { answerStores } from './answer-stores.js'
 import { allBanks } from './resolve-category.js'
@@ -183,12 +183,17 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   // `basisOf` yields no prompt count for `unprompted=0`, and `cellsFor` with
   // none would build the WHOLE bank: the wrong evidence under the right
   // number. A version the store no longer holds is a refusal, never today's.
-  const headline = parseBasis(stored.comparisonBasis ?? '')
-  const headlineSet = headline && headline.unprompted === 0 && headline.custom ? headline.custom : null
+  // The ONE predicate for a headline set, shared with the re-score and the record's label (`headlineSetOf`, C3r item 6).
+  const headlineSet = headlineSetOf(stored.comparisonBasis)
   let cells: { readonly cell: ReturnType<typeof cellsFor>[number]['cell']; readonly prompt: string; readonly engine: EngineId; readonly custom: boolean }[]
   if (headlineSet) {
     const set = await customPromptsAtIn(store, domain, headlineSet.version)
     if (!set) return { refuse: `${domain}: this cycle was measured over prompt set ${headlineSet.version}, which the store no longer holds` }
+    // THE SAME CHECK THE RE-SCORE MAKES (stats review of C3r, MINOR 9). The version is a pointer into a store a person can edit, and a
+    // set is now read with repeats dropped: a store whose version N is no longer the list this cycle asked would yield evidence over
+    // a NARROWER or different sample than the headline beside it, with no word said. Refused, as the re-score refuses it.
+    const mismatch = customBasisMismatch(headlineSet, set.prompts)
+    if (mismatch) return { refuse: `${domain}: the store's prompt set ${headlineSet.version} is no longer the list this cycle asked (${mismatch === 'count' ? `it asked ${headlineSet.count} prompts and the set now holds ${set.prompts.length}` : 'its fingerprint differs'}), so its evidence cannot be shown as that cycle's` }
     cells = customCellsFor(bank, engines, day, set.prompts).map((c) => ({ ...c, custom: false }))
   } else {
     cells = [

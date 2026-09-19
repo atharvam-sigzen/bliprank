@@ -35,9 +35,10 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { normalisePrompt } from '@bliprank/contracts'
+import { distinctPrompts, normalisePrompt } from '@bliprank/contracts'
 import { domainBrandForms, findMentions, normaliseForMatch, squash, type BrandSpec } from '@bliprank/scorer'
 import { normaliseHost, type PromptBank } from '@bliprank/taxonomy'
+import { DEFAULT_PROMPTS_PER_SCAN } from './live-gate.js'
 import { allBanks, namesTrackedBrand, plainText, readCategoryRecord, trackedBrands, withRecordLock, type CategoryRecord } from './resolve-category.js'
 import { categoryRecordIn, customPromptsIn } from './store/documents.js'
 import type { WorkspaceStore } from './store/pg-store.js'
@@ -50,10 +51,25 @@ import type { WorkspaceStore } from './store/pg-store.js'
  * shared with 17 curated prompts, would admit none). It bounds cells, cost and
  * the ceiling; the surface says so in those words.
  */
-// One cycle's prompt count (`DEFAULT_PROMPTS_PER_SCAN`, live-gate.ts): the
-// edited set IS the measurement, and a measurement costs at most one cycle's
-// cells, so the set is bounded where the bank is (ADR-0016 Amendment 1).
-export const MAX_CUSTOM_PROMPTS = 17
+// One cycle's prompt count: the edited set IS the measurement, and a
+// measurement costs at most one cycle's cells, so the set is bounded where the
+// bank is (ADR-0016 Amendment 1). It IS `DEFAULT_PROMPTS_PER_SCAN`, not a
+// second 17 (MVP_PLAN C3r item 13): every bound sized on a cycle's cells (the
+// per-domain ceiling's derived default, `DEFAULT_CELLS_PER_CYCLE`) assumes no
+// cycle is larger than the bank's default, so lowering that constant for cost
+// and leaving this one behind would let a person's set buy a cycle bigger than
+// the one that default was sized for. `custom-prompts.test.ts` pins the
+// relationship and what it protects.
+//
+// WHAT THIS DOES NOT DO, said so nobody reads more into it (stats review of
+// C3r, NOTE 5): it follows the compile-time default, not the ENVIRONMENT.
+// `GRADER_PROMPTS_PER_SCAN` lowers the BANK's cycle on one machine; a person's
+// set may still hold up to this many. That opens no unbounded spend: the
+// cost review traced every per-cycle bound (the due list's expected cost, the
+// daily cap built from it, the run allowance, the quota pre-check) to the
+// SET's real cell count, never to the environment's figure. Whether an
+// operator's lower figure should also cap a person's set is the owner's call.
+export const MAX_CUSTOM_PROMPTS = DEFAULT_PROMPTS_PER_SCAN
 export const PROMPT_MIN = 10
 export const PROMPT_MAX = 200
 
@@ -72,7 +88,9 @@ export type SupersededSet = Omit<CustomPromptSet, 'superseded'>
 const setsFile = (dataDir: string): string => join(dataDir, 'custom-prompts.json')
 const requestsFile = (dataDir: string): string => join(dataDir, 'custom-prompt-requests.json')
 
-const cleanList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((p): p is string => typeof p === 'string').map(plainText).filter(Boolean) : [])
+// ON READ, AS ON WRITE (C3r item 8): each question once. The writer below has always dropped a repeat; a file edited by hand
+// never met the writer, and a cycle asked its repeated prompt as two cells and counted the answers twice.
+const cleanList = (v: unknown): string[] => (Array.isArray(v) ? distinctPrompts(v.filter((p): p is string => typeof p === 'string').map(plainText).filter(Boolean)) : [])
 
 function shapeSet(host: string, value: unknown, withHistory: boolean): CustomPromptSet | null {
   if (typeof value !== 'object' || value === null) return null
@@ -155,6 +173,9 @@ export function checkCustomPromptsWith(domain: string, prompts: readonly unknown
     // The cache key's own normalisation decides what is the same question: "best crm?" and "best crm" are one cell, so they are one prompt here.
     // A prompt the bank also asks is KEPT, not refused: the set replaces the bank (Amendment 1), so a kept bank prompt is one cell, asked once.
     const key = normalisePrompt(p)
+    // Ten question marks pass the length check and normalise to nothing; the cache key refuses to key nothing, so such a set could be
+    // SAVED and never collected: every cycle over it threw. Found by the statistics review of C3r item 1, refused here with the reason.
+    if (key === '') return { refuse: `"${p}" has no words in it, only punctuation, so there is no question for the engines to answer`, kind: 'input' }
     if (seen.has(key)) continue
     seen.add(key)
     list.push(p)

@@ -123,6 +123,20 @@ export function writeCycle(dataDir: string, result: CycleResult): { readonly day
 }
 
 /**
+ * Where a SUPERSEDED result file goes: beside the file it was, named for the
+ * algorithm that produced it, and never overwritten, so a second supersession
+ * under one algorithm gets its own slot rather than erasing the first
+ * (ADR-0013). One rule for the re-score tool and for the store's own writer
+ * (R5: a historical score is kept, never replaced). `.audit.json` rows are
+ * never listed as cycles and nothing serves them.
+ */
+export function auditPathForFile(file: string, algo: string): string {
+  const base = `${file.replace(/\.json$/, '')}.${algo || 'unversioned'}`
+  if (!existsSync(`${base}.audit.json`)) return `${base}.audit.json`
+  for (let n = 2; ; n++) if (!existsSync(`${base}.${n}.audit.json`)) return `${base}.${n}.audit.json`
+}
+
+/**
  * Every cycle this store holds for a domain, oldest first.
  *
  * The cycles directory, plus the latest file when its day is not already among

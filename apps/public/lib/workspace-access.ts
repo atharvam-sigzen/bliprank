@@ -44,7 +44,15 @@ import { dataDir, ROOT } from './data-dir'
  * too: an owner or admin applies a correction directly (the POST on
  * /api/category, /api/competitors, /api/custom-prompts writes version N+1
  * and marks a matching pending request applied); a member files a request
- * for them; on the file store everyone files, and the CLIs apply. Corrections
+ * for them. On the file store (a machine, identity off) a category or
+ * competitor correction is filed and the CLIs apply it, while TWO WRITES
+ * APPLY DIRECTLY from whoever reaches the server, because the person at the
+ * keyboard is the machine's operator (MVP_PLAN C3): the domain's prompt set
+ * (`/api/custom-prompts`) and the daily re-check (`/api/tracked`), which
+ * between them define a recurring spend. Nothing authenticates those two, so
+ * what bounds them is that the server is reachable from this machine only:
+ * the app's `dev` and `start` scripts bind 127.0.0.1, pinned by
+ * `build-env.test.ts` (C3r item 14; the C3 tenancy pass, MAJOR 3). Corrections
  * are versioned and never re-derived on every path (PRODUCT_GOAL point 7).
  *
  * THE LEDGERS COME WITH THE STORE, decided the same way (ledger-stores.ts):

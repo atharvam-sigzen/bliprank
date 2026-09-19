@@ -1,4 +1,5 @@
 import { formatFrequency, formatInterval, formatValue, type Metric } from '@bliprank/stats'
+import { isZeroFinding } from './zero-mentions'
 
 /**
  * THE RECORD'S LEDE — the finding, in one sentence, before the instrument.
@@ -44,14 +45,18 @@ export function Headline({
   const spoken = formatFrequency(metric)
 
   /*
-   * THE ZERO CASE YIELDS TO THE SURFACE'S OWN TREATMENT rather than printing the
-   * same finding twice. `formatFrequency` returns a `none` shape carrying its
-   * upper bound and nothing here reads it: the Grader's record already says
-   * "not mentioned in any of the N answers… a real result with a real upper
-   * bound, not an error", and adds the domain-label caveat, which is more than
-   * a lede should carry.
+   * THE ZERO CASE YIELDS TO `ZeroMentions` rather than printing the same
+   * finding twice. That component says "not named in any of the N answers",
+   * speaks the upper limit as a range, and adds the domain-label caveat, which
+   * is more than a lede should carry. EVERY SURFACE THAT RENDERS THIS LEDE
+   * RENDERS THAT COMPONENT BESIDE IT: until C3r item 3 the workspace record did
+   * not, and a client with no mentions read a bare 0.0% rail. The test is ONE
+   * predicate shared with that component (`isZeroFinding`), on the value and
+   * not the spoken kind, so exactly one of the two speaks in every state (at
+   * three answers a zero is 'unavailable' as a frequency, and it is still a
+   * zero).
    */
-  if (spoken.kind === 'none') return null
+  if (isZeroFinding(metric)) return null
 
   // WHOSE QUESTIONS. With a set of the person's own in force the number is
   // measured over THOSE prompts, and the lede says so where the sample size is

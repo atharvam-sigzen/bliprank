@@ -31,6 +31,8 @@ vi.mock('../../../../services/grader/src/fetch-site.js', async (importActual) =>
 import { POST as preview } from './preview/route'
 import { POST as customPrompts } from './custom-prompts/route'
 import { GET as trackedGet, POST as trackedPost } from './tracked/route'
+import { POST as scan } from './scan/route'
+import { servedFactsOf, servedSetNotice } from '@/lib/served-set'
 import { recordCategory } from '../../../../services/grader/src/resolve-category.js'
 import { readTracked } from '../../../../services/grader/src/due.js'
 import { runGrader } from '../../../../services/grader/src/run.js'
@@ -162,5 +164,62 @@ describe('enter, edit, set the days, first cycle now, three daily ticks, then ex
     expect(parseBasis(r.comparisonBasis)?.custom).toEqual({ count: 6, version: 2, fingerprint: promptSetFingerprint(bank.slice(0, 6)) })
     // The identical list is refused as no change, so a version is never spent on nothing.
     expect(await post(customPrompts, 'custom-prompts', { domain: 'acme.test', prompts: bank.slice(0, 6), reason: 'the same six, sent twice' })).toMatchObject({ status: 400, body: { kind: 'no-change' } })
+  })
+
+  it('the preview decides "this is the bank\'s question" with the ONE normaliser, as the scan does (C3r item 10): a kept bank prompt respelt is still the bank\'s, not the person\'s own', async () => {
+    const shown = (await post(preview, 'preview', { domain: 'acme.test' })).body as unknown as PreviewResponse
+    const kept = shown.prompts[0]!
+    // The same question as the bank's under the cache key's judgement: another case, a doubled space, terminal punctuation.
+    const respelt = `${kept.text.toUpperCase().replace(' ', '  ')}?!`
+    const own = 'which crm imports contacts from a spreadsheet'
+    expect(await post(customPrompts, 'custom-prompts', { domain: 'acme.test', prompts: [respelt, own], reason: 'one of yours respelt, one of ours' })).toMatchObject({ status: 200, body: { version: 1 } })
+    const again = (await post(preview, 'preview', { domain: 'acme.test' })).body as unknown as PreviewResponse
+    // Trim-and-lowercase called the respelt prompt the person's own; the scan, keyed by the normaliser, then filed it under the bank's question type.
+    // (The saver collapses the doubled space; the case and the punctuation are stored as typed, and are what trim-and-lowercase tripped on.)
+    expect(again.prompts).toEqual([
+      { text: respelt.replace('  ', ' '), intent: kept.intent },
+      { text: own, intent: 'own' },
+    ])
+    expect(again.prompts[0]!.text.trim().toLowerCase()).not.toBe(kept.text.trim().toLowerCase())
+  })
+
+  it('AN EDIT ON A DAY WHOSE CHECK ALREADY RAN IS NOT COLLECTED, AND THE PAGE IS TOLD SO (C3r item 5): the served cycle names the version it asked, the store the version in force, and the date the new one will be', async () => {
+    const shown = (await post(preview, 'preview', { domain: 'acme.test' })).body as unknown as PreviewResponse
+    const bank = shown.prompts.map((p) => p.text)
+    expect(await post(customPrompts, 'custom-prompts', { domain: 'acme.test', prompts: bank.slice(0, 5), reason: 'five questions our buyers actually ask' })).toMatchObject({ status: 200, body: { version: 1 } })
+    const D = today()
+    const r = await runGrader({ domain: 'acme.test', plan: 'payg', day: D, engines: [...ENGINES], capUsd: 10, mode: 'fixture', apiKey: '', dataDir: dir, log: () => {} })
+    if (r.status !== 'scanned') throw new Error(r.status)
+    await fileWorkspaceStore(dir).cycles.put(cycleInputOf(r))
+
+    const served = async () => {
+      const res = await scan(new Request('http://local/api/scan', { method: 'POST', headers: headers(), body: JSON.stringify({ domain: 'acme.test' }) }))
+      const blocks = (await res.text()).split('\n\n').filter(Boolean)
+      const event = (name: string) => {
+        const block = blocks.find((b) => b.includes(`event: ${name}`))
+        return block ? (JSON.parse(block.split('\n').find((l) => l.startsWith('data: '))!.slice(6)) as Record<string, unknown>) : undefined
+      }
+      return { cached: event('cached'), result: event('result'), error: event('error') }
+    }
+
+    // Nothing edited since: the stored cycle asked exactly what is in force, and the ordinary case carries no notice.
+    const same = await served()
+    expect(same.error).toBeUndefined()
+    expect(servedFactsOf(same.cached?.['served'])).toEqual({ servedDay: D, servedVersion: 1, inForceVersion: 1, today: D, nextCheckFrom: untilDay(D, 1) })
+    expect(servedSetNotice(servedFactsOf(same.cached?.['served'])!)).toBeNull()
+
+    // Version 2, saved on the day the check already ran. The button serves today's stored cycle (one a day, nothing re-bought)...
+    expect(await post(customPrompts, 'custom-prompts', { domain: 'acme.test', prompts: bank.slice(0, 6), reason: 'and a sixth, from the sales call' })).toMatchObject({ status: 200, body: { version: 2 } })
+    const after = await served()
+    expect(after.error).toBeUndefined()
+    expect(parseBasis(String(after.result?.['comparisonBasis']))?.custom).toMatchObject({ count: 5, version: 1 })
+    // ...and says so: version 1 was asked, version 2 was not, and tomorrow's date is when it will be.
+    const facts = servedFactsOf(after.cached?.['served'])
+    expect(facts).toEqual({ servedDay: D, servedVersion: 1, inForceVersion: 2, today: D, nextCheckFrom: untilDay(D, 1) })
+    const notice = servedSetNotice(facts!)
+    expect(notice).toContain(`Today’s check (${D}) already ran, on version 1 of your questions`)
+    expect(notice).toContain(`The questions you saved since (version 2) were not asked today, because one check runs per day. They will be asked at the next check, which can run from ${untilDay(D, 1)}.`)
+    // Still one cycle for the day: nothing was collected by asking.
+    expect(listCycles(dir, 'acme.test')).toHaveLength(1)
   })
 })

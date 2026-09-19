@@ -35,3 +35,29 @@ export function normalisePrompt(prompt: string): string {
     .trim()
     .replace(/[\s.!?…,;:]+$/u, '')
 }
+
+/**
+ * The list a cycle may ask: each question ONCE, in first-seen order and in its
+ * first spelling, where "the same question" is the cache key's own judgement
+ * (`normalisePrompt`), and a string that normalises to nothing is not a
+ * question and is left out (`cacheCell` refuses to key one).
+ *
+ * The writer of a person's prompt set has always held a list to this
+ * (`checkCustomPromptsWith`). The READERS did not (MVP_PLAN C3r item 8): a
+ * hand-edited store file, or a document written some other way, could carry
+ * "best crm" and "Best CRM?" as two entries, and a cycle then asked one cell
+ * twice and counted its answers twice, an `n` inflated by nothing but a
+ * repeat. One rule, here beside the normaliser, so the writer, both readers
+ * and the scan cannot disagree about it.
+ */
+export function distinctPrompts(prompts: readonly string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const p of prompts) {
+    const key = normalisePrompt(p)
+    if (key === '' || seen.has(key)) continue
+    seen.add(key)
+    out.push(p)
+  }
+  return out
+}

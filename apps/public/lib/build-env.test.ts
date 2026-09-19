@@ -127,6 +127,31 @@ describe('browser code never imports a package root that carries a Node-only mod
   })
 })
 
+describe('with identity off the app answers this machine only (MVP_PLAN C3r item 14)', () => {
+  /*
+   * On the machine's file store nothing authenticates a request, and two
+   * writes apply directly: the domain's prompt set and the daily re-check.
+   * Together they define a recurring spend. What bounds them is that nobody
+   * off this machine can reach the server, and `next dev` and `next start`
+   * bind every interface unless told otherwise. So the bind is part of the
+   * spend boundary, and it is pinned here rather than remembered.
+   */
+  const scripts = (file: string): Record<string, string> => (JSON.parse(readFileSync(fileURLToPath(new URL(file, import.meta.url)), 'utf8')) as { scripts: Record<string, string> }).scripts
+
+  it('the app’s dev and start scripts bind the loopback address', () => {
+    const app = scripts('../package.json')
+    for (const name of ['dev', 'start'] as const) {
+      expect(app[name], name).toMatch(/^next (dev|start) /)
+      expect(app[name], name).toMatch(/(^|\s)(-H|--hostname)[ =]127\.0\.0\.1(\s|$)/)
+      expect(app[name], name).not.toMatch(/0\.0\.0\.0|(-H|--hostname)[ =](?!127\.0\.0\.1)/)
+    }
+  })
+
+  it('the demo command is that script and nothing else, so it cannot restate the host', () => {
+    expect(scripts('../../../package.json')['demo:grader']).toBe('pnpm --filter @bliprank/public dev')
+  })
+})
+
 describe('no linter is addressed by name', () => {
   // Strict tsc is the gate. A directive naming a linter that is not installed
   // is a promise nothing keeps; B0 removed the three that existed.

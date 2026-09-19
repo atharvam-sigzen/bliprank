@@ -1,7 +1,7 @@
 import { normaliseHost } from '@bliprank/taxonomy'
 import { SCAN_FAILED } from '@/lib/route-errors'
 import { join } from 'node:path'
-import { ENGINES } from '@bliprank/contracts'
+import { ENGINES, headlineSetOf } from '@bliprank/contracts'
 import { checkGate, defaultGateConfig, ledgerCapUsd, recordScan, utcDay } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
 import { checkDomainCeiling, defaultDomainCeilingConfig, recordDomainCycle, runAllowanceFor } from '../../../../../services/grader/src/domain-ceiling.js'
@@ -213,7 +213,25 @@ export async function POST(req: Request): Promise<Response> {
           //    accidental re-submit is a sixth of the month.
           const hit = await cached(store, domain)
           if (hit) {
-            send(c, 'cached', { domain })
+            // WHICH QUESTIONS THE SERVED CYCLE ASKED, AND WHICH ARE IN FORCE NOW
+            // (C3r item 5). One cycle a day stands; what was silent is that a
+            // person who saved version 2 today and pressed the button was shown
+            // version 1's number with nothing saying so. The served set is
+            // read off the cycle's OWN basis by the shared predicate, the set
+            // in force from the store; the page words them (lib/served-set.ts).
+            const servedBasis = String((hit as { comparisonBasis?: unknown }).comparisonBasis ?? '')
+            const servedDay = String(((hit as { run?: { day?: unknown } }).run?.day ?? '') || String((hit as { collectedAt?: unknown }).collectedAt ?? '').slice(0, 10))
+            const inForce = await customPromptsIn(store, domain)
+            send(c, 'cached', {
+              domain,
+              served: {
+                servedDay,
+                servedVersion: headlineSetOf(servedBasis)?.version ?? null,
+                inForceVersion: inForce && inForce.prompts.length > 0 ? inForce.version : null,
+                today,
+                nextCheckFrom: servedDay === today ? nextDay(today) : today,
+              },
+            })
             send(c, 'result', hit)
             return done(c)
           }

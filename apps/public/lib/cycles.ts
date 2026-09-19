@@ -16,8 +16,8 @@
  * used to be demonstrated only on fixtures.
  */
 
-import { basisDifference } from '@bliprank/contracts/basis'
-import type { Comparison, Metric } from '@bliprank/stats'
+import { basisChangeWords, basisDifference, headlineSetOf } from '@bliprank/contracts/basis'
+import { MIN_N_FOR_COMPARISON, type Comparison, type Metric } from '@bliprank/stats'
 import { compareCycles } from './compare-cycles'
 import { isScanResultFile, rememberScan, runInfoOf, scans, subjectOf, normaliseTyped, type ScanResultFile } from './scan-result'
 
@@ -109,6 +109,65 @@ export function whyNotComparable(a: Metric, b: Metric): string | null {
   if (a.algo_version !== b.algo_version) return `scored by different versions (${b.algo_version} against ${a.algo_version})`
   if (a.collection_path !== b.collection_path) return `collected by different paths (${b.collection_path} against ${a.collection_path})`
   return basisDifference(a.comparison_basis, b.comparison_basis)
+}
+
+/**
+ * WHAT THE PER-DAY LIST SAYS ABOUT A DAY AGAINST THE DAY BEFORE IT, in plain
+ * words, or null when the two are an ordinary like-for-like pair (MVP_PLAN C3r
+ * item 2).
+ *
+ * DERIVED FROM `compare()` ITSELF, through `compareCycles`. The list used to
+ * call `whyNotComparable`, which names three of the reasons a comparison is
+ * refused (the scoring version, the collection path, the basis) and is null
+ * for the other two: a day with too few answers, which is ROUTINE for a short
+ * set of a person's own questions (three questions on five engines is fifteen
+ * answers, under the floor), and a pair measured to precisions too different
+ * to separate honestly. Those days carried no mark, so the list read as a
+ * like-for-like series where the verdict beside the chart refused every pair.
+ * Asking the verdict, not a parallel list of reasons, means a reason added to
+ * `compare()` later cannot go missing here.
+ *
+ * `refused` is a comparison that was not made, and says why. `note` is a
+ * comparison that WAS made across a change a reader can see: the person went
+ * back to a list of questions they had asked before, so the version number
+ * moved and the sample did not (stats review of C3r item 1, MINOR 6). Without
+ * the note the list prints "version 1" then "version 3" with no mark, where
+ * every other change of version is a break.
+ */
+export function dayMarker(current: Metric, previous: Metric): { readonly kind: 'refused' | 'note'; readonly text: string } | null {
+  const verdict = compareCycles(current, previous)
+  if (verdict.significance === 'not-comparable') {
+    return { kind: 'refused', text: `not comparable with the day before: ${whyInPlainWords(current, previous)}` }
+  }
+  if (verdict.significance === 'insufficient-data') {
+    const smallest = Math.min(current.n, previous.n)
+    return {
+      kind: 'refused',
+      text: `too few answers to compare with the day before: the smaller of the two days holds ${smallest} ${smallest === 1 ? 'answer' : 'answers'}, and a comparison needs at least ${MIN_N_FOR_COMPARISON} on each`,
+    }
+  }
+  if (current.comparison_basis !== previous.comparison_basis) {
+    const v = headlineSetOf(current.comparison_basis)?.version
+    return { kind: 'note', text: `the same questions as the day before${v !== undefined ? `, saved again as version ${v}` : ''}, so the two days are compared` }
+  }
+  return null
+}
+
+/**
+ * WHY TWO DAYS ARE NOT COMPARED, for a reader who has never seen a basis
+ * string (stats review of C3r, MAJOR 3). `whyNotComparable` is the auditor's
+ * reading ("the prompt count (17 against 0), the custom prompt set (absent
+ * against 6@1)") and stays where an auditor reads it. On the day list that
+ * line told a client their second day asked 0 prompts, straight after telling
+ * them it asked "your 6 prompts". Same three reasons, in `compare()`'s own
+ * order, from the same fields; the basis case is worded by the package that
+ * owns the string. When none of the three differs, `compare()` refused for
+ * the one reason left: the two days' ranges are too unlike in width.
+ */
+export function whyInPlainWords(a: Metric, b: Metric): string {
+  if (a.algo_version !== b.algo_version) return `the two days were scored by different versions of our scoring rules (${b.algo_version}, then ${a.algo_version}), so they are not the same measurement`
+  if (a.collection_path !== b.collection_path) return 'the answers were collected in a different way on the two days, so they are not the same measurement'
+  return basisChangeWords(a.comparison_basis, b.comparison_basis) ?? 'one day\u2019s range is far narrower than the other\u2019s, so a gap between them could not be judged fairly'
 }
 
 // The basis shape and its words are one definition, shared with the grader that

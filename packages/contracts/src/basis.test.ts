@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { BASIS_KEYS, BASIS_LABELS, basisDifference, customBasisOf, formatBasis, parseBasis, promptSetFingerprint, sameBasis, sha256Hex, type Basis } from './basis.js'
+import { BASIS_KEYS, BASIS_LABELS, basisDifference, customBasisOf, formatBasis, headlineSetOf, parseBasis, promptSetFingerprint, sameBasis, sha256Hex, type Basis } from './basis.js'
 import { NORMALISATION_VERSION, normalisePrompt } from './normalise.js'
 
 /** Every basis string a stored scan or the bundled reference carries today. Byte for byte; ADR-0016 promises they never change. */
@@ -234,6 +234,20 @@ describe('the custom tail identifies the sample, not only its label (MVP_PLAN C3
 
   it('the writer refuses a fingerprint that is not twelve lower-case hex characters', () => {
     expect(() => formatBasis({ ...base, custom: { count: 1, version: 1, fingerprint: 'XYZ' } })).toThrow(/fingerprint/)
+  })
+})
+
+describe('one predicate for "is this measurement over a person\u2019s own set" (MVP_PLAN C3r item 6)', () => {
+  it('needs BOTH halves: the custom tail, and unprompted=0 on the same basis', () => {
+    const own = formatBasis({ ...base, unprompted: 0, custom: customBasisOf(['which crm suits a small team'], 2) })
+    expect(headlineSetOf(own)).toMatchObject({ count: 1, version: 2 })
+    // The bank's headline: no tail.
+    expect(headlineSetOf(formatBasis(base))).toBeNull()
+    // A tail beside bank prompts is not a headline set. The re-score used to read this as one: it asked for the tail and not for unprompted=0.
+    expect(headlineSetOf(formatBasis({ ...base, unprompted: 17, custom: { count: 2, version: 1 } }))).toBeNull()
+    // A stored cycle from before the fingerprint is still a headline set.
+    expect(headlineSetOf(formatBasis({ ...base, unprompted: 0, custom: { count: 3, version: 1 } }))).toEqual({ count: 3, version: 1 })
+    for (const s of [undefined, '', 'legacy|x|y']) expect(headlineSetOf(s)).toBeNull()
   })
 })
 

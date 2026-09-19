@@ -688,6 +688,49 @@ near-duplicate prompts. The next session takes Stage P (presentation
 readiness: P1, the daily checks run from the app the owner has open), then
 Stage D.
 
+**THE GATE IS THREE COMMANDS, EACH READ BY ITS OWN EXIT CODE (2026-09-19):**
+`pnpm typecheck`, `pnpm test` AND `pnpm --filter @bliprank/public build`,
+locally and on CI. C3 landed with typecheck, the suite and CI green and the
+app's production build broken (a client page reached `node:crypto` through
+the contracts package root; fixed in `b1ea791`, and CI now builds). tsc and
+vitest run on Node and cannot see a browser or edge bundle that pulls a
+Node-only module; only the build can. It bit again on 2026-09-19 inside the
+session that wrote this line: an `instrumentation.ts` that returned early on
+the negated runtime test put `node:crypto` into the edge bundle, with
+typecheck and 2067 tests green, and the build leg refused it. Read each leg's
+exit code in its own call (`cmd > log 2>&1; echo $?`), never through a pipe to
+`tail`. The root suite excludes `.claude/**`: another session's worktree under
+`.claude/worktrees/` is another branch's suite, and collected here it turned
+143 files into 413 and failed 36 tests that are not this tree's.
+**C3r (2026-09-19, the oversight verification's fourteen items, two commits
+plus the gate repair; `docs/MVP_PLAN.md` row C3r carries the evidence):** the
+custom tail of the basis ends in a fingerprint of the prompt list itself
+(`packages/contracts/src/basis.ts`: `promptSetFingerprint`, `customBasisOf`,
+`sameBasis`, `headlineSetOf`, `basisChangeWords`, `customBasisMismatch`; the
+normaliser moved unchanged to `normalise.ts`), so two different sets at the
+same K and V no longer share a basis and a revert to an identical set does;
+`compare()` is untouched and the cross-cycle callers ask `sameBasis` first
+(`apps/public/lib/compare-cycles.ts`). The record says a zero in words with
+its range (`components/zero-mentions.tsx`), the day list is marked by
+`compare()`'s own verdict in plain words (`lib/cycles.ts` `dayMarker`), the
+head-to-head says which of three facts it is, an edit on a day whose check
+already ran is said (`lib/served-set.ts`), a re-score and the evidence reader
+refuse a set that is no longer the list the cycle asked, both readers of a
+set drop repeats and the scan refuses a repeated question before asking
+anything, the file store keeps a superseded day's file (R5), the tracked-host
+ceiling is one decision under ONE lock for the route and the operator's
+command (`due.ts` `decideTrackedSwitch`, `ledger-doc.ts`
+`updateFileLedgerSync`), and the app's `dev` and `start` scripts bind
+127.0.0.1, which is what bounds the unauthenticated writes while identity is
+off. Three independent passes ran on the uncommitted change sets and each
+found a MAJOR in the builder's first draft, all fixed with a failing case
+first (`docs/MVP_REVIEWS.md` rows C3r, NOT YET ACCEPTED by the oversight
+session). ⚠️ HUMAN REVIEW REQUIRED: METHODOLOGY (ADR-0016 Amendment 1
+addendum: what two numbers must share before they are compared; the zero
+sentence; the plain words for a changed basis); scoring/R5 (`rescore.ts`,
+`store/file-store.ts`); spend control (`due.ts`, `ledger-doc.ts`
+`updateFileLedgerSync`, `custom-prompts.ts` `MAX_CUSTOM_PROMPTS`).
+
 **⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
 allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS
 assertion — the one assertion no policy can substitute for, because a role with

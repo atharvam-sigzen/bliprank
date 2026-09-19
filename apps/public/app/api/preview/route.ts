@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs'
-import { ENGINES } from '@bliprank/contracts'
+import { ENGINES, normalisePrompt } from '@bliprank/contracts'
 import { classifyDomain, normaliseHost } from '@bliprank/taxonomy'
 import { defaultGateConfig } from '../../../../../services/grader/src/live-gate.js'
 import { bankAuthorConfig } from '../../../../../services/grader/src/bank-author.js'
@@ -218,8 +218,11 @@ export async function POST(req: Request): Promise<Response> {
     // own latest version once one exists, the bank's on first entry. A kept
     // bank prompt keeps its intent; one the person wrote is theirs.
     const set = await customPromptsIn(store, domain)
-    const bankIntent = new Map(resolved.bank.prompts.map((p) => [p.text.trim().toLowerCase(), p.intent]))
-    const shown = set && set.prompts.length ? set.prompts.map((text) => ({ text, intent: bankIntent.get(text.trim().toLowerCase()) ?? 'own' })) : unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent }))
+    // Keyed by the ONE normaliser, the cache key's (C3r item 10): the scan decides "this is the bank's prompt" with it (`scan.ts`
+    // `intentOf`), and trim-and-lowercase here disagreed with it on a trailing "?" or a doubled space, so the preview called a
+    // prompt the person's own and the record then filed it under the bank's question type.
+    const bankIntent = new Map(resolved.bank.prompts.map((p) => [normalisePrompt(p.text), p.intent]))
+    const shown = set && set.prompts.length ? set.prompts.map((text) => ({ text, intent: bankIntent.get(normalisePrompt(text)) ?? 'own' })) : unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent }))
 
     const competitorSet = (await competitorsIn(store, DATA, domain, resolved.bank, subjectFor(domain, resolved.bank, resolved.record.brandName).spec.id)) ?? { competitors: [], missing: [] }
     const body: PreviewResponse = {

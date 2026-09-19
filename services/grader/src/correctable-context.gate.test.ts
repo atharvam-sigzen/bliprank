@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -7,7 +7,7 @@ import { readScanAnswers } from './answers.js'
 import { applyOverride } from './competitor-overrides.js'
 import { applyCustomPrompts } from './custom-prompts.js'
 import { listCycles, writeCycle } from './cycles.js'
-import { planRescore } from './rescore.js'
+import { planRescore, restampRefusal } from './rescore.js'
 import { recordCategory } from './resolve-category.js'
 import { runGrader } from './run.js'
 import { snapshotRows } from './version-diff.js'
@@ -202,5 +202,65 @@ describe('one cycle carrying both corrections, through the real runner, offline'
     if (rebased.status !== 'scanned') throw new Error(rebased.status)
     expect(rebased.comparisonBasis).not.toBe(old.comparisonBasis)
     expect(parseBasis(rebased.comparisonBasis)).toMatchObject({ unprompted: 0, custom: { count: 2, version: 1 } })
+  })
+})
+
+describe('a re-score re-derives the sample that was measured, or refuses (MVP_PLAN C3r item 7)', () => {
+  const setsFile = () => join(dir, 'custom-prompts.json')
+  const editStoredSet = (prompts: readonly string[]) => {
+    const stored = JSON.parse(readFileSync(setsFile(), 'utf8')) as Record<string, { prompts: readonly string[] }>
+    stored['pipedrive.com']!.prompts = prompts
+    writeFileSync(setsFile(), JSON.stringify(stored))
+  }
+
+  it('THE STORE\u2019S SET AT THAT VERSION MUST STILL BE THE LIST THE CYCLE ASKED: a changed list, or a changed count, is refused, never re-derived under the old file\u2019s name', async () => {
+    applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: CUSTOM, reason: 'what our buyers actually ask', by: 'operator' })
+    const result = await collect('2026-09-03')
+    if (result.status !== 'scanned') throw new Error(result.status)
+    writeCycle(dir, result)
+    expect(await planRescore(dir, 'pipedrive.com', 2)).toMatchObject({ missing: [], customPrompts: 1, promptSetRole: 'headline', restampsBasis: false })
+
+    // The version is a pointer into a store a person can edit. Same count, another question: only the fingerprint can see it.
+    editStoredSet([CUSTOM[0]!, 'which crm has the best reporting'])
+    expect(await planRescore(dir, 'pipedrive.com', 2)).toMatchObject({ refuse: expect.stringContaining('is no longer the list this cycle asked') })
+    // Another count: refused on K, fingerprint or none.
+    editStoredSet([CUSTOM[0]!])
+    expect(await planRescore(dir, 'pipedrive.com', 2)).toMatchObject({ refuse: expect.stringMatching(/asked 2 prompts at set 1, and the store.s set 1 now holds 1; re-deriving over a different list is a different measurement/) })
+    // THE EVIDENCE READER MAKES THE SAME CHECK (stats review of C3r, MINOR 9): a store whose version 1 is no longer the list the
+    // cycle asked must not yield "that cycle's evidence" over a narrower or different sample. It used to build cells from whatever
+    // the store returned, and with repeats now dropped on read a hand-edited set silently narrowed the evidence.
+    expect(await readScanAnswers(dir, 'pipedrive.com', '2026-09-03')).toMatchObject({ refuse: expect.stringContaining('is no longer the list this cycle asked (it asked 2 prompts and the set now holds 1)') })
+    editStoredSet([CUSTOM[0]!, 'which crm has the best reporting'])
+    expect(await readScanAnswers(dir, 'pipedrive.com', '2026-09-03')).toMatchObject({ refuse: expect.stringContaining('its fingerprint differs') })
+    // The same list under another spelling and order is the same sample, and is re-derivable.
+    editStoredSet([`${CUSTOM[1]!.toUpperCase()}?`, `  ${CUSTOM[0]}  `])
+    expect(await planRescore(dir, 'pipedrive.com', 2)).toMatchObject({ missing: [], customPrompts: 1 })
+    expect(await readScanAnswers(dir, 'pipedrive.com', '2026-09-03')).not.toHaveProperty('refuse')
+  })
+
+  it('a second measurement whose basis cannot be read is refused: it used to be re-derived WITHOUT the block and written back over the file that had one', async () => {
+    applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: CUSTOM, reason: 'what our buyers actually ask', by: 'operator' })
+    const old = await collectDecision4('2026-09-02')
+    if (old.status !== 'scanned') throw new Error(old.status)
+    writeCycle(dir, { ...old, customPrompts: { ...old.customPrompts!, comparisonBasis: 'not a basis' } } as never)
+    const plan = await planRescore(dir, 'pipedrive.com', 2, join(dir, 'results', 'cycles', 'pipedrive.com', '2026-09-02.json'))
+    expect(plan).toMatchObject({ refuse: expect.stringContaining('second measurement whose basis cannot be read') })
+  })
+
+  it('A SAME-VERSION RE-SCORE MAY NOT MOVE A BASIS: a cycle stored before the fingerprint is restamped only across a scoring-version boundary (stats review of item 1, MINOR 4)', async () => {
+    applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: CUSTOM, reason: 'what our buyers actually ask', by: 'operator' })
+    const result = await collect('2026-09-03')
+    if (result.status !== 'scanned') throw new Error(result.status)
+    // As C3 wrote it, before C3r item 1: the tail with no fingerprint.
+    const before = result.comparisonBasis.replace(/#[0-9a-f]{12}$/, '')
+    expect(before).toMatch(/\|custom=2@1$/)
+    writeCycle(dir, { ...result, comparisonBasis: before } as never)
+    const plan = await planRescore(dir, 'pipedrive.com', 2)
+    if ('refuse' in plan) throw new Error(plan.refuse)
+    expect(plan.restampsBasis).toBe(true)
+    expect(restampRefusal(plan, true)).toContain('would change its basis string')
+    // Under a new scoring version the restamp crosses a boundary compare() draws anyway, and is allowed.
+    expect(restampRefusal(plan, false)).toBeNull()
+    expect(restampRefusal({ restampsBasis: false }, true)).toBeNull()
   })
 })

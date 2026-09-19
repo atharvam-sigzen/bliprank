@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { ARMED, dailyCapUsd, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
 import { declaredSingleProcess, ledgerStores } from './ledger-stores.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
-import { dueToday, monthlyEstimate, readTracked, setTracked } from './due.js'
+import { dueToday, maxTrackedPerWorkspace, monthlyEstimate, readTracked, setTracked } from './due.js'
 
 export interface TickOptions {
   readonly dataDir: string
@@ -135,7 +135,8 @@ async function main(): Promise<void> {
       process.stderr.write(`refusing: ${parsed.refuse}\n`)
       process.exit(2)
     }
-    const next = setTracked(parsed.dataDir, parsed.domain, parsed.on, { by: parsed.by, reason: parsed.reason })
+    // Held to the same ceiling as the route (C3r item 12): a tracked host is a daily spend whoever switches it on.
+    const next = setTracked(parsed.dataDir, parsed.domain, parsed.on, { by: parsed.by, reason: parsed.reason, max: maxTrackedPerWorkspace(process.env) })
     if ('refuse' in next) {
       process.stderr.write(`refusing: ${next.refuse}\n`)
       process.exit(2)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { assertProvisionalAllowed, confidenceGrade, formatProvenance, formatMetric } from '@bliprank/stats'
+import { MIN_N_FOR_COMPARISON, assertProvisionalAllowed, confidenceGrade, formatProvenance, formatMetric } from '@bliprank/stats'
 import { ActionLink } from '@/components/action-link'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { CitedSources } from '@/components/cited-sources'
@@ -9,13 +9,14 @@ import { GapReport } from '@/components/gap-report'
 import { CustomPromptsBlock } from '@/components/custom-prompts-block'
 import { PromptBreakdown } from '@/components/prompt-breakdown'
 import { Headline } from '@/components/headline'
+import { ZeroMentions } from '@/components/zero-mentions'
 import { RangeRail } from '@/components/range-rail'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { CiTrendChart } from '@/components/ci-trend-chart'
 import { NewCycle } from '@/components/new-cycle'
 import { CategoryCorrection } from '@/components/category-correction'
 import { CompetitorOverrides } from '@/components/competitor-overrides'
-import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf, whyNotComparable } from '@/lib/cycles'
+import { cycleDayOf, cyclesFor, dayMarker, earlierCategoryCycles, latestMovement, syncCycles, trendOf } from '@/lib/cycles'
 import { PROMPT_SET_SCOPE, promptSetOf, promptSetWords } from '@/lib/prompt-set'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
@@ -132,7 +133,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
         <aside className="note">
           <span className="note__cap">Cycle</span>
           <span className="note__line">
-            <strong>{scan.counts.answersScored} answers</strong>
+            {/* The headline's OWN sample (C3r item 9), so the masthead and the rail's margin below never state two counts for one screen. */}
+            <strong>
+              {metric.n} {metric.n === 1 ? 'answer' : 'answers'}
+            </strong>
             {run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
@@ -185,6 +189,8 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
         {/* Same lede as the Grader, from the same component: the two surfaces
             render one record and must not come to word it differently. */}
         <Headline subject={subject.name} metric={metric} engines={run.engines.length} promptSet={promptSet} />
+        {/* The lede yields at zero mentions; this is what speaks instead, at both depths (C3r item 3). */}
+        <ZeroMentions metric={metric} promptSet={promptSet} subjectSource={scan.subjectSource} />
         {promptSet ? (
           <p className="prose prose--flag" data-prompt-set-scope>
             {PROMPT_SET_SCOPE}
@@ -201,8 +207,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
           <aside className="note">
             <span className="note__cap">Basis</span>
             <span className="note__line">{scan.categoryName}</span>
+            {/* The number's OWN n (C3r item 9). `counts.answersScored` is the whole cycle's tally, which on a cycle that also carried decision 4's second block includes answers this rate was never measured over. */}
             <span className="note__line">
-              {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
+              {metric.n} {metric.n === 1 ? 'answer' : 'answers'}
+              {run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
             </span>
             {run.day ? <span className="note__line">day {run.day}</span> : null}
             {/* Whose questions: at BOTH depths, like the sample size (ADR-0016 Amendment 1). */}
@@ -555,8 +563,8 @@ function CycleDays({ cycles }: { cycles: readonly ScanResultFile[] }) {
       metric: subjectOf(scan).metric,
       source: scan.run?.source === 'loop' ? 'daily re-check' : 'started by hand',
       set,
-      // Every reason `compare()` refuses for, not the basis alone: a scoring-version or a collection-path boundary between two days is as real a break as a change of questions, and this list is the plain reading of the trend (C3 stats review, MAJOR 2). `whyNotComparable` names all three, in `compare()`'s own order, and is null when nothing differs.
-      moved: previous !== null ? whyNotComparable(subjectOf(scan).metric, subjectOf(previous).metric) : null,
+      // EVERY reason `compare()` refuses for, asked of `compare()` itself (`dayMarker`, C3r item 2): the scoring version, the collection path, the basis, AND a day with too few answers or a pair too unlike in precision, which the list used to pass over in silence. Plus one note, when a version change is the same questions saved again.
+      marker: previous !== null ? dayMarker(subjectOf(scan).metric, subjectOf(previous).metric) : null,
     }
   })
   return (
@@ -572,7 +580,7 @@ function CycleDays({ cycles }: { cycles: readonly ScanResultFile[] }) {
           <li className="daylist__item" key={r.day}>
             <span className="num">{r.day}</span>: mentioned in <span className="num">{formatMetric(r.metric)}</span> · {r.source}
             {r.set ? ` · ${promptSetWords(r.set)}` : ''}
-            {r.moved ? <span className="prose--flag"> · not comparable with the day before, {r.moved}</span> : null}
+            {r.marker ? <span className={r.marker.kind === 'refused' ? 'prose--flag' : undefined} data-day-marker={r.marker.kind}> · {r.marker.text}</span> : null}
           </li>
         ))}
       </ol>
@@ -604,7 +612,9 @@ function TrendSection({ cycles, subjectName }: { cycles: readonly ScanResultFile
         <span className="num">{cycles.length}</span> collected cycles of {subjectName}, from <span className="num">{cycleDayOf(first)}</span> to{' '}
         <span className="num">{cycleDayOf(last)}</span>. Each point is one day&apos;s answers to the questions that cycle was asked, with its own
         interval. Where two neighbouring points were measured on a different basis or scored by a different version, the line between them
-        breaks and the comparison is refused rather than made.
+        breaks and the comparison is refused rather than made. A line only says two days were measured the same way; whether the movement
+        between them is real is the verdict beside the chart, and with fewer than {MIN_N_FOR_COMPARISON} answers on either day there is no
+        verdict to give.
       </p>
       <div className="annotated">
         <div className="annotated__body">
