@@ -13,6 +13,7 @@ import { ZeroMentions } from '@/components/zero-mentions'
 import { RangeRail } from '@/components/range-rail'
 import { Planned, SCHEDULE_FACT } from '@/lib/planned'
 import { CiTrendChart } from '@/components/ci-trend-chart'
+import { DailyChecks } from '@/components/daily-checks'
 import { NewCycle } from '@/components/new-cycle'
 import { CategoryCorrection } from '@/components/category-correction'
 import { CompetitorOverrides } from '@/components/competitor-overrides'
@@ -316,6 +317,10 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       </section>
 
       <NewCycle domain={workspace.domain} cycles={cycles} excluded={excluded} onCollected={() => refresh((g) => g + 1)} />
+      {/* THE DAILY CHECKS (MVP_PLAN P1, P2): what the loop did yesterday for every tracked domain, whether this morning's run was
+          missed, and the button that runs today's checks through the same tick and the same daily cap. It renders nothing off the
+          owner's machine (identity on, a fleet), where its two routes answer 404. */}
+      <DailyChecks />
 
       {context === 'brand' ? <WorkspacePointer /> : <WorkspaceFacts workspace={workspace} context={context} />}
     </>

@@ -3669,3 +3669,222 @@ h3.record__title,
     grid-column: 1 / -1;
   }
 }
+
+/* ============================================================================
+   D4 — THREE PURPOSE-BUILT VISUALS, APPENDED (frontend-designer, 2026-09-19)
+   ============================================================================
+   apps/public/components/prompt-grid.tsx, cited-sources.tsx, gap-report.tsx —
+   replacing the three table-only insights named in MVP_PLAN D4. All three
+   reuse what already exists wherever the data is the same KIND of claim:
+   `SourceReach` in cited-sources.tsx draws with `.estrip` above, unchanged,
+   and the surviving exact tables draw with `.range`, also unchanged. The
+   three blocks below are the only marks genuinely new to this sheet: the
+   question x engine matrix, the magnitude bars for "most cited sites", and
+   the coverage ladder's row layout (`CoverageStrip` itself is untouched).
+   ============================================================================ */
+
+/* --- prompt-grid.tsx: every question against every engine, at a glance ---- */
+
+.pgrid__head {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  fill: var(--color-muted-foreground);
+}
+
+.pgrid__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  fill: var(--color-foreground);
+}
+
+.pgrid__count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  fill: var(--color-muted-foreground);
+}
+
+/*
+ * THREE STATES, NEVER BY OPACITY ALONE. `none` (no answer collected) and
+ * `miss` (collected, not named) share one stroke colour and differ only in
+ * DASH, so a colour-blind or greyscale reader still tells "nothing happened
+ * here" from "an answer said no" without reading a single label.
+ *
+ * ⚠️ THE THREE NAMED TIERS ARE NOT SAFE BY FILL ALONE, AND THE FIRST VERSION
+ * OF THIS COMMENT CLAIMED THEY WERE (review MINOR e). Each of primary,
+ * secondary and neutral-ink individually clears 3:1 against the CARD — that
+ * part held — but rank1 (primary) and rank3 (neutral-ink) sit close enough to
+ * each other in LIGHTNESS that the contrast BETWEEN THEM is only about
+ * 1.16:1, which a reader distinguishing ranks by fill alone, in greyscale or
+ * with a colour deficiency, could not reliably read apart. The actual fix is
+ * `.pgrid__rank` below: the exact rank is printed as a numeral inside the
+ * cell, so rank never depends on telling two inks apart. The fill stays as a
+ * fast at-a-glance cue on top of the numeral, not the only carrier of it.
+ */
+.pgrid__cell {
+  stroke-width: 1.25;
+}
+
+.pgrid__cell--none {
+  fill: none;
+  stroke: var(--color-field-border);
+  stroke-dasharray: 2 2;
+}
+
+.pgrid__cell--miss {
+  fill: none;
+  stroke: var(--color-field-border);
+}
+
+.pgrid__cell--rank1 {
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
+}
+
+.pgrid__cell--rank2 {
+  fill: var(--color-secondary);
+  stroke: var(--color-secondary);
+}
+
+.pgrid__cell--rank3 {
+  fill: var(--color-neutral-ink);
+  stroke: var(--color-neutral-ink);
+}
+
+/*
+ * The rank numeral, punched into the cell's own fill. `--color-card` is the
+ * page's paper colour, which is the opposite extreme from every one of the
+ * three data inks above IN BOTH THEMES BY CONSTRUCTION — light card against
+ * dark ink here, dark card against the same tokens' lightened dark-theme
+ * values there — so this one declaration clears contrast against all three
+ * fills without a per-theme override.
+ */
+.pgrid__rank {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--color-card);
+  pointer-events: none;
+}
+
+/* A real hit target per row, exactly like the head-to-head chart's own —
+   hover has no equivalent on touch, and neither a hover nor a title is
+   reachable by keyboard, so this is what makes the full question and the
+   per-engine breakdown reachable by tab and by tap (review MINOR f). */
+.pgrid__row-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.pgrid__row-hit:hover {
+  fill: var(--color-muted);
+}
+
+.pgrid__row-hit:focus-visible {
+  fill: var(--color-muted);
+  stroke: var(--color-ring);
+  stroke-width: 2;
+  outline: none;
+}
+
+/* --- cited-sources.tsx: magnitude bars for "most cited sites" ------------- */
+
+.hostbars {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hostbar {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 8rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hostbar__name {
+  font-size: 0.8125rem;
+  color: var(--color-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hostbar__track {
+  position: relative;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-muted);
+}
+
+/*
+ * ⚠️ SCALED TO ITS OWN MAXIMUM — deliberately unlike every proportion on this
+ * sheet. A citation count is a tally, not an estimate with a margin that
+ * fitting the axis could misrepresent; see the note above `MostCited` in
+ * cited-sources.tsx. Secondary ink, not primary, because this is volume and
+ * primary stays reserved for an estimate and the interval around it.
+ */
+.hostbar__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  min-width: 2px;
+  border-radius: 2px;
+  background: var(--color-secondary);
+}
+
+.hostbar__count {
+  font-size: 0.6875rem;
+  color: var(--color-muted-foreground);
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .hostbar {
+    grid-template-columns: minmax(0, 1fr) 8rem;
+  }
+
+  .hostbar__name {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- gap-report.tsx: the coverage ladder ----------------------------------- */
+
+.covladder {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.covladder__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.covladder__q {
+  font-size: 0.8125rem;
+  color: var(--color-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .covladder__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .covladder__q {
+    white-space: normal;
+  }
+}

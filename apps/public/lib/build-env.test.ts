@@ -59,8 +59,16 @@ describe('the deployment (ADR-0002 Amendment 1, MVP_PLAN B1)', () => {
     .split('\n')
     .filter((p) => p.endsWith('/route.ts'))
 
-  it('finds the thirteen route handlers (eight of the Grader, three of identity since B2, the tick since C2, the tracked list since C3)', () => {
-    expect(routes).toHaveLength(13)
+  it('finds the fifteen route handlers (eight of the Grader, three of identity since B2, the tick since C2, the tracked list since C3, the machine’s run-now and status since P1 and P2)', () => {
+    expect(routes).toHaveLength(15)
+  })
+
+  it('the instrumentation hook imports the scheduler INSIDE the positive runtime test, the one shape the bundler drops from the edge bundle (MVP_PLAN P1)', () => {
+    // An early return on the negated test reads the same to a person; with it the edge bundle reached node:crypto and `next build`
+    // failed while typecheck and 2067 tests stayed green (2026-09-19). Pinned, because only the build can see it and the build is slow.
+    const hook = readFileSync(root('apps/public/instrumentation.ts'), 'utf8')
+    expect(hook).toMatch(/if \(process\.env\.NEXT_RUNTIME === 'nodejs'\) \{\s*const \{ startLocalScheduler \} = await import\('\.\/lib\/scheduler'\)/)
+    expect(hook.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/NEXT_RUNTIME'?\]? !==/)
   })
 
   it('no route claims to be absent on the deployment', () => {

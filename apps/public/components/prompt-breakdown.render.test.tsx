@@ -30,9 +30,18 @@ describe('the simple reading is a sentence, not a table', () => {
     expect(simple).toContain('we asked')
   })
 
-  it('drops the table, the glyph legend and every technical caveat', () => {
-    expect(simple).not.toContain('<table')
+  it('drops the visible table, the glyph legend and every technical caveat', () => {
+    /*
+     * `<table` ITSELF IS NO LONGER A SAFE PROBE. `PromptGrid` (D4) carries a
+     * `visually-hidden` accessible table beside its picture — screen readers
+     * only, the same device `CiTrendChart` already uses — so a raw `<table`
+     * substring now appears at simple depth by design. What the rule bans is a
+     * SIGHTED reader meeting the literal glyph table: `.table-wrap` is the one
+     * that ever paints, so its absence, plus the absence of the rank marks and
+     * the caveats below it, is what this guards.
+     */
     expect(simple).not.toContain('table-wrap')
+    expect(simple).not.toContain('mark--hit')
     expect(simple).not.toContain('no answer was collected for that cell')
     expect(simple).not.toContain('The engine columns are counts, not rates')
     expect(simple).not.toContain('There is no sentiment column')

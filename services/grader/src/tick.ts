@@ -24,6 +24,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ARMED, dailyCapUsd, formulaCapUsd, hardCeilingUsd, readDailyLedger, runTick } from './daily-loop.js'
 import { declaredSingleProcess, ledgerStores } from './ledger-stores.js'
+import { recordTickReport, reportOf } from './tick-outcomes.js'
 import { RETRY_HEADROOM, runAllowanceFor } from './domain-ceiling.js'
 import { dueToday, maxTrackedPerWorkspace, monthlyEstimate, readTracked, setTracked } from './due.js'
 
@@ -161,6 +162,13 @@ async function main(): Promise<void> {
     // A ledger that could not be read, locked or written before a domain ran: the loop fails closed and says so in one line, as every other refusal does (C2r cost review, MINOR 10).
     process.stderr.write(`refusing: ${(e as Error).message}\n`)
     process.exit(2)
+  }
+  // What the run did is kept where the app's record reads it the morning after (MVP_PLAN P2), whether it was started here or from the
+  // app. A document that gates nothing: failing to write it never fails the tick.
+  try {
+    await recordTickReport(ledgerStores(parsed.dataDir, declaredSingleProcess(process.env)), reportOf(outcome, 'cli', parsed.fixture ? 'fixture' : 'live', new Date().toISOString(), parsed.day ?? new Date().toISOString().slice(0, 10)))
+  } catch (e) {
+    line(`  (the outcome could not be recorded for the app's record: ${(e as Error).message})`)
   }
   if ('refuse' in outcome) {
     process.stderr.write(`refusing: ${outcome.refuse}\n`)
