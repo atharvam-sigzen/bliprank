@@ -3709,13 +3709,18 @@ h3.record__title,
  * THREE STATES, NEVER BY OPACITY ALONE. `none` (no answer collected) and
  * `miss` (collected, not named) share one stroke colour and differ only in
  * DASH, so a colour-blind or greyscale reader still tells "nothing happened
- * here" from "an answer said no" without reading a single label. The three
- * named tiers are three real inks from the sheet's own data vocabulary —
- * primary, secondary, neutral — never one hue thinned by opacity: a tint
- * faint enough to read as a third tier is also faint enough to fail the 3:1
- * a non-text mark owes (WCAG 1.4.11), which a discrete ink never risks.
- * Every one of the five states clears 3:1 on the card in both themes, the
- * same tokens the rest of this file already carries that guarantee for.
+ * here" from "an answer said no" without reading a single label.
+ *
+ * ⚠️ THE THREE NAMED TIERS ARE NOT SAFE BY FILL ALONE, AND THE FIRST VERSION
+ * OF THIS COMMENT CLAIMED THEY WERE (review MINOR e). Each of primary,
+ * secondary and neutral-ink individually clears 3:1 against the CARD — that
+ * part held — but rank1 (primary) and rank3 (neutral-ink) sit close enough to
+ * each other in LIGHTNESS that the contrast BETWEEN THEM is only about
+ * 1.16:1, which a reader distinguishing ranks by fill alone, in greyscale or
+ * with a colour deficiency, could not reliably read apart. The actual fix is
+ * `.pgrid__rank` below: the exact rank is printed as a numeral inside the
+ * cell, so rank never depends on telling two inks apart. The fill stays as a
+ * fast at-a-glance cue on top of the numeral, not the only carrier of it.
  */
 .pgrid__cell {
   stroke-width: 1.25;
@@ -3745,6 +3750,42 @@ h3.record__title,
 .pgrid__cell--rank3 {
   fill: var(--color-neutral-ink);
   stroke: var(--color-neutral-ink);
+}
+
+/*
+ * The rank numeral, punched into the cell's own fill. `--color-card` is the
+ * page's paper colour, which is the opposite extreme from every one of the
+ * three data inks above IN BOTH THEMES BY CONSTRUCTION — light card against
+ * dark ink here, dark card against the same tokens' lightened dark-theme
+ * values there — so this one declaration clears contrast against all three
+ * fills without a per-theme override.
+ */
+.pgrid__rank {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--color-card);
+  pointer-events: none;
+}
+
+/* A real hit target per row, exactly like the head-to-head chart's own —
+   hover has no equivalent on touch, and neither a hover nor a title is
+   reachable by keyboard, so this is what makes the full question and the
+   per-engine breakdown reachable by tab and by tap (review MINOR f). */
+.pgrid__row-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.pgrid__row-hit:hover {
+  fill: var(--color-muted);
+}
+
+.pgrid__row-hit:focus-visible {
+  fill: var(--color-muted);
+  stroke: var(--color-ring);
+  stroke-width: 2;
+  outline: none;
 }
 
 /* --- cited-sources.tsx: magnitude bars for "most cited sites" ------------- */
