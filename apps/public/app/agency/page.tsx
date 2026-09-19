@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ActionLink } from '@/components/action-link'
 import { ProductBar } from '@/components/chrome'
-import { RangeRail } from '@/components/range-rail'
-import { CONCEPT_NOTICE, PORTFOLIO } from '@/lib/agency-fixture'
-import { NO_SCHEDULER_NOTE, Planned } from '@/lib/planned'
+import { PortfolioClientRow } from '@/components/portfolio-row'
 import { FEATURED_ID, tierById } from '@/lib/agency-pricing'
-import { runInfoOf, scanFor, subjectOf } from '@/lib/scan-result'
+import { cyclesFor, syncCycles } from '@/lib/cycles'
+import { SCHEDULE_FACT } from '@/lib/planned'
+import { NOT_A_RANKING, ORDER_NOTE, OWN_SET_NOTE, PORTFOLIO_NOTICE, UTC_NOTE, byAttention, portfolioRowOf, type PortfolioRowModel, type TrackedRead } from '@/lib/portfolio'
+import { scanFor } from '@/lib/scan-result'
+import type { TrackedStatus } from '@/lib/tracked'
 import { collectionStatus, readAgencyDomains, removeAgencyDomain, workspaceFor, type Workspace } from '@/lib/workspace'
-import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
+import { assertProvisionalAllowed } from '@bliprank/stats'
 
 // Module scope on purpose: the grades below are only computed once the reader
 // has clients, so relying on `confidenceGrade` to throw would mean discovering
@@ -18,29 +20,33 @@ import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bl
 assertProvisionalAllowed('The agency portfolio')
 
 /**
- * THE AGENCY PORTFOLIO — three groups of rows, and the difference between them
- * is the entire point of the screen.
+ * THE AGENCY PORTFOLIO — two groups of rows, both real (MVP_PLAN D1).
  *
  * A portfolio is the surface where a tool is most tempted to fill the grid.
  * Every row wants a number so the table looks finished, and the row with no
- * number is the one a competitor quietly seeds with a plausible figure. So this
- * page keeps three populations strictly apart and never lets one borrow the
- * other's typography:
+ * number is the one a competitor quietly seeds with a plausible figure. Until
+ * D1 this page did a politer version of that itself: six invented clients
+ * with made-up counts, labelled illustrative, always rendered. They are
+ * deleted, and the file that held them with them. What is left:
  *
- *   COLLECTED — a domain the reader added that has a committed scan behind it.
- *     Rail, interval, preview score, precision grade. Real, and the only rows
- *     on the page that are.
- *   QUEUED — a domain the reader added that has never been collected. It gets
- *     its category, its prompt allocation and its engine set, because all of
- *     that is true before a single answer exists — and NOT ONE metric, because
- *     none exists. The row is visibly a different kind of thing.
- *   WORKED EXAMPLE — the six invented clients from `agency-fixture`, kept and
- *     labelled as illustrative exactly as before.
+ *   COLLECTED — a domain the person added that has a really collected cycle
+ *     on this machine. Drawn from that client's own latest cycle: the rate
+ *     with its range and n, the trend as `compare()`'s verdict in words, the
+ *     daily checks and the days remaining, and whose questions produced the
+ *     number. Ordered by what needs attention, never by rate
+ *     (`lib/portfolio.ts`).
+ *   QUEUED — a domain the person added that has never been collected. Its
+ *     category, its prompt allocation and its engine set, because all of that
+ *     is true before a single answer exists, and NOT ONE metric, because none
+ *     exists.
  *
- * ⚠️ STILL A CONCEPT. There are no agency accounts, no tenancy and no
- * cross-workspace query. The added list is this browser's localStorage and
- * nothing else. Tenancy is human-owned (CLAUDE.md §4) and a real portfolio
- * crosses a workspace boundary on every row.
+ * WHERE THE NUMBERS COME FROM. The client LIST is this browser's localStorage
+ * (there are no agency accounts in the MVP; owner decision 2026-09-16). The
+ * RESULTS are the machine's store: on opening, every added domain's cycles are
+ * fetched from `/api/cycles` and its daily-check status from `/api/tracked`,
+ * so a cycle the daily loop filed overnight is on this page in the morning.
+ * Post-MVP, accounts, workspaces and invitations wire the list to
+ * `workspaces_of` and RLS with no change to this screen.
  */
 
 /**
@@ -59,16 +65,60 @@ export default function AgencyPortfolio() {
   const [mounted, setMounted] = useState(false)
   const [domains, setDomains] = useState<readonly string[]>([])
 
+  // Bumped when the store's cycles have been merged into this browser's registry, so the rows are re-derived from them.
+  const [synced, setSynced] = useState(0)
+  const [tracked, setTracked] = useState<Readonly<Record<string, TrackedRead>>>({})
+
   useEffect(() => {
     setMounted(true)
-    setDomains(readAgencyDomains())
+    const added = readAgencyDomains()
+    setDomains(added)
+    // THE MACHINE'S STORE IS THE SOURCE OF THE NUMBERS. Both reads are GETs that spend nothing. `/api/cycles` answers 404 for a
+    // domain the store does not hold, and the row keeps what this browser already knew. `/api/tracked` answers 200 with
+    // `tracked: false` for a domain nobody switched on, and refuses (409, 503) where the store cannot be read at all: then the
+    // row SAYS the re-check could not be read, and is never ranked with the clients that need nothing.
+    let live = true
+    void Promise.all(
+      added.map(async (domain) => {
+        await syncCycles(domain)
+        try {
+          const res = await fetch(`/api/tracked?domain=${encodeURIComponent(domain)}`, { cache: 'no-store' })
+          return [domain, res.ok ? ((await res.json()) as TrackedStatus) : null] as const
+        } catch {
+          return [domain, null] as const
+        }
+      }),
+    ).then((pairs) => {
+      if (!live) return
+      setTracked(Object.fromEntries(pairs))
+      setSynced((n) => n + 1)
+    })
+    return () => {
+      live = false
+    }
   }, [])
 
   // A stored entry that no longer resolves to a workspace is dropped rather
   // than rendered as a broken row.
   const spaces = domains.map(workspaceFor).filter((w): w is Workspace => w !== null)
-  const collected = spaces.filter((w) => w.hasData)
-  const queued = spaces.filter((w) => !w.hasData)
+  // A row carries a number only when a cycle was really collected for it. `synced` is read so the rows are re-derived once the
+  // store's cycles have arrived; the registry itself is module state, not React state.
+  void synced
+  const today = new Date().toISOString().slice(0, 10)
+  // ROWS WAIT FOR THE READS THEY ARE ORDERED BY. Drawn before the statuses arrive they would all rank "nothing to do" and then
+  // re-sort under the reader a moment later (statistics review of D1, MINOR 1); until then the page says it is reading.
+  const ready = mounted && synced > 0
+  // A scan with no day cannot be placed on a time axis, so `cyclesFor` leaves it out, and it is still a collected scan: it is a
+  // row of one cycle, "undated", never a queued client under a heading that says "no measurement of any kind" (MINOR 6).
+  const cyclesOf = (domain: string) => {
+    const dated = cyclesFor(domain)
+    const any = scanFor(domain)
+    return dated.length > 0 ? dated : any ? [any] : []
+  }
+  const rows: readonly PortfolioRowModel[] = ready
+    ? byAttention(spaces.map((w) => portfolioRowOf(w.domain, cyclesOf(w.domain), w.domain in tracked ? (tracked[w.domain] ?? null) : undefined, today)).filter((r): r is PortfolioRowModel => r !== null))
+    : []
+  const queued = ready ? spaces.filter((w) => cyclesOf(w.domain).length === 0) : []
   const allocated = spaces.reduce((total, w) => total + w.promptCount, 0)
 
   const remove = (domain: string) => setDomains(removeAgencyDomain(domain))
@@ -82,13 +132,10 @@ export default function AgencyPortfolio() {
           <h1>Agency portfolio</h1>
           <p className="lede">Every client, every category, with the interval attached — one sheet.</p>
         </div>
-        <aside className="note note--flag">
-          <span className="note__cap note__cap--flag">Concept preview</span>
-          <span className="note__gloss">{CONCEPT_NOTICE}</span>
-          <span className="note__line">
-            {mounted ? `${spaces.length} added · ${collected.length} collected` : 'reading this browser'}
-          </span>
-          <span className="note__line">{PORTFOLIO.length} illustrative clients</span>
+        <aside className="note">
+          <span className="note__cap">Real checks, local list</span>
+          <span className="note__gloss">{PORTFOLIO_NOTICE}</span>
+          <span className="note__line">{mounted ? `${spaces.length} added · ${rows.length} collected` : 'reading this browser'}</span>
         </aside>
       </div>
 
@@ -138,7 +185,8 @@ export default function AgencyPortfolio() {
 
             <p className="prose">
               A cycle for a client asks its category&apos;s unprompted prompt set across all five answer surfaces. The allocation above is that
-              arithmetic run offline: it is what collection would cost this portfolio in prompts, not a record of anything collected.
+              arithmetic run offline over each client&apos;s CATEGORY set: it is what collection would cost this portfolio in prompts, not a
+              record of anything collected. A client measured over questions of its own asks those instead, and its row says how many.
             </p>
 
             {/* A forward action on its own line: a short destination label,
@@ -153,8 +201,8 @@ export default function AgencyPortfolio() {
               <section className="record">
                 <h3 className="record__title">No clients added</h3>
                 <p className="prose">
-                  Nothing has been added to this portfolio, so there is nothing to show. The worked example further down is invented and is
-                  labelled as such; it is not this portfolio with sample data in it.
+                  Nothing has been added to this portfolio, so there is nothing to show. No sample clients are drawn in its place: a row
+                  appears here only for a client you add, and carries a number only once a check has really been collected for it.
                 </p>
               </section>
             ) : null}
@@ -172,23 +220,43 @@ export default function AgencyPortfolio() {
         </div>
       </section>
 
-      {/* 1 — COLLECTED. */}
-      {mounted && collected.length > 0 ? (
+      {/* 1 — COLLECTED. Real cycles, ordered by what needs attention, never by rate. */}
+      {mounted && !ready && spaces.length > 0 ? <p className="prose">Reading this machine&apos;s checks for the clients in this browser.</p> : null}
+      {ready && rows.length > 0 ? (
         <section className="section" aria-labelledby="collected-heading">
           <h2 id="collected-heading">Collected</h2>
           <div className="annotated">
             <div className="annotated__body">
+              {/* UNCONDITIONAL. Every client in its own category is the NORMAL state of a portfolio, and then no two rows share a
+                  basis: the first draft said this only when a row had its own set, and its order note ended "two clients whose
+                  ranges overlap are not first and second", which invites the inverse (statistics review of D1, MAJOR 3). */}
+              <p className="prose prose--flag" data-not-a-ranking>
+                {NOT_A_RANKING}
+                {rows.some((r) => r.ownSet) ? ` ${OWN_SET_NOTE}` : ''}
+              </p>
+              <p className="prose" data-order-note>
+                {ORDER_NOTE}
+              </p>
+              {/* The re-check is an INSTRUCTION on every row; what actually schedules one is said here, once, in the words every
+                  other surface uses (MAJOR 1). */}
+              <p className="prose" data-schedule-fact>
+                A row says whether a client is SET to be re-checked daily, which is a person&apos;s instruction, not a record that checks ran.
+                Schedule: {SCHEDULE_FACT}.
+              </p>
               <ul className="portfolio">
-                {collected.map((w) => (
-                  <CollectedRow key={w.domain} workspace={w} onRemove={remove} />
+                {rows.map((row) => (
+                  <PortfolioClientRow key={row.domain} row={row} onRemove={remove} />
                 ))}
               </ul>
             </div>
             <aside className="note">
               <span className="note__cap">Basis</span>
-              <span className="note__line">wilson-95 · algo det-1</span>
+              <span className="note__line">each row: its own latest check</span>
+              <span className="note__line">95% range, with its sample size</span>
+              <span className="note__line">{UTC_NOTE}</span>
               <span className="note__gloss">
-                These rows render a scan a budgeted runner already produced. Opening this page collects nothing and spends nothing.
+                These rows render checks a budgeted runner already collected on this machine. Opening this page collects nothing and spends
+                nothing.
               </span>
             </aside>
           </div>
@@ -197,7 +265,7 @@ export default function AgencyPortfolio() {
 
       {/* 2 — QUEUED. No rail, no score, no grade, and a status line that says
           why in words. A reader must not have to notice an absence. */}
-      {mounted && queued.length > 0 ? (
+      {ready && queued.length > 0 ? (
         <section className="section" aria-labelledby="queued-heading">
           <h2 id="queued-heading">Queued — no cycle in this record</h2>
           <div className="annotated">
@@ -225,173 +293,26 @@ export default function AgencyPortfolio() {
         </section>
       ) : null}
 
-      {/* THE LIFECYCLE LEGEND — one, marked planned, below the added groups.
-          The rows above carry only the two states that can actually occur in
-          this build: a collected cycle with its real day, or queued with
-          nothing. The fuller vocabulary is described here in words, once —
-          never drawn as empty status columns, which would render an unbuilt
-          capability as table furniture. */}
-      {mounted && spaces.length > 0 ? (
-        <section className="section" aria-label="Run status legend">
-          <div className="annotated">
-            <div className="annotated__body">
-              <p className="prose">
-                <Planned /> Once recurring collection exists, every added row will carry a run status — queued, running, done or failed — with its
-                last and next run. Today a row states only what is true: the day of a collected cycle, or that no cycle exists in this record.
-              </p>
-            </div>
-            <aside className="note note--flag">
-              <span className="note__cap note__cap--flag">Planned</span>
-              <span className="note__gloss">{NO_SCHEDULER_NOTE}</span>
-            </aside>
-          </div>
-        </section>
-      ) : null}
-
-      {/* 3 — THE WORKED EXAMPLE, labelled exactly as it was before. */}
-      <section className="section" aria-labelledby="example-heading">
-        <h2 id="example-heading">Worked example — invented clients</h2>
-
-        <div className="annotated">
-          <div className="annotated__body">
-            <p className="prose prose--flag">
-              The six rows below are illustrative and the clients do not exist. They are here to show what a full portfolio looks like when every
-              row carries its interval — including the thin sample and the one measured at zero. No figure in this group was collected from
-              anything.
-            </p>
-
-            {/*
-              One sheet, not a grid of client cards. The plan dissolves cards
-              into paper, and a portfolio is exactly where the template instinct
-              (six boxed tiles with a big number each) is strongest — and worst,
-              because boxing them invites reading the numbers as scores out of
-              ten rather than as measurements with ranges.
-
-              These rows stay NON-CLICKABLE while the added rows above are
-              anchors: the clients are invented, and a detail page for an
-              invented client would be a fabricated record wearing the same
-              chrome as a real one.
-            */}
-            <ul className="portfolio">
-              {PORTFOLIO.map((row) => {
-                const { grade } = confidenceGrade(row.metric)
-                return (
-                  <li className="portfolio__row" key={row.client}>
-                    <div className="portfolio__head">
-                      <span className="portfolio__client">{row.client}</span>
-                      <span className="portfolio__category">{row.categoryName} · illustrative</span>
-                    </div>
-
-                    {/* The signature device, in a table cell. Same rail, same
-                        fixed 0-100 scale, same settle — so a row cannot show a
-                        figure without showing how much it does not know. */}
-                    <div className="portfolio__rail">
-                      <RangeRail label="Mention rate" metric={row.metric} />
-                    </div>
-
-                    <div className="portfolio__marks">
-                      <span className="portfolio__mark">
-                        <span className="readout__cap">Precision</span>
-                        <span className="portfolio__grade num">{grade}</span>
-                      </span>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-
-          <aside className="note note--flag">
-            <span className="note__cap note__cap--flag">Illustrative</span>
-            <span className="note__line">wilson-95 · algo det-1</span>
-            <span className="note__line">5 engines · unprompted set</span>
-            <span className="note__gloss">
-              Every interval in this group is real arithmetic over invented counts. The figures are made up; the maths that turns them into a range
-              is the same code the Grader runs, so no row shows a shape that could not occur.
-            </span>
-          </aside>
-        </div>
-      </section>
-
       <section className="section">
-        <h2>What an agency would actually get</h2>
+        <h2>What this page does and does not do</h2>
         <p className="prose">
-          One row per client, each carrying its own interval rather than a league table of point estimates. A portfolio is where the temptation to
+          One row per client, each carrying its own range rather than a league table of point estimates. A portfolio is where the temptation to
           rank is strongest and where ranking is least defensible: two clients whose ranges overlap are not first and second, and this view says so
-          instead of sorting them.
-        </p>
-        <p className="prose">
-          <strong>quillbase.app</strong> is deliberately in the worked example on a thin sample. Its range is visibly wider than the others, which
-          is what a small sample looks like when nobody hides it — and the reason a portfolio built on point estimates alone would rank it
-          confidently and wrongly.
+          instead of sorting them by rate.
         </p>
         <p className="prose prose--flag">
-          None of this is wired to anything. There are no agency accounts, no client workspaces and no cross-client queries in this build. Client
-          isolation is the one thing a trust-positioned product cannot prototype casually, so the data model behind this screen gets designed
-          before the screen does.
+          There are no agency accounts, no client workspaces and no sharing in this build. The list of clients is this browser&apos;s; the
+          checks are this machine&apos;s. Client isolation is the one thing a trust-positioned product cannot prototype casually, so accounts and
+          invitations arrive with the data model behind them, not before it.
         </p>
-
-        {/* A link to a mockup, not to a feature. It sits at the end of the
-            caveat section rather than beside "Add a client" for that reason:
-            next to a working control it would read as a second working control,
-            and the prose around it has to do the work the position does. */}
         <p className="prose">
-          Adding a client is the only step of the client lifecycle that runs today. The rest of the arc is drawn as a mockup: a scheduled cycle, a
-          collection run, a first result and the first comparison, each stage marked as intent rather than shown as a feature. Nothing on it has
-          been collected or scheduled.
+          Adding a client resolves its category and its prompt allocation offline. Its first check, and its daily checks, are started from the
+          client&apos;s own record. The rest of the client lifecycle is drawn as a mockup, each stage marked as intent rather than shown as a
+          feature.
         </p>
         <ActionLink href="/agency/lifecycle">Client lifecycle</ActionLink>
       </section>
     </main>
-  )
-}
-
-/**
- * A client with a committed scan behind it. Everything on this row is derived
- * from that scan — there is no branch here that can produce a figure without
- * one, because `scanFor` returning null renders nothing at all.
- */
-function CollectedRow({ workspace, onRemove }: { workspace: Workspace; onRemove: (domain: string) => void }) {
-  const scan = scanFor(workspace.domain)
-  // `hasData` is derived from this same call, so null is unreachable — but the
-  // alternative to a guard is a non-null assertion, and an assertion is how a
-  // row eventually renders undefined as a number.
-  if (!scan) return null
-
-  const run = runInfoOf(scan)
-  const subject = subjectOf(scan)
-  const { grade } = confidenceGrade(subject.metric)
-
-  return (
-    <li className="portfolio__row">
-      <div className="portfolio__head">
-        {/* The head is the door to this client's record. The remove button
-            stays a SIBLING of the anchor, never a child — no nested
-            interactive elements. The day printed here comes from runInfoOf
-            and is the row's run status: the one state a collected row can
-            truthfully claim. */}
-        <Link className="portfolio__link" href={`/agency/client/${encodeURIComponent(workspace.domain)}`}>
-          <span className="portfolio__client">{workspace.domain}</span>
-          <span className="portfolio__category">
-            {scan.categoryName}
-            {run.day ? ` · collected — cycle of ${run.day}` : ' · collected'} · {scan.counts.answersScored} answers
-          </span>
-        </Link>
-        <span className="portfolio__category detail">{formatProvenance(subject.metric)}</span>
-        <RemoveButton domain={workspace.domain} onRemove={onRemove} />
-      </div>
-
-      <div className="portfolio__rail">
-        <RangeRail label="Mention rate" metric={subject.metric} />
-      </div>
-
-      <div className="portfolio__marks">
-        <span className="portfolio__mark">
-          <span className="readout__cap">Precision</span>
-          <span className="portfolio__grade num">{grade}</span>
-        </span>
-      </div>
-    </li>
   )
 }
 

@@ -220,7 +220,7 @@ describe('dayMarker: every reason compare() refuses for, in plain words (MVP_PLA
 
   it('THE COMMONEST TRANSITION: the category\u2019s questions one day, the person\u2019s own the next. It used to read "the prompt count (17 against 0), the custom prompt set (absent against 6@1)"', () => {
     const m = dayMarker(at(6, 30, own(1)), at(20, 85, basisOf({})))
-    expect(m).toEqual({ kind: 'refused', text: 'not comparable with the day before: the day before was asked the category\u2019s 17 questions, and this day your own 6 questions (version 1)' })
+    expect(m).toEqual({ kind: 'refused', text: 'not comparable with the day before: the earlier check was asked the category\u2019s 17 questions, and this one your own 6 questions (version 1)' })
     // Nothing on the line says a day "asked 0", and nothing is in basis notation.
     expect(m!.text).not.toMatch(/against 0|\d@\d|absent/)
   })

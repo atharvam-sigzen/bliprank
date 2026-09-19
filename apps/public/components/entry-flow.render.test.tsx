@@ -171,7 +171,7 @@ describe('the record lists the days, at simple depth', () => {
     expect(sentence(list)).toMatch(/2026-09-18:.*daily re-check · your 4 prompts, version 2/)
     // The version change is a change of basis, said in words on the day it happened, and only there.
     // IN PLAIN WORDS (stats review, MAJOR 3): this line used to read "the custom prompt set (3@1 against 4@2)".
-    expect(sentence(list)).toMatch(/2026-09-18:.*not comparable with the day before: the day before was asked your own 3 questions \(version 1\), and this day your own 4 questions \(version 2\)/)
+    expect(sentence(list)).toMatch(/2026-09-18:.*not comparable with the day before: the earlier check was asked your own 3 questions \(version 1\), and this one your own 4 questions \(version 2\)/)
     expect(sentence(list)).not.toMatch(/\d@\d/)
     expect(sentence(list)).not.toMatch(/2026-09-17:[^:]*not comparable/)
     // The headline above it names the latest set.

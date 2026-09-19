@@ -763,9 +763,30 @@ day and the daily cap. `SCHEDULE_FACT` is unchanged: it changes only after a
 live tick has filed a cycle. ⚠️ HUMAN REVIEW REQUIRED: spend control
 (`lib/local-tick.ts`, `lib/scheduler.ts`, `api/tick/run-now/route.ts`,
 `load-key.ts` `FILE_FLAGS`). The cost review is in `docs/MVP_REVIEWS.md` row
-P1, P2, NOT YET ACCEPTED. **The next session takes D1** (the agency portfolio
-from real scans, the invented clients deleted, the own-set label on every
-row), then D5.
+P1, P2, NOT YET ACCEPTED.
+**D1 (2026-09-19, built, committed locally, NOT pushed on the owner's
+instruction that afternoon): the agency portfolio is drawn from real scans
+and the invented clients are deleted.** `lib/agency-fixture.ts` is gone and a
+test reads the app's source and the rendered page for its six names. A row is
+a client's real latest cycle (`apps/public/lib/portfolio.ts` `portfolioRowOf`,
+pure): the rate with the noun, the range and the rate's own n through
+`packages/stats`; a zero said in words; what KIND of cycle it is when it is
+the bundled reference scan or a fixture cycle; a category that was not
+identified marked as such; whose questions, the client's own set labelled on
+the row; the trend as `compare()`'s verdict in words; and the daily re-check
+worded as the INSTRUCTION it is, never "checked daily", with `SCHEDULE_FACT`
+once above the rows. NO TWO ROWS ARE COMPARED, EVER, said unconditionally;
+rows are ordered by what needs attention, never by rate, and a sustained fall
+is seen through ONE further pair fixed in advance (the latest against the
+oldest check in the unbroken comparable run). The client list stays this
+browser's (the MVP scope of 2026-09-16); the numbers are read from the
+machine's store through `/api/cycles` and `GET /api/tracked`. The independent
+statistics pass found six MAJORs in the builder's first draft, all fixed with
+a failing case first (`docs/MVP_REVIEWS.md` row D1, NOT YET ACCEPTED).
+⚠️ HUMAN REVIEW REQUIRED: statistics (rendered metrics; the second,
+non-adjacent comparison in `lib/portfolio.ts` `oldestComparable`). **The next
+rows are the oversight session's to assign** (its tracks table names D5 and a
+P1 fix track).
 
 **⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
 allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS

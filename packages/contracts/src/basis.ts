@@ -307,7 +307,7 @@ export function basisChangeWords(current: string, previous: string): string | nu
   const said: string[] = []
   const questions = (x: Basis): string => (x.custom && x.unprompted === 0 ? `your own ${x.custom.count} ${x.custom.count === 1 ? 'question' : 'questions'} (version ${x.custom.version})` : `the category\u2019s ${x.unprompted} ${x.unprompted === 1 ? 'question' : 'questions'}`)
   if (b.unprompted !== a.unprompted || customDifference(a.custom, b.custom) !== null) {
-    said.push(questions(a) === questions(b) ? 'the questions asked were not the same list, though saved under the same count and version' : `the day before was asked ${questions(b)}, and this day ${questions(a)}`)
+    said.push(questions(a) === questions(b) ? 'the questions asked were not the same list, though saved under the same count and version' : `the earlier check was asked ${questions(b)}, and this one ${questions(a)}`)
   }
   if (b.bank.slug !== a.bank.slug) said.push('the category it was measured under changed')
   else if (b.bank.version !== a.bank.version) said.push(`the category\u2019s question bank moved from version ${b.bank.version} to version ${a.bank.version}`)
