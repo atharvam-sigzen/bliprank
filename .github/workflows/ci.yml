@@ -8,7 +8,7 @@
 # a job that could spend (R3), so none is provided and none may be added here.
 #
 # Strict `tsc` is the lint. No linter is installed (B0 removed the directives
-# that named one), so typecheck + test is the whole gate.
+# that named one), so typecheck + test + the app's production build is the gate.
 name: ci
 
 on:
@@ -43,3 +43,8 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+
+      # The production build of the app. Tests and tsc cannot see a browser bundle
+      # that pulls a Node-only module: C3 shipped one (a client page importing the
+      # contracts package root, which carries node:crypto) with this gate green.
+      - run: pnpm --filter @bliprank/public build

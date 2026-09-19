@@ -1,4 +1,4 @@
-import { parseBasis } from '@bliprank/contracts'
+import { parseBasis } from '@bliprank/contracts/basis'
 
 /**
  * THE PROMPT SET A MEASUREMENT WAS TAKEN OVER, read off its own basis string

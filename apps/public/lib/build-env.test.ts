@@ -41,9 +41,9 @@ describe('the CI gate (MVP_PLAN B0)', () => {
     expect(ci).toMatch(/^on:\n\s+push:\n\s+pull_request:/m)
   })
 
-  it('runs exactly the two commands the gate is made of, in order', () => {
+  it('runs exactly the commands the gate is made of, in order: typecheck, test, and the app build', () => {
     const runs = [...ci.matchAll(/^\s+- run: (.+)$/gm)].map((m) => m[1])
-    expect(runs).toEqual(['pnpm install --frozen-lockfile', 'pnpm typecheck', 'pnpm test'])
+    expect(runs).toEqual(['pnpm install --frozen-lockfile', 'pnpm typecheck', 'pnpm test', 'pnpm --filter @bliprank/public build'])
   })
 
   it('is offline by construction: no key, no collection flag, no secret reaches the job (R3)', () => {
@@ -103,6 +103,26 @@ describe('no test depends on this machine’s live data (MVP_PLAN B5)', () => {
       .filter((p) => /\.test\.tsx?$/.test(p) && !p.endsWith('lib/build-env.test.ts'))
     expect(tests.length).toBeGreaterThan(100)
     const offenders = tests.filter((p) => readFileSync(root(p), 'utf8').includes('data-' + 'live'))
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('browser code never imports a package root that carries a Node-only module', () => {
+  // `@bliprank/contracts` re-exports cache-key.ts, which imports node:crypto.
+  // A `'use client'` file, or a lib file one imports, that names the package
+  // root breaks the production build and nothing else: tsc and vitest both run
+  // on Node and resolve it happily. C3 shipped exactly that in lib/prompt-set.ts
+  // (2026-09-19, caught by the oversight session's build, not by CI). The
+  // browser-safe entries are the subpaths: /basis, /engines, /geo.
+  it('no component and no non-route lib file imports the contracts package root', () => {
+    const files = execFileSync('git', ['ls-files', '--', 'apps/public/components', 'apps/public/lib', 'apps/public/app'], { cwd: root(''), encoding: 'utf8' })
+      .split('\n')
+      .filter((p) => /\.tsx?$/.test(p) && !/\.test\.tsx?$/.test(p) && !/\/route\.ts$/.test(p))
+    expect(files.length).toBeGreaterThan(60)
+    const bare = /from\s+['"]@bliprank\/contracts['"]/
+    // Server-only lib files may need the root; they are named here on purpose, one by one.
+    const serverOnly = new Set<string>([])
+    const offenders = files.filter((p) => !serverOnly.has(p) && bare.test(readFileSync(root(p), 'utf8')))
     expect(offenders).toEqual([])
   })
 })
