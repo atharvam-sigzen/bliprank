@@ -544,3 +544,95 @@ spend. The loop's bounds are unchanged by this and by ADR-0018: a loop job
 runs under the daily cap, the tick lease and the daily-ledger fold; a
 hand-started cycle runs under none of those three and under the bounds this
 amendment lists.
+
+# Amendment 3 — the daily checks run from the app the owner has open (owner decision 2026-09-16; MVP_PLAN P1, P2; built 2026-09-19)
+
+⚠️ HUMAN REVIEW REQUIRED: spend control. Nothing here has run live, and no
+session may run it live.
+
+**What the owner decided.** Until the directors' review there is no
+machine-level scheduled task and no hosted copy. While the local app is
+running, the day's tick runs once at a fixed LOCAL time (default 06:15,
+`GRADER_TICK_HOUR`), and a button on the record, "Run today's checks now",
+runs the same tick on demand. Arming on the machine is two acts and nothing
+else: `COLLECTION_BUDGET_USD_DAILY` and `GRADER_LIVE_SCAN=true` in the
+repo-root `.env.local`, plus a tracked domain in the store.
+
+**One path, one cap.** Both come to `runLocalTick`
+(`apps/public/lib/local-tick.ts`), which calls `runTick` in live mode over the
+machine's own store and ledgers: the function the operator's command calls.
+The daily cap, the tick lease, the per-domain reservation, the quota and burst
+gates, the per-run allowance and the runner's lifetime ledger are the ones
+this ADR already defines, met in the same order. No second loop exists.
+
+**The one thing this path supplies, and when.** `runTick` refuses a live run
+unless `GRADER_DAILY_LOOP=armed`, this ADR's go-ahead. For THIS path the
+owner's go-ahead IS the two acts. So `localArming` hands `runTick` an
+environment carrying `GRADER_DAILY_LOOP=armed` when, and only when: identity
+is off and the runtime is a declared single process (a machine; on a
+deployment or a fleet the path answers 404 and the signed QStash route of
+ADR-0018 is the transport); the hard daily ceiling is a positive number; the
+live flag is true; at least one domain is tracked and inside its days; and
+`GRADER_DAILY_LOOP` is not set to anything OTHER than `armed` (an explicit
+other value, `off` for instance, is the owner's off switch and is obeyed).
+With the cap, the flag or a tracked domain absent the answer is one of three
+fixed sentences and `runTick` is never called. Every OTHER refusal
+`liveGates` makes still stands, in its own words: the master collection flag,
+the provider key, the named plan, the runner ledger's room. The dotenv
+allow-list (`load-key.ts` `FILE_FLAGS`) gains the ceiling, the plan, the loop
+variable and the hour, read by this path and no other: the signed route still
+takes its mode from the environment alone.
+
+**When it fires.** When the clock CROSSES the tick time while the process is
+alive (`lib/scheduler.ts` `crossed`): a laptop asleep at 06:15 runs on waking;
+an app STARTED after the hour does not run, because starting the app is not an
+instruction to spend. The record says the morning's check did not run and the
+button runs it on a person's word. Never twice: a crossing is once per local
+day per process, and across processes the local day is CLAIMED in
+`local-scheduler.json` under the document's lock before the tick runs; behind
+both stand one cycle per host per UTC day, the tick lease and the daily cap.
+
+**The button's route** (`POST /api/tick/run-now`) is unsigned because on a
+machine with identity off there is nobody to sign, so it exists only there
+(404 otherwise). The server answers the machine only (`-H 127.0.0.1`, C3r item
+14), which stops another machine and not a page open in the owner's browser,
+so a request that says it comes from another origin is refused before anything
+is read. What a forged press could cause is bounded either way: today's
+checks, once, under the day's cap.
+
+**What it did is kept** (`tick-outcomes.json`, `services/grader/src/tick-outcomes.ts`):
+per tracked domain, collected, ran without a result, refused and why, or not
+due, for the app's runs and the command's. A SEPARATE document from
+`daily-spend.json` on purpose: the spend ledger is what the cap is enforced
+against, and a display concern may never write into it. The record shows
+yesterday's and today's outcome, and says on opening when the morning's run
+was missed (`GET /api/tick/status`, `components/daily-checks.tsx`).
+
+**Recorded risk, bounded (the owner's own words in the row).** An agent
+session that starts the dev server on this machine runs the scheduler too,
+bounded by the daily cap and the tracked set; the pre-spend hook cannot see a
+timer or a button. What narrows it: nothing fires on start, only on a
+crossing; and `COLLECTION_ENABLED` must still be true.
+
+**Independent cost review of the build (2026-09-19), for the owner.** No
+defect in the arming: fail-closed on every malformed input tried, no new path
+by which an injected environment variable arms anything, the four new dotenv
+names read by this path alone, the same cap, lease and ledgers as the
+operator's command. Two things it asks the owner to hold in view. (1) This
+path converts a flag that used to matter only on a person's click
+(`COLLECTION_ENABLED`, injected true into every agent session by decision)
+into one component of an UNATTENDED trigger: once the two acts are taken and
+a domain is tracked, any app left running, or started from any session,
+collects at the local hour with no further confirmation, bounded as above.
+Measured on the owner's machine on the day of the build: the cap and the live
+flag were already set, so it stood one tracked domain from armed. A session
+that starts the app sets `GRADER_DAILY_LOOP=off`. (2) A run refused at ARMING
+(no cap, flag off, nobody tracked, switched off) returns before anything is
+recorded, so it leaves no line in `tick-outcomes.json`; the record states the
+same fixed sentence live on opening, and `missedToday` is computed against
+the arming as it stands now, which fails toward less spend. A run refused
+deeper, by `liveGates`, IS recorded.
+
+`SCHEDULE_FACT` is unchanged ("nothing schedules a cycle yet"): by this plan's
+own rule it changes only after a live tick has filed a cycle.
+

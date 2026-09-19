@@ -326,6 +326,7 @@ QSTASH_CURRENT_SIGNING_KEY=        # the route verifies deliveries with these tw
 QSTASH_NEXT_SIGNING_KEY=
 GRADER_TICK_CRON=                  # optional, default "15 6 * * *" (UTC; a CRON_TZ= prefix is refused, the day is UTC)
 GRADER_DAILY_LOOP=                 # armed = live; fixture = offline, honoured only with identity off; anything else = every verified job answers "not armed" and does nothing
+GRADER_TICK_HOUR=                  # optional, default 06:15, this machine's LOCAL time as HH:MM or H: when the in-app scheduler runs the day's checks while the local app is open (MVP_PLAN P1, ADR-0017 Amendment 3). A value that does not parse keeps the default. Read from the environment or the repo-root .env.local.
 GRADER_MAX_TRACKED_PER_WORKSPACE=  # optional, default 3: the hosts one workspace may re-check daily through POST /api/tracked, until D2 gates the count by plan (C3). A value that is not a positive integer keeps the default. The machine's track command does not read it.
 ```
 
@@ -730,6 +731,41 @@ addendum: what two numbers must share before they are compared; the zero
 sentence; the plain words for a changed basis); scoring/R5 (`rescore.ts`,
 `store/file-store.ts`); spend control (`due.ts`, `ledger-doc.ts`
 `updateFileLedgerSync`, `custom-prompts.ts` `MAX_CUSTOM_PROMPTS`).
+
+**P1 and P2 (2026-09-19, built, NEVER RUN LIVE): the day's checks run from
+the app the owner has open, and the record says what they did (ADR-0017
+Amendment 3).** `apps/public/instrumentation.ts` starts an in-process
+scheduler (`lib/scheduler.ts`) that, while the local app is running, attempts
+the day's tick once when the clock CROSSES a fixed LOCAL time (default 06:15,
+`GRADER_TICK_HOUR`), never on start; the record's "Run today's checks now"
+button posts to `POST /api/tick/run-now`. Both call `runLocalTick`
+(`lib/local-tick.ts`), which calls `runTick` in live mode over the machine's
+own store and ledgers: the same tick path, the same daily cap, the same gates
+as the operator's command. Arming on the machine is the owner's two acts
+(`COLLECTION_BUDGET_USD_DAILY`, `GRADER_LIVE_SCAN=true`, in the repo-root
+`.env.local`) and a tracked domain; with any absent the answer is one of
+three fixed sentences and `runTick` is never called; with all present
+`localArming` supplies `GRADER_DAILY_LOOP=armed`, unless that variable is
+set to anything else, which is the owner's off switch. The button's route is
+unsigned, so it exists only with identity off on a declared single process
+(404 otherwise) and refuses a cross-origin request. What each tick did is
+kept in `tick-outcomes.json` (a separate document from the spend ledger, on
+purpose) and shown on the record per tracked domain: collected, ran without
+a result, refused and why, not due; a morning run that was missed is said on
+opening (`GET /api/tick/status`, `components/daily-checks.tsx`).
+**⚠️ A SESSION THAT STARTS THE APP SETS `GRADER_DAILY_LOOP=off`
+(`COLLECTOR_TOPOLOGY=single-process GRADER_DAILY_LOOP=off pnpm --filter
+@bliprank/public dev`).** Measured on 2026-09-19: the owner's machine already
+has the cap and the live flag set, so it is ONE TRACKED DOMAIN from armed, and
+an app left running, or started from any session, would then collect at the
+local hour with no further confirmation, bounded by one cycle per host per
+day and the daily cap. `SCHEDULE_FACT` is unchanged: it changes only after a
+live tick has filed a cycle. ⚠️ HUMAN REVIEW REQUIRED: spend control
+(`lib/local-tick.ts`, `lib/scheduler.ts`, `api/tick/run-now/route.ts`,
+`load-key.ts` `FILE_FLAGS`). The cost review is in `docs/MVP_REVIEWS.md` row
+P1, P2, NOT YET ACCEPTED. **The next session takes D1** (the agency portfolio
+from real scans, the invented clients deleted, the own-set label on every
+row), then D5.
 
 **⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
 allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS

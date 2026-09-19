@@ -96,7 +96,19 @@ export function loadApiKey(root: string, env: NodeJS.ProcessEnv = process.env, n
  * read, never defaulted: a route that declared single-process for itself
  * would be the bug that change removed.
  */
-const FILE_FLAGS = new Set(['COLLECTION_ENABLED', 'GRADER_LIVE_SCAN', 'COLLECTOR_TOPOLOGY'])
+const FILE_FLAGS = new Set([
+  'COLLECTION_ENABLED',
+  'GRADER_LIVE_SCAN',
+  'COLLECTOR_TOPOLOGY',
+  // The in-app daily tick (MVP_PLAN P1, owner decision 2026-09-16): arming on the machine is two acts in THIS file, the hard daily
+  // ceiling and the live flag, so the ceiling has to be readable here; the plan a live tick must name, the loop variable (an explicit
+  // value other than "armed" is the owner's off switch) and the local hour beside them. Read by `apps/public/lib/local-tick.ts` and
+  // by nothing else: `readFlag` is opt-in per caller, so the signed QStash route still takes its mode from the environment alone.
+  'COLLECTION_BUDGET_USD_DAILY',
+  'OPENWEBNINJA_PLAN',
+  'GRADER_DAILY_LOOP',
+  'GRADER_TICK_HOUR',
+])
 
 /**
  * Resolve one boolean-ish flag, reporting where it came from.
