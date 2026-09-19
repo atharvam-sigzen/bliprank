@@ -177,3 +177,169 @@ hatch, and it leaves a trail.
 Human-owned areas touched, flagged at each step: the competitor set and the
 prompt banks (scoring inputs), the ceiling recomputation (spend control), the
 basis shape (provenance). No live spend at any step.
+
+---
+
+# Amendment 1 — the person's edited prompt set IS the measurement (owner decision, 2026-09-16)
+
+**Status:** Built by a session on the owner's stated decision of 2026-09-16
+(MVP_PLAN row C3). **⚠️ HUMAN REVIEW REQUIRED: METHODOLOGY.** This changes what
+the headline number is a measurement OF. `docs/METHODOLOGY.md` is human-owned
+and does not describe custom prompts at all today; it needs a section written
+by its owner before this is described to a customer as methodology. The sample
+definition and the scoring rule set are human-owned (CLAUDE.md §4); the code
+is written, the decision on its wording and its floors is not a session's.
+
+## What the owner decided
+
+The entry flow, in the owner's words, recorded by the session: a person enters
+a domain; the prompts that would be asked appear (the domain's current set: the
+authored or curated bank on first entry, the person's own latest version after
+that); the person edits them in the app, adding, removing or rewording, and the
+result is saved as version V through the existing versioned custom-prompts
+path, with PROPERTY 2 still enforced; the person enters a number of days; the
+first cycle runs now and the domain is tracked until that day, asked that set
+on every engine daily, and then it stops. **The edited set is the measurement.**
+The headline carries its basis and says "your N prompts, version V"; the trend
+breaks at a version change; a head-to-head compares equal bases only; and the
+bank's set is not collected separately for that domain unless the person kept
+its prompts.
+
+## What this supersedes, and why the integrity argument still holds
+
+Decision 4 made the person's prompts a SECOND measurement beside the curated
+one, on the owner's reasoning of 2026-09-03: *merging would change the sample
+and break every trend the moment a prompt is added.* That reasoning was about
+SILENT change. This amendment does not merge and does not change anything
+silently:
+
+- The set REPLACES the bank's prompts as the headline's cells; nothing is
+  pooled. The headline basis becomes the bank's string with `unprompted=0` and
+  the keyed tail `custom=K@V` (`packages/contracts/src/basis.ts`, unchanged:
+  the shape already existed for decision 4's block, and the positional seven
+  segments are untouched, so every stored basis still parses and formats byte
+  for byte).
+- A version change IS a change of basis. `compare()` refuses across it, the
+  trend chart breaks its line there, the per-day list says so in words on the
+  day it happened (`the custom prompt set (3@1 against 4@2)`), and a
+  head-to-head between two records is drawn only on equal bases. The break is
+  the disclosure: a person who changes their questions is shown, at the point
+  of change, that the number before and the number after answer different
+  questions.
+- PROPERTY 2 (the headline is unprompted) holds on the person's text: the
+  writer refuses a prompt that names the subject or any tracked brand, with
+  the scorer's own matcher and the reason, before anything is saved
+  (`checkCustomPromptsWith`). PROPERTY 3 (one basis across every brand in a
+  result) holds: every brand is scored over the same answers.
+- R5: no stored cycle is touched, and a re-derivation measures the sample the
+  stored cycle measured. The re-score pre-flight reads the ROLE the set played
+  off the stored file (`custom=` on the headline basis with `unprompted=0`:
+  the headline's own sample; a second block beside a bank headline: decision
+  4's block) and pins it on the re-run (`RunnerOptions.promptSetRole`,
+  `rescore.ts` `promptSetRole`). The first build of this amendment pinned the
+  version and not the role, so the runner read any pinned version as the
+  headline's set and a re-score of a decision-4 cycle would have republished
+  it, over the same file, as a measurement of a different sample: the silent
+  rebasing this product is sold against. Found by the statistics review
+  before anything was committed; `correctable-context.gate.test.ts` now
+  re-derives an old-shape cycle under both roles and shows the difference.
+  Nothing new writes a second block.
+- The block's basis and a headline set's basis are the SAME STRING
+  (`…|unprompted=0|runs=1|custom=K@V`); what tells them apart is the field
+  they live in. No surface reads the two together today: the trend and the
+  latest movement read headline metrics only, decision 4's movement reads
+  block metrics only, a head-to-head is within one result, and
+  `promptSetOf` reads the headline basis alone. A cross-record surface built
+  later must keep that separation or the basis needs a marker for the role.
+- R6: the cache key is unchanged. A prompt the person kept from the bank
+  normalises to the bank's own cell, so it is one cell in the corpus, asked
+  once, and a repeated cycle reads it back.
+- The scoring algorithm version does NOT move. `algo_version` stamps how an
+  answer is scored (mention, citation, position: R1's deterministic rules),
+  and none of that changed; what changed is the SAMPLE, and the basis is the
+  provenance field that exists to carry exactly that. A reviewer who thinks
+  the sample definition belongs under the version stamp instead should say so
+  here before a customer sees it.
+
+## What it costs, stated plainly
+
+- **Cross-domain comparability ends at the first edit.** The curated bank is
+  what made two domains in one category comparable with each other. A domain
+  measured over its own set is comparable with itself at the same version and
+  with nothing else. Any category benchmark (`/cbi-publish`) must be built
+  from bank-basis measurements only, and the basis makes those selectable.
+- **A small set is a small sample.** n is prompts × engines × runs. A set of
+  three prompts on five engines is fifteen answers: the Wilson interval is
+  correspondingly wide and is shown, and `compare()`'s minimum sample means two
+  such cycles are reported as insufficient data rather than compared. No floor
+  on the set's size is imposed by this amendment beyond the writer's existing
+  bounds; **whether to warn or refuse below some count is the methodology
+  owner's decision**, and the honest default until it is made is what the
+  build does: show the interval and refuse the comparison.
+- The set is bounded at one cycle's prompts (`MAX_CUSTOM_PROMPTS = 17`, was
+  15), so a person can keep the whole bank while rewording one question, and a
+  measurement never costs more than a bank cycle. The writer's refusal of a
+  prompt "the curated bank already asks" is gone, because the set no longer
+  sits beside the bank.
+- **A person's set can be less independent than the bank's.** The interval
+  assumes the n answers are independent draws. The curated bank's prompts were
+  written and reviewed to ask different questions; an edited set may contain a
+  reworded prompt beside its original, and two near-identical questions produce
+  near-identical answers. Deduplication only removes prompts identical after
+  cache-key normalisation, so rewordings are collected as separate cells and
+  counted as separate trials. The stated interval is therefore an upper bound
+  on the precision of a set whose questions overlap, by roughly √DEFF: with a
+  six-prompt set that is really two questions written three ways, of the order
+  of 1.5×. This is the same design-effect correction G0 was commissioned to
+  measure for engines and runs (`packages/stats/src/wilson.ts`), now with a
+  second source we do not control. No correction is applied today, by either
+  route. Whether the editor should flag near-duplicate prompts, and whether
+  the set's own DEFF should be estimated once G0 lands, is the methodology
+  owner's decision. (Wording from the statistics review of this amendment.)
+
+## What travels with the number
+
+The label "your N prompts, version V" is said where the sample size is said:
+in the lede, and in the basis note beside the rail on both surfaces, so it
+survives the case where the lede yields (zero mentions, which at fifteen
+answers is not rare). Beside it, on both surfaces, one sentence says what the
+number may be compared with: the person's own earlier cycles asked the same
+version, and nothing else, not another domain and not a scan asked the
+category bank (`lib/prompt-set.ts` `PROMPT_SET_SCOPE`). A head-to-head on a
+set is headed "How that compares on your questions" and says that the rivals
+are ranked on what the person asked, not on the category's shared bank:
+PROPERTY 3 makes the comparison sound, and the heading stops it being read as
+a position in the market. The per-day list marks every boundary `compare()`
+refuses for (the scoring version, the collection path, the basis), not the
+change of questions alone.
+
+Before a small set is bought, the editor and the preview say what it buys:
+below `MIN_N_FOR_COMPARISON` answers (questions × engines at one run per
+cell; six questions is the first size that clears thirty at five engines) no
+two cycles and no competitor row can be compared. A warning, never a refusal,
+and computed against the constant, which is PROVISIONAL pending G0. **Whether
+to refuse below some size remains the methodology owner's decision.**
+
+The daily re-check's status names the set version in force NOW, which is what
+the next cycle will ask, and keeps the version at the moment of switching on
+apart as provenance of the instruction. Each run is pinned to the version its
+cost was sized on, so a set saved between the day's decision and the run
+changes the next cycle and never the one in flight.
+
+## What was built, and what was not
+
+Built (MVP_PLAN C3): the preview shows the domain's current set and lets the
+person edit it (`components/prompt-preview.tsx`), saving through
+`/api/custom-prompts`, which on a machine's own store applies directly as
+version V (the person at the keyboard is its operator; with identity on, an
+owner or admin applies and a member files, as before); `runScan` takes
+`promptSet` and measures it as the headline; the runner, the due list, the
+scan route's sizing and the re-score pre-flight follow; the headline and the
+record say "your N prompts, version V"; the record lists the days with the
+version each was asked under. Tested end to end offline
+(`app/api/entry-flow.test.ts`, `components/entry-flow.render.test.tsx`,
+`scan.test.ts`).
+
+Not built, deliberately: a floor on set size; any parallel collection of the
+bank's set for a domain with its own; any pooling of answers across versions;
+any rewrite of a stored cycle; the METHODOLOGY text.

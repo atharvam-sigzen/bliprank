@@ -1,7 +1,7 @@
 import { normaliseHost } from '@bliprank/taxonomy'
 import { consequencesOf, fileCategoryRequestIn, type CategoryRequest } from '../../../../../services/grader/src/category-requests.js'
 import { allCategories, correctCategoryIn, readGeneratedBanks } from '../../../../../services/grader/src/resolve-category.js'
-import { categoryRecordIn } from '../../../../../services/grader/src/store/documents.js'
+import { categoryRecordIn, customPromptsIn } from '../../../../../services/grader/src/store/documents.js'
 import {
   DEFAULT_VISITOR_WINDOW_MS,
   checkVisitorThrottle,
@@ -101,7 +101,7 @@ export async function GET(req: Request): Promise<Response> {
   // Each correction's target is the slug of the record that carries it.
   const chain = [...(record.superseded ?? []), record]
   const pending = await store.requests.pending<RequestBody>('category', domain)
-  const c = consequencesOf(data, domain, env, (await store.cycles.list(domain)).length)
+  const c = consequencesOf(data, domain, env, (await store.cycles.list(domain)).length, (await customPromptsIn(store, domain))?.prompts.length ?? 0)
   const body: CategoryStatus = {
     domain,
     record: {

@@ -201,7 +201,7 @@ export async function handleTick(req: Request, env: NodeJS.ProcessEnv = process.
     if (!entry) return json(200, { ok: false, kind: 'domain', outcome: 'not-tracked', host: job.host, reason: `${job.host} is no longer tracked for workspace ${job.workspaceId}; nothing was collected` })
     const store = await jobStoreFor(entry, identity, data)
     if ('refuse' in store) return json(200, { ok: false, kind: 'domain', outcome: 'refused', host: job.host, reason: store.refuse })
-    const out = await runDomainJob({ dataDir: data, env, ledgers, store, job: job as DomainJob, mode, root: ROOT, resultFile: !identity.on }, { now, log: (s) => log('[tick]', s) })
+    const out = await runDomainJob({ dataDir: data, env, ledgers, store, job: job as DomainJob, mode, root: ROOT, resultFile: !identity.on, ...(entry.until ? { until: entry.until } : {}) }, { now, log: (s) => log('[tick]', s) })
     if (out.outcome === 'ran') return json(200, { ok: true, kind: 'domain', outcome: 'ran', host: job.host, day: job.day, run: out.run, spentAfter: out.spentAfter })
     return json(200, { ok: false, kind: 'domain', outcome: out.outcome, host: job.host, day: job.day, reason: out.refuse })
   } catch (e) {

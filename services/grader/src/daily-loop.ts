@@ -609,7 +609,8 @@ async function runAdmitted(d: DueDomain, remaining: number, ctx: RunContext): Pr
     calls = 'counts' in result ? result.counts.providerCalls : 0
     if (result.status === 'scanned') {
       try {
-        await ctx.store.cycles.put(cycleInputOf(result))
+        // The loop's cycle says so (migration 0009, C3): the column and the stamp read `loop`, a person's read `hand`.
+        await ctx.store.cycles.put({ ...cycleInputOf(result), source: 'loop' })
       } catch (e) {
         ctx.log(`  ${d.host}: not filed: ${(e as Error).message}`)
       }
@@ -876,6 +877,13 @@ export interface DomainJobOptions {
    * tenancy review, MINOR-7). Default false.
    */
   readonly resultFile?: boolean
+  /**
+   * The tracked entry's last day, when it has one (C3). The caller holds the
+   * entry it opened the store for; the job re-decides `expired` from it, so a
+   * job that reaches the route by any way other than that day's own fan-out
+   * still collects nothing past the day the person was promised.
+   */
+  readonly until?: string
 }
 
 export type DomainJobOutcome =
@@ -904,7 +912,7 @@ export async function runDomainJob(opts: DomainJobOptions, deps: TickDeps = {}):
   if (!stored?.fanOut) return { outcome: 'no-fan-out', refuse: `no fan-out has booked ${job.day} in ${ledgerAt}; a domain job runs only after the day's fan-out has stored the day's cap` }
   const capUsd = stored.capUsd
 
-  const decided = await decideDueIn(opts.dataDir, opts.env, job.day, { host: job.host, workspaceId: job.workspaceId }, opts.store)
+  const decided = await decideDueIn(opts.dataDir, opts.env, job.day, { host: job.host, workspaceId: job.workspaceId, ...(opts.until ? { until: opts.until } : {}) }, opts.store)
   if ('config' in decided) return { outcome: 'refused', refuse: decided.config }
   if ('notDue' in decided.verdict) return { outcome: 'not-due', refuse: `${job.host}: ${decided.verdict.notDue.reason}: ${decided.verdict.notDue.detail}` }
   const d = decided.verdict.due
@@ -955,6 +963,12 @@ function defaultCollect(opts: { readonly dataDir: string; readonly env: NodeJS.P
       maxPrompts: gate.callsPerEngine,
       runAllowanceCalls: o.allowanceCalls,
       mode: o.mode,
+      source: 'loop',
+      // Pinned to what the decision was sized on (C3 cost review, MINOR 4): that
+      // version of the domain's own set, or the bank's when there was none. The
+      // runner re-reads the store; without the pin a set saved between the
+      // admission and the run would ask cells the allowance was not sized for.
+      customPrompts: d.promptSet,
       apiKey: o.apiKey,
       dataDir: opts.dataDir,
       // The result file is the CLI's; on the deployment the store holds the cycle and the instance's disk is every workspace's (B3b tenancy audit).

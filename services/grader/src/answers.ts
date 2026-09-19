@@ -48,14 +48,14 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { AnswerIndex, r2KeyFor } from '@bliprank/collector'
-import { ENGINES, type EngineId } from '@bliprank/contracts'
+import { ENGINES, parseBasis, type EngineId } from '@bliprank/contracts'
 import { PUBLISHER_REGISTRY } from '@bliprank/taxonomy'
 import { answerStores } from './answer-stores.js'
 import { allBanks } from './resolve-category.js'
 import { SCORING_ALGO_VERSION, scoreAnswer, type ScoreRow } from '@bliprank/scorer'
 import type { Citation } from '@bliprank/contracts'
 import { competitorsIn } from './competitor-overrides.js'
-import { categoryRecordIn } from './store/documents.js'
+import { categoryRecordIn, customPromptsAtIn } from './store/documents.js'
 import { defaultWorkspaceStore } from './store/file-store.js'
 import type { WorkspaceStore } from './store/pg-store.js'
 import { basisOf, cellsFor, customCellsFor, subjectFor } from './scan.js'
@@ -175,10 +175,27 @@ export async function scoreStoredCycle(dataDir: string, domain: string, cycleDay
   // answers are evidence for that block and are marked so the reader keeps
   // them apart from the headline's sample.
   const customPrompts = (stored as { customPrompts?: { prompts?: unknown } }).customPrompts?.prompts
-  const cells = [
-    ...cellsFor(bank, engines, day, basis.maxPrompts).map((c) => ({ ...c, custom: false })),
-    ...(Array.isArray(customPrompts) ? customCellsFor(bank, engines, day, customPrompts.filter((p): p is string => typeof p === 'string')).map((c) => ({ ...c, custom: true })) : []),
-  ]
+  // A HEADLINE measured over the person's own set (ADR-0016 Amendment 1: the
+  // headline basis reads `unprompted=0|…|custom=K@V`). Its evidence is the
+  // answers to THAT set at THAT version, and they are the headline's own
+  // sample, so they are not marked `custom` (the mark keeps decision 4's
+  // second block apart from a headline; here there is no second block).
+  // `basisOf` yields no prompt count for `unprompted=0`, and `cellsFor` with
+  // none would build the WHOLE bank: the wrong evidence under the right
+  // number. A version the store no longer holds is a refusal, never today's.
+  const headline = parseBasis(stored.comparisonBasis ?? '')
+  const headlineSet = headline && headline.unprompted === 0 && headline.custom ? headline.custom : null
+  let cells: { readonly cell: ReturnType<typeof cellsFor>[number]['cell']; readonly prompt: string; readonly engine: EngineId; readonly custom: boolean }[]
+  if (headlineSet) {
+    const set = await customPromptsAtIn(store, domain, headlineSet.version)
+    if (!set) return { refuse: `${domain}: this cycle was measured over prompt set ${headlineSet.version}, which the store no longer holds` }
+    cells = customCellsFor(bank, engines, day, set.prompts).map((c) => ({ ...c, custom: false }))
+  } else {
+    cells = [
+      ...cellsFor(bank, engines, day, basis.maxPrompts).map((c) => ({ ...c, custom: false })),
+      ...(Array.isArray(customPrompts) ? customCellsFor(bank, engines, day, customPrompts.filter((p): p is string => typeof p === 'string')).map((c) => ({ ...c, custom: true })) : []),
+    ]
+  }
 
   // The same subject and competitor specs the scan scored with, derived the
   // same way, so a citation's class here is the class the scan's rows carry.

@@ -32,7 +32,8 @@ describe('GET: the set in force, the limits, the cost per prompt', () => {
     expect((await get('?domain=nobody.test')).status).toBe(404)
     const none = (await (await get('?domain=acme.test')).json()) as { set: null; limits: { maxPrompts: number }; perPrompt: { cells: number; plan: string } }
     expect(none.set).toBeNull()
-    expect(none.limits.maxPrompts).toBe(15)
+    // One cycle's prompts: the set IS the measurement (ADR-0016 Amendment 1), so it is bounded where the bank is.
+    expect(none.limits.maxPrompts).toBe(17)
     expect(none.perPrompt).toMatchObject({ cells: 5, plan: 'payg' })
     applyCustomPrompts(dir, { host: 'acme.test', prompts: GOOD, reason: REASON, by: 'operator', at: '2026-09-03T10:00:00.000Z' })
     const some = (await (await get('?domain=acme.test')).json()) as { set: { version: number; prompts: string[] } }
@@ -40,7 +41,7 @@ describe('GET: the set in force, the limits, the cost per prompt', () => {
   })
 })
 
-describe('POST: files a request with the store’s own validation, never writes the set', () => {
+describe('POST on the machine’s own store: the store’s own validation, then the set is saved as the next version (ADR-0016 Amendment 1, MVP_PLAN C3)', () => {
   it('a prompt naming a tracked brand or the subject is refused at filing time, with the reason', async () => {
     const brand = await post({ domain: 'acme.test', prompts: ['how does this compare to HubSpot'], reason: REASON })
     expect(brand.status).toBe(422)
@@ -49,14 +50,25 @@ describe('POST: files a request with the store’s own validation, never writes 
     expect(self.status).toBe(422)
   })
 
-  it('a filed request is pending on GET without its reason; the set is untouched; refusals carry a status', async () => {
-    expect((await post({ domain: 'acme.test', prompts: GOOD, reason: REASON })).status).toBe(200)
-    const body = (await (await get('?domain=acme.test')).json()) as { pending: { prompts: string[]; reason?: string } | null; set: null }
-    expect(body.pending).toMatchObject({ prompts: GOOD })
-    expect(body.pending).not.toHaveProperty('reason')
-    expect(readCustomPromptSet(dir, 'acme.test')).toBeNull()
+  it('the person at the keyboard is the machine’s operator: a good list is APPLIED as version 1, nothing is left pending, an identical list is no change, an edit is version 2; refusals carry a status and write nothing', async () => {
+    // With identity on, an owner or admin applies and a member files (session-store.test.ts); on the file store there is one person and the entry flow saves directly.
+    const saved = await post({ domain: 'acme.test', prompts: GOOD, reason: REASON })
+    expect(saved.status).toBe(200)
+    expect(await saved.json()).toMatchObject({ applied: true, version: 1 })
+    const body = (await (await get('?domain=acme.test')).json()) as { pending: unknown; set: { version: number; prompts: string[] } | null }
+    expect(body.pending).toBeNull()
+    expect(body.set).toMatchObject({ version: 1, prompts: GOOD })
+    expect(readCustomPromptSet(dir, 'acme.test')).toMatchObject({ version: 1, prompts: GOOD, by: 'local' })
+    expect(await (await post({ domain: 'acme.test', prompts: GOOD, reason: REASON })).json()).toMatchObject({ kind: 'no-change' })
+    expect(await (await post({ domain: 'acme.test', prompts: [GOOD[0]], reason: REASON })).json()).toMatchObject({ applied: true, version: 2 })
+    expect(readCustomPromptSet(dir, 'acme.test')?.superseded).toHaveLength(1)
+    // A refused list leaves the set where it was.
+    expect((await post({ domain: 'acme.test', prompts: ['how does this compare to HubSpot'], reason: REASON })).status).toBe(422)
+    expect(readCustomPromptSet(dir, 'acme.test')).toMatchObject({ version: 2 })
     expect((await post({ domain: 'acme.test', prompts: 'not a list', reason: REASON })).status).toBe(400)
-    expect((await post({ domain: 'acme.test', prompts: [], reason: REASON })).status).toBe(400)
+    // An empty list CLEARS the set in force, which is a version too: the next cycle asks the bank's prompts again, on the bank's basis.
+    expect(await (await post({ domain: 'acme.test', prompts: [], reason: REASON })).json()).toMatchObject({ applied: true, version: 3 })
+    expect(readCustomPromptSet(dir, 'acme.test')).toMatchObject({ version: 3, prompts: [] })
     expect((await post({ domain: 'acme.test', prompts: ['too short'], reason: REASON })).status).toBe(400)
     expect((await post({ domain: 'nobody.test', prompts: GOOD, reason: REASON })).status).toBe(404)
   })

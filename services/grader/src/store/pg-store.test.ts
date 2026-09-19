@@ -45,7 +45,8 @@ describe('cycles', () => {
     const days = await inA((s) => s.cycles.list('acme.example'))
     expect(days.map((c) => c.day)).toEqual(['2026-09-01', '2026-09-02'])
     expect((await inA((s) => s.cycles.latest('acme.example')))?.day).toBe('2026-09-02')
-    expect((await inA((s) => s.cycles.read('acme.example', '2026-09-01')))?.result).toEqual(result('2026-09-01'))
+    // The store stamps who started the cycle into the result it writes (migration 0009): a caller that says nothing is a person.
+    expect((await inA((s) => s.cycles.read('acme.example', '2026-09-01')))?.result).toEqual({ ...result('2026-09-01'), run: { day: '2026-09-01', source: 'hand' } })
     expect(await inA((s) => s.cycles.read('acme.example', '2026-09-03'))).toBeNull()
   })
 

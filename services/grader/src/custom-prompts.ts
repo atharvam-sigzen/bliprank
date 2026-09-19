@@ -1,20 +1,23 @@
 /**
- * CUSTOM PROMPTS — the customer's own questions, stored where the record is,
- * collected as a SECOND measurement beside the curated one. ADR-0016,
- * decision 4.
+ * THE DOMAIN'S PROMPT SET — the person's own questions, stored where the
+ * record is, versioned, and since ADR-0016 Amendment 1 THE measurement a
+ * cycle takes (owner decision 2026-09-16; MVP_PLAN C3).
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * WHAT A CUSTOM PROMPT IS, AND IS NOT.
+ * WHAT THE SET IS, AND IS NOT.
  *
  * The curated bank is the category's sample: unprompted questions that name
- * no brand, the same for every domain in the category, which is what makes
- * two domains comparable and one domain comparable with itself. A custom
- * prompt is the customer's question. It is asked on the same engines, on the
- * same day, through the same budgeted runner, and it is scored into ITS OWN
- * rows, its own metric and its own basis (`custom=K@V`, `unprompted=0`). It
- * never enters the headline sample: merging it would change what the
- * headline measures the moment a prompt is added, and break every trend.
- * (Decided by the owner, 2026-09-03.)
+ * no brand, the same for every domain in the category. On first entry it is
+ * what a person sees. When the person edits it, adding, removing or rewording,
+ * the result is saved here as version V, and from then on THAT set is what a
+ * cycle asks, on every engine, and what the headline measures: its basis is
+ * the bank's with `unprompted=0` and `custom=K@V`, the record says "your K
+ * prompts, version V", the trend breaks at a version change exactly as it
+ * breaks at any other change of basis, and a head-to-head compares equal bases
+ * only. The bank's set is not collected separately for that domain unless the
+ * person kept its prompts. Decision 4's "second measurement" (2026-09-03) is
+ * superseded by this: a stored cycle that carried a second block still reads
+ * back with it, and nothing new writes one.
  *
  * ⚠️ PROPERTY 2 HOLDS FOR THE CUSTOMER'S PROMPTS TOO. A prompt that names the
  * subject guarantees the subject a mention and reports our own phrasing back
@@ -47,7 +50,10 @@ import type { WorkspaceStore } from './store/pg-store.js'
  * shared with 17 curated prompts, would admit none). It bounds cells, cost and
  * the ceiling; the surface says so in those words.
  */
-export const MAX_CUSTOM_PROMPTS = 15
+// One cycle's prompt count (`DEFAULT_PROMPTS_PER_SCAN`, live-gate.ts): the
+// edited set IS the measurement, and a measurement costs at most one cycle's
+// cells, so the set is bounded where the bank is (ADR-0016 Amendment 1).
+export const MAX_CUSTOM_PROMPTS = 17
 export const PROMPT_MIN = 10
 export const PROMPT_MAX = 200
 
@@ -137,8 +143,6 @@ export function checkCustomPromptsWith(domain: string, prompts: readonly unknown
   // Bounded before any work: an unauthenticated filing must not make the store fold and match a thousand strings.
   if (prompts.length > MAX_CUSTOM_PROMPTS * 4) return { refuse: `${prompts.length} prompts is far over the ${MAX_CUSTOM_PROMPTS} this build allows per domain`, kind: 'too-many' }
   if (!record) return { refuse: `${host} has no category on record, so there is no cycle for its prompts to join. A first scan decides one.`, kind: 'no-record' }
-  const bank = banks.find((b) => b.category === record.slug)
-  const curated = new Set((bank?.prompts ?? []).map((p) => normalisePrompt(p.text)))
 
   const seen = new Set<string>()
   const list: string[] = []
@@ -149,8 +153,8 @@ export function checkCustomPromptsWith(domain: string, prompts: readonly unknown
     // A prompt is a question, not a link. A URL is a brand the matcher cannot see (it masks URLs before matching), and the engine reads it as one.
     if (/(^|\s)(https?:\/\/|www\.)/i.test(p) || /\S+\.[a-z]{2,}\/\S*/i.test(p)) return { refuse: `"${p}" carries a link. A prompt is a question in words; a URL names a site, and a named site is a named brand.`, kind: 'names-brand' }
     // The cache key's own normalisation decides what is the same question: "best crm?" and "best crm" are one cell, so they are one prompt here.
+    // A prompt the bank also asks is KEPT, not refused: the set replaces the bank (Amendment 1), so a kept bank prompt is one cell, asked once.
     const key = normalisePrompt(p)
-    if (curated.has(key)) return { refuse: `"${p}" is already one of the curated bank's own prompts; asking it again would put the headline's answer into your block`, kind: 'input' }
     if (seen.has(key)) continue
     seen.add(key)
     list.push(p)

@@ -267,7 +267,12 @@ export async function POST(req: Request): Promise<Response> {
             const willAsk = promptsFor(bank, cfg.callsPerEngine).length
             const wasEngines = was.engines ? [...was.engines].sort().join(',') : undefined
             const willUse = [...ENGINES].sort().join(',')
-            const promptsDiffer = was.maxPrompts !== undefined && was.maxPrompts !== willAsk
+            // With the person's own set in force the set is the measurement and a
+            // version change is a deliberate change of basis the trend breaks at
+            // (ADR-0016 Amendment 1), not a refusal; the bank's count is checked
+            // only while the bank is the measurement.
+            const setInForce = ((await customPromptsIn(store, domain))?.prompts.length ?? 0) > 0
+            const promptsDiffer = !setInForce && was.maxPrompts !== undefined && was.maxPrompts !== willAsk
             const enginesDiffer = wasEngines !== undefined && wasEngines !== willUse
             if (promptsDiffer || enginesDiffer) {
               const detail = [
@@ -331,8 +336,12 @@ export async function POST(req: Request): Promise<Response> {
         //    Denominated in hand-started CYCLES (ADR-0017): a change to the
         //    domain's prompt set changes what a cycle costs, never how many it
         //    gets. The cycle's cells size the per-run allowance below instead.
-        const customCount = (await customPromptsIn(store, domain))?.prompts.length ?? 0
-        const cellsThisCycle = (cfg.callsPerEngine + customCount) * ENGINES.length
+        // The person's set, when one is in force, IS the cycle (ADR-0016 Amendment 1); otherwise the bank's count.
+        // Read ONCE here and pinned on the run below, so the gate, the allowance and the runner agree on one version (C3 cost review, MINOR 4).
+        const ownSet = await customPromptsIn(store, domain)
+        const customCount = ownSet?.prompts.length ?? 0
+        const promptsThisCycle = customCount > 0 ? customCount : cfg.callsPerEngine
+        const cellsThisCycle = promptsThisCycle * ENGINES.length
         //    Keyed by THIS workspace and the host (B3d item 1): admission is
         //    the workspace's. The money stays bounded for everyone by what a
         //    hand-started scan meets here — the burst cap on new domains, the
@@ -351,7 +360,7 @@ export async function POST(req: Request): Promise<Response> {
         //    checked before anything is spent, both failing closed.
         send(c, 'stage', { stage: 'checking quota' })
         // Sized to the WHOLE cycle, custom cells included, or the check passes and the quota runs out part-way.
-        const gate = await checkGate(domain, { ...cfg, callsPerEngine: cfg.callsPerEngine + customCount }, found.key, now)
+        const gate = await checkGate(domain, { ...cfg, callsPerEngine: promptsThisCycle }, found.key, now)
         if (!gate.ok) {
           // What the provider said when the quota could not be read is logged
           // here and never sent: it may be a response body (B3c item 6).
@@ -362,8 +371,8 @@ export async function POST(req: Request): Promise<Response> {
 
         send(c, 'stage', { stage: 'classifying' })
 
-        const total = (cfg.callsPerEngine + customCount) * ENGINES.length
-        send(c, 'begin', { domain, total, engines: ENGINES.length, prompts: cfg.callsPerEngine + customCount })
+        const total = promptsThisCycle * ENGINES.length
+        send(c, 'begin', { domain, total, engines: ENGINES.length, prompts: promptsThisCycle })
 
         // runGrader, not a hand-rolled orchestrator: it carries the run lock,
         // the spend ledger, the rate budget and the topology declaration. A
@@ -387,6 +396,8 @@ export async function POST(req: Request): Promise<Response> {
           // cells with headroom (ADR-0017). Bounds a retry storm at the
           // allowance rather than discovering it in a ledger afterwards.
           runAllowanceCalls: runAllowanceFor(cellsThisCycle),
+          // The set this cycle was sized on, or the bank's when there was none: never whatever the store holds a moment later.
+          customPrompts: customCount > 0 ? ownSet!.version : null,
           // Authoring a category, when the taxonomy has none for this domain.
           // Almost always a no-op by the time a scan runs: the preview step has
           // already resolved and RECORDED the category, so `resolveCategory`

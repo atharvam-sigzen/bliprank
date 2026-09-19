@@ -159,6 +159,14 @@ interface Plan {
   readonly competitorSet: number | null
   /** The custom prompt set the cycle asked; null when it asked none. Pinned on the re-run. */
   readonly customPrompts: number | null
+  /**
+   * What that set WAS in the stored cycle: the headline's own sample
+   * (Amendment 1: `custom=` on the headline basis with `unprompted=0`) or
+   * decision 4's second block beside a bank headline. Read off the stored
+   * file, never assumed, and pinned on the re-run: a re-score changes the
+   * derivation, never the sample (C3 stats review, BLOCKER 1).
+   */
+  readonly promptSetRole: 'headline' | 'block' | null
 }
 
 
@@ -202,17 +210,21 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
   if (competitorSet !== null && !overrideAt(dataDir, domain, competitorSet)) {
     return { refuse: `${domain}: this cycle was measured against competitor set ${competitorSet}, which the store no longer holds; a re-derivation under another set is a different measurement` }
   }
-  const maxPrompts = basis.maxPrompts ?? fallbackPrompts
   const engines = basis.engines ?? ([...ENGINES] as EngineId[])
 
-  // The custom prompts THIS cycle asked, at the version its own block records
-  // (ADR-0016). Their cells must be in the store too, or the re-derivation
-  // would buy them; and the version is pinned on the re-run.
-  const customBasis = parseBasis((stored as { customPrompts?: { comparisonBasis?: string } }).customPrompts?.comparisonBasis ?? '')
-  const customVersion = customBasis?.custom?.version ?? null
+  // A headline measured over the person's own set (ADR-0016 Amendment 1:
+  // `unprompted=0|…|custom=K@V` on the HEADLINE basis) re-derives over that
+  // set at that version, and over nothing of the bank's. Otherwise the bank's
+  // prompts at the recorded count, plus decision 4's second block when the
+  // stored cycle carried one. Either way every cell must already be in the
+  // store, or the re-derivation would buy it; and the version is pinned.
+  const headlineSet = parseBasis(stored.comparisonBasis ?? '')?.custom
+  const customBasis = headlineSet ? null : parseBasis((stored as { customPrompts?: { comparisonBasis?: string } }).customPrompts?.comparisonBasis ?? '')
+  const customVersion = headlineSet?.version ?? customBasis?.custom?.version ?? null
   const customSet = customVersion === null ? null : customPromptsAt(dataDir, domain, customVersion)
-  if (customVersion !== null && !customSet) return { refuse: `${domain}: this cycle asked custom prompt set ${customVersion}, which the store no longer holds` }
-  const cells = [...cellsFor(bank, engines, day, maxPrompts), ...(customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [])]
+  if (customVersion !== null && !customSet) return { refuse: `${domain}: this cycle was measured over prompt set ${customVersion}, which the store no longer holds` }
+  const maxPrompts = headlineSet ? 0 : (basis.maxPrompts ?? fallbackPrompts)
+  const cells = headlineSet && customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [...cellsFor(bank, engines, day, maxPrompts), ...(customSet ? customCellsFor(bank, engines, day, customSet.prompts) : [])]
   const index = new AnswerIndex(answerStores(dataDir).kv)
   const { hits } = await index.lookup(cells.map((c) => c.cell))
   const missing = cells.filter((c) => !hits.has(c.cell.key)).map((c) => `${c.engine} ${c.prompt.slice(0, 40)}`)
@@ -230,6 +242,7 @@ export async function planRescore(dataDir: string, domain: string, fallbackPromp
     missing,
     competitorSet,
     customPrompts: customVersion,
+    promptSetRole: customVersion === null ? null : headlineSet ? 'headline' : 'block',
   }
 }
 
@@ -326,6 +339,8 @@ async function main(): Promise<void> {
       maxPrompts: plan.maxPrompts,
       competitorSet: plan.competitorSet,
       customPrompts: plan.customPrompts,
+      // The role the set played in the STORED cycle, so the re-derivation measures the sample that cycle measured.
+      ...(plan.promptSetRole ? { promptSetRole: plan.promptSetRole } : {}),
       // A verified-free re-derivation may make NO provider attempt: the allowance is zero, so a cell the pre-flight missed is refused before it is bought (ADR-0017).
       runAllowanceCalls: 0,
       dataDir: o.dataDir,

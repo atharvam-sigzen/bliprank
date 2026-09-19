@@ -50,6 +50,8 @@ export interface ScanRun {
   readonly spentUsd?: number
   readonly capUsd: number
   readonly at: string
+  /** Who started the cycle (migration 0009): the daily re-check says `loop`. Absent on a file written before the stamp existed, when only a person could start one. */
+  readonly source?: 'hand' | 'loop'
 }
 
 export interface ScanResultFile {

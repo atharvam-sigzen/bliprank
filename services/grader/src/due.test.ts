@@ -64,7 +64,7 @@ describe('the tracked file is a fact, not a guess', () => {
 })
 
 describe('the due list', () => {
-  it('nothing tracked, nothing due; a tracked domain is due with its cells and cost, and a custom set adds to them', () => {
+  it('nothing tracked, nothing due; a tracked domain is due with its cells and cost, and a set of the person’s own REPLACES the bank’s (ADR-0016 Amendment 1)', () => {
     expect(dueToday(dir, {}, '2026-09-03')).toMatchObject({ due: [], notDue: [], cells: 0, usd: 0 })
     setTracked(dir, 'acme.test', true, { by: 'operator', reason: 'r' })
     const list = dueToday(dir, {}, '2026-09-03')
@@ -73,7 +73,8 @@ describe('the due list', () => {
     expect(list.tracked).toEqual([{ host: 'acme.test', cells: 17 * ENGINES.length, usd: list.usd }])
     expect(list.usd).toBeCloseTo((0.007 * 3 + 0.008 + 0.005) * 17, 6)
     applyCustomPrompts(dir, { host: 'acme.test', prompts: ['which crm works offline on a phone'], reason: 'the questions our buyers ask', by: 'operator' })
-    expect(dueToday(dir, {}, '2026-09-03').due[0]).toMatchObject({ customPrompts: 1, cells: 18 * ENGINES.length })
+    // The set IS the measurement: one prompt on five engines, not the bank's seventeen plus one.
+    expect(dueToday(dir, {}, '2026-09-03').due[0]).toMatchObject({ curatedPrompts: 0, customPrompts: 1, cells: 1 * ENGINES.length })
   })
 
   it('not due: a cycle already today, a prior cycle on another basis, a domain whose bank is gone; the manual ceiling is not consulted', () => {

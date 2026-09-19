@@ -255,6 +255,37 @@ an owner or admin makes from the record, writing the entry with the
 session's account, workspace and role after checking the record exists in
 the store), and later D2, where a plan's tracked-host count gates it (B6).
 
+**C3 built it (2026-09-16), and the owner rescoped it the same day.** The
+route exists as D6 describes: `POST /api/tracked` derives the workspace, the
+account and the role from `workspaceAccess()` and from nothing in the body (the
+C2 tenancy review's MAJOR-2); the role is re-read from the session at every
+write; an owner or admin switches, a member is refused; a host with no category
+record in that workspace's store is refused; the entry replaced or removed is
+this host's in this workspace, other workspaces' entries pass through the
+write verbatim, and everything is written through `setTrackedIn` under the
+fenced lock of C2r; GET answers the workspace's own entry and nothing of any
+other's; an interim ceiling, `GRADER_MAX_TRACKED_PER_WORKSPACE` (default 3),
+is counted inside the locked write until D2 gates the count by plan; and POST
+is throttled per visitor and per domain, because a tracked host is a daily
+spend once the loop is armed. **What the rescope changed:** the instruction has
+an END. The body names a domain, a direction and a number of days (1 to 90);
+the entry carries `until` (the last UTC day, inclusive) and `prompts` (the
+version of the domain's prompt set in force at the write, ADR-0016 Amendment
+1); `decideDue` answers `expired` on the day after, and an expired host costs
+the day's cap nothing. **The surface is the owner's machine, identity off:**
+the preview's days field and the record's switch are offered only where the
+file store answered (`TrackedStatus.backend`); with identity on the route is
+built and tested over PGlite and the KV double and wired to no surface, so a
+fan-out on a deployment still finds nobody tracked. `SCHEDULE_FACT` is
+unchanged until a live tick has filed a cycle. And migration 0009 gives a
+cycle a `source` (`hand` or `loop`) so a loop-filed cycle is distinguishable
+from the tracker's own: the runner stamps the caller's declaration into
+`run.source`, both stores write it, and `ws_put_cycle` copies it into the
+column under the same signature as before, so the two declared definer lists
+stand. The source is the app tier's word until a loop service identity exists,
+and the migration says so. The list itself still lives outside the database,
+by this decision; the workspace-scoped table remains the owner's alternative.
+
 ### D7 — The mode comes from the environment, never from the body
 
 `GRADER_DAILY_LOOP=armed` is live: the jobs spend, under every gate above.

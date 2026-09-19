@@ -15,7 +15,7 @@ import type { CustomPromptStatus } from '../../../lib/custom-prompt-request'
 import { applies, isForeignPending, isStaleVersion, PENDING_BY_ANOTHER, READ_AGAIN, workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
 
 /**
- * The custom prompts a domain's cycles ask beside the curated bank, and the
+ * The domain's own prompt set, which its cycles ask INSTEAD of the curated bank's once one is in force (ADR-0016 Amendment 1), and the
  * request to change them. ADR-0016, decision 4. The same shape and bounds as
  * `/api/category` and `/api/competitors`: GET reads, POST files a request and
  * never writes the set, one pending per domain, caps on their own ledgers, the
@@ -106,7 +106,11 @@ export async function POST(req: Request): Promise<Response> {
   const verdict = await checkVisitorThrottle(ip, cfg, now)
   if (!verdict.ok) return json({ kind: 'rate-limit', message: verdict.message }, 429)
 
-  if (applies(access)) {
+  // An owner or admin applies on the Postgres store; on a machine's own file
+  // store (identity off) the person at the keyboard is its operator and the
+  // entry flow saves the edited set directly as version V (ADR-0016 Amendment
+  // 1, MVP_PLAN C3 step 3). A member on the Postgres store still files.
+  if (access.backend === 'file' || applies(access)) {
     let written: Awaited<ReturnType<typeof applyCustomPromptsIn>>
     try {
       written = await applyCustomPromptsIn(store, data, { host: domain, prompts: raw.prompts as string[], reason, by: access.who })

@@ -316,6 +316,14 @@ describe('request → session → token → context → store → response', () 
   it('a member previews and scans a domain with no record: the first category record is the member\'s own write, and the member still cannot apply a correction (B3d item 2, migration 0006)', async () => {
     session.user = MEMBER
     pages.fetched.length = 0
+    // THE NETWORK IS SHUT FOR THE PREVIEW TOO. A domain in no known category reaches the bank author whenever a key can be
+    // found, and the route reads one from the repo-root `.env.local`: on a machine that holds an author key this preview made
+    // a real request to the free model (seen in the full run's log at C3, 2026-09-19; CI holds no key and never did). With
+    // fetch shut the author fails, the resolver falls back exactly as it does with authoring off, and the suite is offline
+    // on every machine, not only on a clean one.
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('the test never reaches a network')
+    }))
     // The preview reads the homepage (served by the mock) and records the category, version 1, in One's workspace, through the member's token.
     const pv = await post(preview, 'preview', { domain: 'fresh.test' })
     expect(pv.status).toBe(200)

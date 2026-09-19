@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { assertProvisionalAllowed, confidenceGrade, formatProvenance } from '@bliprank/stats'
+import { assertProvisionalAllowed, confidenceGrade, formatProvenance, formatMetric } from '@bliprank/stats'
 import { ActionLink } from '@/components/action-link'
 import { HeadToHeadSection } from '@/components/head-to-head-section'
 import { CitedSources } from '@/components/cited-sources'
@@ -15,7 +15,8 @@ import { CiTrendChart } from '@/components/ci-trend-chart'
 import { NewCycle } from '@/components/new-cycle'
 import { CategoryCorrection } from '@/components/category-correction'
 import { CompetitorOverrides } from '@/components/competitor-overrides'
-import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf } from '@/lib/cycles'
+import { cycleDayOf, cyclesFor, earlierCategoryCycles, latestMovement, syncCycles, trendOf, whyNotComparable } from '@/lib/cycles'
+import { PROMPT_SET_SCOPE, promptSetOf, promptSetWords } from '@/lib/prompt-set'
 import { BUNDLED_SCANS, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor, type Workspace } from '@/lib/workspace'
 
@@ -108,6 +109,8 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
   const run = runInfoOf(scan)
   const subject = subjectOf(scan)
   const metric = subject.metric
+  // The person's own prompt set, when this cycle was measured over one (ADR-0016 Amendment 1): read off the basis the metric carries.
+  const promptSet = promptSetOf(scan.comparisonBasis)
   const { grade, note } = confidenceGrade(metric)
   // Object identity against the compiled-in constants, the same derivation the
   // chrome's switcher uses: scans() returns the bundled files by reference, so
@@ -181,7 +184,12 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       <section className="record">
         {/* Same lede as the Grader, from the same component: the two surfaces
             render one record and must not come to word it differently. */}
-        <Headline subject={subject.name} metric={metric} engines={run.engines.length} />
+        <Headline subject={subject.name} metric={metric} engines={run.engines.length} promptSet={promptSet} />
+        {promptSet ? (
+          <p className="prose prose--flag" data-prompt-set-scope>
+            {PROMPT_SET_SCOPE}
+          </p>
+        ) : null}
 
         {/* The rail with its papers beside it. Same instrument as the Grader,
             same discipline: the figure cannot be photographed without the range
@@ -197,6 +205,12 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
               {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
             </span>
             {run.day ? <span className="note__line">day {run.day}</span> : null}
+            {/* Whose questions: at BOTH depths, like the sample size (ADR-0016 Amendment 1). */}
+            {promptSet ? (
+              <span className="note__line" data-prompt-set>
+                {promptSetWords(promptSet)}
+              </span>
+            ) : null}
             {/* DETAIL, matching the Grader. Found on review: the same field on
                 the same record was marked on one surface and not the other, so
                 the simple view was inconsistent between them. */}
@@ -227,6 +241,8 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
       {/* THE TREND, WHEN THERE IS ONE TO DRAW. Two collected cycles or more;
           below that the section further down keeps refusing it in words. */}
       {cycles.length >= 2 ? <TrendSection cycles={cycles} subjectName={subject.name} /> : null}
+      {/* THE DAYS, ONE BY ONE, beside the trend and at simple depth (MVP_PLAN C3): what was collected on each day, by whom, over which questions. */}
+      <CycleDays cycles={cycles} />
 
       {/* The same comparison the Grader renders, from the same scan file. The
           zero-competitor branch inside it keeps its honest prose: a fallback
@@ -237,7 +253,7 @@ function Measured({ workspace, context }: { workspace: Workspace; context: Works
           absence when the file predates `promptRows`, so this surface makes no
           claim about the split that the data does not carry. */}
       <PromptBreakdown scan={scan} />
-      {/* THE SECOND MEASUREMENT, when this cycle asked the customer's own prompts (ADR-0016). Its own record; never folded into the one above. */}
+      {/* DECISION 4'S SECOND BLOCK, on a stored cycle that carried one (ADR-0016). Since Amendment 1 the person's set is the headline's own sample and no new cycle writes this; an old one still renders as it was measured. */}
       <CustomPromptsBlock scan={scan} cycles={cycles} />
 
       {/* The two diagnostics, from the same evidence and the page itself (ADR-0014). */}
@@ -362,8 +378,9 @@ function Preflight({ workspace, context }: { workspace: Workspace; context: Work
             <div className="annotated__body">
               <p className="prose">
                 These are the {prompts.length} prompts from the {workspace.categoryName.toLowerCase()} bank, asked on every one of the{' '}
-                {workspace.engines.length} answer surfaces. Not a sample of them, and not a paraphrase: this is the list, exactly as it would be
-                sent.
+                {workspace.engines.length} answer surfaces. Not a sample of them, and not a paraphrase: this is the bank&apos;s list, exactly as it
+                would be sent. If you have saved questions of your own for this domain, a cycle asks those instead, and the Grader shows them
+                before anything runs.
               </p>
               <ol className="promptlist">
                 {prompts.map((prompt) => (
@@ -513,6 +530,56 @@ export function WorkspaceFacts({ workspace, context }: { workspace: Workspace; c
  * comparable" rather than a movement when the stamp or the basis differs
  * between them (R5). The chart itself breaks its line at such a boundary.
  */
+/**
+ * THE PER-DAY LIST (MVP_PLAN C3, owner decision 2026-09-16). One line per
+ * collected cycle, newest first: the day, the mention rate with its interval
+ * and n (formatted by packages/stats, so R8 holds in the list as it does in
+ * the rail), who started it (the daily re-check or a person, migration 0009),
+ * and, when the questions were the person's own, which version of them. Where
+ * a day's basis differs from the day before it the line says so in words,
+ * because that is exactly where the trend's line breaks and a reader of the
+ * list should not have to find the chart to learn it.
+ *
+ * NOT `.detail`: the list is the plain reading of the trend, which is what a
+ * non-technical reader asks for first ("what happened each day?"), and it
+ * carries nothing the simple depth withholds. With one cycle it is one line,
+ * and says that a second day is what a trend needs.
+ */
+function CycleDays({ cycles }: { cycles: readonly ScanResultFile[] }) {
+  if (cycles.length === 0) return null
+  const rows = cycles.map((scan, i) => {
+    const previous = i > 0 ? cycles[i - 1]! : null
+    const set = promptSetOf(scan.comparisonBasis)
+    return {
+      day: cycleDayOf(scan),
+      metric: subjectOf(scan).metric,
+      source: scan.run?.source === 'loop' ? 'daily re-check' : 'started by hand',
+      set,
+      // Every reason `compare()` refuses for, not the basis alone: a scoring-version or a collection-path boundary between two days is as real a break as a change of questions, and this list is the plain reading of the trend (C3 stats review, MAJOR 2). `whyNotComparable` names all three, in `compare()`'s own order, and is null when nothing differs.
+      moved: previous !== null ? whyNotComparable(subjectOf(scan).metric, subjectOf(previous).metric) : null,
+    }
+  })
+  return (
+    <section className="section" id="days" data-cycle-days>
+      <h2>Day by day</h2>
+      <p className="prose">
+        {cycles.length === 1
+          ? 'One day collected so far. A second day is what a trend needs; each day is measured on its own and listed here as it arrives.'
+          : `${cycles.length} days collected, newest first. Each line is that day's own measurement, with its own range. Two days are compared only when they were asked the same questions on the same engines, scored by the same version, and each holds enough answers to compare.`}
+      </p>
+      <ol className="daylist" reversed>
+        {[...rows].reverse().map((r) => (
+          <li className="daylist__item" key={r.day}>
+            <span className="num">{r.day}</span>: mentioned in <span className="num">{formatMetric(r.metric)}</span> · {r.source}
+            {r.set ? ` · ${promptSetWords(r.set)}` : ''}
+            {r.moved ? <span className="prose--flag"> · not comparable with the day before, {r.moved}</span> : null}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 function TrendSection({ cycles, subjectName }: { cycles: readonly ScanResultFile[]; subjectName: string }) {
   const points = trendOf(cycles)
   const movement = latestMovement(cycles)
@@ -535,7 +602,7 @@ function TrendSection({ cycles, subjectName }: { cycles: readonly ScanResultFile
       <h2>Mention rate over cycles</h2>
       <p className="prose">
         <span className="num">{cycles.length}</span> collected cycles of {subjectName}, from <span className="num">{cycleDayOf(first)}</span> to{' '}
-        <span className="num">{cycleDayOf(last)}</span>. Each point is one day&apos;s answers to the recorded category&apos;s prompts, with its own
+        <span className="num">{cycleDayOf(last)}</span>. Each point is one day&apos;s answers to the questions that cycle was asked, with its own
         interval. Where two neighbouring points were measured on a different basis or scored by a different version, the line between them
         breaks and the comparison is refused rather than made.
       </p>

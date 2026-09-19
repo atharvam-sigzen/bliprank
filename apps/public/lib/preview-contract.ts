@@ -45,8 +45,10 @@ export interface PreviewResponse {
   readonly correction?: { readonly from: string; readonly at: string; readonly by: string; readonly reason: string }
   /** Set when the category could not be decided and the general bank applies. */
   readonly fallback?: { readonly reason: 'unclassified' | 'ambiguous'; readonly detail: string; readonly candidates: readonly string[] }
-  /** THE ACTUAL PROMPTS, verbatim, in the order a cycle would send them. */
+  /** THE ACTUAL PROMPTS, verbatim, in the order a cycle would send them: the person's own set when one is in force, else the bank's (ADR-0016 Amendment 1). An intent of `own` is a prompt the person wrote. */
   readonly prompts: readonly { readonly text: string; readonly intent: string }[]
+  /** Present when the person's edited set is in force: its version and count, the basis the next cycle carries (`custom=K@V`). */
+  readonly promptSet?: { readonly version: number; readonly count: number }
   readonly engines: readonly string[]
   /** Competitors the scan will rank against: the category's set, or this domain's override over it. Empty when neither names any. */
   readonly competitors: readonly string[]

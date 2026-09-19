@@ -34,9 +34,29 @@ describe('cycles', () => {
       ['2026-09-02', 'det-2', 'b'],
     ])
     expect((await s.cycles.latest('acme.example'))?.day).toBe('2026-09-02')
-    expect((await s.cycles.read('acme.example', '2026-09-01'))?.result).toEqual(result('2026-09-01'))
+    // The file carries the same stamp the database column does (migration 0009): a caller that says nothing is a person.
+    expect((await s.cycles.read('acme.example', '2026-09-01'))?.result).toEqual({ ...result('2026-09-01'), run: { day: '2026-09-01', source: 'hand' } })
     expect(await s.cycles.read('acme.example', '2026-09-03')).toBeNull()
     expect(await s.cycles.list('other.example')).toEqual([])
+  })
+
+  it('a same-day write under the same version on another basis, or from the other source, is refused as the database refuses it; the same measurement re-writes (C3 tenancy review, MINOR 7)', async () => {
+    const s = fileWorkspaceStore(dir)
+    const stamped = (over: Record<string, unknown>) => ({ ...result('2026-09-05'), algoVersion: 'det-3', comparisonBasis: 'b', ...over })
+    await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-3', comparisonBasis: 'b', result: stamped({}), source: 'loop' })
+    // The loop filed the day; a hand scan in flight at the same moment is a different measurement and is not written over it.
+    await expect(s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-3', comparisonBasis: 'b', result: stamped({}), source: 'hand' })).rejects.toThrow(/another basis or from another source/)
+    await expect(s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-3', comparisonBasis: 'set=2', result: stamped({ comparisonBasis: 'set=2' }), source: 'loop' })).rejects.toThrow(/another basis or from another source/)
+    expect((await s.cycles.read('acme.example', '2026-09-05'))?.source).toBe('loop')
+    // The same measurement again (a retry, a re-derivation) re-writes.
+    await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-3', comparisonBasis: 'b', result: stamped({ rewritten: true }), source: 'loop' })
+    // A NEW algorithm version on the same day is not refused by either twin. WHERE THEY DIFFER, and have since before this rule
+    // (cycles.ts names a day's file by the day alone): Postgres keeps both rows (R5's new row beside the old), the file store
+    // REPLACES the day's one file, so the det-3 body is gone from `cycles/` here. The re-score tool keeps its own audit copy of
+    // what it replaces; this store does not. Asserted as it is, so nobody reads the comment above as a promise the file twin
+    // keeps. ⚠️ HUMAN REVIEW: an R5 retention divergence between the twins, for the scoring owner to accept or close.
+    await s.cycles.put({ host: 'acme.example', day: '2026-09-05', algoVersion: 'det-4', comparisonBasis: 'b', result: stamped({ algoVersion: 'det-4' }), source: 'hand' })
+    expect((await s.cycles.list('acme.example')).filter((c) => c.day === '2026-09-05').map((c) => c.algoVersion)).toEqual(['det-4'])
   })
 
   it('keeps the database writer\'s guards: the host, the day and the status must agree with the result', async () => {

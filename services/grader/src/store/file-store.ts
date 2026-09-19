@@ -8,6 +8,7 @@ import { readOverride } from '../override-store.js'
 import { resolveTopology } from '../ledger-stores.js'
 import { readCategoryRecord, withRecordLock } from '../resolve-category.js'
 import type { DocumentKind, RequestKind, StoredCycle, StoredRequest, Versioned, WorkspaceStore } from './pg-store.js'
+import { runSourceOf, withSource } from './pg-store.js'
 
 /**
  * THE FILE STORE — the `WorkspaceStore` interface over the layout
@@ -107,7 +108,7 @@ const storedOf = <T,>(r: Req): StoredRequest<T> => {
 
 const cycleOf = (c: FileCycle): StoredCycle => {
   const r = c.result as unknown as Record<string, unknown>
-  return { host: c.result.domain, day: c.day, algoVersion: String(r['algoVersion'] ?? ''), comparisonBasis: String(r['comparisonBasis'] ?? ''), result: r, writtenAt: String(r['collectedAt'] ?? '') }
+  return { host: c.result.domain, day: c.day, algoVersion: String(r['algoVersion'] ?? ''), comparisonBasis: String(r['comparisonBasis'] ?? ''), result: r, writtenAt: String(r['collectedAt'] ?? ''), source: runSourceOf(r) ?? 'hand' }
 }
 
 export function fileWorkspaceStore(dataDir: string): WorkspaceStore {
@@ -118,7 +119,17 @@ export function fileWorkspaceStore(dataDir: string): WorkspaceStore {
         if (c.result['domain'] !== c.host) throw new Error(`workspace store: the result names domain ${String(c.result['domain'])}, filed under ${c.host}`)
         const stampedDay = (c.result['run'] as { day?: unknown } | undefined)?.day
         if (typeof stampedDay === 'string' && stampedDay !== c.day) throw new Error(`workspace store: the result was collected on ${stampedDay}, filed under ${c.day}`)
-        const filed = writeCycle(dataDir, c.result as unknown as CycleResult)
+        // The same stamp the database column carries (0009): the file says who started the cycle.
+        const source = c.source ?? runSourceOf(c.result) ?? 'hand'
+        // And the same rule as ws_put_cycle (0004, 0009): a same-day write under the same algorithm version on another basis or from another source is not a re-write of the same measurement.
+        const standing = listCycles(dataDir, c.host).find((x) => x.day === c.day)
+        if (standing) {
+          const r = standing.result as unknown as Record<string, unknown>
+          if (String(r['algoVersion'] ?? '') === c.algoVersion && (String(r['comparisonBasis'] ?? '') !== c.comparisonBasis || (runSourceOf(r) ?? 'hand') !== source)) {
+            throw new Error(`workspace store: ${c.host} on ${c.day} under ${c.algoVersion} is already stored on another basis or from another source; a different measurement is not a re-write`)
+          }
+        }
+        const filed = writeCycle(dataDir, withSource(c.result, source) as unknown as CycleResult)
         if ('refuse' in filed) throw new Error(`workspace store: ${filed.refuse}`)
       },
       async list(host) {

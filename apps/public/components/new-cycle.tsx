@@ -6,6 +6,7 @@ import { cycleDayOf, nextCycleDay } from '@/lib/cycles'
 import { runLiveScan } from '@/lib/live-scan'
 import { rememberScan, type ScanResultFile } from '@/lib/scan-result'
 import { SCHEDULE_FACT } from '@/lib/planned'
+import { TrackDaily } from '@/components/track-daily'
 
 type State =
   | { phase: 'idle' }
@@ -148,6 +149,7 @@ export function NewCycle({
         on, spends real provider quota: one request per prompt per engine{latest ? ` (the latest cycle had ${latest.counts.cellsRequested} cells)` : ''}, plus
         any retries. On a deployment with no scan service the request is refused and nothing is added.
       </p>
+      <TrackDaily domain={domain} />
     </section>
   )
 }

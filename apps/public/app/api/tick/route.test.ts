@@ -248,6 +248,17 @@ describe('identity off, fixture mode: the whole path through the real route and 
     expect(published).toEqual([])
   })
 
+  it('a domain job re-decides the end of the instruction: a host tracked until yesterday collects nothing, however the job reached the route (C3 tenancy re-check)', async () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    setTracked(dir, 'pipedrive.com', true, { by: 'operator', reason: 'a week that has ended', until: yesterday })
+    // The fan-out honours it: the day is opened, nothing is due, nothing is published.
+    expect(await post(FAN_OUT)).toMatchObject({ status: 200, body: { ok: true, outcome: 'fanned-out', published: 0, due: 0, notDue: 1 } })
+    expect(published).toEqual([])
+    // And a job that arrives anyway (a replayed body, a held token) meets the same decision in the job itself.
+    expect(await post(domainJob('pipedrive.com'))).toMatchObject({ status: 200, body: { ok: false, outcome: 'not-due', reason: expect.stringContaining('expired') } })
+    expect(runner.calls).toEqual([])
+  })
+
   it('a corrupt daily ledger: 503 with a fixed sentence, nothing collected', async () => {
     const { ledgerStores } = await vi.importActual<typeof import('../../../../../services/grader/src/ledger-stores.js')>('../../../../../services/grader/src/ledger-stores.js')
     await ledgerStores(dir, process.env).doc('daily-spend.json').update(() => 'not a ledger')

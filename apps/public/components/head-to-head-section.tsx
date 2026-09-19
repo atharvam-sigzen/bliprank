@@ -1,6 +1,7 @@
 'use client'
 
 import { HeadToHeadChart } from '@/components/head-to-head-chart'
+import { promptSetOf, promptSetWords } from '@/lib/prompt-set'
 import { buildHeadToHead, reasonFor } from '@/lib/head-to-head'
 import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
 
@@ -19,6 +20,8 @@ import { subjectOf, type ScanResultFile } from '@/lib/scan-result'
  */
 export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
   const subject = subjectOf(scan)
+  // The person's own prompt set, when this cycle was measured over one (ADR-0016 Amendment 1).
+  const ownSet = promptSetOf(scan.comparisonBasis)
   const competitors = scan.brands.filter((b) => !b.isSubject)
 
   /*
@@ -84,7 +87,17 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
 
   return (
     <section className="section" aria-labelledby="h2h-heading">
-      <h2 id="h2h-heading">How that compares in {scan.categoryName.toLowerCase()}</h2>
+      <h2 id="h2h-heading">{ownSet ? 'How that compares on your questions' : `How that compares in ${scan.categoryName.toLowerCase()}`}</h2>
+      {/* PROPERTY 3 holds (one basis across every brand), so the comparison is
+          sound; what changed is whose questions it is a comparison ON. Under a
+          category heading a reader takes it for a position in the market, which
+          the amendment says has ended (C3 stats review, MAJOR 5). */}
+      {ownSet ? (
+        <p className="prose prose--flag" data-h2h-own-set>
+          These rivals are measured on your own questions ({promptSetWords(ownSet)}), so this ranks them on what you asked, not on the
+          category&apos;s shared prompt bank.
+        </p>
+      ) : null}
 
       <div className="annotated">
         <div className="annotated__body">
@@ -103,8 +116,9 @@ export function HeadToHeadSection({ scan }: { scan: ScanResultFile }) {
             {/* The prompt subset is the honest part: a share-of-voice number
                 taken from prompts that name brands would measure our own
                 phrasing. */}
-            From prompts that name no brand — the unprompted set. Comparison and verification prompts are excluded from this number by
-            construction.
+            {ownSet
+              ? `From ${promptSetWords(ownSet)}, none of which names a brand: a prompt that named one was refused when the set was saved.`
+              : 'From prompts that name no brand — the unprompted set. Comparison and verification prompts are excluded from this number by construction.'}
           </span>
         </aside>
       </div>

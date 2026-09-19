@@ -39,6 +39,7 @@ import { normaliseHost } from '@bliprank/taxonomy'
 import { readCustomPromptSet } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
 import { LOCAL_WORKSPACE } from './domain-ceiling.js'
+import { CORRUPT } from './ledger-doc.js'
 import type { LedgerStores } from './ledger-stores.js'
 import { defaultGateConfig, type GateConfig } from './live-gate.js'
 import { allBanks, readCategoryRecord, withRecordLock, type CategoryRecord } from './resolve-category.js'
@@ -59,6 +60,10 @@ export interface TrackedEntry {
   readonly workspaceId?: string
   /** The role `by` held in that workspace when the domain was switched on; the database re-verifies it against membership when a job presents the token (migration 0005). */
   readonly role?: TrackedRole
+  /** The last UTC day (YYYY-MM-DD, inclusive) the daily re-check runs; a tick after it is `expired` (C3). Absent: no end. */
+  readonly until?: string
+  /** The version of the domain's prompt set in force when it was switched on: provenance of the instruction (C3). The loop asks the set in force. */
+  readonly prompts?: number
 }
 
 /** The tracked list's document name: a file under the data directory on a machine, the ledger document of that name on the deployment. */
@@ -90,6 +95,8 @@ export function parseTracked(parsed: unknown, where: string): readonly TrackedEn
       reason: typeof t.reason === 'string' ? t.reason : '',
       ...(typeof t.workspaceId === 'string' && t.workspaceId ? { workspaceId: t.workspaceId } : {}),
       ...(isRole(t.role) ? { role: t.role } : {}),
+      ...(typeof t.until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.until) ? { until: t.until } : {}),
+      ...(Number.isInteger(t.prompts) && (t.prompts as number) > 0 ? { prompts: t.prompts as number } : {}),
     }))
 }
 
@@ -122,14 +129,112 @@ export async function readTrackedIn(ledgers: LedgerStores, where: string = `the 
   return parseTracked(parsed, where)
 }
 
+/** What a workspace action writes into the deployment's tracked list (C3): every field from the verified session, none from a body. */
+export interface TrackedWrite {
+  readonly host: string
+  /** the session's workspace; `local` on a machine's file store, stored as no workspaceId (the CLI's own form) */
+  readonly workspaceId: string
+  /** the account behind the session, or `local` */
+  readonly by: string
+  /** the session's role now, re-read at every write so a promotion or demotion is what the loop runs with; absent on the file store */
+  readonly role?: TrackedRole
+  readonly reason: string
+  readonly at: string
+  /** the last day the re-check runs, inclusive (C3); absent: no end */
+  readonly until?: string
+  /** the version of the domain's prompt set in force at the write (C3) */
+  readonly prompts?: number
+}
+
+/** Thrown by `setTrackedIn` when the workspace already tracks `max` hosts. The count is taken under the same lock as the write, so two requests cannot both pass it (C3 cost review, MAJOR 1). */
+export class TrackedCeilingReached extends Error {
+  constructor(
+    readonly tracked: number,
+    readonly max: number,
+  ) {
+    super(`this workspace already re-checks ${tracked} domain${tracked === 1 ? '' : 's'} daily, its ceiling of ${max} until plans gate the count; switch one off first`)
+    this.name = 'TrackedCeilingReached'
+  }
+}
+
+/**
+ * The store twin of `setTracked` (C3): switch a host's daily collection on or
+ * off in the deployment's `tracked.json` ledger document, for ONE workspace.
+ * The entry replaced or removed is the one for this host in this workspace
+ * and no other: two workspaces tracking one host each keep their own entry
+ * (ADR-0018 D10), and a workspace can neither see nor remove another's. A
+ * corrupt document is an error, never an empty list (see `parseTracked`).
+ * With `max`, a workspace already tracking that many OTHER hosts is refused
+ * (`TrackedCeilingReached`), decided inside the locked update, so the count
+ * and the append are one step: a read-then-write pair let two concurrent
+ * switches both pass the ceiling (the C3 cost review, measured). Returns the
+ * workspace's own entries after the write, never the others'.
+ */
+export async function setTrackedIn(ledgers: LedgerStores, where: string, w: TrackedWrite, on: boolean, opts: { readonly max?: number; readonly today?: string } = {}): Promise<readonly TrackedEntry[]> {
+  const host = normaliseHost(w.host)
+  if (!host) throw new Error('not a domain')
+  const isMine = (x: unknown): boolean => typeof x === 'object' && x !== null && workspaceOf(x as TrackedEntry) === w.workspaceId
+  /** Thrown inside the update to leave the document untouched when nothing would change. */
+  class Unchanged extends Error {
+    constructor(readonly own: readonly TrackedEntry[]) {
+      super('unchanged')
+    }
+  }
+  try {
+    const written = await ledgers.doc(TRACKED).update((current) => {
+      if (current === CORRUPT) throw new Error(`${where} is not readable JSON; nothing is tracked or untracked until a person repairs it`)
+      if (current !== null && current !== undefined && !Array.isArray(current)) throw new Error(`${where} is not a list; nothing is tracked or untracked until a person repairs it`)
+      const raw = (current ?? []) as readonly unknown[]
+      // OTHER WORKSPACES' ENTRIES PASS THROUGH VERBATIM (C3 tenancy review,
+      // MAJOR 3). Parsing them here would strip a field this build does not
+      // know and drop a malformed one: a stranger's switch rewriting another
+      // tenant's list. Only this workspace's entries are parsed and replaced.
+      const foreign = raw.filter((x) => !isMine(x))
+      const own = parseTracked(raw.filter(isMine), where)
+      // The ceiling counts what is LIVE: an entry past its `until` runs nothing and
+      // costs the cap nothing, so it may not hold a slot either, or three lapsed
+      // instructions block a workspace whose status says nothing is tracked (C3
+      // tenancy re-check). The same predicate the route's status count uses.
+      const today = opts.today ?? w.at.slice(0, 10)
+      const live = own.filter((t) => t.until === undefined || today <= t.until)
+      if (on && opts.max !== undefined && !live.some((t) => t.host === host) && live.length >= opts.max) throw new TrackedCeilingReached(live.length, opts.max)
+      const kept = own.filter((t) => t.host !== host)
+      // Switching off a host this workspace does not track changes nothing, so nothing is written (C3 tenancy review, MINOR 5).
+      if (!on && kept.length === own.length) throw new Unchanged(own)
+      const entry: TrackedEntry = {
+        host,
+        since: w.at,
+        by: w.by,
+        reason: w.reason,
+        ...(w.workspaceId === LOCAL_WORKSPACE ? {} : { workspaceId: w.workspaceId }),
+        ...(w.role ? { role: w.role } : {}),
+        ...(w.until ? { until: w.until } : {}),
+        ...(w.prompts ? { prompts: w.prompts } : {}),
+      }
+      return on ? [...foreign, ...kept, entry] : [...foreign, ...kept]
+    })
+    return parseTracked((written as readonly unknown[]).filter(isMine), where)
+  } catch (e) {
+    if (e instanceof Unchanged) return e.own
+    throw e
+  }
+}
+
 /** Switch a domain's daily collection on or off. A person's act; it refuses a domain with no record, because there is nothing to collect under. */
-export function setTracked(dataDir: string, domain: string, on: boolean, who: { readonly by: string; readonly reason: string; readonly at?: string }): readonly TrackedEntry[] | { readonly refuse: string } {
+export function setTracked(
+  dataDir: string,
+  domain: string,
+  on: boolean,
+  who: { readonly by: string; readonly reason: string; readonly at?: string; readonly until?: string; readonly prompts?: number },
+): readonly TrackedEntry[] | { readonly refuse: string } {
   const host = normaliseHost(domain)
   if (!host) return { refuse: 'not a domain' }
   if (on && !readCategoryRecord(dataDir, host)) return { refuse: `${host} has no category on record; a first scan decides one, and only then is there something to re-check daily` }
   return withRecordLock(dataDir, () => {
     const current = readTracked(dataDir).filter((t) => t.host !== host)
-    const next = on ? [...current, { host, since: who.at ?? new Date().toISOString(), by: who.by, reason: who.reason }] : current
+    const next = on
+      ? [...current, { host, since: who.at ?? new Date().toISOString(), by: who.by, reason: who.reason, ...(who.until ? { until: who.until } : {}), ...(who.prompts ? { prompts: who.prompts } : {}) }]
+      : current
     writeFileSync(trackedFile(dataDir), JSON.stringify(next, null, 2) + '\n')
     return next
   })
@@ -144,6 +249,14 @@ export interface DueDomain {
   readonly category: string
   readonly curatedPrompts: number
   readonly customPrompts: number
+  /**
+   * The version of the domain's own prompt set this decision was sized on, or
+   * null when the bank's prompts were (C3 cost review, MINOR 4). The loop hands
+   * it to the runner, so the run measures exactly what the day's cap and the
+   * allowance were sized for: a set saved between the decision and the run
+   * changes the NEXT cycle, never this one.
+   */
+  readonly promptSet: number | null
   readonly cells: number
   readonly usd: number
 }
@@ -151,7 +264,7 @@ export interface DueDomain {
 export interface NotDue {
   readonly host: string
   readonly workspaceId: string
-  readonly reason: 'no-record' | 'no-bank' | 'cycle-today' | 'basis-moved'
+  readonly reason: 'no-record' | 'no-bank' | 'cycle-today' | 'basis-moved' | 'expired'
   readonly detail: string
 }
 
@@ -180,6 +293,8 @@ export interface DueFacts {
   /** the bank for the record's slug in this build, when one exists */
   readonly bank: ReturnType<typeof allBanks>[number] | null
   readonly customPrompts: number
+  /** the version of the set those prompts are, when there are any */
+  readonly customVersion?: number | null
   /** the newest stored cycle, when any */
   readonly prior: { readonly day: string; readonly comparisonBasis: string } | null
 }
@@ -214,19 +329,27 @@ const cannotSize = (gate: GateConfig, env: NodeJS.ProcessEnv): string | null =>
  * costs the day's cap its expected cycle whether or not it is due today.
  */
 export function decideDue(
-  entry: Pick<TrackedEntry, 'host' | 'workspaceId'>,
+  entry: Pick<TrackedEntry, 'host' | 'workspaceId' | 'until'>,
   facts: DueFacts,
   sizing: Sizing,
   day: string,
 ): { readonly tracked: TrackedCost | null; readonly verdict: { readonly due: DueDomain } | { readonly notDue: NotDue } } {
   const workspaceId = workspaceOf(entry)
   const { gate, perPrompt } = sizing
+  // The instruction has an end (C3): a day after `until` is expired, and an
+  // expired host costs the day's cap nothing, because it will not run.
+  if (entry.until && day > entry.until) {
+    return { tracked: null, verdict: { notDue: { host: entry.host, workspaceId, reason: 'expired', detail: `tracked until ${entry.until}; the daily re-check has ended, switch it on again to continue` } } }
+  }
   if (!facts.record) return { tracked: null, verdict: { notDue: { host: entry.host, workspaceId, reason: 'no-record', detail: 'no category record' } } }
   if (!facts.bank) return { tracked: null, verdict: { notDue: { host: entry.host, workspaceId, reason: 'no-bank', detail: `no bank for ${facts.record.slug} in this build` } } }
-  const curated = promptsFor(facts.bank, gate.callsPerEngine).length
+  // The person's set IS the measurement when one is in force (ADR-0016 Amendment 1): a cycle asks it, and only it.
+  const curatedAll = promptsFor(facts.bank, gate.callsPerEngine).length
   const custom = facts.customPrompts
-  const cells = (curated + custom) * gate.engines.length
-  const usd = (curated + custom) * perPrompt
+  const curated = custom > 0 ? 0 : curatedAll
+  const asked = curated + custom
+  const cells = asked * gate.engines.length
+  const usd = asked * perPrompt
   // Expected cost is a fact about the tracked domain, due today or not: the day's cap is the sum over all of them.
   const tracked: TrackedCost = { host: entry.host, cells, usd }
   if (facts.prior && facts.prior.day === day) {
@@ -236,7 +359,8 @@ export function decideDue(
     const was = basisOf(facts.prior.comparisonBasis)
     const engines = [...gate.engines].sort().join(',')
     const priorEngines = was.engines ? [...was.engines].sort().join(',') : engines
-    if ((was.maxPrompts !== undefined && was.maxPrompts !== curated) || priorEngines !== engines) {
+    // A set change is the person's deliberate act and a change of basis the trend breaks at (Amendment 1), not a refusal; the bank's count is checked only while the bank is the measurement.
+    if ((was.maxPrompts !== undefined && custom === 0 && was.maxPrompts !== curated) || priorEngines !== engines) {
       return {
         tracked,
         verdict: {
@@ -250,7 +374,7 @@ export function decideDue(
       }
     }
   }
-  return { tracked, verdict: { due: { host: entry.host, workspaceId, category: facts.record.slug, curatedPrompts: curated, customPrompts: custom, cells, usd } } }
+  return { tracked, verdict: { due: { host: entry.host, workspaceId, category: facts.record.slug, curatedPrompts: curated, customPrompts: custom, promptSet: custom > 0 ? (facts.customVersion ?? null) : null, cells, usd } } }
 }
 
 /** The list, from the decisions: totals over what is due, the cap's basis over everything tracked. */
@@ -278,6 +402,7 @@ function factsFromFiles(dataDir: string, host: string): DueFacts {
     record,
     bank,
     customPrompts: readCustomPromptSet(dataDir, host)?.prompts.length ?? 0,
+    customVersion: readCustomPromptSet(dataDir, host)?.version ?? null,
     prior: prior ? { day: prior.day, comparisonBasis: (prior.result as { comparisonBasis?: string }).comparisonBasis ?? '' } : null,
   }
 }
@@ -287,10 +412,12 @@ async function factsFromStore(store: WorkspaceStore, dataDir: string, host: stri
   const record = await categoryRecordIn(store, host)
   const bank = record ? (allBanks(dataDir).find((b) => b.category === record.slug) ?? null) : null
   const prior = await store.cycles.latest(host)
+  const ownSet = await customPromptsIn(store, host)
   return {
     record,
     bank,
-    customPrompts: (await customPromptsIn(store, host))?.prompts.length ?? 0,
+    customPrompts: ownSet?.prompts.length ?? 0,
+    customVersion: ownSet?.version ?? null,
     prior: prior ? { day: prior.day, comparisonBasis: prior.comparisonBasis } : null,
   }
 }
@@ -352,7 +479,8 @@ export async function decideDueIn(
   dataDir: string,
   env: NodeJS.ProcessEnv,
   day: string,
-  entry: Pick<TrackedEntry, 'host' | 'workspaceId'>,
+  /** `until` included: a domain job re-decides the instruction's end, it does not inherit the fan-out's word for it (C3 tenancy re-check). */
+  entry: Pick<TrackedEntry, 'host' | 'workspaceId' | 'until'>,
   store: WorkspaceStore,
 ): Promise<{ readonly config: string } | ReturnType<typeof decideDue>> {
   const sizing = sizingOf(dataDir, env)

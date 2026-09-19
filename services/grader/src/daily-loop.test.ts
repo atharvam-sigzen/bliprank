@@ -57,9 +57,10 @@ describe('the cap is a formula over the tracked set', () => {
     expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo(17 * PER_PROMPT * RETRY_HEADROOM, 6)
     applyCustomPrompts(dir, { host: 'acme.test', prompts: ['which crm works offline on a phone', 'best crm for a two-person studio'], reason: 'buyers ask these', by: 'operator' })
     setTracked(dir, 'beta.test', true, { by: 'operator', reason: 'r' })
-    expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo((19 + 17) * PER_PROMPT * RETRY_HEADROOM, 6)
+    // acme.test's own set of two REPLACES the bank's seventeen (ADR-0016 Amendment 1); beta.test still asks the bank.
+    expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo((2 + 17) * PER_PROMPT * RETRY_HEADROOM, 6)
     setTracked(dir, 'beta.test', false, { by: 'operator', reason: 'churned' })
-    expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo(19 * PER_PROMPT * RETRY_HEADROOM, 6)
+    expect(dailyCapUsd(dueToday(dir, {}, '2026-09-07'))).toBeCloseTo(2 * PER_PROMPT * RETRY_HEADROOM, 6)
   })
 
   it('is bounded above by the hard ceiling the owner names, and the ceiling must be a positive number to count', async () => {
@@ -375,11 +376,49 @@ describe('the loop through the real runner, offline', () => {
     expect(first.ran[0]!.spentUsd).toBe(0) // the fixture adapter prices a call at zero, and the runner's ledger says so
     expect(listCycles(dir, 'pipedrive.com').map((c) => c.day)).toEqual(['2026-09-07'])
     const stored = JSON.parse(readFileSync(join(dir, 'results', 'pipedrive.com.json'), 'utf8')) as { run: { mode: string; day: string } }
-    expect(stored.run).toMatchObject({ mode: 'fixture', day: '2026-09-07' })
+    // The loop's cycle says who started it (migration 0009, C3), in the file's stamp as in the store's column.
+    expect(stored.run).toMatchObject({ mode: 'fixture', day: '2026-09-07', source: 'loop' })
+    expect(listCycles(dir, 'pipedrive.com').map((c) => (JSON.parse(readFileSync(c.file, 'utf8')) as { run: { source: string } }).run.source)).toEqual(['loop'])
     const second = await runTick({ dataDir: dir, env, day: '2026-09-07', apply: true, mode: 'fixture' })
     if ('refuse' in second) throw new Error(second.refuse)
     expect(second.ran).toEqual([])
     expect(second.list.notDue[0]).toMatchObject({ host: 'pipedrive.com', reason: 'cycle-today' })
+  })
+
+  it('a set saved between the decision and the run changes the NEXT cycle, never this one: the run is pinned to the version the cap and the allowance were sized on (C3 cost review)', async () => {
+    const V1 = ['which crm works offline on a phone', 'best crm for a two-person studio']
+    const V2 = [...V1, 'which crm is easiest to leave when we outgrow it']
+    applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: V1, reason: 'the questions our buyers ask', by: 'operator' })
+    setTracked(dir, 'pipedrive.com', true, { by: 'operator', reason: 'reference domain' })
+    expect(dueToday(dir, ONE, '2026-09-07').due[0]).toMatchObject({ customPrompts: 2, promptSet: 1, cells: 2 * ENGINES.length })
+    // The loop logs its sizing line after admission and before the runner starts: the person saves version 2 exactly there.
+    let edited = false
+    const first = await runTick(
+      { dataDir: dir, env: ONE, day: '2026-09-07', apply: true, mode: 'fixture' },
+      {
+        log: (s) => {
+          if (!edited && s.includes('pipedrive.com: collecting')) {
+            edited = true
+            const written = applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: V2, reason: 'and a third, from the sales call', by: 'operator' })
+            if ('refuse' in written) throw new Error(written.refuse)
+          }
+        },
+      },
+    )
+    if ('refuse' in first) throw new Error(first.refuse)
+    expect(edited).toBe(true)
+    expect(first.ran.map((r) => [r.host, r.status])).toEqual([['pipedrive.com', 'scanned']])
+    const day1 = JSON.parse(readFileSync(listCycles(dir, 'pipedrive.com')[0]!.file, 'utf8')) as { comparisonBasis: string; counts: { cellsRequested: number } }
+    // Version 1, the two prompts the day was sized on: not the three the store held by the time the runner read it.
+    expect(day1.comparisonBasis).toMatch(/\|custom=2@1$/)
+    expect(day1.counts.cellsRequested).toBe(2 * ENGINES.length)
+    // The next day is version 2's: a new basis, and the day's list says the size it will be.
+    expect(dueToday(dir, ONE, '2026-09-08').due[0]).toMatchObject({ customPrompts: 3, promptSet: 2, cells: 3 * ENGINES.length })
+    const next = await runTick({ dataDir: dir, env: ONE, day: '2026-09-08', apply: true, mode: 'fixture' })
+    if ('refuse' in next) throw new Error(next.refuse)
+    const day2 = JSON.parse(readFileSync(listCycles(dir, 'pipedrive.com')[1]!.file, 'utf8')) as { comparisonBasis: string; counts: { cellsRequested: number } }
+    expect(day2.comparisonBasis).toMatch(/\|custom=3@2$/)
+    expect(day2.counts.cellsRequested).toBe(3 * ENGINES.length)
   })
 })
 

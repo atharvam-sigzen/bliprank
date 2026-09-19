@@ -33,6 +33,9 @@ export type DocumentKind = 'category-record' | 'competitor-override' | 'custom-p
 export type RequestKind = 'category' | 'competitors' | 'custom-prompts'
 export type RequestStatus = 'pending' | 'applied' | 'declined'
 
+/** Who started a cycle: a person from the record or a CLI, or the daily loop (migration 0009, MVP_PLAN C3). */
+export type CycleSource = 'hand' | 'loop'
+
 export interface CycleInput {
   readonly host: string
   /** YYYY-MM-DD, the UTC day the cycle was collected */
@@ -41,7 +44,18 @@ export interface CycleInput {
   readonly comparisonBasis: string
   /** the ScanResultFile the app serves, as written by the runner */
   readonly result: Record<string, unknown>
+  /** the caller's declaration; absent, the result's own run stamp decides, and a result with no stamp is a person's (0009) */
+  readonly source?: CycleSource
 }
+
+/** The source a result carries in its run stamp, when the runner wrote one it recognises. */
+export const runSourceOf = (result: Record<string, unknown>): CycleSource | undefined => {
+  const s = (result['run'] as { source?: unknown } | undefined)?.source
+  return s === 'hand' || s === 'loop' ? s : undefined
+}
+
+/** The result with its run stamp carrying `source`: what both stores write, so the file and the row say the same thing. */
+export const withSource = (result: Record<string, unknown>, source: CycleSource): Record<string, unknown> => ({ ...result, run: { ...((result['run'] as Record<string, unknown> | undefined) ?? {}), source } })
 
 export interface StoredCycle {
   readonly host: string
@@ -50,6 +64,8 @@ export interface StoredCycle {
   readonly comparisonBasis: string
   readonly result: Record<string, unknown>
   readonly writtenAt: string
+  /** who started it (0009): `hand` for a row written before the column existed */
+  readonly source: CycleSource
 }
 
 export interface Versioned<T> {
@@ -112,6 +128,7 @@ interface CycleRow {
   comparison_basis: string
   result: Record<string, unknown>
   written_at: string
+  source: CycleSource
 }
 interface DocRow<T> {
   version: number
@@ -131,7 +148,7 @@ interface RequestRow<T> {
 }
 
 const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : String(v))
-const cycleOf = (r: CycleRow): StoredCycle => ({ host: r.host, day: String(r.day).slice(0, 10), algoVersion: r.algo_version, comparisonBasis: r.comparison_basis, result: r.result, writtenAt: iso(r.written_at) })
+const cycleOf = (r: CycleRow): StoredCycle => ({ host: r.host, day: String(r.day).slice(0, 10), algoVersion: r.algo_version, comparisonBasis: r.comparison_basis, result: r.result, writtenAt: iso(r.written_at), source: r.source })
 const requestOf = <T,>(r: RequestRow<T>): StoredRequest<T> => ({
   id: r.id,
   host: r.host,
@@ -161,7 +178,7 @@ export function pgWorkspaceStore(db: Db): WorkspaceStore {
   // 'det-3'), ordered by the write that produced them, which is the order a
   // re-score happens in. `written_at` is the tie-break the reader wants.
   const CYCLES = `
-    SELECT DISTINCT ON (workspace_id, host, day) host, day::text AS day, algo_version, comparison_basis, result, written_at
+    SELECT DISTINCT ON (workspace_id, host, day) host, day::text AS day, algo_version, comparison_basis, result, written_at, source
       FROM workspace_cycles WHERE ${WS} AND host = $1
      ORDER BY workspace_id, host, day, written_at DESC`
 
@@ -184,7 +201,9 @@ export function pgWorkspaceStore(db: Db): WorkspaceStore {
     cycles: {
       async put(c) {
         assertDay(c.day)
-        await db.query('SELECT ws_put_cycle($1, $2::date, $3, $4, $5::jsonb)', [c.host, c.day, c.algoVersion, c.comparisonBasis, JSON.stringify(c.result)])
+        // The source rides in the result's run stamp; ws_put_cycle copies it into the column (0009).
+        const result = withSource(c.result, c.source ?? runSourceOf(c.result) ?? 'hand')
+        await db.query('SELECT ws_put_cycle($1, $2::date, $3, $4, $5::jsonb)', [c.host, c.day, c.algoVersion, c.comparisonBasis, JSON.stringify(result)])
       },
       async list(host) {
         const rows = await db.query<CycleRow>(`SELECT * FROM (${CYCLES}) c ORDER BY day`, [host])

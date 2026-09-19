@@ -13,6 +13,8 @@ import { PromptPreview } from '@/components/prompt-preview'
 import { ScanProgress, ScanRefusal } from '@/components/scan-progress'
 import { runLiveScan } from '@/lib/live-scan'
 import { fetchPreview } from '@/lib/preview'
+import { PROMPT_SET_SCOPE, promptSetOf, promptSetWords } from '@/lib/prompt-set'
+import type { TrackedStatus } from '@/lib/tracked'
 import type { PreviewResponse } from '@/lib/preview-contract'
 import { BUNDLED_SCANS, IS_LIVE, SCAN, rememberScan, runInfoOf, scanFor, subjectOf, type ScanResultFile } from '@/lib/scan-result'
 import { writeActiveDomain, writeRole } from '@/lib/workspace'
@@ -54,7 +56,7 @@ type State =
   | { phase: 'idle' }
   /* Between the button and the spend. See `PromptPreview`. */
   | { phase: 'previewing'; domain: string }
-  | { phase: 'preview'; domain: string; preview: PreviewResponse }
+  | { phase: 'preview'; domain: string; preview: PreviewResponse; trackable: boolean }
   | { phase: 'scanning'; domain: string; stage: string; done: number; total: number; engines: number; prompts: number; lastCell: string; cached: boolean }
   | { phase: 'done'; domain: string; scan: ScanResultFile }
   | { phase: 'refused'; domain: string; kind: string; message: string }
@@ -113,9 +115,24 @@ export default function Grader() {
      * homepage fetch instead of seventeen requests on five engines.
      */
     setState({ phase: 'previewing', domain: value })
-    void fetchPreview(value).then((outcome) => {
-      if (outcome.ok) setState({ phase: 'preview', domain: value, preview: outcome.preview })
-      else setState({ phase: 'refused', domain: value, kind: outcome.kind, message: outcome.message })
+    void fetchPreview(value).then(async (outcome) => {
+      if (!outcome.ok) {
+        setState({ phase: 'refused', domain: value, kind: outcome.kind, message: outcome.message })
+        return
+      }
+      // Whether the daily re-check can be offered here: only on the machine's
+      // own store, where the person at the keyboard is its operator (MVP_PLAN
+      // C3). Anything else, a deployment or a list that cannot be read, offers
+      // the scan alone and says nothing it cannot honour.
+      let trackable = false
+      try {
+        const res = await fetch(`/api/tracked?domain=${encodeURIComponent(value)}`, { cache: 'no-store' })
+        const status = (await res.json().catch(() => ({}))) as Partial<TrackedStatus>
+        trackable = res.ok && status.backend === 'file' && status.may === true
+      } catch {
+        trackable = false
+      }
+      setState({ phase: 'preview', domain: value, preview: outcome.preview, trackable })
     })
   }
 
@@ -261,6 +278,7 @@ export default function Grader() {
       ) : state.phase === 'preview' ? (
         <PromptPreview
           preview={state.preview}
+          trackable={state.trackable}
           onConfirm={() => startScan(state.domain)}
           onCancel={() => {
             setDomain('')
@@ -411,7 +429,7 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
       {/* The finding, before the caveats about it and before the instrument
           that draws it. A reader who stops here has the estimate, both bounds
           and the sample size, in a sentence. */}
-      <Headline subject={subject.name} metric={metric} engines={run.engines.length} />
+      <Headline subject={subject.name} metric={metric} engines={run.engines.length} promptSet={promptSetOf(scan.comparisonBasis)} />
 
       {/*
         A SHORT SAMPLE SAYS SO. If the provider stopped answering part-way — the
@@ -445,6 +463,12 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
         </p>
       ) : null}
 
+      {promptSetOf(scan.comparisonBasis) ? (
+        <p className="prose prose--flag" style={{ marginTop: 'var(--space-3)' }} data-prompt-set-scope>
+          {PROMPT_SET_SCOPE}
+        </p>
+      ) : null}
+
       {/* The rail, with its papers in the margin beside it. This is the surface
           most likely to be screenshotted beside a competitor's tool: their
           headline is a confident figure; this one cannot be photographed
@@ -460,6 +484,15 @@ function Result({ scan, onReset }: { scan: ScanResultFile; onReset: () => void }
             {scan.counts.answersScored} answers{run.engines.length > 0 ? ` · ${run.engines.length} engines` : ''}
           </span>
           {run.day ? <span className="note__line">day {run.day}</span> : null}
+          {/* WHOSE QUESTIONS, here as well as in the lede: the lede yields to the
+              zero treatment when nothing was mentioned, and at the small samples a
+              person's own set makes routine a zero is not rare, so without this
+              line a whole result page named no sample (C3 stats review, MAJOR 4). */}
+          {promptSetOf(scan.comparisonBasis) ? (
+            <span className="note__line" data-prompt-set>
+              {promptSetWords(promptSetOf(scan.comparisonBasis)!)}
+            </span>
+          ) : null}
           {/* The auditor's line — algorithm version and collection path — and
               the only part of this note that goes at simple depth. The category,
               the answer count and the engine count above it stay at BOTH depths:

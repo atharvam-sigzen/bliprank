@@ -29,7 +29,18 @@ import { formatFrequency, formatInterval, formatValue, type Metric } from '@blip
  * gets the bounds in the same sentence a sighted reader does, which a tooltip
  * could never manage.
  */
-export function Headline({ subject, metric, engines }: { subject: string; metric: Metric; engines: number }) {
+export function Headline({
+  subject,
+  metric,
+  engines,
+  promptSet,
+}: {
+  subject: string
+  metric: Metric
+  engines: number
+  /** The person's own prompt set, when the measurement was taken over one (ADR-0016 Amendment 1): the sentence then says so, in plain words, with the version. */
+  promptSet?: { readonly count: number; readonly version: number } | null
+}) {
   const spoken = formatFrequency(metric)
 
   /*
@@ -42,7 +53,12 @@ export function Headline({ subject, metric, engines }: { subject: string; metric
    */
   if (spoken.kind === 'none') return null
 
-  const from = `From ${metric.n} answers${engines > 0 ? ` across ${engines} ${engines === 1 ? 'engine' : 'engines'}` : ''}.`
+  // WHOSE QUESTIONS. With a set of the person's own in force the number is
+  // measured over THOSE prompts, and the lede says so where the sample size is
+  // said, at both depths: a reader comparing two records has to be able to see
+  // that one was asked the bank's questions and the other was not.
+  const asked = promptSet ? ` to your ${promptSet.count} ${promptSet.count === 1 ? 'prompt' : 'prompts'}, version ${promptSet.version},` : ''
+  const from = `From ${metric.n} ${metric.n === 1 ? 'answer' : 'answers'}${asked}${engines > 0 ? ` across ${engines} ${engines === 1 ? 'engine' : 'engines'}` : ''}.`
 
   /*
    * WHEN THE ESTIMATE LANDS ON ONE OF ITS OWN BOUNDS, STATE THE RANGE INSTEAD.

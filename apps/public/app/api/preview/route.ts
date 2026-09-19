@@ -7,7 +7,7 @@ import { loadApiKey } from '../../../../../services/grader/src/load-key.js'
 import { UNPROMPTED_INTENTS, subjectFor } from '../../../../../services/grader/src/scan.js'
 import { allBanks, allCategories, resolveCategory } from '../../../../../services/grader/src/resolve-category.js'
 import { competitorsIn } from '../../../../../services/grader/src/competitor-overrides.js'
-import { categoryRecordIn, recordsIn } from '../../../../../services/grader/src/store/documents.js'
+import { categoryRecordIn, customPromptsIn, recordsIn } from '../../../../../services/grader/src/store/documents.js'
 import type { WorkspaceStore } from '../../../../../services/grader/src/store/pg-store.js'
 import { ROOT } from '@/lib/data-dir'
 import { workspaceAccess, type WorkspaceAccess } from '@/lib/workspace-access'
@@ -214,6 +214,12 @@ export async function POST(req: Request): Promise<Response> {
     // what runs. Deriving it a second way here is how a preview drifts from the
     // scan it previews and becomes worse than no preview at all.
     const unprompted = resolved.bank.prompts.filter((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))
+    // The domain's current set (ADR-0016 Amendment 1, C3 step 2): the person's
+    // own latest version once one exists, the bank's on first entry. A kept
+    // bank prompt keeps its intent; one the person wrote is theirs.
+    const set = await customPromptsIn(store, domain)
+    const bankIntent = new Map(resolved.bank.prompts.map((p) => [p.text.trim().toLowerCase(), p.intent]))
+    const shown = set && set.prompts.length ? set.prompts.map((text) => ({ text, intent: bankIntent.get(text.trim().toLowerCase()) ?? 'own' })) : unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent }))
 
     const competitorSet = (await competitorsIn(store, DATA, domain, resolved.bank, subjectFor(domain, resolved.bank, resolved.record.brandName).spec.id)) ?? { competitors: [], missing: [] }
     const body: PreviewResponse = {
@@ -230,7 +236,8 @@ export async function POST(req: Request): Promise<Response> {
       version: resolved.record.version,
       ...(resolved.record.correction ? { correction: resolved.record.correction } : {}),
       ...(resolved.fallback ? { fallback: resolved.fallback } : {}),
-      prompts: unprompted.slice(0, gate.callsPerEngine).map((p) => ({ text: p.text, intent: p.intent })),
+      prompts: shown,
+      ...(set && set.prompts.length ? { promptSet: { version: set.version, count: set.prompts.length } } : {}),
       engines: [...ENGINES],
       // The subject is not its own rival. `runScan` drops the leader the domain
       // matched from the comparison set (scan.ts); a preview that listed it

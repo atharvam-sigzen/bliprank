@@ -623,3 +623,34 @@ describe('promptRows carry the bank’s intent', () => {
     }
   })
 })
+
+describe("ADR-0016 Amendment 1 — the person's edited set IS the measurement", () => {
+  it('asks the set and only the set, on a basis that names it; a kept bank prompt keeps its intent, an own prompt has none; no second block', async () => {
+    const bank = DEMO_BANKS.find((b) => b.category === 'crm-software')!
+    const kept = bank.prompts.find((p) => (UNPROMPTED_INTENTS as readonly string[]).includes(p.intent))!
+    const own = 'which crm works offline on a phone'
+    const seen: string[] = []
+    const d = deps((p) => {
+      seen.push(p)
+      return 'HubSpot is a common answer.'
+    })
+    const r = await runScan(req('pipedrive.com', { promptSet: { version: 2, prompts: [kept.text, own] } }), d)
+    expect(r.status).toBe('scanned')
+    if (r.status !== 'scanned') return
+    // The cells: the set's two prompts on each engine, nothing of the bank's seventeen.
+    expect([...new Set(seen)].sort()).toEqual([kept.text, own].sort())
+    // The basis says whose questions these are, so a version change is a change of basis the trend breaks at.
+    expect(r.comparisonBasis).toMatch(/\|unprompted=0\|runs=1\|custom=2@2$/)
+    for (const b of r.brands) expect(b.metric.comparison_basis).toBe(r.comparisonBasis)
+    // The rows are the set's; the kept prompt carries the bank's intent, the person's own carries none.
+    const rows = r.promptRows as readonly { prompt: string; intent?: string }[]
+    expect([...new Set(rows.map((x) => x.prompt))].sort()).toEqual([kept.text, own].sort())
+    expect(rows.find((x) => x.prompt === kept.text)?.intent).toBe(kept.intent)
+    expect(rows.find((x) => x.prompt === own)?.intent).toBeUndefined()
+    // Decision 4's second block is not written: the set is the headline, not a block beside it.
+    expect(r.customPrompts).toBeUndefined()
+    // And the bank's own measurement, from the same answers, is a different basis: not comparable, by design.
+    const bankRun = await runScan(req('pipedrive.com'), deps(() => 'HubSpot is a common answer.'))
+    if (bankRun.status === 'scanned') expect(bankRun.comparisonBasis).not.toBe(r.comparisonBasis)
+  })
+})

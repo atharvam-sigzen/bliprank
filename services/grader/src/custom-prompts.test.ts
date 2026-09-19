@@ -49,8 +49,8 @@ describe('PROPERTY 2 holds for the customer’s prompts, with the scorer’s own
     expect(checkCustomPrompts(dir, 'acme.test', ['how does this compare to hub\u200bspot for a team'], REASON)).toMatchObject({ kind: 'names-brand' })
   })
 
-  it('a prompt the curated bank already asks is refused, and two spellings the cache key calls one question are one prompt', () => {
-    expect(checkCustomPrompts(dir, 'acme.test', ['What is the best CRM for a solo founder just starting out?'], REASON)).toMatchObject({ kind: 'input', refuse: expect.stringContaining('curated bank') })
+  it('a prompt the curated bank already asks is KEPT (the set replaces the bank, ADR-0016 Amendment 1), and two spellings the cache key calls one question are one prompt', () => {
+    expect(checkCustomPrompts(dir, 'acme.test', ['What is the best CRM for a solo founder just starting out?'], REASON)).toMatchObject({ prompts: ['What is the best CRM for a solo founder just starting out?'] })
     expect(checkCustomPrompts(dir, 'acme.test', ['which crm works offline on a phone?', 'which crm works offline on a phone'], REASON)).toMatchObject({ prompts: ['which crm works offline on a phone?'] })
     expect(checkCustomPrompts(dir, 'acme.test', Array.from({ length: 100 }, (_, i) => `question number ${i} about crm tools`), REASON)).toMatchObject({ kind: 'too-many' })
   })

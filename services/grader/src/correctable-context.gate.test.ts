@@ -51,8 +51,46 @@ async function collect(day: string) {
   })
 }
 
+/**
+ * A cycle as the runner wrote it while ADR-0016 decision 4 stood: the bank's
+ * prompts as the headline, the person's as a second block on its own basis.
+ * Today's runner no longer writes that shape (Amendment 1), so it is assembled
+ * from two real offline runs over the same store and day: the set's cells
+ * (whose answers and basis are exactly what the old block carried) and the
+ * bank's, pinned with `customPrompts: null`. What the readers consult, the
+ * basis strings, the block's prompts and the answer store, is all real.
+ */
+async function collectDecision4(day: string) {
+  const own = await collect(day)
+  const bank = await runGrader({
+    domain: 'pipedrive.com',
+    plan: 'payg',
+    day,
+    engines: ['chatgpt', 'gemini'],
+    capUsd: 5,
+    maxPrompts: 2,
+    customPrompts: null,
+    mode: 'fixture',
+    apiKey: '',
+    dataDir: dir,
+    log: () => {},
+  })
+  if (own.status !== 'scanned' || bank.status !== 'scanned') return bank
+  return {
+    ...bank,
+    customPrompts: {
+      version: 1,
+      prompts: CUSTOM,
+      comparisonBasis: own.comparisonBasis,
+      counts: { cellsRequested: own.counts.cellsRequested, answersScored: own.counts.answersScored },
+      brands: own.brands,
+      promptRows: own.promptRows,
+    },
+  }
+}
+
 describe('one cycle carrying both corrections, through the real runner, offline', () => {
-  it('the basis carries set=1, the custom block carries custom=2@1, the excluded rival is gone, the included one is scored, the headline is the curated sample alone', async () => {
+  it('the person\u2019s set IS the measurement (ADR-0016 Amendment 1): the headline basis carries set=1 and custom=2@1 with unprompted=0, the excluded rival is gone, the included one is scored, and no second block is written', async () => {
     const override = applyOverride(dir, { host: 'pipedrive.com', exclude: ['zoho-crm'], include: ['semrush'], reason: 'Zoho is our integration partner', by: 'operator' })
     if ('refuse' in override) throw new Error(override.refuse)
     const set = applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: CUSTOM, reason: 'what our buyers actually ask', by: 'operator' })
@@ -62,50 +100,46 @@ describe('one cycle carrying both corrections, through the real runner, offline'
     expect(result.status).toBe('scanned')
     if (result.status !== 'scanned') return
 
-    // The headline: curated cells only, on a basis that names the override version.
+    // The headline: the person's two prompts and nothing of the bank's, on a basis that names the override version AND the set version.
     const basis = parseBasis(result.comparisonBasis)!
-    expect(basis).toMatchObject({ bank: { slug: 'crm-software', version: 1 }, unprompted: 2, set: 1 })
-    expect(basis.custom).toBeUndefined()
+    expect(basis).toMatchObject({ bank: { slug: 'crm-software', version: 1 }, unprompted: 0, set: 1, custom: { count: 2, version: 1 } })
     expect(result.brands.map((b) => b.id)).not.toContain('zoho-crm')
     expect(result.brands.map((b) => b.id)).toContain('semrush')
     expect(result.brands.find((b) => b.isSubject)!.metric.n).toBe(4)
+    expect(result.brands.every((b) => b.metric.comparison_basis === result.comparisonBasis)).toBe(true)
     expect(result.promptRows).toHaveLength(4)
+    expect(result.promptRows.map((r) => r.prompt).every((p) => CUSTOM.includes(p))).toBe(true)
 
-    // The second measurement: its own basis, its own rows, the same rivals.
-    const custom = result.customPrompts!
-    expect(parseBasis(custom.comparisonBasis)).toMatchObject({ unprompted: 0, set: 1, custom: { count: 2, version: 1 } })
-    expect(custom.counts).toEqual({ cellsRequested: 4, answersScored: 4 })
-    expect(custom.promptRows.map((r) => r.prompt).every((p) => CUSTOM.includes(p))).toBe(true)
-    expect(custom.brands.map((b) => b.id)).not.toContain('zoho-crm')
-    expect(custom.brands.map((b) => b.id)).toContain('semrush')
+    // Decision 4's second block is superseded: the set is the headline, not a block beside it.
+    expect(result.customPrompts).toBeUndefined()
 
-    // The whole cycle's counts are curated plus custom; the file on disk is the result.
-    expect(result.counts.cellsRequested).toBe(8)
-    expect(result.counts.answersScored).toBe(8)
-    expect(JSON.parse(readFileSync(join(dir, 'latest.json'), 'utf8')).customPrompts.version).toBe(1)
+    // The whole cycle is the set's cells: two prompts on two engines. The `maxPrompts: 2` the runner was handed sizes the BANK and does not touch the set.
+    expect(result.counts.cellsRequested).toBe(4)
+    expect(result.counts.answersScored).toBe(4)
+    expect(JSON.parse(readFileSync(join(dir, 'latest.json'), 'utf8')).comparisonBasis).toBe(result.comparisonBasis)
 
-    // Filed as a cycle, it reads back under the sets it recorded: the evidence marks the custom answers.
+    // Filed as a cycle, it reads back under the sets it recorded: the evidence is the set's answers, and they are the headline's own sample.
     expect(writeCycle(dir, result)).toMatchObject({ day: '2026-09-03' })
     expect(listCycles(dir, 'pipedrive.com')).toHaveLength(1)
     const evidence = await readScanAnswers(dir, 'pipedrive.com', '2026-09-03')
     if ('refuse' in evidence) throw new Error(evidence.refuse)
-    expect(evidence.answers).toHaveLength(8)
-    expect(evidence.answers.filter((a) => a.custom).length).toBe(4)
-    expect(evidence.answers.filter((a) => !a.custom).length).toBe(4)
+    expect(evidence.answers).toHaveLength(4)
+    expect(evidence.answers.filter((a) => a.custom)).toHaveLength(0)
+    expect([...new Set(evidence.answers.map((a) => a.prompt))].sort()).toEqual([...CUSTOM].sort())
 
-    // The re-score pre-flight finds every cell, curated and custom, and pins both versions.
+    // The re-score pre-flight finds every cell of the SET, none of the bank's, and pins both versions.
     const plan = await planRescore(dir, 'pipedrive.com', 2)
-    expect(plan).toMatchObject({ missing: [], cells: 8, competitorSet: 1, customPrompts: 1 })
+    expect(plan).toMatchObject({ missing: [], cells: 4, competitorSet: 1, customPrompts: 1, promptSetRole: 'headline' })
 
-    // The version-diff rows cover every stored answer, custom included, and the row key keeps them apart.
+    // The version-diff rows cover every stored answer, and the row key keeps them apart.
     const scored = await scoreStoredCycle(dir, 'pipedrive.com', '2026-09-03')
     if ('refuse' in scored) throw new Error(scored.refuse)
     const rows = snapshotRows(scored)
-    expect(rows).toHaveLength(8)
-    expect(new Set(rows.map((r) => `${r.engine}|${r.prompt}|${r.run}`)).size).toBe(8)
+    expect(rows).toHaveLength(4)
+    expect(new Set(rows.map((r) => `${r.engine}|${r.prompt}|${r.run}`)).size).toBe(4)
   })
 
-  it('a later change to either set makes the next cycle a new question, and the earlier cycle still reads back under its own sets', async () => {
+  it('a later change to either set makes the next cycle a new question on a new basis, and the earlier cycle still reads back under its own sets', async () => {
     applyOverride(dir, { host: 'pipedrive.com', exclude: ['zoho-crm'], include: [], reason: 'Zoho is our integration partner', by: 'operator' })
     applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: CUSTOM, reason: 'what our buyers actually ask', by: 'operator' })
     const first = await collect('2026-09-03')
@@ -120,14 +154,53 @@ describe('one cycle carrying both corrections, through the real runner, offline'
 
     expect(parseBasis(second.comparisonBasis)?.set).toBe(2)
     expect(second.brands.map((b) => b.id)).toContain('zoho-crm')
-    expect(parseBasis(second.customPrompts!.comparisonBasis)?.custom).toEqual({ count: 1, version: 2 })
+    // The version change is ON THE HEADLINE's basis now: that is where the trend breaks and compare() refuses.
+    expect(parseBasis(second.comparisonBasis)?.custom).toEqual({ count: 1, version: 2 })
+    expect(parseBasis(first.comparisonBasis)?.custom).toEqual({ count: 2, version: 1 })
     expect(first.comparisonBasis).not.toBe(second.comparisonBasis)
 
     // The first cycle's evidence and re-score still resolve under set 1 and prompt set 1, not today's.
     const evidence = await readScanAnswers(dir, 'pipedrive.com', '2026-09-03')
     if ('refuse' in evidence) throw new Error(evidence.refuse)
-    expect(evidence.answers.filter((a) => a.custom)).toHaveLength(4)
+    expect(evidence.answers).toHaveLength(4)
+    expect([...new Set(evidence.answers.map((a) => a.prompt))].sort()).toEqual([...CUSTOM].sort())
     const plan = await planRescore(dir, 'pipedrive.com', 2, join(dir, 'results', 'cycles', 'pipedrive.com', '2026-09-03.json'))
-    expect(plan).toMatchObject({ missing: [], competitorSet: 1, customPrompts: 1 })
+    expect(plan).toMatchObject({ missing: [], cells: 4, competitorSet: 1, customPrompts: 1 })
+  })
+
+  it('a cycle stored while decision 4 stood still reads back with its second block: the bank\u2019s headline, the block kept apart (R5)', async () => {
+    // What a pre-amendment runner wrote: the bank's prompts as the headline, the person's as a block. Built with the scan's own request field, which is kept for exactly this.
+    applyCustomPrompts(dir, { host: 'pipedrive.com', prompts: CUSTOM, reason: 'what our buyers actually ask', by: 'operator' })
+    const old = await collectDecision4('2026-09-02')
+    if (old.status !== 'scanned') throw new Error(old.status)
+    expect(parseBasis(old.comparisonBasis)).toMatchObject({ unprompted: 2 })
+    expect(parseBasis(old.comparisonBasis)?.custom).toBeUndefined()
+    expect(parseBasis(old.customPrompts!.comparisonBasis)).toMatchObject({ unprompted: 0, custom: { count: 2, version: 1 } })
+    writeCycle(dir, old)
+    const evidence = await readScanAnswers(dir, 'pipedrive.com', '2026-09-02')
+    if ('refuse' in evidence) throw new Error(evidence.refuse)
+    expect(evidence.answers).toHaveLength(8)
+    expect(evidence.answers.filter((a) => a.custom)).toHaveLength(4)
+    const plan = await planRescore(dir, 'pipedrive.com', 2, join(dir, 'results', 'cycles', 'pipedrive.com', '2026-09-02.json'))
+    // The plan reads the ROLE off the stored file: this set was a block beside a bank headline, not the headline's sample.
+    expect(plan).toMatchObject({ missing: [], cells: 8, customPrompts: 1, promptSetRole: 'block' })
+
+    // THE FINDING (C3 stats review, BLOCKER): the re-derivation is the runner with the plan's pins. With the
+    // role pinned it measures the sample the stored cycle measured: the bank's headline on its own basis, the
+    // person's prompts as the block on theirs, every cell a cache hit.
+    const pinned = { domain: 'pipedrive.com', plan: 'payg' as const, day: '2026-09-02', engines: ['chatgpt', 'gemini'] as const, capUsd: 5, maxPrompts: 2, customPrompts: 1, mode: 'fixture' as const, apiKey: '', dataDir: dir, log: () => {} }
+    const rederived = await runGrader({ ...pinned, engines: [...pinned.engines], promptSetRole: 'block' })
+    if (rederived.status !== 'scanned') throw new Error(rederived.status)
+    expect(rederived.comparisonBasis).toBe(old.comparisonBasis)
+    expect(parseBasis(rederived.comparisonBasis)?.custom).toBeUndefined()
+    expect(rederived.customPrompts!.comparisonBasis).toBe(old.customPrompts!.comparisonBasis)
+    expect(rederived.counts).toMatchObject({ cellsRequested: 8, cacheHits: 8, providerCalls: 0 })
+    expect(rederived.brands.find((b) => b.isSubject)!.metric.n).toBe(old.brands.find((b) => b.isSubject)!.metric.n)
+    // And the test bites: WITHOUT the role the same pins measure the person's set as the headline, a different
+    // sample under the same file name, which is what a re-score did before the role existed.
+    const rebased = await runGrader({ ...pinned, engines: [...pinned.engines] })
+    if (rebased.status !== 'scanned') throw new Error(rebased.status)
+    expect(rebased.comparisonBasis).not.toBe(old.comparisonBasis)
+    expect(parseBasis(rebased.comparisonBasis)).toMatchObject({ unprompted: 0, custom: { count: 2, version: 1 } })
   })
 })

@@ -24,6 +24,7 @@ import { join } from 'node:path'
 import { PRICE_USD_PER_CALL, type OwnPlan } from '@bliprank/collector'
 import { ENGINES } from '@bliprank/contracts'
 import { FALLBACK_SLUG, normaliseHost, type PromptBank } from '@bliprank/taxonomy'
+import { readCustomPromptSet } from './custom-prompts.js'
 import { listCycles } from './cycles.js'
 import { defaultGateConfig } from './live-gate.js'
 import { allBanks, plainText, readCategoryRecord, withRecordLock, type CategoryRecord } from './resolve-category.js'
@@ -223,11 +224,24 @@ export interface Consequences {
  * before anything is applied. Pay-as-you-go when the plan is unset, the
  * dearest, so the stated cost is never an underestimate.
  */
-export function consequencesOf(dataDir: string, domain: string, env: NodeJS.ProcessEnv, earlierCycles: number = listCycles(dataDir, domain).length): Consequences {
+export function consequencesOf(
+  dataDir: string,
+  domain: string,
+  env: NodeJS.ProcessEnv,
+  earlierCycles: number = listCycles(dataDir, domain).length,
+  /** How many prompts the domain's OWN set holds, when one is in force; a store-backed caller passes its store's figure, a file caller lets it default to this machine's. */
+  ownPrompts: number = readCustomPromptSet(dataDir, domain)?.prompts.length ?? 0,
+): Consequences {
   const gate = defaultGateConfig(dataDir, env)
   const engines = gate.engines.length > 0 ? gate.engines : ENGINES
   const planRaw = env['OPENWEBNINJA_PLAN']
   const plan: OwnPlan = planRaw === 'pro' || planRaw === 'ultra' || planRaw === 'mega' ? planRaw : 'payg'
   const perPrompt = engines.reduce((n, e) => n + PRICE_USD_PER_CALL[plan][e], 0)
-  return { earlierCycles, prompts: gate.callsPerEngine, engines: engines.length, cells: gate.callsPerEngine * engines.length, plan, usd: perPrompt * gate.callsPerEngine }
+  // The person's own set, when one is in force, IS the next cycle (ADR-0016
+  // Amendment 1), and a category correction does not clear it; sizing this
+  // figure on the bank would understate the cycle whenever the set is the
+  // larger of the two (C3 cost review, MINOR 3). The spend gates size the
+  // same way (`decideDue`, `/api/scan`).
+  const prompts = ownPrompts > 0 ? ownPrompts : gate.callsPerEngine
+  return { earlierCycles, prompts, engines: engines.length, cells: prompts * engines.length, plan, usd: perPrompt * prompts }
 }

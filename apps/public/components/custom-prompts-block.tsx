@@ -4,8 +4,14 @@ import { customBlockOf, customMovement, customSubjectOf } from '@/lib/scan-resul
 import type { ScanResultFile } from '@/lib/scan-result'
 
 /**
- * YOUR PROMPTS — the second measurement, rendered as a second record, never
- * folded into the first. ADR-0016, decision 4.
+ * YOUR PROMPTS — decision 4's second measurement, rendered as a second record,
+ * never folded into the first. ADR-0016, decision 4.
+ *
+ * ⚠️ FOR STORED CYCLES ONLY since ADR-0016 Amendment 1 (2026-09-16): the
+ * person's set is now the headline's own sample and no new cycle writes this
+ * block. A cycle collected while decision 4 stood still carries one, and it is
+ * still rendered exactly as it was measured (R5): its own number, its own
+ * interval, never compared with a headline.
  *
  * What it keeps straight: the number here is over the customer's own prompts
  * only, on its own basis, with its own interval and n; it is not the headline
@@ -67,7 +73,8 @@ export function CustomPromptsBlock({ scan, cycles }: { scan: ScanResultFile; cyc
           {subject ? <span className="note__line detail">{formatProvenance(subject.metric)}</span> : null}
           <span className="note__gloss">
             Asked on the same engines, on the same day, through the same budgeted runner as the curated bank, and scored into rows of their own.
-            Changing the set makes the next cycle a new question here; the headline and its trend are untouched.
+            This block is a measurement from before your own questions became the headline. New cycles measure your set as the headline instead,
+            and a change of set breaks the trend where it happens.
           </span>
         </aside>
       </div>

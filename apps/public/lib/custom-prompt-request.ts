@@ -5,7 +5,7 @@
  * reason `preview-contract.ts` gives.
  *
  * ⚠️ A REQUEST CHANGES NOTHING until a person applies it. When one does, the
- * next cycle asks the set as a SECOND measurement, with its own basis; the
+ * next cycle asks the set as THE measurement (ADR-0016 Amendment 1), with its own basis; the
  * headline and its trend are untouched.
  */
 

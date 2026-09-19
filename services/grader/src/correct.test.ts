@@ -63,5 +63,9 @@ describe('the consequences a person sees before --apply', () => {
 
   it('a domain with no cycles has nothing to leave off a trend', () => {
     expect(consequencesOf(dir, 'nobody.test', {}).earlierCycles).toBe(0)
+    // The domain's own set, when one is in force, IS the next cycle (ADR-0016 Amendment 1), and a correction does not clear it: the figure follows the set, in either direction (C3 cost review).
+    expect(consequencesOf(dir, 'acme.test', { GRADER_PROMPTS_PER_SCAN: '10' }, 0, 12)).toMatchObject({ prompts: 12, cells: 12 * 5 })
+    expect(consequencesOf(dir, 'acme.test', {}, 0, 3)).toMatchObject({ prompts: 3, cells: 3 * 5 })
+    expect(consequencesOf(dir, 'acme.test', {}, 0, 0)).toMatchObject({ prompts: 17 })
   })
 })

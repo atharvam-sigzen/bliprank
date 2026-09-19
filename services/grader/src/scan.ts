@@ -34,7 +34,7 @@
  *    "not comparable" for every row.
  */
 
-import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis } from '@bliprank/contracts'
+import { ENGINES as ENGINE_IDS, cacheCell, type CacheCell, type EngineAdapter, type EngineId, type RawAnswer, formatBasis, parseBasis, normalisePrompt } from '@bliprank/contracts'
 import { SCORING_ALGO_VERSION, domainBrandForms, scoreAnswer, type BrandSpec } from '@bliprank/scorer'
 import { wilson, type Metric } from '@bliprank/stats'
 import { DEMO_BANKS, DEMO_TAXONOMY, FALLBACK_SLUG, PUBLISHER_REGISTRY, classifyDomain, looksLikeFilename, normaliseHost, type CategoryDef, type Classification, type Intent, type PromptBank } from '@bliprank/taxonomy'
@@ -52,11 +52,19 @@ export interface ScanRequest {
   /** Cap the prompt count for a cheaper demo run. Omitted = the whole unprompted set. */
   readonly maxPrompts?: number
   /**
-   * The customer's own prompts, at the version the store holds (ADR-0016).
-   * Collected as cells like any other, scored into their OWN block with their
-   * own basis, never into the headline sample. Omitted or empty: none.
+   * ADR-0016 decision 4's second measurement: the customer's own prompts
+   * collected beside the bank's and scored into their OWN block. Superseded by
+   * `promptSet` (Amendment 1); kept so a stored cycle that carried a block can
+   * be re-derived exactly. Ignored when `promptSet` is given.
    */
   readonly customPrompts?: { readonly version: number; readonly prompts: readonly string[] }
+  /**
+   * THE PERSON'S EDITED SET IS THE MEASUREMENT (ADR-0016 Amendment 1, owner
+   * decision 2026-09-16). When present and non-empty, these prompts are the
+   * headline's cells, the basis carries `unprompted=0` and `custom=K@V`, and
+   * the bank's prompts are not collected unless the person kept them.
+   */
+  readonly promptSet?: { readonly version: number; readonly prompts: readonly string[] }
 }
 
 export interface ScanDeps {
@@ -571,17 +579,22 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
 
   // PROPERTY 2. Unprompted prompts only.
   const prompts = promptsFor(bank, req.maxPrompts)
+  // ADR-0016 Amendment 1: the person's edited set, when one is in force, IS
+  // the measurement. PROPERTY 2 held on it when it was saved (custom-prompts.ts
+  // refuses a prompt that names the subject or a tracked brand), so the
+  // headline stays unprompted; what changes is whose questions they are.
+  const set = req.promptSet && req.promptSet.prompts.length ? req.promptSet : undefined
 
   const { spec: subject, source: subjectSource } = subjectFor(req.domain, bank, brandName)
   // The override's set when there is one, the category's otherwise; the subject is never its own rival either way.
   const competitors = (competitorSet?.competitors ?? leadersOf(bank)).filter((c) => c.id !== subject.id)
   const scored: BrandSpec[] = [subject, ...competitors]
 
-  const curatedCells = cellsFor(bank, req.engines, req.day, req.maxPrompts)
-  // The customer's own prompts ride the same loop as cells like any other —
-  // same cache key shape, same budget, same progress — and their answers are
-  // kept APART, so the headline below never sees them (ADR-0016, decision 4).
-  const customCells = req.customPrompts?.prompts.length ? customCellsFor(bank, req.engines, req.day, req.customPrompts.prompts) : []
+  // The headline's cells: the person's set when one is in force, else the bank's unprompted prompts.
+  const curatedCells = set ? customCellsFor(bank, req.engines, req.day, set.prompts) : cellsFor(bank, req.engines, req.day, req.maxPrompts)
+  // Decision 4's second block, only for a cycle re-derived from one that
+  // carried it: those cells ride the same loop and their answers are kept APART.
+  const customCells = !set && req.customPrompts?.prompts.length ? customCellsFor(bank, req.engines, req.day, req.customPrompts.prompts) : []
   const cells = [...curatedCells.map((c) => ({ ...c, custom: false })), ...customCells.map((c) => ({ ...c, custom: true }))]
 
   const answers: RawAnswer[] = []
@@ -636,20 +649,34 @@ export async function runScan(req: ScanRequest, deps: ScanDeps): Promise<ScanRes
 
   // PROPERTY 3. One basis for every brand, because every brand is scored over
   // the same answers from the same scan.
-  const comparisonBasis = comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell, competitorSet?.version)
+  // With a set in force the basis says so: `unprompted=0|…|custom=K@V`. A
+  // version change is a change of basis, so the trend breaks there and a
+  // head-to-head refuses across it, exactly as for any other segment.
+  const comparisonBasis = set
+    ? comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { count: set.prompts.length, version: set.version })
+    : comparisonBasisFor(bank, req.engines, prompts.length, runsPerCell, competitorSet?.version)
   /*
    * The bank's classification, keyed by the prompt TEXT the cells were built
    * from — `prompts`, not `bank.prompts`. Those differ whenever `maxPrompts`
    * slices the set, and keying off the full bank would attach an intent to a
-   * prompt this cycle never sent.
+   * prompt this cycle never sent. Under a set, a prompt the person kept from
+   * the bank keeps the bank's intent; one the person wrote has none (see
+   * `PromptRow.intent`).
    */
-  const intentOf = new Map<string, Intent>(prompts.map((p) => [p.text, p.intent]))
+  const intentOf = set
+    ? new Map<string, Intent>(
+        set.prompts.flatMap((text) => {
+          const fromBank = bank.prompts.find((p) => normalisePrompt(p.text) === normalisePrompt(text))
+          return fromBank ? [[text, fromBank.intent] as const] : []
+        }),
+      )
+    : new Map<string, Intent>(prompts.map((p) => [p.text, p.intent]))
   const { brands, promptRows } = scoreBlock(answers, scored, subject, competitors, comparisonBasis, intentOf)
 
   // THE SECOND MEASUREMENT, over its own answers, on its own basis. Present
   // whenever custom cells were asked, even if none answered, so the record can
   // say "asked, nothing came back" rather than nothing at all.
-  const customPrompts: CustomPromptsBlock | undefined = req.customPrompts?.prompts.length
+  const customPrompts: CustomPromptsBlock | undefined = !set && req.customPrompts?.prompts.length
     ? (() => {
         const basis = comparisonBasisFor(bank, req.engines, 0, runsPerCell, competitorSet?.version, { count: req.customPrompts.prompts.length, version: req.customPrompts.version })
         // No map: the customer wrote these and nobody classified them. See

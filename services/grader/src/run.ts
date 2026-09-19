@@ -75,6 +75,8 @@ export interface RunnerOptions {
   /** Observe each cell as it completes — the SSE route streams these. */
   readonly onProgress?: (p: ScanProgress) => void
   readonly mode: 'live' | 'fixture' | 'stub'
+  /** Who started this run: the daily loop says `loop`; a person's scan, from the record or a CLI, says nothing and is `hand` (migration 0009, MVP_PLAN C3). */
+  readonly source?: 'hand' | 'loop'
   readonly apiKey: string
   readonly dataDir: string
   /** The whole result as JSON on disk, for the CLI. Absent on a deployment: the workspace store holds the cycle, and an instance's disk is shared by every workspace it serves (B3b tenancy audit). */
@@ -96,12 +98,24 @@ export interface RunnerOptions {
    */
   readonly competitorSet?: number | null
   /**
-   * The custom prompt set to ask (ADR-0016, decision 4). Omitted: the set in
-   * force now, read from the store. `null`: none, for re-deriving a cycle that
-   * asked none. A number: that recorded version; one the store no longer holds
-   * fails the run rather than substituting today's.
+   * The domain's prompt set to measure with (ADR-0016 Amendment 1: the
+   * person's edited set IS the measurement). Omitted: the set in force now,
+   * read from the store; with none in force, the bank's unprompted prompts.
+   * `null`: the bank's, for re-deriving a cycle that had no set. A number: that
+   * recorded version; one the store no longer holds fails the run rather than
+   * substituting today's.
    */
   readonly customPrompts?: number | null
+  /**
+   * What the set named by `customPrompts` IS in this run. `headline` (the
+   * default): the person's set is the measurement (ADR-0016 Amendment 1).
+   * `block`: decision 4's SECOND block beside the bank's headline, for
+   * re-deriving a cycle that was stored that way and for nothing else. Without
+   * this the runner could not tell the two apart, and a re-score of an old
+   * cycle republished it, over the same file, as a measurement of a different
+   * sample: the silent rebasing R5 forbids (C3 stats review, BLOCKER 1).
+   */
+  readonly promptSetRole?: 'headline' | 'block'
   /**
    * The most provider attempts this run may make, retries included (ADR-0017).
    * The route and the daily loop derive it from the cycle's cells
@@ -240,6 +254,8 @@ export interface GraderRun {
   readonly spentUsd: number
   readonly capUsd: number
   readonly at: string
+  /** who started it: the stores copy this into the cycle's `source` column and file (0009) */
+  readonly source: 'hand' | 'loop'
 }
 
 export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readonly run: GraderRun }> {
@@ -451,11 +467,12 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
               fromRecord(domain, offlineRecord, offlineBank, offlineRecord.slug === FALLBACK_SLUG ? { reason: 'unclassified', detail: offlineRecord.evidence, candidates: [] } : undefined)
           : undefined
 
-    // The customer's own prompts: the set in force, or the version pinned by
-    // a re-derivation. Read beside the scan, so what is asked is what the record
+    // The domain's prompt set: the one in force, or the version pinned by a
+    // re-derivation. Read beside the scan, so what is asked is what the record
     // page shows, and a pinned version the store lost fails rather than drifts.
+    // When one is in force it is THE measurement (ADR-0016 Amendment 1).
     const customSet = o.customPrompts === null ? null : o.customPrompts === undefined ? await customPromptsIn(store, o.domain) : await customPromptsAtIn(store, o.domain, o.customPrompts)
-    if (o.customPrompts !== undefined && o.customPrompts !== null && !customSet) throw new Error(`${o.domain}: custom prompt set ${o.customPrompts} is not on record; a measurement under another set is a different measurement`)
+    if (o.customPrompts !== undefined && o.customPrompts !== null && !customSet) throw new Error(`${o.domain}: prompt set ${o.customPrompts} is not on record; a measurement under another set is a different measurement`)
     const result = await runScan(
       {
         domain: o.domain,
@@ -463,7 +480,11 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
         day: o.day,
         runsPerCell: 1,
         ...(o.maxPrompts ? { maxPrompts: o.maxPrompts } : {}),
-        ...(customSet && customSet.prompts.length ? { customPrompts: { version: customSet.version, prompts: customSet.prompts } } : {}),
+        ...(customSet && customSet.prompts.length
+          ? o.promptSetRole === 'block'
+            ? { customPrompts: { version: customSet.version, prompts: customSet.prompts } }
+            : { promptSet: { version: customSet.version, prompts: customSet.prompts } }
+          : {}),
       },
       {
         orchestrator,
@@ -486,7 +507,7 @@ export async function runGrader(o: RunnerOptions): Promise<ScanResult & { readon
     )
 
     const spentThisRun = (await spendLedger.spentUsd()) - spentBefore
-    const run: GraderRun = { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spentThisRun, capUsd: o.capUsd, at: new Date().toISOString() }
+    const run: GraderRun = { mode: o.mode, plan: o.plan, day: o.day, engines: o.engines, spentUsd: spentThisRun, capUsd: o.capUsd, at: new Date().toISOString(), source: o.source ?? 'hand' }
     const envelope = { ...result, run }
     if (o.outFile) writeFileSync(o.outFile, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8')
     // Cumulative here, deliberately: "of the cap" is a statement about the cap,
@@ -509,15 +530,15 @@ async function main(): Promise<void> {
 
   // Print the bill before incurring it, never after. `/backfill` holds the same
   // rule and it is the difference between a decision and a discovery.
-  const promptsIfWhole = opts.maxPrompts ?? 17
-  // The customer's own prompts are cells too (ADR-0016); a bill that left them out would be a discovery, not a decision.
-  const customIfWhole = opts.customPrompts === null ? 0 : (opts.customPrompts === undefined ? readCustomPromptSet(opts.dataDir, opts.domain) : customPromptsAt(opts.dataDir, opts.domain, opts.customPrompts))?.prompts.length ?? 0
-  const worst = estimateUsd(opts, promptsIfWhole + customIfWhole)
+  // The domain's own set, when one is in force, is the whole cycle (ADR-0016 Amendment 1); a bill sized on the bank instead would be a discovery, not a decision.
+  const ownSet = opts.customPrompts === null ? 0 : (opts.customPrompts === undefined ? readCustomPromptSet(opts.dataDir, opts.domain) : customPromptsAt(opts.dataDir, opts.domain, opts.customPrompts))?.prompts.length ?? 0
+  const promptsIfWhole = ownSet > 0 ? ownSet : (opts.maxPrompts ?? 17)
+  const worst = estimateUsd(opts, promptsIfWhole)
   // The per-run allowance (ADR-0017): the cycle's cells with retry headroom, unless the command line named one. Bounds this run's attempts, retries included.
-  const allowance = opts.runAllowanceCalls ?? runAllowanceFor((promptsIfWhole + customIfWhole) * opts.engines.length)
+  const allowance = opts.runAllowanceCalls ?? runAllowanceFor(promptsIfWhole * opts.engines.length)
   opts.log(
     `grader scan · ${opts.domain} · mode=${opts.mode} · plan=${opts.plan} · day=${opts.day}\n` +
-      `  ${opts.engines.length} engines x up to ${promptsIfWhole} unprompted prompts${customIfWhole ? ` + ${customIfWhole} of the domain's own` : ''} x 1 run\n` +
+      `  ${opts.engines.length} engines x up to ${promptsIfWhole} ${ownSet > 0 ? "of the domain's own prompts" : 'unprompted prompts'} x 1 run\n` +
       `  worst case (every cell a miss): $${worst.toFixed(4)} against a $${opts.capUsd.toFixed(2)} cap · at most ${allowance} attempts this run, retries included`,
   )
   if (preview) {

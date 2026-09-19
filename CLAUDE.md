@@ -326,6 +326,7 @@ QSTASH_CURRENT_SIGNING_KEY=        # the route verifies deliveries with these tw
 QSTASH_NEXT_SIGNING_KEY=
 GRADER_TICK_CRON=                  # optional, default "15 6 * * *" (UTC; a CRON_TZ= prefix is refused, the day is UTC)
 GRADER_DAILY_LOOP=                 # armed = live; fixture = offline, honoured only with identity off; anything else = every verified job answers "not armed" and does nothing
+GRADER_MAX_TRACKED_PER_WORKSPACE=  # optional, default 3: the hosts one workspace may re-check daily through POST /api/tracked, until D2 gates the count by plan (C3). A value that is not a positive integer keeps the default. The machine's track command does not read it.
 ```
 
 `SITE_URL` is the destination (`${SITE_URL}/api/tick`), so the URL QStash signs
@@ -334,8 +335,9 @@ session's:** `pnpm grader:schedule -- --register` from a shell holding the
 token (the pre-spend hook blocks `--register` and `--resume` in a session), and
 `GRADER_DAILY_LOOP=armed` on the deployment. Registering alone spends nothing:
 every delivery is answered "not armed" until the variable is set. The
-deployment's tracked list is the `tracked.json` ledger document in Upstash and
-has no write path until C3, so a fan-out there publishes nothing yet.
+deployment's tracked list is the `tracked.json` ledger document in Upstash; its
+write path is `POST /api/tracked` (C3), session-derived and wired to no surface
+on a deployment yet, so a fan-out there still finds nobody tracked.
 
 **⚠️ Whichever model answers, the competitor rule holds.** It is not the schema:
 `parseCandidate` reads three keys and ignores every other one, `leaders: []` is
@@ -422,6 +424,8 @@ reviewed bank leaders only, and moves the basis (`set=N`,
 `pnpm grader:competitors`); custom prompts are a versioned per-domain set held
 to PROPERTY 2 with the scorer's own matcher, collected as a SECOND measurement
 on its own basis (`custom=K@V`), never the headline (`pnpm grader:prompts`).
+**Superseded on 2026-09-16 by ADR-0016 Amendment 1 (the person's edited set IS
+the measurement; see C3 below).**
 Visitors file requests; operators apply. One shared basis definition lives in
 `packages/contracts/src/basis.ts`. Every route is local-demo only; there is
 still no identity.
@@ -639,6 +643,50 @@ The independent cost review moved C2's verdict to **safe to arm once the owner
 registers and arms**; still nothing registered, armed or spent. ⚠️ HUMAN
 REVIEW REQUIRED: spend control (`ledger-doc.ts`, `cache-index.ts`
 `setIfHeld`, `daily-loop.ts` `runAdmitted`/`runFanOut`, `tick.ts`).
+**C3 (rescoped by the owner on 2026-09-16, landed 2026-09-19; identity OFF,
+the machine's own store):** the entry flow. A person enters a domain; the
+preview shows the domain's current prompt set (the bank's on first entry, the
+person's own latest version after that); the person edits it in the app
+(`components/prompt-preview.tsx`), saved as version V through
+`/api/custom-prompts`, which on a machine's file store applies directly and
+still refuses a prompt naming the subject or a tracked brand (PROPERTY 2); the
+person enters a number of days; the first cycle runs now and
+`POST /api/tracked` writes `{ host, since, until, by: local, prompts: V }` into
+`tracked.json`; the daily tick asks THAT set on every engine each day until
+`until`, and the day after is `expired`. **ADR-0016 Amendment 1 (owner decision
+2026-09-16): the edited set IS the measurement.** The headline basis is
+`unprompted=0|…|custom=K@V`, the headline and the record say "your N prompts,
+version V", the trend breaks at a version change, a head-to-head compares equal
+bases only, the bank's set is not collected for that domain unless kept, and
+the record lists the days one by one at simple depth with who started each
+(`CycleDays`). Decision 4's "second measurement" is superseded; a stored cycle
+that carried a second block still reads back and re-derives with it. **The
+deployment path stays built and unwired:** the same route derives the
+workspace, the account and the role from `workspaceAccess()` and from nothing
+in the body, re-reads the role at every write, refuses a member, counts an
+interim ceiling of 3 tracked hosts per workspace inside the locked write,
+passes other workspaces' entries through verbatim, and is throttled per
+visitor and per domain; it is tested over PGlite and the KV double and no
+surface offers it with identity on (`TrackedStatus.backend`). **Migration 0009:**
+`workspace_cycles.source` (`hand`|`loop`), stamped by the runner from the
+caller's declaration and copied into the column by `ws_put_cycle` under its
+unchanged signature, so a loop-filed cycle is distinguishable (point 9); the
+source is the app tier's word until a loop service identity exists, and the
+file store holds the same same-day rule the database does. **Nothing is
+registered or armed.** ⚠️ HUMAN REVIEW REQUIRED: METHODOLOGY (ADR-0016
+Amendment 1: what the headline measures; `docs/METHODOLOGY.md` has no section
+for it yet); tenancy (migration 0009, `api/tracked/route.ts`, `setTrackedIn`);
+spend control (a tracked host is a daily spend; the per-workspace ceiling; the
+cycle sized on the set in `decideDue` and `/api/scan`). The reviews are in
+`docs/MVP_REVIEWS.md` row C3, NOT YET ACCEPTED: the statistics review found
+one BLOCKER before the commit (a re-score of a decision-4 cycle would have
+republished it as a measurement of a different sample; the re-score now pins
+the ROLE the set played, `RunnerOptions.promptSetRole`), and left two
+questions for the methodology owner: whether a set below the comparison floor
+is refused rather than warned about, and whether the editor flags
+near-duplicate prompts. The next session takes Stage P (presentation
+readiness: P1, the daily checks run from the app the owner has open), then
+Stage D.
 
 **⚠️ `bliprank.rls_bypass_allowed` STAYS UNSET in production.** It is an
 allowlist that excuses named roles from the deploy gate's superuser/BYPASSRLS

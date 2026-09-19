@@ -163,6 +163,35 @@ describe('cycles: one row per (host, day, algo_version); same version re-writes,
     const rows = await inWorkspace(WS1, (q) => q(`SELECT comparison_basis FROM workspace_cycles WHERE host = 'acme.example' AND day = '2026-09-03'`))
     expect(rows).toEqual([{ comparison_basis: 'b' }])
   })
+
+  it('a cycle records who started it, from the result the writer was handed; it is provenance, not authorisation (migration 0009, C3 tenancy review MINOR 6)', async () => {
+    // No word is a person's; the loop's word is the loop's; anything else is refused at the writer.
+    await inWorkspace(WS1, async (q) => {
+      await q(`SELECT ws_put_cycle('acme.example', '2026-09-10', 'det-3', 'b', $1)`, [RESULT])
+      await q(`SELECT ws_put_cycle('acme.example', '2026-09-11', 'det-3', 'b', $1)`, [{ ...RESULT, run: { day: '2026-09-11', source: 'loop' } }])
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-12', 'det-3', 'b', $1)`, [{ ...RESULT, run: { day: '2026-09-12', source: 'robot' } }])).rejects.toThrow(/by hand or by the loop, not by robot/)
+    })
+    expect(await inWorkspace(WS1, (q) => q(`SELECT day::text AS day, source FROM workspace_cycles WHERE host = 'acme.example' AND day >= '2026-09-10' ORDER BY day`))).toEqual([
+      { day: '2026-09-10', source: 'hand' },
+      { day: '2026-09-11', source: 'loop' },
+    ])
+    // A plain MEMBER files a cycle, and may say `loop`: the column widens nothing a member could not already do (ws_put_cycle is every member's, 0005), and no decision reads it.
+    await db.exec(`SET ROLE svc_onboard`)
+    await db.exec(`INSERT INTO accounts (id,email) VALUES ('00000000-0000-4000-8000-0000000000f9','m@one.test') ON CONFLICT DO NOTHING;
+                   INSERT INTO workspace_members (workspace_id,account_id,role) VALUES ('${WS1}','00000000-0000-4000-8000-0000000000f9','member') ON CONFLICT DO NOTHING`)
+    await db.exec(`RESET ROLE`)
+    await inWorkspace(WS1, (q) => q(`SELECT ws_put_cycle('acme.example', '2026-09-13', 'det-3', 'b', $1)`, [{ ...RESULT, run: { day: '2026-09-13', source: 'loop' } }]), { sub: '00000000-0000-4000-8000-0000000000f9', role: 'member' })
+    // The same day from the OTHER source is a different measurement, refused like another basis.
+    await inWorkspace(WS1, async (q) => {
+      await expect(q(`SELECT ws_put_cycle('acme.example', '2026-09-13', 'det-3', 'b', $1)`, [{ ...RESULT, run: { day: '2026-09-13', source: 'hand' } }])).rejects.toThrow(/another basis or from another source/)
+    })
+    // The tenant role still holds no direct write on the table, the new column included; and the other workspace sees none of it.
+    await inWorkspace(WS1, async (q) => {
+      await expect(q(`UPDATE workspace_cycles SET source = 'loop'`)).rejects.toThrow(/permission denied/)
+      await expect(q(`INSERT INTO workspace_cycles (workspace_id, host, day, algo_version, comparison_basis, result, source) VALUES ('${WS1}','x.example','2026-09-14','det-3','b','{}','loop')`)).rejects.toThrow(/permission denied/)
+    })
+    expect(await inWorkspace(WS2, (q) => q(`SELECT source FROM workspace_cycles WHERE host = 'acme.example' AND day >= '2026-09-10'`))).toEqual([])
+  })
 })
 
 describe('documents: version N+1 is the database\'s, history is rows, nothing is updated or deleted', () => {

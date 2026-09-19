@@ -32,8 +32,11 @@ import { PROMPTS_PER_CYCLE, preflightPrompts, workspaceFor } from '@/lib/workspa
  * the machine that holds the record as a REQUEST, validated there with the
  * scorer's own matcher (a prompt naming you or a tracked brand is refused at
  * once, with the reason). A person applies it; from then on every cycle asks
- * the set as a second measurement beside the curated bank. Nothing here
- * schedules a cycle, and a filed list changes nothing until applied.
+ * THAT set, and the headline is measured over it (ADR-0016 Amendment 1, owner
+ * decision 2026-09-16: the person's set IS the measurement, its basis names
+ * the version, and a change of questions breaks the trend where it happens).
+ * Nothing here schedules a cycle, and a filed list changes nothing until
+ * applied.
  */
 export function ManagePrompts({ domain, backHref, backLabel }: { domain: string; backHref: string; backLabel: string }) {
   const workspace = workspaceFor(domain)
@@ -228,8 +231,9 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
                 the next cycle, started by a person. Each of those is said. */}
             <p className="prose" style={{ marginTop: 'var(--space-3)' }}>
               This list is a draft, stored in this browser. Filing it sends the whole list to the machine that holds this domain&apos;s record as a
-              request; a person applies it there, and from then on every cycle asks these prompts beside the curated bank, scored as a separate
-              measurement. Nothing is asked of any engine until a person starts a cycle.
+              request; a person applies it there, and from then on every cycle asks these prompts instead of the curated bank&apos;s: your number is
+              then measured over your questions, it carries their version, and it is no longer comparable with cycles asked other questions. Nothing
+              is asked of any engine until a person starts a cycle.
             </p>
 
             {server.kind === 'away' ? (
@@ -274,7 +278,7 @@ export function ManagePrompts({ domain, backHref, backLabel }: { domain: string;
                         ? {
                             ok: true,
                             message: r.applied
-                              ? `Applied ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'}. The next cycle asks them beside the curated bank, as a second measurement on its own basis.`
+                              ? `Applied ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'}. The next cycle asks these and only these, and the number it produces carries their version.`
                               : `Filed ${r.prompts.length} ${r.prompts.length === 1 ? 'prompt' : 'prompts'} as a request. Nothing changes until a person applies it.`,
                           }
                         : { ok: false, message: r.message },
