@@ -1,0 +1,227 @@
+{
+  "id": "g044-gem-pipedrive-crm-bill-doubled-added",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations · seen on reading: Close named by its bare name as a product (not a listed alias); subject is the last brand to appear",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:34:38.121Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM bill has doubled as we added seats, what are the options?",
+    "cell": {
+      "key": "c8264956faae880dc8f546bd48c7bd3c51dd839ff9ad6d803e17aab91c6f7fad",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "When a CRM bill explodes due to headcount growth, you have four main levers: optimization, plan restructuring, negotiation, and migration.\n\n### 1. Optimize Your Existing Seat Allocations\nBefore changing software or contracts, audit your current user base to strip out unused costs.\n\n*   **Downgrade to \"View-Only\" or \"Light\" Licenses:** Execs, finance, or customer success teams often just need visibility, not editing power. Many platforms (e.g., Salesforce, HubSpot) offer cheaper or free read-only seats.\n*   **Deprovision Ghost Accounts:** Run an audit of active user logins over the last 60–90 days. Deactivate contractors who have left, former employees, or low-activity users.\n*   **Share Administrative Duties:** Reduce the number of full-privilege admin seats, which often command the highest pricing tier.\n\n### 2. Restructure Your Pricing Model\nIf your current vendor's core pricing structure is holding you back, switch how you pay.\n\n*   **Switch to Annual Billing:** Moving from monthly to annual billing usually unlocks an automatic 15% to 25% discount across all seats.\n*   **Consolidate Tiers:** Check if you are paying for an Enterprise tier for your whole organization when only 10% of users need Enterprise features. Request a mixed-tier contract if your vendor permits it.\n*   **Move to a Usage/Contact-Based Alternative:** If many employees need occasional access, look for CRM pricing structured around contact volume or API usage rather than headcount.\n\n### 3. Negotiate with Your Current Vendor\nCRM vendors expect to negotiate when account size scales.\n\n*   **Request Volume Discounting:** Ask for tiered bulk discounts (e.g., lower per-seat rates after passing 25, 50, or 100 seats).\n*   **Leverage Multi-Year Contracts:** Lock in fixed per-seat rates for 2 to 3 years in exchange for a cap on price increases upon renewal.\n*   **Threaten a Renewal Review:** Signal to your account manager that the bill has crossed your internal budget cap and you are evaluating alternative platforms. \n\n### 4. Migrate to a Low-Cost or Unlimited-Seat Alternative\nIf seat-based math is fundamentally broken for your business model, consider platforms designed for high team counts.\n\n*   **Unlimited/Flat-Rate CRMs:** Platforms like **Close** or specialized open-source options offer flat or usage-friendly caps.\n*   **Mid-Market/Value Competitors:** Switching from high-cost platforms (like Salesforce Enterprise) to platforms like **HubSpot (Sales Hub)**, **Zoho CRM**, or **Pipedrive** often reduces the per-seat cost significantly.\n*   **Custom Internal Solutions:** If the CRM is primarily used for light task tracking or basic lead logging, moving the workflow to database tools like Airtable or Notion can eliminate seat overhead entirely.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 5,
+    "cited": false,
+    "position": 5,
+    "competitorsMentioned": [
+      "Salesforce",
+      "HubSpot",
+      "Close",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 448
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 460
+      },
+      {
+        "brand": "close",
+        "span": "Close",
+        "offset": 2242
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 2467
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2484
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "HubSpot",
+      "Close",
+      "Zoho CRM",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "\"Close\" at 2242 is the product in bold (\"Platforms like **Close** or specialized open-source options\"), the brand's name itself though not one of its listed aliases (close crm, close.com). Airtable and Notion are outside the set and ignored."
+  }
+}

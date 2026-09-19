@@ -1,0 +1,123 @@
+{
+  "id": "g166-aio-thecosmicbyte-gaming-headset-7-1",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:32:43.399Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming headset with 7.1 surround sound under 2500",
+    "cell": {
+      "key": "cc11b6ff6689904afee02f951c275d3e489e71712b8d6163d3cdfa0e100a9070",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The EvoFox Hyperion 7. is a top budget gaming headset featuring virtual 7.1 surround sound available for under 2500.\nTop Budget Pick\nAs listed on Amazon.in, “EvoFox Hyperion 7.1 Gaming Headphones with Mic - Black, 50mm Drivers, Software Supported 7.1 Surround Sound, Retractable Mic, Wired (USB A + Type-C), Inline Controls, Over-Ear Swappable Ear Pads.”\nHere is a video reviewing top budget gaming choices:2m[Top 7] Best Budget Gaming Headsets 20262.4K views · 1 month agoYouTube · Gadget Ten",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/gaming-headphones-under-2500/s?k=gaming+headphones+under+2500",
+        "position": 0,
+        "title": "Gaming Headphones Under 2500 - Amazon.in",
+        "meta": {
+          "snippet": "EvoFox Hyperion 7.1 Gaming Headphones with Mic - Black, 50mm Drivers, Software Supported 7.1 Surround Sound, Retractable Mic, Wire...",
+          "source": "Amazon.in"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "amazon.in: retailer search page"
+    },
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the text; the answer names only the EvoFox Hyperion 7.1."
+  }
+}

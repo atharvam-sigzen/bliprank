@@ -1,0 +1,215 @@
+{
+  "id": "g096-aio-sigzen-erp-distribution-company-sales",
+  "covers": "real google-ai-overviews answer, erp-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (snippet, source); domain-label subject matched separator-insensitively · seen on reading: competitor named only inside a hyphenated compound (Salesforce-native) next to the ordinary words Sales Force Automation",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T11:29:44.897Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP for distribution company with sales force automation",
+    "cell": {
+      "key": "1ede497360609ac25c99173f085532ca12eb21f045f8ad008e14c2c9c6077d36",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The top Enterprise Resource Planning (ERP) options for distribution companies with built-in or seamlessly integrated Sales Force Automation (SFA) include Epicor Prophet 21, Oracle NetSuite, and Salesforce-native solutions like Rootstock.\nTop ERP Solutions for Distribution with SFA",
+    "citations": [
+      {
+        "url": "https://www.rootstock.com/salesforce-for-manufacturing/",
+        "position": 0,
+        "title": "Salesforce Manufacturing ERP Software",
+        "meta": {
+          "snippet": "Grow Your Manufacturing Business with Rootstock Cloud ERP and Salesforce While many manufacturing businesses use the Salesforce Pl...",
+          "source": "Rootstock Software"
+        }
+      },
+      {
+        "url": "https://www.cloudywave.com/salesforce-erp/",
+        "position": 1,
+        "title": "Salesforce ERP | Best ERP App on Salesforce AppExchange",
+        "meta": {
+          "snippet": "Everything your manufacturing or distribution operation needs — sales, inventory, warehouse, finance, and more — already connected...",
+          "source": "Cloudy Wave"
+        }
+      },
+      {
+        "url": "https://www.top10erp.org/erp-software-comparison/best-fit/distribution_and_industrial-distribution_and_salesforce",
+        "position": 2,
+        "title": "Distribution, Industrial Distribution, Salesforce Compatible",
+        "meta": {
+          "snippet": "Table_title: Architecture Table_content: | Compare Side-by-Side NetSuite ERP | Compare Side-by-Side Cetec ERP | Compare Side-by-Si...",
+          "source": "top10erp.org"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESdAHrOzAVqw75eOGuIfx_-2yawUDrK_jFiEF9FxooAFCbfe4HQEEmYJ118Ze6uFacOuMZzEenUzb8C7edgEuxMouAJhMIDU9dWVF71KC3v6UXkun04SYfGTFj4HfUKoXrHKA-wWJrLFL3hDWiMXTmPhQ6BkEL",
+        "position": 3,
+        "title": "What is the best ERP for Salesforce?",
+        "meta": {
+          "snippet": "Each focuses on a different business type or organisational size. * Certinia (formerly Financial Force) Best for: Professional ser...",
+          "source": "NAO ERP"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:salesforce",
+        "span": "Salesforce",
+        "offset": 194
+      }
+    ],
+    "order": [
+      "Salesforce"
+    ],
+    "citations": {
+      "0": "rootstock.com: vendor site, not in registry",
+      "1": "cloudywave.com: vendor site, not in registry",
+      "2": "top10erp.org: ERP comparison/lead-gen site; unsure it is a user-review platform, so other",
+      "3": "google.com/goto redirect: host is google.com, target not visible; other"
+    },
+    "notes": "Subject absent. The only Salesforce occurrence (194) is inside the hyphenated compound \"Salesforce-native\"; counted because the name stands as a whole word before the hyphen and a reader takes it to name the Salesforce platform. Unsure: a strict whole-token reading of the compound would give brandsDetected 0. \"Sales Force Automation\" at 117 is ordinary words, not Salesforce."
+  }
+}

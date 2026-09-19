@@ -1,0 +1,219 @@
+{
+  "id": "g143-cop-thecosmicbyte-best-budget-tkl-mechanical",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:33:26.170Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best budget tkl mechanical keyboard for gaming in india",
+    "cell": {
+      "key": "7c6e4f6607d63618f0846ee873e2b15115840f44d81542cc90481f077f4dd827",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For gamers in India seeking budget-friendly TKL mechanical or semi-mechanical keyboards, options like the EvoFox Fireblade TKL, EvoFox Katana X2 TKL, and Ant Esports MK700 V2 offer reliable performance, RGB lighting, and anti-ghosting features at affordable prices.\nTop Recommendations\nEvoFox Fireblade TKL Semi-Mechanical Keyboard\nFeatures: Semi-mechanical keys with tactile feedback, rainbow backlighting, 19 anti-ghosting keys, 12 multimedia keys, Windows lock key, braided cable.\nPros: Compact TKL layout saves desk space, durable build, suitable for both gaming and typing 1.\nPrice Range: Budget-friendly under ₹2,000.\nEvoFox Katana X2 TKL Mechanical Keyboard\nFeatures: Mechanical clicky Blue switches, dynamic RGB backlighting, all keys anti-ghosting, volume knob, dedicated gaming functions (Copilot, Xbox Gamebar).\nPros: Fully mechanical feel, reliable switch performance, ideal for gaming enthusiasts on a budget 1.\nAnt Esports MK700 V2 Membrane TKL Gaming Keyboard\nFeatures: Membrane keyboard with mechanical feel keys, 87 UV-coated keys, RGB backlight, waterproof design.\nPros: Affordable alternative for those preferring a mechanical feel without the higher cost of full mechanical switches 1.\nCosmic Byte CB-GK-20 Styx TKL Membrane Gaming Keyboard\nFeatures: TKL layout with rainbow LED backlighting, designed for ergonomic gaming use.\nPros: Lightweight and compact, budget-friendly, straightforward setup 1.\n2 Sources\nBuying Tips for Budget TKL Keyboards in India\nSwitch Type: Blue switches provide tactile clicky feedback; red switches are linear and quieter. Semi-mechanical keyboards mimic switch feel at a lower cost.\nAnti-Ghosting: Look for keyboards with 19+ anti-ghosting keys for smooth combination key presses in games.\nBuild Quality: Braided cables and solid keycaps improve durability.\nRGB Lighting: Optional but enhances aesthetics; check if lighting modes are customizable.\nBudget Consideration: TKL mechanical keyboards under ₹2,000–₹3,000 offer good performance without overspending.\nOverall, EvoFox Fireblade TKL and EvoFox Katana X2 TKL remain the most popular budget TKL options in India due to their mechanical/ semi-mechanical switches, compact design, and gamer-focused features +1. For a tight budget, the Ant Esports MK700 V2 provides a satisfactory gaming experience with membrane keys.",
+    "citations": [
+      {
+        "url": "https://reviehub.in/best-budget-mechanical-keyboard-india-2026-top-5-tested/",
+        "position": 0,
+        "title": "Best Budget Mechanical Keyboard India 2026: Top 5 Tested",
+        "meta": {
+          "publisher": "reviehub.in",
+          "icon_url": "blob:https://www.bing.com/1f2b805a-c3e8-457e-a679-75b314bbbfd6"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Gaming-Keyboards-Under-%E2%82%B91-000/s?rh=n%3A1375414031%2Cp_36%3A1318503031",
+        "position": 1,
+        "title": "Amazon.in: Under ₹1,000 - Gaming Keyboards / PC Gaming Peripherals ...",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/4fe6d4cb-7d6b-463d-b0f7-5a92a65db217"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-tkl-keyboard-india/",
+        "position": 2,
+        "title": "Best TKL Keyboard in India (2026): Tested Tenkeyless Picks",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/322b929b-d3af-400e-9392-78051b02e035"
+        }
+      },
+      {
+        "url": "https://www.ragequitters.in/reviews/best-gaming-keyboards-under-2000-india",
+        "position": 3,
+        "title": "Best Gaming Keyboards Under ₹2,000 in India (2026) | RageQuitters",
+        "meta": {
+          "publisher": "ragequitters.in",
+          "icon_url": "blob:https://www.bing.com/d2214f77-3092-458a-9213-f70a4f00fa4e"
+        }
+      },
+      {
+        "url": "https://choicely.in/best-budget-mechanical-keyboard-india/",
+        "position": 4,
+        "title": "Best Budget Mechanical Keyboard In India (2026) – Top Picks Under ₹5,000",
+        "meta": {
+          "publisher": "choicely.in",
+          "icon_url": "blob:https://www.bing.com/9c4fd9b3-1f24-427f-8d95-ab6f75fa241c"
+        }
+      },
+      {
+        "url": "https://www.producthunter.in/gaming/best-gaming-keyboards-india",
+        "position": 5,
+        "title": "Best Gaming Keyboards in India (2026)",
+        "meta": {
+          "publisher": "producthunter.in",
+          "icon_url": "blob:https://www.bing.com/3bb2d822-f150-4915-9d50-0968560d7a0b"
+        }
+      },
+      {
+        "url": "https://www.flipkart.com/q/mechanical-keyboard",
+        "position": 6,
+        "title": "Mechanical Keyboards - Keyboard Online at Best Price | Flipkart",
+        "meta": {
+          "publisher": "flipkart.com",
+          "icon_url": "blob:https://www.bing.com/b8516dab-d87a-4d71-b8bd-8de52b1f4016"
+        }
+      },
+      {
+        "url": "https://pcpartspicker.in/best-5-budget-mechanical-gaming-keyboards-in-india/",
+        "position": 7,
+        "title": "Best 5 Budget Mechanical Gaming Keyboards in India",
+        "meta": {
+          "publisher": "pcpartspicker.in",
+          "icon_url": "blob:https://www.bing.com/f1cf921c-992e-4153-9965-99d3841dd577"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/budget-mechanical-keyboard/s?k=budget+mechanical+keyboard",
+        "position": 8,
+        "title": "Amazon.in: Budget Mechanical Keyboard",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "https://th.bing.com/th/id/ODF.R78Eph0Za3lAUNkY3fwTSg?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 1206
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "reviehub.in: buying-guide blog, not in the publisher registry",
+      "1": "amazon.in: retailer search page",
+      "2": "gamingnation.in: listicle blog, not in the publisher registry",
+      "3": "ragequitters.in: listicle blog, not in the publisher registry",
+      "4": "choicely.in: listicle blog, not in the publisher registry",
+      "5": "producthunter.in: listicle blog, not in the publisher registry",
+      "6": "flipkart.com: retailer listing page",
+      "7": "pcpartspicker.in: listicle blog, not in the publisher registry",
+      "8": "amazon.in: retailer search page"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name). Single mention, as a list heading \"Cosmic Byte CB-GK-20 Styx TKL Membrane Gaming Keyboard\". No citation is on thecosmicbyte.com."
+  }
+}

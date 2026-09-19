@@ -1,0 +1,247 @@
+{
+  "id": "g061-aio-pipedrive-crm-should-marketing-agency",
+  "covers": "real google-ai-overviews answer, crm-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (source) · seen on reading: no brand in prose; a competitor appears only as a citation",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-08-25T05:17:11.484Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+    "cell": {
+      "key": "6b1aef185d4e343c31e5cae432b0c17f5227a5931c0dba174e3af84d39bf5e41",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Marketing agencies should choose a CRM based on their team size, workflow complexity, and whether they need to track monthly retainers or project pipelines.\nTop CRM Choices by Agency Need\nKey Features Agencies Need",
+    "citations": [
+      {
+        "url": "https://salesdose.io/en/blog/crm-para-agencias",
+        "position": 0,
+        "meta": {
+          "source": "SalesDose"
+        }
+      },
+      {
+        "url": "https://www.hubspot.com/products/crm",
+        "position": 1,
+        "meta": {
+          "source": "HubSpot"
+        }
+      },
+      {
+        "url": "https://functionfox.com/7-best-agency-crm-software-that-actually-boost-client-growth/",
+        "position": 2,
+        "meta": {
+          "source": "FunctionFox"
+        }
+      },
+      {
+        "url": "https://www.copper.com/resources/the-top-crm-for-your-agency-why-you-need-one",
+        "position": 3,
+        "meta": {
+          "source": "Copper CRM"
+        }
+      },
+      {
+        "url": "https://sakasandcompany.com/best-crm-software-for-agencies/",
+        "position": 4,
+        "meta": {
+          "source": "Karl Sakas"
+        }
+      },
+      {
+        "url": "https://suitedash.com/best-crm-for-agencies/",
+        "position": 5,
+        "meta": {
+          "source": "SuiteDash"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "competitor",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "salesdose.io blog: vendor site, not in the publisher registry",
+      "1": "host www.hubspot.com is on hubspot.com, the competitor HubSpot's domain",
+      "2": "functionfox.com: vendor site article, not in registry",
+      "3": "copper.com: a CRM vendor that is not in the competitor set, so other",
+      "4": "sakasandcompany.com: consultant's site, not in registry",
+      "5": "suitedash.com: vendor site article, not in registry"
+    },
+    "notes": "The answer text is three short lines (a sentence and two section headings) and names no brand at all. HubSpot appears only as a citation, never in the prose, so it is not in competitorsMentioned. No citation is on pipedrive.com."
+  }
+}

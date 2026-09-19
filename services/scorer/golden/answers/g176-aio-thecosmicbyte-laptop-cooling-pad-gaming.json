@@ -1,0 +1,155 @@
+{
+  "id": "g176-aio-thecosmicbyte-laptop-cooling-pad-gaming",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:39:43.244Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "laptop cooling pad for gaming under 1000 rupees",
+    "cell": {
+      "key": "d50c8502c2153498a084ff8a1ffd191b72092367464c917bf529dcfac675565b",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best gaming laptop cooling pads available under 1000 rupees in India include the Ant Esports NC and basic dual-fan stands from brands like Cosmic Byte or CLAW.\nHere is a look at your best options and what to expect at this budget:\nTop Choices Under ₹1000\nRealities of Budget Cooling Pads\nWatch this video to see tested budget cooling options and performance comparisons in the sub-2000 rupee range:40sBest Laptop Cooling Pad in India 2026 | 500-2000 Rs Tested4.5K views · 26 days agoYouTube · TechRx Zone",
+    "citations": [
+      {
+        "url": "https://www.reddit.com/r/IndianGaming/comments/mcvxhx/need_a_cooling_pad_under_1000/",
+        "position": 0,
+        "title": "Need a cooling pad under 1000! : r/IndianGaming",
+        "meta": {
+          "snippet": "According to a post on r/IndianGaming, you might not need a cooling pad. Some say that cooling pads can: * Throw hot air back into...",
+          "source": "Reddit",
+          "date": "Mar 25, 2021"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Portable-Computer-Cooling-Pads-Laptop-Accessories/s?rh=n%3A1375311031%2Cp_36%3A1318503031",
+        "position": 1,
+        "title": "Portable Computer Cooling Pads / Laptop Accessories",
+        "meta": {
+          "snippet": "CLAW Air Pro C39 Laptop Cooling Pad with Dual 125mm Fans (1000 RPM), Mobile Stand, Anti-Slip Baffle, 5 Height Levels, 2 USB 2.0 Po...",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=ii8LtcPbXQE&t=82",
+        "position": 2,
+        "title": "Best Laptop Cooling Pad in India 2026 | 500-2000 Rs Tested",
+        "meta": {
+          "snippet": "Best Laptop Cooling Pad in India 2026 | 500-2000 Rs Tested जोड़-जोड़ के इस टाइप की कंपैरिजन. वीडियोस बनाते हैं आपके लिए विदाउट. एन...",
+          "source": "YouTube·TechRx Zone",
+          "date": "Aug 5, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "community",
+      "1": "other",
+      "2": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 143
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "reddit.com thread: community platform",
+      "1": "amazon.in: retailer",
+      "2": "youtube.com watch page: video platform"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 143, named in passing (\"brands like Cosmic Byte or CLAW\"). No citation on thecosmicbyte.com."
+  }
+}

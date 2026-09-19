@@ -1,0 +1,207 @@
+{
+  "id": "g067-gpt-pipedrive-crm-large-enterprise-sales",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:25:38.683Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM do large enterprise sales organisations typically use?",
+    "cell": {
+      "key": "6f2d8f9e1aee64006ca0c29e3ac7c17911490b37fc2cdeec396d254beb30984d",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Large enterprise sales organisations typically use **enterprise-grade CRM platforms** built to handle thousands of sellers, complex account hierarchies, global territories, forecasting, integrations, and governance. The most common choices are:\n\n| CRM | Typical enterprise users | Why they choose it |\n| --- | --- | --- |\n| Salesforce (Sales Cloud / Customer 360) | Large global sales teams across most industries | The most widely adopted enterprise CRM; strong pipeline management, forecasting, automation, ecosystem, and customisation. |\n| Microsoft Dynamics 365 Sales | Enterprises already invested in Microsoft 365, Teams, Azure, Power Platform | Tight integration with Outlook, Teams, Excel, and Microsoft's business stack. |\n| Oracle Fusion Cloud CX / Oracle CRM | Large enterprises running Oracle ERP and complex operations | Strong when CRM needs to connect deeply with finance, supply chain, and Oracle enterprise systems. |\n| SAP Customer Experience (CX) | Large SAP ERP customers | Often selected by global manufacturing, industrial, and enterprise organisations already standardised on SAP. |\n| ServiceNow Customer Service / workflows | Enterprises focused on service operations and workflow automation | Common where customer operations are closely tied to IT service processes. |\n\n### The usual enterprise sales stack\n\nA large B2B sales organisation often has:\n\n- **CRM system of record:** Salesforce, Dynamics 365, Oracle, or SAP\n- **Sales engagement:** tools such as Salesloft or Outreach for sequencing and prospecting\n- **Conversation intelligence:** tools for call recording, coaching, and deal insights\n- **CPQ (configure-price-quote):** for complex pricing and proposals\n- **Marketing automation:** connected to CRM for lead management\n- **Data enrichment and analytics:** account intelligence, forecasting, and revenue operations\n\n### What determines the choice?\n\n- **Salesforce** → often the default choice when the company wants maximum flexibility and has dedicated CRM operations teams.\n- **Dynamics 365** → often wins when the company is already deeply Microsoft-based.\n- **Oracle/SAP** → often win when CRM must sit inside a broader ERP ecosystem.\n- **ServiceNow** → often appears in organisations where customer service workflows are as important as selling.\n\nFor a **Fortune 500-style enterprise sales organisation**, Salesforce is probably the most common answer, but Microsoft Dynamics 365, Oracle, and SAP are also very common depending on the company’s existing technology landscape.\n\nTSISources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 324
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Microsoft Dynamics 365 Sales",
+        "offset": 543
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citations": {},
+    "notes": "Subject absent. Salesforce first appears in a table cell as \"Salesforce (Sales Cloud / Customer 360)\"; Dynamics by its full name in the next row. Later short forms \"Dynamics 365\" (1417, 2018) and \"Microsoft Dynamics 365\" (2400) are the same brand. \"Microsoft 365, Teams, Azure\" (606) and \"Microsoft-based\" (2081) are other Microsoft products / the company, not Dynamics 365 Sales. \"Salesloft\" is a different company, \"closely\" is an ordinary word. Oracle, SAP and ServiceNow are not in the set. No citations."
+  }
+}

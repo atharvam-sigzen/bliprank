@@ -1,0 +1,161 @@
+{
+  "id": "g185-aim-thecosmicbyte-swappable-switch-mechanical-keyboard",
+  "covers": "real google-ai-mode answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T10:42:13.514Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "swappable switch mechanical keyboard with usb c under 4000",
+    "cell": {
+      "key": "52d11a257f387eb7b7b71b921a81351c7f2c0d6d8194b2f77debb52007c88dd3",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nA hot-swappable (swappable switch) mechanical keyboard with USB-C connectivity under a budget of 4,000 (assuming PHP or INR, roughly $65–$70 USD) is widely achievable with reliable entry-to-mid-tier enthusiast brands.\nThe best hot-swappable, USB-C mechanical keyboards fitting this price point include:\nTop Recommendations\nKeychron V-Series:: Keychron V Series Official Info offers the best build quality, screw-in stabilizers, and full programmability via QMK/VIA without breaking the bank. It features a reliable wired USB-C connection.\nRoyal Kludge (RK) RK84/RK61Go to product viewer dialog for this item.:: Royal Kludge Store gives you incredible versatility with tri-mode connectivity (detachable USB-C, Bluetooth, and 2.4GHz wireless) at a lower price point.",
+    "citations": [
+      {
+        "url": "https://www.nytimes.com/wirecutter/reviews/our-favorite-mechanical-keyboards/#:~:text=The%20V3%20Max%2C,USB%2DC%E2%80%93to%E2%80%93A%20adapter%2C",
+        "position": 0,
+        "title": "The Best Mechanical Keyboards - The New York Times",
+        "meta": {
+          "snippet": "The V3 Max, V5 Max, and V6 Max each have a USB-C port and a switch for Windows and Mac modes on the back. Keychron includes a remo...",
+          "source": "The New York Times",
+          "date": "Jan 15, 2026"
+        }
+      },
+      {
+        "url": "/goto?url=CAESaQHrOzAV-jTGHzhXBYX2ru_QJzcXODLDNPvNAMzqDjEkwwIDQ2KkJWdHHDMFoUj1Ih9KXQoMTv3Q4p0s24f8kGkVZXSnTonTnnrjy4Y2QwxagmhjxZm2p5apwekMBBbudYzJ95TgMt_bWw",
+        "position": 1,
+        "title": "Best Hot-Swap Keyboards: Easiest to Customize (2026)",
+        "meta": {
+          "snippet": "The concept is elegantly simple. Instead of soldering switch pins directly to the PCB, hot-swap keyboards add small spring-loaded ...",
+          "source": "MKB Guide",
+          "date": "Apr 14, 2026"
+        }
+      },
+      {
+        "url": "https://tech-insider.org/ie/how-to-choose-best-mechanical-keyboard-brand-2026/#:~:text=Entry%20boards%20like,wired%2Donly.",
+        "position": 2,
+        "title": "How to Choose the Best Mechanical Keyboard Brand",
+        "meta": {
+          "snippet": "Entry boards like the Royal Kludge RK84 sit around $55, mid-range hot-swap boards … land between $200 and $300. Bluetooth, 2.4GHz ...",
+          "source": "tech-insider.org",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://tech-insider.org&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 14, 2026"
+        }
+      },
+      {
+        "url": "https://mkbguide.com/blog/keychron-vs-nuphy-keyboard-brand-compared#:~:text=Entry%20tier%20%28sub%2D%24100%29%3A,and%20the%20Kick75%2C",
+        "position": 3,
+        "title": "Keychron vs NuPhy: Which Brand to Pick in 2026? - MKB Guide",
+        "meta": {
+          "snippet": "Entry tier (sub-$100): Keychron B2 Pro (Amazon) and V3 Max sit at the entry-level, budget end. NuPhy has no direct answer under $1...",
+          "source": "MKB Guide",
+          "date": "Jun 26, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "earned_media",
+      "1": "other",
+      "2": "other",
+      "3": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "nytimes.com (Wirecutter section) is in the publisher registry",
+      "1": "opaque /goto redirect with no host; source label says MKB Guide: a keyboard guide blog, not in the publisher registry",
+      "2": "tech-insider.org: blog, not in the publisher registry",
+      "3": "mkbguide.com blog: guide blog, not in the publisher registry"
+    },
+    "notes": "Whole answer read; no occurrence of \"cosmic\", \"byte\" or \"CB\". Subject absent. Citation 1 is a relative /goto?url=... redirect with no host; its source label (MKB Guide) points to a blog, so other either way."
+  }
+}

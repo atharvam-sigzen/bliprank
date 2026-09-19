@@ -1,0 +1,260 @@
+{
+  "id": "g065-aim-pipedrive-best-crm-solo-founder",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: competitor \"Close\" named only by its bare name, an ordinary English word, as a product in a heading",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:00:21.094Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What is the best CRM for a solo founder just starting out?",
+    "cell": {
+      "key": "5b7748b38e69059de51a49b25f7da0b7f6ce8fc882187edd2fbbe6f3fbe1ed6c",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a solo founder just starting out, the \"best\" CRM isn't the one with the most enterprise features—it’s the one that is free or cheap, fast to set up, and won't distract you from building your product and talking to users.\nTop options tailored to a solo founder's constraints and growth stages:\n1. The Best All-in-One & Free Option: HubSpot CRM\nBest for:: Founders who want marketing, sales, and customer service under one roof without paying upfront.\nWhy it fits: The HubSpot Free Tier offers robust contact management, deal pipelines, email tracking, meeting scheduling links, and live chat.\nThe Catch:: Paid tiers get expensive very quickly as you scale or need advanced automation, but as a day-one solo founder, you can stay on the free plan for a long time.\n2. The Best for Pure Sales Velocity: Pipedrive\nBest for:: Founders running heavy outbound sales, investor outreach, or closing high-ticket B2B deals.\nWhy it fits:: It’s visually driven by a Kanban board that forces you to define your next action for every single lead or prospect. Setup takes 10 minutes, and it keeps you relentlessly focused on moving relationships forward.\nThe Catch:: It’s a paid tool (though it offers a free trial), and it lacks a native marketing/email-blasting layer.\n3. The Best Flexible & Customizable Option: Notion or Airtable\nBest for:: Ultra-lean founders who already use Notion/Airtable and want a completely bespoke database.\nWhy it fits:: You can build a custom CRM tailored precisely to your workflow using templates, linking contacts to companies, notes, and tasks without learning dedicated CRM software.\nThe Catch:: No automated email tracking, native email syncing, or automated sequences out of the box—you have to do the manual logging.\n4. The Best Lightweight Alternative: Close or Streak\nBest for:: Gmail power users.\nWhy it fits:: Streak turns your actual Gmail inbox into a CRM, embedding pipeline stages directly into your email threads. It requires virtually zero context-switching.\nRecommendation Summary\nGo with HubSpot if you need a scalable, professional system with scheduling links and light marketing tracking for $0.\nGo with Pipedrive if your primary job right now is aggressive sales outreach and closing deals.\nGo with a Notion/Airtable template if you want ultimate flexibility and hate traditional software bloat.",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/watch?v=umcjcZxzvY8&t=510",
+        "position": 0,
+        "title": "5 Best CRM for Solopreneurs & Freelancers 2025 (Full ...",
+        "meta": {
+          "snippet": "and track deals on the go while it offers a range of features it remains budget friendly pricing plans start at just $9 per month ...",
+          "source": "YouTube·Business Solution",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "May 14, 2025"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=vhVkw-jF01o&t=750",
+        "position": 1,
+        "title": "🔝 Best CRM for Startups 2026: HubSpot vs Pipedrive ...",
+        "meta": {
+          "snippet": "🔝 Best CRM for Startups 2026: HubSpot vs Pipedrive vs NetHunt vs Attio tools so if you stay on starter it's a great deal just to ...",
+          "source": "YouTube·NetHunt CRM",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "May 14, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=Mk3l5A9tL5w&t=314",
+        "position": 2,
+        "title": "Best Free CRM Software 2026 (Top 5 Free CRMs ...",
+        "meta": {
+          "snippet": "I believe offers the best free. plan number one HubSpot CRM when people talk about free CRM software HubSpot is usually the first ...",
+          "source": "YouTube·Business Toolset",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Sep 7, 2025"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Close"
+    ],
+    "citationClasses": {
+      "0": "video",
+      "1": "video",
+      "2": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 335
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 803
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2145
+      },
+      {
+        "brand": "close",
+        "span": "Close",
+        "offset": 1780
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Close"
+    ],
+    "citations": {
+      "0": "www.youtube.com watch page: video platform",
+      "1": "www.youtube.com watch page: video platform (the title names Pipedrive, but the host is YouTube, not the subject's domain)",
+      "2": "www.youtube.com watch page: video platform"
+    },
+    "notes": "\"Close\" at 1780 is the brand's bare name used as a product in a heading (\"4. The Best Lightweight Alternative: Close or Streak\"); it is the name but not one of the listed aliases (\"close crm\", \"close.com\"), and I count it because it plainly names the CRM product there. \"closing\" at two other places is an ordinary word. Citation 1's TITLE names Pipedrive, but a title is not answer prose and the URL is on youtube.com, so cited stays false."
+  }
+}

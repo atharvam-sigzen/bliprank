@@ -1,0 +1,205 @@
+{
+  "id": "g140-aim-sigzen-erp-good-chemical-manufacturing",
+  "covers": "real google-ai-mode answer, erp-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: competitor named only in a parenthetical aside after a different product of the same company",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T11:21:15.978Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "which ERP is good for a chemical manufacturing company in India",
+    "cell": {
+      "key": "568638ecc958dff1d785c347085310818cd20813753ba011cb1d908acbee9131",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nChoosing the right ERP for a chemical manufacturing company in India requires specialized process manufacturing features—such as strict batch/lot traceability, formula/recipe management, hazardous material handling, and compliance with Indian regulations (like GST, GHS, and environmental norms).\nTop ERP options suited for chemical manufacturing in India span different budgets and scales:\n1. Industry-Specific & Local Indian ERPs\nUdyog Chemical ERP:: Highly tailored for the Indian chemical landscape. It features robust modules for hazardous chemical storage, shelf-life/expiry tracking, batch traceability, and regulatory alignment with GST and safety data sheets (SDS).\nFocus Softnet (Focus X / MRP):: Popular in the Indian SME and mid-market space, offering strong manufacturing resource planning, warehouse tracking, and process controls tailored to batch production and inventory volatility.\n2. Open-Source & Cost-Effective Adaptations\nDexciss ERP (built on ERPNext):: Gaining strong traction as a flexible, high-value option. Built on an open-source framework, it offers purpose-built process manufacturing features like dynamic formula scaling, bi-directional lot tracking, and integrated quality control at a lower total cost of ownership.\n3. Global Mid-to-High-End ERPs (with Strong Indian Localization)\nSAP S/4HANA Cloud (or SAP Business One):: The gold standard for large-scale or multinational chemical enterprises. Offers deep batch management, formulation security, environmental health and safety (EHS) tracking, and seamless Indian statutory compliance.\nOracle NetSuite:: A powerful cloud ERP ideal for mid-to-large growing chemical companies needing multi-subsidiary management, advanced inventory tracking, and robust quality assurance workflows.\nEpicor / Infor CloudSuite Process Manufacturing:: Specifically designed for process industries rather than discrete manufacturing, making recipe/formula management and co-product/by-product accounting native features.",
+    "citations": [
+      {
+        "url": "https://www.linkedin.com/pulse/ultimate-guide-best-erp-systems-chemical-industry-india-iylsf",
+        "position": 0,
+        "title": "The Ultimate Guide to the Best ERP Systems for the Chemical ...",
+        "meta": {
+          "snippet": "Q: Which is the best ERP software for chemical industry companies in India? A: Dexciss ERP is widely recognized as the best ERP fo...",
+          "source": "LinkedIn·Dexciss Technology",
+          "date": "Jul 27, 2026"
+        }
+      },
+      {
+        "url": "https://www.udyogsoftware.com/chemical-manufacturing-erp",
+        "position": 1,
+        "title": "Best Chemical Manufacturing ERP Software in India | Udyog",
+        "meta": {
+          "snippet": "Udyog Chemical ERP can help with: * Chemical safety and quality compliance * Waste and effluent management * Raw material volatili...",
+          "source": "Udyog Software"
+        }
+      },
+      {
+        "url": "https://www.focussoftnet.com/in/chemical-manufacturing-erp-software",
+        "position": 2,
+        "title": "Best ERP Software for Chemical Manufacturing in India",
+        "meta": {
+          "snippet": "Products Focus X Cloud ERP solution that optimizes sales, accounting, procurement, fixed assets, and all other operations. Focus W...",
+          "source": "Focus Softnet"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "SAP Business One"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:sapbusinessone",
+        "span": "SAP Business One",
+        "offset": 1352
+      }
+    ],
+    "order": [
+      "SAP Business One"
+    ],
+    "citations": {
+      "0": "linkedin.com/pulse article: social network, not in registry",
+      "1": "udyogsoftware.com: ERP vendor site, not in registry",
+      "2": "focussoftnet.com: ERP vendor site, not in registry"
+    },
+    "notes": "SAP Business One appears once, in a parenthesis: 'SAP S/4HANA Cloud (or SAP Business One)' at 1352. The 'SAP S/4HANA Cloud' at 1330 just before it is a different product and is not the counted span. 'dynamic' at 1144 is an ordinary word. Udyog, Focus Softnet, Dexciss, ERPNext, Oracle NetSuite, Epicor, Infor are outside the set."
+  }
+}

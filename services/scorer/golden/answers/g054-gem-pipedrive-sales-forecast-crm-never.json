@@ -1,0 +1,190 @@
+{
+  "id": "g054-gem-pipedrive-sales-forecast-crm-never",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: capitalised ordinary word \"Close-Date\" in a heading is not the brand Close",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T06:16:38.836Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our sales forecast in the CRM is never close to what actually closes, how do we fix it?",
+    "cell": {
+      "key": "b2bfeb4e70b7ea1f9c0ed3a33d0bfdc476acdeeaee68c15d8acc906d7e14b7cd",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Unreliable CRM forecasts are usually caused by subjective deal stages, bloated pipelines, and a lack of clear entrance/exit criteria for each stage. Fixing it requires moving your sales process from **rep-opinion-based** to **buyer-action-based**.\n\n**1. Define Criteria Based on Buyer Actions (Not Rep Activity)**\nSales reps naturally tend to be optimistic. Redefine deal stages using verifiable actions taken by the prospect rather than tasks completed by your rep.\n\n*   **Weak Stage Criteria:** \"Sent proposal\" or \"Had productive demo.\"\n*   **Strong Stage Criteria:** \"Prospect confirmed budget in writing\" or \"Security/legal review initiated.\"\n\n**2. Audit and Clean Your Pipeline (The \"Zombie Deal\" Purge)**\nBloated pipelines ruin forecast accuracy. Implement strict rules to prune deals that are stalling.\n\n*   **Enforce Close-Date Rules:** If a close date has been pushed more than 2–3 times, auto-down-weight its probability or push it to a separate \"Nurture\" pipeline.\n*   **Track Stage Velocity:** Establish a maximum duration for each stage. If a deal stays in the demo phase 2x longer than your average winning deal, flag it automatically for review.\n\n**3. Move from Single-Point Probability to Weighted Forecasting**\nStop letting reps pick a single probability percentage for a deal closing this month. Instead, categorize opportunities into distinct forecast categories:\n\n| Category | Definition | Action Rule |\n| :--- | :--- | :--- |\n| **Commit** | Signed verbal agreement; procurement initiated. | Included in floor forecast (90%+ lock). |\n| **Best Case** | Clear path to close, but critical step remains (e.g., legal sign-off). | Included in upside forecast. |\n| **Pipeline** | Active discussions, early stage. | Excluded from current month/quarter forecast. |\n\n**4. Run Bi-Weekly Pipeline Audits**\nManagers should use 1-on-1 pipeline reviews to pressure-test deals using objective evidence:\n*   *What specific steps remain before signature?*\n*   *Has the economic buyer directly confirmed the timeline?*\n*   *What happens if they do nothing by [target date]?*\n\n<ElicitationsGroup message=\"Where would you like to focus first?\">\n  <Elicitation label=\"Draft objective entrance/exit criteria for our pipeline stages\" query=\"Help me write specific, buyer-action entrance and exit criteria for standard sales pipeline stages.\"/>\n  <Elicitation label=\"Build a pipeline audit checklist for sales managers\" query=\"Create a practical pipeline audit checklist that sales managers can use during weekly 1-on-1s to test deal probability.\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "No vendor is named. \"Close-Date\" at 825 is capitalised only because it sits in a bold heading (\"Enforce Close-Date Rules\"); it is the ordinary word, as are \"close date\" (850) and \"path to close\" (1586). \"Pipeline\" as a table row label (1680) is the ordinary word, not Pipedrive."
+  }
+}

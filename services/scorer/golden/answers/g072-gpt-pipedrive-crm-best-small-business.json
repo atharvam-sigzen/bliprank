@@ -1,0 +1,213 @@
+{
+  "id": "g072-gpt-pipedrive-crm-best-small-business",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: table name cells are blank (names stripped); bare domain \"monday.com\" appears only as the platform teams already use; \"Zoho\" short form",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:19:25.601Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is best for a small business in the UK?",
+    "cell": {
+      "key": "9ed1ecb7892137e76dc499921aede34c76cb5870ac80c41da20eb27760a0266b",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "There isn’t one “best” CRM for every UK small business — the right choice depends on whether you mainly need **sales tracking, marketing automation, customer service, or a simple contact database**. For most small UK businesses, these are the strongest options:\n\n| CRM | Best for | Why choose it | Potential downside |\n| --- | --- | --- | --- |\n|  | Most small businesses starting out | Excellent free tier, easy to learn, combines contacts, deals, email tracking and marketing tools | Costs can rise when you add advanced automation |\n|  | Sales-led businesses | Very simple visual sales pipeline; great for teams that mainly need to manage leads and deals | Less suitable if you want a full marketing platform |\n|  | Best value for money | Lots of features at a lower price; good automation options | Interface can feel more complex |\n|  | Small UK service businesses | Simple, lightweight, easy adoption, UK-focused reputation | Fewer advanced features |\n|  | Teams already using monday.com | Flexible workflows and project-style views | Can feel less like a traditional CRM |\n\n## My shortlist by business type\n\n- **Solo consultant / freelancer:**  or\n- **Trades, agencies, B2B services:**\n- **Small team wanting low cost but room to grow:**\n- **Business that relies heavily on email marketing:**  or a CRM paired with a marketing platform\n- **Already using lots of workflow tools:**\n\n## If I had to pick one for a typical UK small business\n\n- **Start with HubSpot** if you want something you can use immediately with minimal setup.\n- **Choose Pipedrive** if your main goal is converting leads into sales.\n- **Choose Zoho** if keeping monthly costs low while having powerful features matters most.\n- **Choose Capsule** if you want a straightforward CRM that your whole team will actually use.\n\nA good rule: a simple CRM that everyone updates daily is usually better than a powerful CRM that becomes another unused system.\n\nIf you tell me your **business type (e.g., trades, consultancy, ecommerce, agency), number of users, and budget per month**, I can narrow it to a specific recommendation.\n\nESources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 1460
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1547
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 1620
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "The CRM-name cells of the table and the names in the \"shortlist by business type\" list are BLANK in the stored text (the names were stripped), so no brand is named there, however obvious the row. Brands are named only in the closing list. short form: \"Zoho\" for Zoho CRM at 1620 (\"Choose Zoho\" as a CRM choice). UNSURE, NOT counted: bare domain \"monday.com\" at 983 in \"Teams already using monday.com\"; it names the monday.com work platform those teams already use, not the CRM being recommended in that (blank) row, so per the when-in-doubt convention I do not count it as monday CRM. If it were counted, the order would be monday CRM, HubSpot, Pipedrive, Zoho CRM (brandsDetected 4, position 3). Capsule is not in the set. No citations."
+  }
+}

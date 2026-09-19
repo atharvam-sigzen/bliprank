@@ -1,0 +1,227 @@
+{
+  "id": "g086-aio-pipedrive-crm-works-best-10",
+  "covers": "real google-ai-overviews answer, crm-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (source) · seen on reading: scraping artefact glued to the end of a competitor's product name (HubSpot Sales Hub_...)",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-08-25T05:04:24.989Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM works best for a 10-person B2B sales team?",
+    "cell": {
+      "key": "34b31ea9d70fc78319876e75dc7ce0f423dbf3545786e5bd17bcb6c66ec71d7c",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a 10-person B2B sales team, Pipedrive and HubSpot Sales Hub_YCKNaq_wCazX5NoP-Yb56AI__YCKNaq_wCazX5NoP-Yb56AI_ work best, depending on whether you prioritize simple pipeline tracking or marketing alignment.\nTop CRM Options for a 10-Rep Team",
+    "citations": [
+      {
+        "url": "https://www.rox.com/articles/crm-for-b2b",
+        "position": 0,
+        "meta": {
+          "source": "Rox | Revenue Agents for the Global 2000"
+        }
+      },
+      {
+        "url": "https://www.coevera.com/blog/best-crm-b2b-sales-teams-2026/",
+        "position": 1,
+        "meta": {
+          "source": "Coevera"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 32
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 46
+      }
+    ],
+    "order": [
+      "Pipedrive",
+      "HubSpot"
+    ],
+    "citations": {
+      "0": "rox.com: vendor site, not in registry",
+      "1": "coevera.com: vendor/agency blog, not in registry"
+    },
+    "notes": "The text reads \"HubSpot Sales Hub_YCKNaq_wCazX5NoP-Yb56AI__YCKNaq_wCazX5NoP-Yb56AI_\": a scraping artefact is glued onto \"Hub\". \"HubSpot\" at 46 is still a clean whole token followed by a space, so HubSpot is mentioned; only the longer form \"HubSpot Sales Hub\" is broken by the glued junk."
+  }
+}

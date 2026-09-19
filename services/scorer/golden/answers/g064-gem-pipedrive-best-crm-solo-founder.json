@@ -1,0 +1,211 @@
+{
+  "id": "g064-gem-pipedrive-best-crm-solo-founder",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: \"Bigin (by Zoho)\" is a different product, not Zoho CRM",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T04:59:24.578Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What is the best CRM for a solo founder just starting out?",
+    "cell": {
+      "key": "970c8bd34da4752c59b2f917ff9d8de33b13a1974a90a498f5c6a95dff67f600",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "There is no single \"best\" CRM for a solo founder—it depends entirely on what you sell and how you run your business. \n\nAs a solo founder, your biggest bottleneck is **time**. Spending hours configuring or logging data into a complex CRM takes away from building and closing deals. \n\n---\n\n### **The Top CRMs by Founder Archetype**\n\n| CRM | Best For | Pros | Cons / Catch | Starting Price |\n| :--- | :--- | :--- | :--- | :--- |\n| **HubSpot** | **Product / SaaS / Content Founders** | Excellent free plan, top-notch UI, strong inbound marketing tools & forms. | Paid tiers escalate drastically (e.g., $100+/mo) once you outgrow free features. | **Free** |\n| **Pipedrive** | **B2B / Service Founders with High Deal Volume** | Best visual drag-and-drop pipeline, clear activity tracking. | Weak on long-term contact networking; built purely for closing deals. | **~$14–$24/mo** |\n| **Streak** | **Founders Who Live in Gmail** | Lives directly inside your Gmail inbox; zero context switching. | Tied strictly to Google Workspace; limited mobile reporting. | **Free** tier available |\n| **folk** | **Relationship-First & Network-Led Founders** | Contact-centric, great LinkedIn Chrome extension, seamless email sequences. | Less ideal if you need heavy automated sales pipelines or complex reporting. | **~$20/mo** |\n| **Bigin (by Zoho)** | **Budget-Conscious Founders** | Extremely cheap, lightweight pipeline management, mobile-friendly. | Doesn't integrate deeply with complex cold outreach tools. | **Free** or ~$7/mo |\n\n---\n\n### **How to Decide**\n\n* **If your budget is $0:** Start with **HubSpot Free**. It gives you contact tracking, meeting scheduling, and basic deal pipelines out of the box with no financial commitment.\n* **If you spend all day sending emails:** Use **Streak** or **Salesflare**. They auto-log interactions directly from your inbox so you never have to manually enter contacts.\n* **If you are pitching investors, advisors, and agency clients:** Use **folk** or **Notion**. They prioritize relationships and contact lists over traditional \"deal stages\".\n* **If you run cold outreach or standard B2B sales:** Use **Pipedrive**. The UI is built specifically to remind you of your next action so deals never slip through the cracks.\n\n---\n\n**Rule of Thumb:** If you have under 10 active leads, even a clean **Notion CRM template** or **Google Sheet** is better than over-engineering your stack. Move to a dedicated tool only when manual tracking causes dropped follow-ups.\n\n<FollowUp label=\"Want me to help you choose based on your specific industry and sales strategy?\" query=\"Help me pick a CRM based on my specific business type, sales workflow, and budget.\"/>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 430
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 657
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2134
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive"
+    ],
+    "citations": {},
+    "notes": "NOT counted as Zoho CRM: \"Bigin (by Zoho)\" at 1324 (table cell), a different Zoho product. Streak, folk, Salesflare and Notion are not in the competitor set. \"closing deals\" is an ordinary word. The trailing <FollowUp .../> markup names no brand. No citations."
+  }
+}

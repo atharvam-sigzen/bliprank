@@ -1,0 +1,238 @@
+{
+  "id": "g031-aio-pipedrive-get-sales-team-actually",
+  "covers": "real google-ai-overviews answer, crm-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (source) · seen on reading: competitor cited through its community subdomain but not mentioned in prose",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-08-25T05:36:45.938Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I get a sales team to actually log their calls and emails in the CRM?",
+    "cell": {
+      "key": "790c7a6461977917b8382b71a4b35bb87124050039b151c70b83dea3999159db",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "To get a sales team to log activities, stop relying on manual data entry and instead automate call and email syncing through your CRM integrations.\nWhen you remove the administrative burden from reps, data accuracy goes up and compliance follows. Here is a step-by-step framework to solve the problem permanently.\n1. Automate the Capture (Remove Manual Work)\nSales reps hate logging data because they view it as non-selling busywork. Fix this by connecting tools so logging happens in the background.\n2. Standardize the Process\nIf manual input is still required for certain notes, make the entry fields simple, mandatory, and uniform.\n3. Track and Coach (Don't Police)",
+    "citations": [
+      {
+        "url": "https://www.mixmax.com/blog/automated-activity-logging-crm",
+        "position": 0,
+        "meta": {
+          "source": "Mixmax"
+        }
+      },
+      {
+        "url": "https://community.hubspot.com/t/maximizing-crm-usage-proven-strategies-to-empower-your-sales-team/104265",
+        "position": 1,
+        "meta": {
+          "source": "HubSpot Community"
+        }
+      },
+      {
+        "url": "https://archizsolutions.com/auto-log-calls-emails/",
+        "position": 2,
+        "meta": {
+          "source": "Archiz Solutions"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=n5pTqjfL0PE&t=1",
+        "position": 3,
+        "meta": {
+          "source": "YouTube"
+        }
+      },
+      {
+        "url": "https://www.apollo.io/insights/how-to-automatically-log-emails-and-calls-from-the-sales-tool-into-my-crm",
+        "position": 4,
+        "meta": {
+          "source": "Apollo.io"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "competitor",
+      "2": "other",
+      "3": "video",
+      "4": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "mixmax.com blog: vendor site, not in the publisher registry",
+      "1": "host community.hubspot.com is a subdomain of competitor HubSpot's domain hubspot.com; identity beats platform (it would otherwise be community)",
+      "2": "archizsolutions.com: vendor site, not in the publisher registry",
+      "3": "youtube.com watch page: video platform",
+      "4": "apollo.io: vendor site, not in the publisher registry"
+    },
+    "notes": "The prose names no brand. HubSpot is cited (community.hubspot.com) but never mentioned in the text. No pipedrive.com citation."
+  }
+}

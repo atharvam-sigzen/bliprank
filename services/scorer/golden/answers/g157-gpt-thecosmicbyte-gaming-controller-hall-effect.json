@@ -1,0 +1,142 @@
+{
+  "id": "g157-gpt-thecosmicbyte-gaming-controller-hall-effect",
+  "covers": "real chatgpt answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T10:35:32.291Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming controller with hall effect joysticks for pc india",
+    "cell": {
+      "key": "e1a45cab534bf8e2a67b79fe317f93f291a8ff61b8cac62481196b806fd7a8e0",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For **PC gaming in India**, these are some of the better **Hall Effect joystick controllers** (Hall sensors reduce the chance of stick drift compared with traditional analog sticks).\n\n| Controller | Approx. price (India) | Connection | Best for |\n| --- | --- | --- | --- |\n| 8BitDo Ultimate 2C | ₹1,800–₹2,200 | Wired / some wireless variants | Best overall value |\n| Cosmic Byte ARES | ₹1,000–₹1,500 | Wired | Cheapest good Hall Effect option |\n| GameSir Nova Lite | ₹2,500–₹3,000 | Wireless | Budget wireless gaming |\n| Cosmic Byte ARES Tri-Mode | ₹1,600–₹3,500 | Wired + 2.4GHz + Bluetooth | Wireless + Hall sticks/triggers |\n| 8BitDo Pro 2 | ₹3,500–₹4,000 | Wired/Bluetooth | Premium build and customization |\n\n## My picks\n\n### 🥇 Best under ₹2000\n\n**8BitDo Ultimate 2C**\n\n- Hall Effect sticks + triggers\n- Very good build quality\n- Good PC compatibility (XInput)\n- Great for Steam, racing, RPGs, and shooters\n\n### 💰 Best budget option\n\n**Cosmic Byte ARES**\n\n- Hall Effect joysticks\n- Magnetic triggers\n- Wired USB (low latency)\n- Good if you mainly play on a desk PC\n\n### 📡 Best wireless value\n\n**Cosmic Byte ARES Tri-Mode**\n\n- Hall Effect sticks + triggers\n- USB-C wired, 2.4GHz wireless, Bluetooth\n- 1000Hz polling rate claim\n\n### 🎮 Premium choice\n\n**GameSir G7 HE**\n\n- Hall Effect sticks and triggers\n- Xbox-style layout\n- Good for competitive PC gaming\n\n## What I would buy:\n\n- **₹1000–1500:** Cosmic Byte ARES\n- **₹2000 budget:** 8BitDo Ultimate 2C\n- **Need wireless:** Cosmic Byte ARES Tri-Mode / GameSir Nova Lite\n- **Play FPS competitively:** GameSir G7 HE\n\nAvoid very cheap ₹500–800 “Hall Effect” controllers from unknown brands; many have poor sticks, bad dead zones, or weak PC support.\n\nIf you tell me your **budget (₹1000 / ₹2000 / ₹3000+)** and whether you need **wireless**, I can narrow it down to one.\n\nGBSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 6,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 368
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 522
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 944
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 1104
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 1406
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 1483
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name). Six mentions: two table cells (ARES, ARES Tri-Mode), two bold pick headings, and two lines of the \"What I would buy\" list. No citations."
+  }
+}

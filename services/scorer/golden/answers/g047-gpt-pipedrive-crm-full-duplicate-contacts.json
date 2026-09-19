@@ -1,0 +1,221 @@
+{
+  "id": "g047-gpt-pipedrive-crm-full-duplicate-contacts",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations · seen on reading: two competitors named only by short forms (\"Dynamics\", \"Zoho\") in a parenthetical list of CRMs",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:37:51.187Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Our CRM is full of duplicate contacts, how do we clean it up and stop it recurring?",
+    "cell": {
+      "key": "a00fdaafbcc1d3d10bef1f58dccd241cfa629b1d341f8c78b5a63565dbe5dc79",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Cleaning up duplicate contacts in a CRM usually needs two tracks: **one-time remediation** and **process changes to prevent duplicates from returning**.\n\n## 1. Assess the duplicate problem first\n\nBefore merging anything, measure what you have:\n\n- Export or report on contacts with possible duplicate matches.\n- Identify the most common causes:\n\nSame person entered with different email addresses\nImports from spreadsheets or marketing tools\nMultiple sales reps creating the same lead\nIntegrations creating records without matching rules\nChanges in naming conventions (e.g., “Bob Smith” vs “Robert Smith”)\n\nDefine what counts as a duplicate. Common matching rules:\n\n- Exact same email address → almost always a duplicate\n- Same phone number + similar name → likely duplicate\n- Same company + similar name → review manually\n- Same person with multiple emails → decide which record is the master\n\n## 2. Create a backup before merging\n\nBefore bulk cleanup:\n\n- Export the CRM data.\n- Record the planned merge rules.\n- Make sure you can restore records if a merge removes important history.\n\n## 3. Deduplicate in batches\n\nA practical cleanup workflow:\n\n1. Run duplicate detection using your CRM’s built-in tools or a data-cleaning tool.\n2. Group duplicates into confidence levels:\n\n**High confidence:** auto-merge (same email, same phone)\n**Medium confidence:** queue for review\n**Low confidence:** leave alone until verified\n3. Choose a “golden record” for each person:\n\nKeep the most complete contact record\nPreserve activity history, notes, opportunities, and ownership\nMove missing fields from duplicates into the master record\n4. Merge duplicates and log what changed.\n\nAvoid deleting duplicates outright unless you are certain. Merging is usually safer because it preserves relationships and history.\n\n## 4. Fix the data entry process\n\nThe cleanup will come back unless the creation process changes.\n\nPut controls in place:\n\n- Require unique email addresses where possible.\n- Add duplicate warnings before a new contact is created.\n- Standardize required fields:\n\nFirst name\nLast name\nCompany\nEmail\nPhone format\n- Create rules for imports:\n\nClean files before upload\nMatch against existing records first\nAssign ownership rules\n- Limit who can create contacts if unnecessary creation is a problem.\n\n## 5. Review integrations\n\nDuplicates often come from connected systems.\n\nAudit:\n\n- Marketing automation platforms\n- Website forms\n- Event platforms\n- Customer support systems\n- Data enrichment tools\n- Sales engagement tools\n\nFor each integration, check:\n\n- Does it search for existing contacts before creating new ones?\n- What field does it use as the unique identifier?\n- Does it update existing records or always create new ones?\n\n## 6. Establish ongoing maintenance\n\nCreate a recurring process:\n\n- Weekly or monthly duplicate reports\n- Data quality dashboard\n- Ownership for resolving duplicates\n- Quarterly review of CRM rules and integrations\n\nUseful metrics:\n\n- Duplicate contacts created per month\n- Percentage of contacts with valid email/phone\n- Number of unresolved duplicate groups\n- Time from duplicate creation to resolution\n\n## 7. Consider automation\n\nMany CRMs can automate duplicate prevention with:\n\n- Matching rules\n- Validation rules\n- Deduplication jobs\n- Data enrichment services\n- Workflow alerts\n\nThe exact setup depends on your CRM (Salesforce, HubSpot, Dynamics, Zoho, etc.). If you tell me which CRM you use and roughly how many contacts you have, I can suggest a more specific cleanup approach.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "HubSpot",
+      "Microsoft Dynamics 365 Sales",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 3356
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 3368
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Dynamics",
+        "offset": 3377
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 3387
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "HubSpot",
+      "Microsoft Dynamics 365 Sales",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "Subject absent. All four competitors appear once, in \"your CRM (Salesforce, HubSpot, Dynamics, Zoho, etc.)\". short form: \"Zoho\" for Zoho CRM at 3387 (a CRM in a list of CRMs). short form / unlisted form: bare \"Dynamics\" for Microsoft Dynamics 365 Sales at 3377; it is listed as a CRM beside the others, so a reader takes it as Microsoft's CRM, but it is shorter than the protocol's own examples (\"Dynamics 365\", \"Microsoft Dynamics\"), so I am less than fully sure of this one."
+  }
+}

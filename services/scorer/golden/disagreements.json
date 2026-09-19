@@ -1,0 +1,475 @@
+{
+  "algoVersion": "det-3",
+  "note": "Every place the scorer and a golden label differ. A FINDING list for the scoring-rule owner: nothing here was resolved by editing a label to match the scorer. golden.test.ts fails when the live report and this file differ.",
+  "disagreements": [
+    {
+      "caseId": "g008-gpt-pipedrive-best-crm-field-sales",
+      "field": "brandsDetected",
+      "expected": 5,
+      "actual": 4
+    },
+    {
+      "caseId": "g008-gpt-pipedrive-best-crm-field-sales",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Zoho CRM",
+        "Salesforce",
+        "Microsoft Dynamics 365 Sales",
+        "HubSpot"
+      ],
+      "actual": [
+        "Zoho CRM",
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g008-gpt-pipedrive-best-crm-field-sales",
+      "field": "position",
+      "expected": 5,
+      "actual": 4
+    },
+    {
+      "caseId": "g009-cop-pipedrive-best-crm-field-sales",
+      "field": "sourceClass",
+      "expected": "https://www.softwaresuggest.com/crm-software/uae => review",
+      "actual": "other"
+    },
+    {
+      "caseId": "g011-aim-pipedrive-best-crm-field-sales",
+      "field": "sourceClass",
+      "expected": "https://www.softwaresuggest.com/crm-software/uae => review",
+      "actual": "other"
+    },
+    {
+      "caseId": "g013-gpt-pipedrive-best-crm-mid-market",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g013-gpt-pipedrive-best-crm-mid-market",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "Microsoft Dynamics 365 Sales",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "caseId": "g015-gem-pipedrive-best-crm-mid-market",
+      "field": "brandsDetected",
+      "expected": 5,
+      "actual": 4
+    },
+    {
+      "caseId": "g015-gem-pipedrive-best-crm-mid-market",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM",
+        "Microsoft Dynamics 365 Sales"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "caseId": "g015-gem-pipedrive-best-crm-mid-market",
+      "field": "position",
+      "expected": 5,
+      "actual": 4
+    },
+    {
+      "caseId": "g024-gem-pipedrive-connect-crm-gmail-calendar",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g024-gem-pipedrive-connect-crm-gmail-calendar",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g027-gpt-pipedrive-get-sales-team-actually",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g027-gpt-pipedrive-get-sales-team-actually",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Salesforce",
+        "HubSpot",
+        "Microsoft Dynamics 365 Sales"
+      ],
+      "actual": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g033-cop-pipedrive-move-customer-data-spreadsheets",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g033-cop-pipedrive-move-customer-data-spreadsheets",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Salesforce",
+        "HubSpot",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g034-gem-pipedrive-move-customer-data-spreadsheets",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g034-gem-pipedrive-move-customer-data-spreadsheets",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g037-gpt-pipedrive-track-leads-come-through",
+      "field": "cited",
+      "expected": true,
+      "actual": false
+    },
+    {
+      "caseId": "g038-cop-pipedrive-track-leads-come-through",
+      "field": "sourceClass",
+      "expected": "https://www.softwaresuggest.com/blog/whatsapp-crm-integration/ => review",
+      "actual": "other"
+    },
+    {
+      "caseId": "g039-gem-pipedrive-track-leads-come-through",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g039-gem-pipedrive-track-leads-come-through",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g039-gem-pipedrive-track-leads-come-through",
+      "field": "position",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g040-aim-pipedrive-track-leads-come-through",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g040-aim-pipedrive-track-leads-come-through",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g044-gem-pipedrive-crm-bill-doubled-added",
+      "field": "brandsDetected",
+      "expected": 5,
+      "actual": 4
+    },
+    {
+      "caseId": "g044-gem-pipedrive-crm-bill-doubled-added",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Salesforce",
+        "HubSpot",
+        "Close",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "Salesforce",
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "caseId": "g044-gem-pipedrive-crm-bill-doubled-added",
+      "field": "position",
+      "expected": 5,
+      "actual": 4
+    },
+    {
+      "caseId": "g046-aio-pipedrive-crm-bill-doubled-added",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g046-aio-pipedrive-crm-bill-doubled-added",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Salesforce",
+        "monday CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g047-gpt-pipedrive-crm-full-duplicate-contacts",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 2
+    },
+    {
+      "caseId": "g047-gpt-pipedrive-crm-full-duplicate-contacts",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Salesforce",
+        "HubSpot",
+        "Microsoft Dynamics 365 Sales",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g048-cop-pipedrive-crm-full-duplicate-contacts",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 2
+    },
+    {
+      "caseId": "g048-cop-pipedrive-crm-full-duplicate-contacts",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Salesforce",
+        "HubSpot",
+        "Zoho CRM",
+        "Microsoft Dynamics 365 Sales"
+      ],
+      "actual": [
+        "Salesforce",
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g065-aim-pipedrive-best-crm-solo-founder",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g065-aim-pipedrive-best-crm-solo-founder",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Close"
+      ],
+      "actual": [
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g072-gpt-pipedrive-crm-best-small-business",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g072-gpt-pipedrive-crm-best-small-business",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot"
+      ]
+    },
+    {
+      "caseId": "g073-cop-pipedrive-crm-best-small-business",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ],
+      "actual": [
+        "HubSpot",
+        "Freshsales",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "caseId": "g073-cop-pipedrive-crm-best-small-business",
+      "field": "position",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g084-gem-pipedrive-crm-works-best-10",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g084-gem-pipedrive-crm-works-best-10",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Close",
+        "HubSpot",
+        "Salesforce"
+      ],
+      "actual": [
+        "HubSpot",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g085-aim-pipedrive-crm-works-best-10",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g085-aim-pipedrive-crm-works-best-10",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Close",
+        "Zoho CRM"
+      ],
+      "actual": [
+        "HubSpot",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "caseId": "g087-gpt-pipedrive-crms-free-plan-limits",
+      "field": "competitorsMentioned",
+      "expected": [
+        "HubSpot",
+        "Zoho CRM",
+        "Freshsales"
+      ],
+      "actual": [
+        "HubSpot",
+        "Freshsales",
+        "Zoho CRM"
+      ]
+    },
+    {
+      "caseId": "g093-cop-sigzen-erp-distribution-company-sales",
+      "field": "brandsDetected",
+      "expected": 2,
+      "actual": 1
+    },
+    {
+      "caseId": "g093-cop-sigzen-erp-distribution-company-sales",
+      "field": "competitorsMentioned",
+      "expected": [
+        "Microsoft Dynamics 365",
+        "Salesforce"
+      ],
+      "actual": [
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g098-cop-sigzen-erp-software-real-estate",
+      "field": "brandsDetected",
+      "expected": 3,
+      "actual": 2
+    },
+    {
+      "caseId": "g098-cop-sigzen-erp-software-real-estate",
+      "field": "competitorsMentioned",
+      "expected": [
+        "QuickBooks",
+        "Microsoft Dynamics 365",
+        "Salesforce"
+      ],
+      "actual": [
+        "QuickBooks",
+        "Salesforce"
+      ]
+    },
+    {
+      "caseId": "g119-gem-sigzen-best-erp-software-small",
+      "field": "brandsDetected",
+      "expected": 4,
+      "actual": 3
+    },
+    {
+      "caseId": "g119-gem-sigzen-best-erp-software-small",
+      "field": "competitorsMentioned",
+      "expected": [
+        "QuickBooks",
+        "Xero",
+        "Odoo",
+        "Microsoft Dynamics 365"
+      ],
+      "actual": [
+        "QuickBooks",
+        "Xero",
+        "Odoo"
+      ]
+    }
+  ],
+  "silentOwned": []
+}

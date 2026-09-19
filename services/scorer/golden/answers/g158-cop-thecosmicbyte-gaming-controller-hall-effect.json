@@ -1,0 +1,235 @@
+{
+  "id": "g158-cop-thecosmicbyte-gaming-controller-hall-effect",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:36:05.425Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming controller with hall effect joysticks for pc india",
+    "cell": {
+      "key": "9d7a662184ac0e574c930d80bc7462af4f4ed5b44574ea2714e8f40514ddcc18",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For precise and durable input, Hall Effect gaming controllers are recommended for PC gamers in India, and several options are available on Amazon India with both wired and wireless modes.\nRecommended Hall Effect Controllers\n1. EvoFox One S V2 Universal 3-Mode Wireless Gaming Controller\nFeatures 1000Hz HallSense™ precision joysticks\nSupports Bluetooth, 2.4GHz wireless, and wired connectivity\nIncludes macro buttons, dual vibration motors, and fast Type-C charging\nCompatible with PC, mobile, Android TV, PS4, and consoles 1\n1 Source\n2. Cosmic Byte ARES Wired/Tri-Mode Controllers\nHall Effect joysticks and triggers for improved control and accuracy\nSupports dual vibration, turbo, and auto-turbo functions\nRGB backlit buttons and software support for macros\nFeatures adjustable vibration and TMR joystick for smoother gameplay 2\n2 Sources\n3. EvoFox Elite S / Elite X2\nPC-focused with Hall Effect magnetic joysticks and triggers\n1000Hz polling rate, programmable macros, sniper mode, and RGB lights\nDual vibration motors and support for wired (Type-C) and 2.4G wireless connectivity 1\n1 Source\n4. Ant Esports GP165 / GP400 / SUPERNOVA Controllers\nHall Effect magnetic triggers and precision joysticks, suitable for long-term gaming\nMultiple connectivity options: USB wired, Bluetooth, and 2.4GHz wireless\nDual vibration, macro capability, motion control, and RGB lighting\nCompatible with Windows PC (X-Input & D-Input), PS3, Android, iOS, Steam Deck, and Switch 2\n2 Sources\n5. PowerA Battle Dragon™ Wireless Controller\nMagnetic Hall Effect, asymmetric rumble motors for immersive experience\nUp to 20-hour battery life\nDesigned for PC and cloud gaming but not compatible with iOS 1\n1 Source\nBuying Tips for Hall Effect Controllers\nPolling rate: Look for at least 1000Hz for low input lag.\nWired vs. wireless: Dual-mode controllers provide flexibility for both long sessions and portability.\nSoftware support: Check for programmable macros, firmware updates, and button customization.\nCompatibility: Ensure your controller supports your PC OS (Windows 10/11) and game platforms.\nGrip and ergonomics: Hall Effect controllers often come in multiple form factors; choose one with a comfortable grip for extended gaming.\nWhere to Buy\nAll listed controllers are available on Amazon India and can be searched via terms like “hall effect controller PC” or using manufacturer names like EvoFox, Cosmic Byte, and Ant Esports +1. Prices range according to features and connectivity options, typically from INR 2,000 to INR 8,000 depending on model and version.\nThese controllers offer high precision, durability, and low-latency inputs, making them ideal for competitive PC gaming.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/hall-effect-controller/s?k=hall+effect+controller",
+        "position": 0,
+        "title": "Amazon.in: Hall Effect Controller",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/a723c068-54cd-43ef-a364-6ebe60c2d4dc"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-controller-for-pc-india/",
+        "position": 1,
+        "title": "Best Controller for PC in India (2026): Top Gaming Gamepads",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/23ae78df-d057-4744-bbac-6be9092de813"
+        }
+      },
+      {
+        "url": "https://www.producthunter.in/gaming/best-game-controllers-pc-india",
+        "position": 2,
+        "title": "Best Game Controllers for PC in India (2026)",
+        "meta": {
+          "publisher": "producthunter.in",
+          "icon_url": "blob:https://www.bing.com/8045cf3c-bd52-4a6e-bbd4-5d39e92a43e3"
+        }
+      },
+      {
+        "url": "https://winnerwinnerchickendinner.in/reviews/best-game-controllers-pc-india",
+        "position": 3,
+        "title": "Best Game Controller for PC in India 2026",
+        "meta": {
+          "publisher": "winnerwinnerchickendinner.in",
+          "icon_url": "blob:https://www.bing.com/dce5fd53-395a-46b2-8e7e-21aa24e0eb51"
+        }
+      },
+      {
+        "url": "https://www.flipkart.com/gaming-accesories/controllers/pc~platform/pr?sid=4rr,km5,r39",
+        "position": 4,
+        "title": "Pc Controllers - Buy Pc Controllers Online at Best Prices In India ...",
+        "meta": {
+          "publisher": "flipkart.com",
+          "icon_url": "blob:https://www.bing.com/c580ce3e-c962-49fd-84c7-f0c6efbed7d8"
+        }
+      },
+      {
+        "url": "https://techyheaven.com/best-controller-for-pc-india/",
+        "position": 5,
+        "title": "Best Controller for PC in India (Rs. 800 – Rs. 5000) | Budget to ...",
+        "meta": {
+          "publisher": "techyheaven.com",
+          "icon_url": "blob:https://www.bing.com/bdf022a5-39c5-49e7-8eb2-93eff8f67858"
+        }
+      },
+      {
+        "url": "https://reviehub.in/gaming-controller-buying-guide-india-2026-top-5-tested/",
+        "position": 6,
+        "title": "Gaming Controller Buying Guide India 2026 | Top 5 Tested",
+        "meta": {
+          "publisher": "reviehub.in",
+          "icon_url": "blob:https://www.bing.com/f0199d0d-3b13-4e01-babf-e5ad9df88e79"
+        }
+      },
+      {
+        "url": "https://www.analyticsinsight.net/gaming/best-gaming-controllers-under-rs-10000-in-india-2026",
+        "position": 7,
+        "title": "Best Gaming Controllers Under Rs. 10,000 in India 2026",
+        "meta": {
+          "publisher": "analyticsinsight.net",
+          "icon_url": "blob:https://www.bing.com/fffe4342-8608-4ddd-8583-641fa177d994"
+        }
+      },
+      {
+        "url": "https://www.genesispc.in/collections/8bitdo",
+        "position": 8,
+        "title": "8BitDo Hall Effect Gaming Controllers in India - Wireless Retro & Pro ...",
+        "meta": {
+          "publisher": "genesispc.in",
+          "icon_url": "blob:https://www.bing.com/56cbbdd1-8119-482c-8de0-08a9c0e3f4bc"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/hall-effect-controller-pc/s?k=hall+effect+controller+pc",
+        "position": 9,
+        "title": "Amazon.in: Hall Effect Controller Pc",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "https://th.bing.com/th/id/ODF.R78Eph0Za3lAUNkY3fwTSg?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 538
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 2386
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "amazon.in: retailer search page",
+      "1": "gamingnation.in: listicle blog, not in the publisher registry",
+      "2": "producthunter.in: listicle blog, not in the publisher registry",
+      "3": "winnerwinnerchickendinner.in: listicle blog, not in the publisher registry",
+      "4": "flipkart.com: retailer listing page",
+      "5": "techyheaven.com: listicle blog, not in the publisher registry",
+      "6": "reviehub.in: buying-guide blog, not in the publisher registry",
+      "7": "analyticsinsight.net: tech news site, not in the publisher registry",
+      "8": "genesispc.in: retailer collection page",
+      "9": "amazon.in: retailer search page"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name). Two mentions: the numbered heading \"2. Cosmic Byte ARES Wired/Tri-Mode Controllers\" and \"manufacturer names like EvoFox, Cosmic Byte, and Ant Esports\". No citation is on thecosmicbyte.com."
+  }
+}

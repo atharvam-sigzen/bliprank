@@ -1,0 +1,243 @@
+{
+  "id": "g070-aim-pipedrive-crm-large-enterprise-sales",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source)",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:26:42.197Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM do large enterprise sales organisations typically use?",
+    "cell": {
+      "key": "e388e93cd563b3bf03d27b79b8dd41213d222238f5f29baf3b3ebe052511c4a6",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Large enterprise sales organizations overwhelmingly rely on a few dominant platforms built to handle massive data volumes, complex hierarchies, multi-layered approval workflows, and deep security governance.\nThe primary CRMs used at this level include:\nSalesforce (Sales Cloud / Agentforce): The undisputed market leader and default standard for large global enterprises. It is chosen for its unmatched ecosystem, deep customization capabilities, complex territory management, and robust enterprise-grade security.\nMicrosoft Dynamics 365 Sales: The primary competitor in large enterprises, heavily favored by organizations already deeply embedded in the Microsoft enterprise ecosystem (Azure, Office 365, Teams, and Power BI).\nOracle and SAP: : Historically deployed in massive legacy conglomerates—often tightly integrated with enterprise resource planning (ERP) systems (like SAP ECC/S/4HANA or Oracle Cloud ERP)—though they are less common as pure \"sales-first\" choices compared to Salesforce.\nHubSpot (Sales Hub Enterprise): While historically a mid-market favorite, HubSpot has increasingly made inroads into larger organizations that prefer a more user-friendly interface and unified data model over the heavy implementation costs of Salesforce.",
+    "citations": [
+      {
+        "url": "https://saascrmreview.com/best-crm-for-sales-teams/",
+        "position": 0,
+        "title": "20 Best CRM for Sales Teams (2026): Ranked by Sales Fit",
+        "meta": {
+          "snippet": "Best overall CRM for growing sales teams: HubSpot Sales Hub (polished UX, strong automation, cross-hub expandability);",
+          "source": "saascrmreview.com",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://saascrmreview.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 20, 2026"
+        }
+      },
+      {
+        "url": "https://www.salestechspace.com/solutions/crm-lead-management/best-b2b-sales-crms-in-2026/",
+        "position": 1,
+        "title": "Best B2B Sales CRMs in 2026: Top 10 Platforms for Modern ...",
+        "meta": {
+          "snippet": "HubSpot Sales Hub – Best All-in-One for Growth-Stage B2B. Pipedrive",
+          "source": "www.salestechspace.com",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.salestechspace.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 16, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales",
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 253
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Microsoft Dynamics 365 Sales",
+        "offset": 515
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 997
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales",
+      "HubSpot"
+    ],
+    "citations": {
+      "0": "saascrmreview.com \"20 Best CRM\" article: a listicle blog despite the name; unsure it is a user-review platform, so other",
+      "1": "www.salestechspace.com: listicle / vendor-directory article, not in registry"
+    },
+    "notes": "Subject absent. \"Microsoft enterprise ecosystem (Azure, Office 365, Teams, and Power BI)\" at 654 is the company / other products. Oracle and SAP are not in the set. Unsure about saascrmreview.com: the name says review, the page is a ranked \"best of\" article, so other."
+  }
+}

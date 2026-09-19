@@ -1,0 +1,214 @@
+{
+  "id": "g034-gem-pipedrive-move-customer-data-spreadsheets",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: brands named only inside follow-up-suggestion markup (<Elicitation> attributes), not in the answer body",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:32:09.989Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+    "cell": {
+      "key": "5619a568b2fda7dbf40d544177fd7d62d09ccea14aa0f65ea045ceef5ae4c527",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Moving customer data out of spreadsheets and into a CRM without losing communication history, notes, or deal context requires a structured **Extract, Clean, Map, and Import** strategy. \n\n---\n\n### Step 1: Standardize Your Spreadsheets First\nCleaning your data inside the spreadsheet before importing prevents breaking relationships or creating duplicates inside the CRM.\n\n* **Assign Unique Identifiers:** Create a distinct `Company ID` and `Contact ID` column. Linking contacts to companies via unique IDs guarantees that historic interactions link to the right parent account.\n* **Deduplicate Records:** Merge duplicate contacts and companies. Standardize company names (e.g., ensure \"Acme Inc.\" and \"Acme Corp\" use one uniform name).\n* **Format Dates consistently:** Convert all history timestamps (e.g., call dates, deal closed dates) to standard ISO format (`YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS`). CRMs fail or reject imports if dates are formatted inconsistently.\n\n---\n\n### Step 2: Structure Historical Notes and Activities\nStandard CRM fields (Name, Email, Stage) do not fit unstructured conversational history or past touchpoints. You have two options depending on how your CRM handles activities:\n\n* **Option A: The Single-Text Append Method (Simplest)**\n  If your history lives in free-text spreadsheet cells (e.g., \"Called on 02/10 - sent quote\"), create a dedicated custom long-text field in your CRM called `Legacy History` or `Historical Notes`. Concatenate multiple note columns into one cell per contact using spreadsheet formulas like `=TEXTJOIN()` before importing.\n* **Option B: Separate Relational Activity Imports (Most Robust)**\n  If you have structured log sheets (e.g., a separate tab listing every email/call with Date, Contact Email, Activity Type, and Details), import contacts first. Then perform a secondary import mapping the activity sheet to the newly created Contact IDs so activities populate on the contact's CRM timeline.\n\n---\n\n### Step 3: Map Data Fields to the CRM\nSet up your destination CRM fields *before* running the import wizard.\n\n| Spreadsheet Column Name | Recommended CRM Property Type | Notes / Handling |\n| :--- | :--- | :--- |\n| `First Name`, `Last Name` | Standard Single-line Text | Split full names into separate columns. |\n| `Company Name` | Primary Account / Company Object | Map using `Company ID` for multi-contact accounts. |\n| `Deal Stage` | Pipeline Stage Dropdown | Ensure picklist values in CRM match spreadsheet values exactly. |\n| `Past Notes / Call Logs` | Multi-line Text Field or Activity Note | Set up custom properties if standard notes fields are restricted. |\n| `Creation / First Contact Date` | Date Picker | Preserves customer tenure context rather than defaulting to import date. |\n\n---\n\n### Step 4: Run a Test Batch First\nNever import your entire database in one go.\n\n1. **Export a 20-Record Sample:** Run a test import with 20 varied records (including records with multi-line notes and multiple contacts per company).\n2. **Verify Field Alignment:** Check if notes landed in the right place, dates parsed correctly, and contacts auto-associated with their respective companies.\n3. **Execute Full Import & Archive Source:** Run the final import. Lock the original spreadsheets to **read-only** mode so your team transitions entirely to the CRM and stops updating static files.\n\n<ElicitationsGroup message=\"Where would you like to go from here?\">\n\n  <Elicitation label=\"Get specific Excel / Google Sheets formulas to clean data\" query=\"Show me Excel and Google Sheets formulas to standardize data, combine note columns, and format dates for a CRM import.\"/>\n\n  <Elicitation label=\"See CRM-specific migration steps (HubSpot, Salesforce, Zoho)\" query=\"Walk me through the exact migration steps and CSV layout for HubSpot, Salesforce, or Zoho.\"/>\n\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 3687
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 3696
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 3708
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "Subject not named. The answer body names no brand; the three competitors appear ONLY inside the trailing follow-up-suggestion markup, <Elicitation label=\"See CRM-specific migration steps (HubSpot, Salesforce, Zoho)\" query=\"... for HubSpot, Salesforce, or Zoho.\"/>. That markup is part of answer.text and is not a URL, so by the protocol's definition it is prose and I counted it; flagged because a reader of the rendered answer would see it only as a suggestion chip. short form: \"Zoho\" at 3708 for Zoho CRM (in a list of CRMs). \"closed\" at 823 (\"deal closed dates\") is an ordinary word."
+  }
+}

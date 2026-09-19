@@ -1,0 +1,241 @@
+{
+  "id": "g178-cop-thecosmicbyte-lightweight-wireless-gaming-mouse",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:30:30.524Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "lightweight wireless gaming mouse under 2000 rupees india",
+    "cell": {
+      "key": "29bd868754d683b16a4767b9d2f5a2236e72b98b327764ba34d42a05bda5a512",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "You can find several quality lightweight wireless gaming mice under ₹2000 in India, such as the EvoFox Phantom Air, daWg Slay 50, and Logitech G304, all offering excellent performance with low weight for comfortable gaming sessions.\nTop Picks\n1. EvoFox Phantom Air Wireless Gaming Mouse\nUltra-lightweight design at 69g\nTri-mode connectivity: Bluetooth + 2.4GHz + Wired\nHigh-precision 12,800 DPI, 1000Hz polling rate\nRGB lighting and 6 programmable buttons\nRechargeable with long usage time 2\n2. daWg Slay 50 Wireless Gaming Mouse\nLightweight 65g, PixArt 3311 sensor\n12,000 DPI, 1000Hz polling rate\n80-hour battery backup and RGB lighting with a charging dock\n6 programmable buttons, high-precision 35G acceleration 2\n3. Logitech G304 Lightspeed Wireless\nCompact and ergonomic lightweight design (~99g)\nHERO optical sensor up to 12,000 DPI for precise tracking\n6 programmable buttons, onboard memory\nReliable Logitech Lightspeed wireless connectivity suitable for esports 1\n4. Cosmic Byte Ignis Tri-Mode Wireless Gaming Mouse\nUltra-lightweight 54g, PixArt 3311 sensor\n12,000 DPI, 1000Hz polling rate\nTri-mode wireless: Bluetooth + 2.4GHz + Wired\nRGB lighting and software support for button customization 2\n5. Redragon M612AK PRO\nHybrid wired/wireless functionality with 8 programmable buttons\n8000 DPI, RGB lighting with customizable effects\nErgonomic design for long gaming sessions 2\nBuying Tips\nWeight: For fast gaming reactions, aim for mice below 70g.\nDPI and Polling Rate: Mice with DPI ≥12,000 and polling rate of 1000Hz give smoother, quicker cursor response.\nBattery Life: Check whether rechargeable or AA/AAA batteries are used; rechargeable models reduce long-term cost.\nConnectivity: Tri-mode (Bluetooth + 2.4G + wired) gives flexibility across devices.\nProgrammable Buttons & Software: Useful for macros in MMO/FPS gaming.\nErgonomics: Comfort is crucial for extended gameplay; consider grip type and hand size.\nThese gaming mice provide a balance between lightweight design, wireless freedom, and affordable pricing under ₹2000 suitable for competitive or casual gamers in India +1.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/Gaming-Mice-Under-%E2%82%B92-000/s?rh=n%3A1375415031%2Cp_36%3A28219987031",
+        "position": 0,
+        "title": "Amazon.in: Under ₹2,000 - Gaming Mice / PC Gaming Peripherals ...",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/e9213e1c-ed0b-4872-84fd-1d00a9c52ee8"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-gaming-mouse-under-2000/",
+        "position": 1,
+        "title": "Best Gaming Mouse Under 2000 in India (2026)",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/26694e55-4d3c-4be6-ab22-a2752b395791"
+        }
+      },
+      {
+        "url": "https://winnerwinnerchickendinner.in/reviews/best-gaming-mouse-under-2000-india",
+        "position": 2,
+        "title": "Best Gaming Mouse Under 2000 in India 2026",
+        "meta": {
+          "publisher": "winnerwinnerchickendinner.in",
+          "icon_url": "blob:https://www.bing.com/20253b3f-9af9-4540-b503-376c2c8b0e32"
+        }
+      },
+      {
+        "url": "https://top10productsindia.in/best-gaming-mouse-under-2000/",
+        "position": 3,
+        "title": "Best Gaming Mouse Under ₹2000 in India - Top 10 Products India",
+        "meta": {
+          "publisher": "top10productsindia.in",
+          "icon_url": "blob:https://www.bing.com/562b2fcd-201d-4579-aaf6-ef6979ba606f"
+        }
+      },
+      {
+        "url": "https://elitehubs.com/collections/gaming-mouse-under-rs-2-000",
+        "position": 4,
+        "title": "Buy Gaming Mice Under Rs.2,000 in India - EliteHubs.com",
+        "meta": {
+          "publisher": "elitehubs.com",
+          "icon_url": "blob:https://www.bing.com/9f66711f-2109-4b5d-9886-e7901f5c40b2"
+        }
+      },
+      {
+        "url": "https://kreo-tech.com/blogs/kreo-blog/best-gaming-mouse-under-2000-inr-in-india-expert-buying-guide-2026",
+        "position": 5,
+        "title": "Best Gaming Mouse Under 2000 INR in India: Expert Buying Guide 2026",
+        "meta": {
+          "publisher": "kreo-tech.com",
+          "icon_url": "blob:https://www.bing.com/8d5821a5-7d64-43c5-9edb-df7924efd447"
+        }
+      },
+      {
+        "url": "https://www.olx.in/blog/electronics-appliances/top-10-budget-friendly-wireless-gaming-mouse-under-2000/",
+        "position": 6,
+        "title": "Top 10 budget-friendly Wireless Gaming Mouse Under 2000 - OLX",
+        "meta": {
+          "publisher": "olx.in",
+          "icon_url": "blob:https://www.bing.com/1fbc9b5d-a905-416f-b93b-10529af1ded5"
+        }
+      },
+      {
+        "url": "https://modxcomputers.com/blog/5-best-gaming-mice-under-2000-in-india/",
+        "position": 7,
+        "title": "5 Best Gaming Mice Under ₹2,000 in India | Logitech, Razer, Redragon ...",
+        "meta": {
+          "publisher": "modxcomputers.com",
+          "icon_url": "blob:https://www.bing.com/bdfb1d9b-304e-4ee4-a270-66cdad2fe151"
+        }
+      },
+      {
+        "url": "https://www.digit.in/top-products/best-gaming-mouse-under-2000-3693.html",
+        "position": 8,
+        "title": "Best Gaming Mouse under 2000 ( August 2026 ) | Digit.in",
+        "meta": {
+          "publisher": "digit.in",
+          "icon_url": "blob:https://www.bing.com/d7045dbb-c04f-4a8c-94cc-0d87d1a6db98"
+        }
+      },
+      {
+        "url": "https://gotechguide.com/best-gaming-mouse-under-2000-rupees/",
+        "position": 9,
+        "title": "Best Gaming Mouse Under 2000 Rupees: Top Picks for Gamers",
+        "meta": {
+          "publisher": "gotechguide.com",
+          "icon_url": "blob:https://www.bing.com/aacc83e2-5d89-493e-b31a-b6483bc70562"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/wireless-gaming-mouse-under-2000/s?k=wireless+gaming+mouse+under+2000",
+        "position": 10,
+        "title": "Amazon.in: Wireless Gaming Mouse Under 2000",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "https://th.bing.com/th/id/ODF.R78Eph0Za3lAUNkY3fwTSg?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "earned_media",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 976
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "amazon.in: retailer",
+      "1": "gamingnation.in: gaming blog listicle, not in the publisher registry",
+      "2": "winnerwinnerchickendinner.in: blogger's best-of article, not a user-review platform; unsure what else it is",
+      "3": "top10productsindia.in: listicle site, not in the publisher registry",
+      "4": "elitehubs.com: retailer collection page",
+      "5": "kreo-tech.com blog: vendor site, not in the publisher registry",
+      "6": "olx.in blog: classifieds marketplace's blog, not in the publisher registry",
+      "7": "modxcomputers.com blog: retailer's blog, not in the publisher registry",
+      "8": "digit.in is in the publisher registry",
+      "9": "gotechguide.com: blog listicle, not in the publisher registry",
+      "10": "amazon.in: retailer"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 976, in the numbered heading \"4. Cosmic Byte Ignis Tri-Mode Wireless Gaming Mouse\". No citation on thecosmicbyte.com."
+  }
+}

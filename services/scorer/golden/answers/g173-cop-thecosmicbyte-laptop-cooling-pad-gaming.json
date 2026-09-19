@@ -1,0 +1,178 @@
+{
+  "id": "g173-cop-thecosmicbyte-laptop-cooling-pad-gaming",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:38:58.008Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "laptop cooling pad for gaming under 1000 rupees",
+    "cell": {
+      "key": "4dbb4eab9abdaf2c981ee2b8a3795a81869acc8861cdde38906227261e4f17f8",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For gaming laptops under ₹1,000, several cooling pads offer multiple fans, adjustable angles, and ergonomic designs to prevent overheating during extended use.\nRecommended Options\nEvoFox Frost Laptop Cooling Pad\nDual 1000 RPM silent fans\n5 adjustable angles and LED lights\nMetal mesh surface for durability\nSupports laptops up to 15.6 inches\nErgonomic design for long gaming sessions 1\nAnt Esports NC230 Gaming Notebook Cooler\n6 RGB fans for enhanced airflow\nAdjustable height cooling stand\nUSB-powered quiet operation\nCompatible with 10–17 inch laptops and gaming consoles like PS5 & PS4 1\nLapcare Chillmate Laptop Cooler\nDual 125mm fans with silent operation\n5-step retractable stand\nDual USB ports with removable mobile holder\nCompatible with most laptop sizes, ergonomic design 1\nCLAW Air Pro C39 Cooling Pad\nDual 125mm fans at 1000 RPM\nAnti-slip baffle, 5 height levels\n2 USB 2.0 ports, supports up to 17-inch laptops 1\nGeonix CoolZ 2Fan Laptop Cooling Pad\nHigh-performance 2 cooling fans\n6 adjustable height levels\nSupports laptops up to 17 inches and up to 5kg weight\nIntegrated mobile phone stand 1\n1 Source\nBuying Considerations\nFan speed and number of fans: More fans or higher RPM generally provide better cooling but may increase noise. Dual to six-fan setups are available under ₹1,000.\nAdjustable angles and height: Ergonomic designs reduce wrist strain during gaming. 5–6 level adjustments are common.\nLaptop size compatibility: Choose a cooling pad that fits your laptop (up to 15.6” or 17” commonly).\nUSB ports: Some coolers include dual USB ports so you don’t lose connectivity while powering the cooling pad.\nBuild quality and surface: Metal mesh surfaces improve durability and heat dissipation compared to plastic-only designs.\nFor a comprehensive list of options under ₹1,000, you can browse sites like Amazon India or Smartprix’s price list, which includes over 800 options updated as of August 2026 +1. Choosing among dual or multi-fan models will offer the best balance of cooling performance and affordability for gaming laptops.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/Portable-Computer-Cooling-Pads-Laptop-Accessories/s?rh=n%3A1375311031%2Cp_36%3A-100000",
+        "position": 0,
+        "title": "Amazon.in: Up To ₹1,000 - Portable Computer Cooling Pads / Laptop ...",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/4c28ae65-fffd-4ad1-baa3-ee24740e1b57"
+        }
+      },
+      {
+        "url": "https://www.smartprix.com/laptop_cooling_pads/price-below_1000",
+        "position": 1,
+        "title": "Laptop Cooling Pads Under ₹1,000 - Smartprix",
+        "meta": {
+          "publisher": "smartprix.com",
+          "icon_url": "blob:https://www.bing.com/8e6fdffa-3d5c-4c08-a7a6-05004d715847"
+        }
+      },
+      {
+        "url": "https://budgettechz.blogspot.com/2026/07/secret-cooling-pads-for-laptops-under.html",
+        "position": 2,
+        "title": "Secret Cooling Pads for Laptops Under 1000 Rupees You Never Knew Existed",
+        "meta": {
+          "publisher": "budgettechz.blogspot.com",
+          "icon_url": "blob:https://www.bing.com/407e626e-ff74-4fe1-8d93-b202d8743d93"
+        }
+      },
+      {
+        "url": "https://www.flipkart.com/laptop-accessories/cooling-padscooling-stands/pr?sid=6bo,ai3,59n",
+        "position": 3,
+        "title": "Cooling Pads & Stands for Laptops | Flipkart 31-Aug-26",
+        "meta": {
+          "publisher": "flipkart.com",
+          "icon_url": "blob:https://www.bing.com/97c24f61-4265-4a0e-a917-eb24c1984744"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-cooling-pads-for-laptop-in-india/",
+        "position": 4,
+        "title": "Best Laptop Cooling Pads India 2026: Rs 589-1849 Tested - Gaming Nation",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/cb7ada44-e61a-47f3-aabc-c7e93022a2ff"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=ep02OKz2vls",
+        "position": 5,
+        "title": "Laptop Cooling Pad Review - Best Under 1000 In India For Gaming and ...",
+        "meta": {
+          "publisher": "youtube.com",
+          "icon_url": "blob:https://www.bing.com/7fe680ab-74d4-4bdf-a792-6283da26b16b"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "amazon.in: retailer",
+      "1": "smartprix.com: price-comparison site, not a user-review platform",
+      "2": "budgettechz.blogspot.com: personal blog",
+      "3": "flipkart.com: retailer",
+      "4": "gamingnation.in: gaming blog listicle, not in the publisher registry",
+      "5": "youtube.com watch page: video platform"
+    },
+    "notes": "Whole answer read; no occurrence of \"cosmic\" or \"byte\". Subject absent."
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "id": "g184-gem-thecosmicbyte-swappable-switch-mechanical-keyboard",
+  "covers": "real gemini answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: initialism \"CB\" used as a short form of the brand in a table cell and a bullet; not counted",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T10:41:35.834Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "swappable switch mechanical keyboard with usb c under 4000",
+    "cell": {
+      "key": "efa116ebb81aaf082d8e5439343eb8fec930cc2422b79f2a3bd430e2f93743f9",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The top hot-swappable mechanical keyboards with a detachable USB-C cable under ₹4,000 offer excellent value depending on your preferred size:\n\n### Top Picks Under ₹4,000\n\n* **RK61 (Royal Kludge 60%)**\n  * **Layout:** 60% compact\n  * **Connectivity:** USB-C (wired) + Bluetooth / 2.4GHz Wireless (on Tri-Mode variants)\n  * **Highlights:** True 3-pin/5-pin hot-swap PCB, per-key RGB, wide aftermarket keycap compatibility. Great entry point for modding.\n  * **Price:** ~₹3,500 – ₹3,999\n\n* **Ajazz AK820**\n  * **Layout:** 75% (includes arrow keys & function row)\n  * **Connectivity:** Detachable USB-C\n  * **Highlights:** Gasket-mounted structure for a deeper, quieter sound (\"thock\"), volume knob, and factory-lubed custom switches.\n  * **Price:** ~₹3,700 – ₹4,200\n\n* **Redragon K617 Fizz / K616 Fizz Pro**\n  * **Layout:** 60% compact\n  * **Connectivity:** USB-C (K617) / Tri-mode Wireless + USB-C (K616 Pro)\n  * **Highlights:** Budget-friendly, hot-swappable (Outemu 3-pin sockets), lightweight dual-tone keycaps.\n  * **Price:** ~₹2,000 – ₹3,200\n\n* **Cosmic Byte GK-42 Phantom**\n  * **Layout:** TKL (87 Keys)\n  * **Connectivity:** Detachable USB-C\n  * **Highlights:** Budget gasket-mount feel, hot-swappable sockets, RGB backlighting. \n  * **Price:** ~₹2,800 – ₹3,200\n\n---\n\n| Model | Layout | Socket Compatibility | Mounting Style |\n| :--- | :--- | :--- | :--- |\n| **RK61** | 60% | Universal 3/5-pin | Tray Mount |\n| **Ajazz AK820** | 75% | Universal 3/5-pin | Gasket Mount |\n| **Redragon K617** | 60% | Outemu 3-pin (narrow pins) | Tray Mount |\n| **CB GK-42** | TKL (87%) | Universal 3/5-pin | Gasket Mount |\n\n### Key Considerations\n* **Universal 5-Pin vs. 3-Pin Outemu Sockets:** Royal Kludge and Ajazz use standard universal sockets, allowing you to install almost any mechanical switch (Gateron, Cherry, Akko, Kailh) without clipping the pins. Budget Redragon models typically use Outemu sockets, which strictly fit thin-pin switches (Outemu, Akko CS, KTT).\n* **Layout Needs:** If you need dedicated arrow keys and a function row, opt for a **75%** (Ajazz AK820) or **TKL** layout (CB GK-42) over a 60% board.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 1050
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 1050 (\"Cosmic Byte GK-42 Phantom\"). NOT counted, and unsure: the initialism \"CB\" in \"CB GK-42\" at 1549 (table cell) and 2085 (closing bullet). In this answer it plainly stands for Cosmic Byte, but it is an abbreviation/model code, not a written form of the name and not a listed alias, so by the 'when in doubt, do not count' convention it is left out. If initialisms were counted the count would be 3. No citations."
+  }
+}

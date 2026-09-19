@@ -1,0 +1,338 @@
+{
+  "id": "g088-cop-pipedrive-crms-free-plan-limits",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: subject absent; competitor cited (monday.com) but not mentioned; name preceded by an em dash with no space",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:27:28.397Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+    "cell": {
+      "key": "d4e0e2debe92e3f6a03aac25faeabac12c088d1380aa0ea6b63036d8e76f0ddc",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Several CRMs offer free plans, each with unique limits on users, contacts, and features—HubSpot, Zoho CRM, Freshsales, EngageBay, Bitrix24, Zite, and Clarify are the top options.\n1. HubSpot CRM\nUsers: Unlimited\nContacts: Up to 1 million\nFeatures: Contact and deal management, email tracking (2,000 emails/month), live chat widget, mobile app, basic marketing tools\nLimits: HubSpot branding on emails, landing pages, and forms; advanced automation requires a paid plan; workflow automations and AI-powered tools are restricted\nBest for: Teams needing all-in-one CRM with marketing capabilities 2\n2 Sources\n2. Zoho CRM\nUsers: Up to 3 on the free plan\nContacts/Records: 5,000 records per module\nFeatures: Lead, contact, and deal management, basic workflows, Zia AI assistant for predictions, mobile app access, multichannel marketing integration\nLimits: Restrictive user limit; advanced reporting and automation require paid plans\nBest for: Very small teams already using Zoho apps 2\n2 Sources\n3. Freshsales (Freshworks CRM)\nUsers: Unlimited\nContacts: Unlimited\nFeatures: Built-in phone system, contact and deal management, email and call logging, customer chat functionality\nLimits: No workflow automation; AI-powered scoring and sales sequences require paid tiers\nBest for: Small sales teams that prioritize unlimited users and built-in calling 2\n2 Sources\n4. EngageBay\nUsers: Up to 15\nContacts: 250\nFeatures: CRM + Marketing + Service Desk, live chat, landing page builder, 1,000 email sends/month\nLimits: Limited contacts (250), basic automation only, max 5 forms\nBest for: Startups needing combined CRM, marketing automation, and support in one free tool 2\n2 Sources\n5. Bitrix24\nUsers: Up to 12 (in SelectHub; elsewhere may be higher)\nContacts/Deals: Unlimited\nFeatures: CRM, project management, HR tools, video calls, calendar sync, pipeline tracking, web forms, built-in telephony, mobile app\nLimits: One sales pipeline free; limited workflow automation; max 1,000 emails/month; 5 GB storage; navigation can be complex\nBest for: Teams needing CRM plus project management and collaboration in one platform 2\n2 Sources\n6. Zite\nUsers: Unlimited\nContacts/Records: 5,000 records\nFeatures: Build custom CRM using AI no-code app creation, visual workflows, connect to external tools, client dashboard, unlimited apps\nLimits: Free AI credits (50) constrain modifications if used heavily; not pre-built out-of-the-box 1\n1 Source\n7. Clarify\nUsers: Unlimited\nCredits: 2,500 AI credits/month for tasks\nFeatures: AI-powered automation, core CRM (contact management, deal tracking, sales pipeline), integrations, email support\nLimits: AI task credits capped; higher volume usage may require upgrading\nBest for: Startups seeking AI-native automation without per-seat costs 1\n1 Source\nKey Notes on Free CRMs\nUser Limits: Many free CRMs cap users (Zoho: 3, EngageBay: 15), but some allow unlimited users (HubSpot, Freshsales, Clarify, Zite).\nContact Limits: Ranges from 250 (EngageBay) up to 1 million (HubSpot) or unlimited (Freshsales).\nAutomation & AI: Workflow automation and advanced AI features are often restricted to paid tiers; some platforms provide limited AI credits or basic triggers.\nFeature Constraints: Emails, landing pages, advanced reporting, branding, and integrations may have limitations.\nWhen to upgrade: If the team exceeds user/contact limits, requires advanced workflow automation, custom reporting, or unbranded communications 2\n2 Sources\nChoosing the Right Free CRM\nDefine team size, current and projected contacts, and must-have features (AI, built-in calling, marketing).\nTest multiple free plans (no credit card), import contacts, and set up pipelines for 1–2 weeks.\nEvaluate when scaling will require upgrading to a paid plan.\nFree CRMs provide a strong starting point for small teams, startups, and solo entrepreneurs, with HubSpot, Freshsales, and Clarify offering the most generous user capacities, while EngageBay and Zoho suit tightly limited, small teams.",
+    "citations": [
+      {
+        "url": "https://www.zite.com/blog/free-crm-for-small-business",
+        "position": 0,
+        "title": "7 Best Free CRMs for Small Businesses in 2026 [Expert Tested]",
+        "meta": {
+          "publisher": "zite.com",
+          "icon_url": "blob:https://www.bing.com/5c61fec5-441d-4c31-8983-e935893e5215"
+        }
+      },
+      {
+        "url": "https://www.clarify.ai/blog/free-crms-a-complete-guide-for-founders",
+        "position": 1,
+        "title": "Clarify - Best free CRMs in 2026: Plans, limits, and upgrades",
+        "meta": {
+          "publisher": "clarify.ai",
+          "icon_url": "blob:https://www.bing.com/1e299fbb-d2ac-4dab-a7b5-5d67e08bae0b"
+        }
+      },
+      {
+        "url": "https://www.selecthub.com/customer-relationship-management/free-crm/",
+        "position": 2,
+        "title": "5 Best Free CRM Software in 2026 - SelectHub",
+        "meta": {
+          "publisher": "selecthub.com",
+          "icon_url": "blob:https://www.bing.com/c130c0a4-2caf-47b5-a1ce-0d7fa3ffd93e"
+        }
+      },
+      {
+        "url": "https://toolradar.com/blog/best-free-crm-software",
+        "position": 3,
+        "title": "Best Free CRM Software in 2026 | Toolradar Blog",
+        "meta": {
+          "publisher": "toolradar.com",
+          "icon_url": "blob:https://www.bing.com/68c7f54a-43e2-4d27-9df8-4561306d9b53"
+        }
+      },
+      {
+        "url": "https://axis-intelligence.com/best-free-crm/",
+        "position": 4,
+        "title": "Best Free CRM 2026: 9 Tools Tested and Ranked (Independent Scoring)",
+        "meta": {
+          "publisher": "axis-intelligence.com",
+          "icon_url": "blob:https://www.bing.com/069b2abf-0c13-4b17-8888-23bc884e2a12"
+        }
+      },
+      {
+        "url": "https://bestcrmforstartups.com/free-crm",
+        "position": 5,
+        "title": "Best Free CRM Software for Startups (2026) | Top Free Plans",
+        "meta": {
+          "publisher": "bestcrmforstartups.com",
+          "icon_url": "blob:https://www.bing.com/5e89f648-ae45-43ad-a435-1d38c2a631d8"
+        }
+      },
+      {
+        "url": "https://www.folk.app/articles/best-free-crm-options",
+        "position": 6,
+        "title": "5 Best free CRMs in 2026 - folk.app",
+        "meta": {
+          "publisher": "folk.app",
+          "icon_url": "blob:https://www.bing.com/813b2b39-575c-4521-b9f6-0b1c62dc1e3e"
+        }
+      },
+      {
+        "url": "https://crm.org/crmland/free-crm",
+        "position": 7,
+        "title": "16 Best Free CRM Software in 2026 - CRM.org",
+        "meta": {
+          "publisher": "crm.org",
+          "icon_url": "blob:https://www.bing.com/6bd1b060-0d9e-443b-99a2-cf32c0307cfc"
+        }
+      },
+      {
+        "url": "https://gurusup.com/blog/free-crm",
+        "position": 8,
+        "title": "Free CRM: 7 Best Options for Businesses in 2026 - gurusup.com",
+        "meta": {
+          "publisher": "gurusup.com",
+          "icon_url": "blob:https://www.bing.com/5ea0bd36-7ae2-451d-982e-669c5fc9c4c7"
+        }
+      },
+      {
+        "url": "https://lagrowthmachine.com/free-crms-small-business-2026/",
+        "position": 9,
+        "title": "15 Free CRMs for Small Business 2026 (+ Upgrade Guide)",
+        "meta": {
+          "publisher": "lagrowthmachine.com",
+          "icon_url": "blob:https://www.bing.com/87033039-c2ed-4cf2-a4d7-0c906c730030"
+        }
+      },
+      {
+        "url": "https://monday.com/blog/crm-and-sales/free-crm/",
+        "position": 10,
+        "title": "10 Free CRMs That Will Grow Your Business [2026] - monday.com",
+        "meta": {
+          "publisher": "monday.com",
+          "icon_url": "blob:https://www.bing.com/0cce0e14-c13c-4dee-be50-06ca383fd420"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "competitor"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 88
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 97
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 107
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citations": {
+      "0": "zite.com blog: vendor site, not in registry",
+      "1": "clarify.ai: vendor blog, not in registry",
+      "2": "selecthub.com: software selection site, unsure it is a review platform, not in registry",
+      "3": "toolradar.com: tool blog, unsure, not in registry",
+      "4": "axis-intelligence.com: blog, not in registry",
+      "5": "bestcrmforstartups.com: listicle site, not in registry",
+      "6": "folk.app: vendor site, not in registry",
+      "7": "crm.org: CRM editorial/affiliate site, not in registry",
+      "8": "gurusup.com: vendor blog, not in registry",
+      "9": "lagrowthmachine.com: vendor blog, not in registry",
+      "10": "host monday.com is the competitor monday CRM's domain"
+    },
+    "notes": "Subject absent from the prose and from the citations. monday CRM is not named in the prose, but monday.com is cited (citation 10). The em dash in \"features—HubSpot\" touches the name; HubSpot is still a whole token."
+  }
+}

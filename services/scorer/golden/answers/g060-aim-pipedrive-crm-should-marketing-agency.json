@@ -1,0 +1,270 @@
+{
+  "id": "g060-aim-pipedrive-crm-should-marketing-agency",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source) · seen on reading: citation URL is an opaque Google /goto redirect with no host: the provider card names a source, the URL cannot confirm it",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:17:05.015Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What CRM should a marketing agency use to manage client pipelines?",
+    "cell": {
+      "key": "79f07fd87800422c1205fd0890e5a84533b22e5833fd8ba2841f99547fa1a0ed",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a marketing agency, the \"best\" CRM depends heavily on your agency's size, your pricing model (retainers vs. project-based), and whether you need a pure sales pipeline or an all-in-one marketing suite.\nThe top options for managing marketing agency client pipelines break down by use-case:\nHubSpot: — Best overall for growth-focused and inbound agencies\nWhy it fits:: It offers an intuitive visual deal pipeline, brilliant email integration, robust contact management, and seamless scaling from a great free tier up to enterprise levels. It matches an agency's vibe because you can manage your own prospective clients and later use similar mechanics if you manage client portals or inbound tracks.\nThe catch:: Pricing can scale up steeply once you move past the starter tiers into advanced automations or custom reporting.\nPipedrive: — Best for pure, sales-heavy pipeline simplicity\nWhy it fits:: If your agency's primary bottleneck is closing outbound leads and tracking discovery calls, Pipedrive is ultra-visual, fast, lightweight, and laser-focused on moving deals cleanly through custom stages. It requires minimal training.\nThe catch:: It’s strictly a sales CRM, meaning you will need external tools for heavy marketing automation or project management.\nGoHighLevel: — Best for agencies wanting bundled marketing funnels and white-labeling\nWhy it fits:: It is built explicitly with agencies in mind. It bundles a robust pipeline manager with landing pages, SMS/email marketing, and automation workflows at a flat monthly rate. You can even white-label it for your own clients.\nThe catch:: The interface can feel overwhelming or \"all-in-one cluttered\" compared to cleaner, dedicated CRMs.\nActiveCampaign: — Best for email- and automation-driven pipelines\nWhy it fits:: Excellent for agencies that run high-touch email nurture sequences before a prospect converts into a client. It allows you to segment pipelines cleanly by client type or location with powerful, lower-cost automation.",
+    "citations": [
+      {
+        "url": "/goto?url=CAESbwHrOzAVj9d2TIE7HBEqk1jaJ4TI2nZbZO9VA7YsvOt7Q6GR1XvrgcKwaag_i1C_9zRSJ1MoAuv0DZP79o17SJ66bMZoiqIf5v34ojMWOBPP4lZRaAKcXQJAuiC0fFRBg3WeDNk5CAkmsu78qG9Spg",
+        "position": 0,
+        "title": "Best CRM for Marketing Agency? : r/CRM - Reddit",
+        "meta": {
+          "snippet": "For a small agency managing retainers and one-off projects, HubSpot or Enginehire can both work well. HubSpot is great for quick s...",
+          "source": "Reddit·r/CRM",
+          "date": "Oct 24, 2025"
+        }
+      },
+      {
+        "url": "/goto?url=CAESVwHrOzAVVDnMtgey4Wci57Ofdemvm_KdnEzXqcHYNmROQ5YM3I_BlOelry_Is9Sxql1UU5tpuknerxon-hK1YZtHy-aXHNLYeKM9g5a8Y8ybrNdTi8K9bw",
+        "position": 1,
+        "title": "5 Best CRM Software - 2026 | What is The Real Difference?",
+        "meta": {
+          "snippet": "it's more about organizing work than heavy automation pricing starts around $15 per user per month for teams that value simplicity...",
+          "source": "YouTube·Daniel | Tech & Data",
+          "date": "Mar 18, 2026"
+        }
+      },
+      {
+        "url": "/goto?url=CAESUwHrOzAVLJjhDFM1Q7tgqFlPaksSkpaamk68xCsQ9FW5eN2E8A5RfEEymYEFuX70vH_la30LM3O--hrgf3IrcerDl-3KPZFbTqUTIOsMPWRBDOSY",
+        "position": 2,
+        "title": "BEST CRM Software | Tested 15 CRMs for 2026 (HONEST ...",
+        "meta": {
+          "snippet": "box at number three we have the big boss. HubSpot. if you've spent any time in marketing you've probably bumped into it it's pract...",
+          "source": "YouTube·Consumer Desire",
+          "date": "Dec 15, 2025"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 2,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 292
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 825
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 991
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive"
+    ],
+    "citations": {
+      "0": "URL is an opaque /goto redirect with no host; title and source say a Reddit r/CRM thread: community platform · RULED other: see revisions",
+      "1": "URL is an opaque /goto redirect with no host; source says YouTube (channel Daniel | Tech & Data): video platform · RULED other: see revisions",
+      "2": "URL is an opaque /goto redirect with no host; source says YouTube (channel Consumer Desire): video platform · RULED other: see revisions"
+    },
+    "notes": "All three citation URLs are relative Google redirects (/goto?url=...) that carry no readable host, so the class is judged from the title and the publisher/source metadata, not from a URL host. None of them is presented as the subject's site, so cited is false. \"closing outbound leads\" is an ordinary word (and not even the token \"close\"). [Ruled before the harness was run: an opaque redirect is classed other, whatever the provider card says; see revisions.]",
+    "revisions": [
+      {
+        "field": "citationClasses.0",
+        "from": "community",
+        "to": "other",
+        "reason": "consistency ruling made before the harness was run: the protocol classes a citation by its URL host, and an opaque Google /goto redirect shows none. Half the labellers read the class off the provider card instead; the card is not reliable in these payloads (the same set holds citations whose title and source describe a different page than their URL), so rule 6 applies: not sure, therefore other."
+      },
+      {
+        "field": "citationClasses.1",
+        "from": "video",
+        "to": "other",
+        "reason": "consistency ruling made before the harness was run: the protocol classes a citation by its URL host, and an opaque Google /goto redirect shows none. Half the labellers read the class off the provider card instead; the card is not reliable in these payloads (the same set holds citations whose title and source describe a different page than their URL), so rule 6 applies: not sure, therefore other."
+      },
+      {
+        "field": "citationClasses.2",
+        "from": "video",
+        "to": "other",
+        "reason": "consistency ruling made before the harness was run: the protocol classes a citation by its URL host, and an opaque Google /goto redirect shows none. Half the labellers read the class off the provider card instead; the card is not reliable in these payloads (the same set holds citations whose title and source describe a different page than their URL), so rule 6 applies: not sure, therefore other."
+      }
+    ]
+  }
+}

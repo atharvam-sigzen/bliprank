@@ -1,0 +1,168 @@
+{
+  "id": "g134-gem-sigzen-open-source-erp-handles",
+  "covers": "real gemini answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: brand also appears inside Gemini markup attributes (Image alt/caption, Elicitation query)",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T11:17:24.550Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "open source ERP that handles production and stock management",
+    "cell": {
+      "key": "6c37482c51efbf1213cd22f8155a30cc18f99e8a579d3de8edab5933a3a047a3",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "**ERPNext** and **Odoo Community** are the leading open-source options for integrated production and stock management, while **Inventree** serves as a specialized lightweight alternative.\n\n---\n\n| System | Production Strengths | Stock Management Strengths | Best For |\n|---|---|---|---|\n| **ERPNext** | Multi-level Bill of Materials (BOM), Work Orders, Capacity Planning, Subcontracting | Multi-warehouse tracking, Serial/Batch tracking, Automated reorder points, Stock reconciliation | Mid-to-large businesses looking for a 100% free core ERP with full manufacturing logic |\n| **Odoo Community** | Work Center routing, Manufacturing Orders, MRP schedules | Barcode integration, Double-entry inventory, Reordering rules, Multi-location tracking | Small-to-mid operations that prefer a modular UI (Note: Enterprise upgrade required for advanced MRP) |\n| **InvenTree** | Light assembly tracking, BOM management, Part categorization | Serial/batch tracking, Supplier part linking, Location hierarchy, Low-stock alerts | Small teams, electronics hardware, or open-source hardware manufacturers needing stock + simple production |\n| **Apache OFBiz** | Advanced MRP, Job Shop & Discrete manufacturing support | Complex multi-store tracking, Inventory valuation (FIFO/LIFO/Average Costing) | Developers or enterprise teams needing heavy customization and complex supply chains |\n\n<Image alt=\"Odoo manufacturing work orders dashboard\" caption=\"Odoo Manufacturing Interface\" src=\"image_agent_tag_2425901768907151882\"/>\n\n---\n\n**Key Differences to Consider**\n\n* **ERPNext:** Completely free and open source under GNU GPLv3, including all production and inventory features out of the box.\n* **Odoo:** Uses an open-core model. The Community Edition handles basic BOMs and production orders, but advanced MRP features (like Work Center capacity planning or PLM) are locked behind paid Enterprise licenses.\n* **InvenTree:** Focused purely on parts inventory and simple assembly workflows, making it much easier to deploy via Docker if full ERP accounting/sales modules aren't needed.\n\n<ElicitationsGroup message=\"To help narrow down the right platform:\">\n\n  <Elicitation label=\"Recommend based on company size and production process\" query=\"Which open source ERP fits best for discrete manufacturing vs continuous process manufacturing?\"/>\n\n  <Elicitation label=\"Compare self-hosting requirements\" query=\"What are the technical and self-hosting deployment requirements for ERPNext vs Odoo?\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Odoo"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 18
+      }
+    ],
+    "order": [
+      "Odoo"
+    ],
+    "citations": {},
+    "notes": "Odoo first at 18 ('**Odoo Community**'). Two later hits (1384, 1435) sit inside an <Image alt=... caption=...> tag and one (2468) inside an <Elicitation query=...> attribute; they do not change the first appearance. ERPNext, InvenTree, Apache OFBiz are outside the set. No citations."
+  }
+}

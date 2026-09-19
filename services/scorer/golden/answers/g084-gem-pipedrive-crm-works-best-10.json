@@ -1,0 +1,225 @@
+{
+  "id": "g084-gem-pipedrive-crm-works-best-10",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: bare \"Close\" as a product name in a table cell (name is an ordinary word and not a listed alias)",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:03:42.065Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM works best for a 10-person B2B sales team?",
+    "cell": {
+      "key": "c79d70257eed2424b5b51addd78cf18160f1cabf30b8af85beecd90f28020ae2",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a 10-person B2B sales team, there is no single \"best\" CRM—the ideal choice depends entirely on your team's core GTM (go-to-market) strategy: **inside sales vs. high-touch account management vs. rapid pipeline tracking**. \n\n| CRM | Best For | Typical Monthly Cost (10 Seats) | Key Strengths | Potential Drawbacks |\n| :--- | :--- | :--- | :--- | :--- |\n| **Pipedrive** | Visual pipeline management & fast rep adoption | ~$390–$590/mo | Extremely clean visual deal stages, high rep adoption, low setup effort. | Light built-in marketing tools; relies on integrations for complex lead scoring. |\n| **Close** | High-volume outbound (cold calling & email sequences) | ~$490–$990/mo | Built-in power dialer, multi-channel automated outreach, native SMS/email sequences. | Can get expensive for small teams; overkill if sales are mostly field or relationship-driven. |\n| **HubSpot (Sales Hub)** | Inbound lead management & sales/marketing alignment | ~$200–$1,000+/mo | Unmatched ecosystem, native content/marketing integration, highly scalable. | Price jumps sharply when moving from Starter to Professional tiers. |\n| **Salesflare** | Relationship selling with zero manual data entry | ~$290–$490/mo | Automatically logs emails, meetings, and contacts directly from Gmail/Outlook. | Less customizability for enterprise-level reporting or hyper-complex pipelines. |\n\n---\n\n**Recommendations**\n\n* **Choose Pipedrive** if your reps prioritize clear deal tracking, quick pipeline updates, and low admin overhead.\n* **Choose Close** if your 10 reps spend all day on the phone or running cold email outbound campaigns.\n* **Choose HubSpot** if marketing drives the majority of your leads and you need marketing + sales unified on one platform.\n* **Choose Salesflare** if your account executives hate logging activity and you sell high-value B2B deals requiring deep email/meeting context tracking.\n\n*(Avoid Salesforce Enterprise at this size unless you have a dedicated, full-time admin—it routinely bogs down 10-person teams in configuration overhead).*",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 2,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [
+      "Close",
+      "HubSpot",
+      "Salesforce"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 359
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1401
+      },
+      {
+        "brand": "close",
+        "span": "Close",
+        "offset": 600
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 869
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 1897
+      }
+    ],
+    "order": [
+      "Pipedrive",
+      "Close",
+      "HubSpot",
+      "Salesforce"
+    ],
+    "citations": {},
+    "notes": "\"Close\" at 600 is a table-row product name (and again \"Choose Close\" at 1517): the product, not the ordinary word. It is the brand's name but not one of its listed aliases (\"close crm\", \"close.com\"). \"Salesforce Enterprise\" at 1897 is a product line carrying the brand's name and counts as Salesforce. \"Salesflare\" is not in the set and is not Salesforce. No citations."
+  }
+}

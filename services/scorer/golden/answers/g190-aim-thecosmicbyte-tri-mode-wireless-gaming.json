@@ -1,0 +1,167 @@
+{
+  "id": "g190-aim-thecosmicbyte-tri-mode-wireless-gaming",
+  "covers": "real google-ai-mode answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: brand named only in a citation's title (a third-party video); absent from prose, not cited",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T10:35:15.646Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "tri mode wireless gaming mouse with high polling rate india",
+    "cell": {
+      "key": "6eaff379aee6e03d4f9d73060c93cced63b2fc8223c3dfd0577d7f8a0da494b9",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nA tri-mode wireless gaming mouse features 2.4GHz wireless, Bluetooth, and wired connections, with high polling rates (typically 1000Hz up to 8000Hz) reducing input lag for competitive gaming.\nPopular budget-to-midrange tri-mode options available or popular in India feature standard 1000Hz polling rates, while true ultra-high polling (4K/8K) options usually require importing or specialized niche availability.\nPopular Tri-Mode Gaming Mice in India (1000Hz Polling)\nUnderstanding High Polling Rates in Wireless Mice\n1000Hz (1ms response time):: Standard high-performance tier; balances ultra-low latency with efficient battery conservation.\n4K / 8K Polling Rates (0.25ms – 0.125ms response time):: Found in flagship international esports mice (like Razer Viper V3 ProGo to product viewer dialog for this item. or Lamzu/Attack Shark 8KGo to product viewer dialog for this item. models), though high-polling wireless receivers often must be bought or imported separately in India.",
+    "citations": [
+      {
+        "url": "/goto?url=CAESaQHrOzAV59HxQuUdnKuDdk3TCISCZpNF9E-z3Cn6K17bH_8jBkphJQqQtlj8djNzNUYHABfwdfBmm-GkTbZDmTQDj2v31zN5HlT6rHcWntFukh8_7DoOTTM6cAwCCqfET2VgEHfp2DbLkw",
+        "position": 0,
+        "title": "₹999 me 1000Hz polling rate, software support aur onboard ...",
+        "meta": {
+          "snippet": "In this you get a 1000Hz polling rate for low input lag, connectivity: 2.4GHz dongle, wired, and Bluetooth. control DPI, macros, a...",
+          "source": "Instagram·Prashant Motwani",
+          "date": "Apr 5, 2026"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Gaming-Mice/b?ie=UTF8&node=1375415031#:~:text=Some%20mice%20have%20a,programmable%20buttons.",
+        "position": 1,
+        "title": "Buy Gaming Mouse Online at Best Price in India",
+        "meta": {
+          "snippet": "Some mice have a 1000Hz polling rate, while others have an 8000Hz polling rate. * **Buttons** Some mice have programmable buttons,",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "/goto?url=CAESnAIB6zswFXYQfOUXUY-r0vHi77a3sNPlOvLDhxFkgFA9tdEhuYCCQULZQFwLqH55qYBGQ9w7XSOhJAA6Q-GxdpzEqylw-5_HQimq0LLr6J5_s_LpOdhjNuqmoYxe3lmpcOYdMmF1oUbRoudyYrPt_Uo0uEgAvQC0dbUgaE3EWKan9inx8IcJ_3R5p8kurdd4aQLj_IvgBo9TeMBY_JoO5V4h55S_eBE9sBWBicVYWOmc87MixLoC-4ar4abvGtuu85ygBVKMRXfXPDsc1wFmI73v9KL47J5RFW7S15Ue2XIRoI-WzN8HYNopX9k37v7DjiBf9-GKt6Tmc3L7-ft-CKGxnPxCYshPw5kOkCnv1LX_K3eb1CsPOQuKD0_aHw",
+        "position": 2,
+        "title": "Inphic IN9 Tri-Mode Wireless Gaming Mouse Gaming আর ...",
+        "meta": {
+          "snippet": "Tri-Mode Connectivity – Wired + 2.4GHz Wireless + Bluetooth 🔹 Ultra-responsive for competitive gaming 🔹 High-precision sensor fo...",
+          "source": "Facebook",
+          "date": "Mar 14, 2026"
+        }
+      },
+      {
+        "url": "/goto?url=CAESYwHrOzAVcqVHO_gvDwAXSK8iv6w2z_CcTzTB4UHe4QJme7Mjh88W8VDDwES5aObQTgbOhUSCWLVJkmSk0hQTAB5AfifIiN9Q2Ppn7FqtKNEHWEMZaz0vyGnRnQNpfXo4OS9Ehw",
+        "position": 3,
+        "title": "Best Budget Gaming Mouse 🔥 Cosmic Byte Atlas Tri Mode",
+        "meta": {
+          "snippet": "तो ये गेमिंग मास्क में लोगों को क्या चाहिए होता है अच्छी. गेमिंग हो मतलब अच्छे. सेंसर हो और फिर वायरलेस. हो और मतलब जो हमारे. फ्लि...",
+          "source": "YouTube·Baba Tech Review",
+          "date": "Feb 5, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "opaque /goto redirect with no host; source label says Instagram: social network",
+      "1": "amazon.in: retailer",
+      "2": "opaque /goto redirect with no host; source label says Facebook: social network",
+      "3": "opaque /goto redirect with no host; source label says YouTube (channel Baba Tech Review) and the title is a video title: video platform · RULED other: see revisions"
+    },
+    "notes": "Whole answer read; no occurrence of \"cosmic\", \"byte\" or \"CB\" in the prose. The subject's name appears only in citation 3's title (\"Best Budget Gaming Mouse Cosmic Byte Atlas Tri Mode\", a YouTube video): not a mention, and not cited because no citation is on thecosmicbyte.com. Citations 0, 2 and 3 are relative /goto?url=... redirects with no host; classed from their source labels, somewhat unsure for that reason. [Ruled before the harness was run: an opaque redirect is classed other, whatever the provider card says; see revisions.]",
+    "revisions": [
+      {
+        "field": "citationClasses.3",
+        "from": "video",
+        "to": "other",
+        "reason": "consistency ruling made before the harness was run: the protocol classes a citation by its URL host, and an opaque Google /goto redirect shows none. Half the labellers read the class off the provider card instead; the card is not reliable in these payloads (the same set holds citations whose title and source describe a different page than their URL), so rule 6 applies: not sure, therefore other."
+      }
+    ]
+  }
+}

@@ -1,0 +1,189 @@
+{
+  "id": "g153-cop-thecosmicbyte-best-rgb-gaming-mousepad",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:37:30.581Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best rgb gaming mousepad india under 1500",
+    "cell": {
+      "key": "e9d09b4cb3001a166444ac7b45869488b1ec3ae94b375046e857879a99cff002",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For budget-friendly RGB gaming mousepads in India under ₹1,500, top options include ZEBRONICS Blaze XL, Aliens XL, Tukzer XL, and EvoFox Falcon, offering extended sizes, multiple lighting modes, and non-slip bases for smooth gaming performance +1.\nRecommended Options\nZEBRONICS Blaze XL RGB Gaming Mousepad\nSize: 80 x 30 cm (Extended)\nRGB Modes: 13 lighting modes with 2 brightness levels\nSurface: Micro-weave texture for precision control\nBase: Non-slip rubber, ensuring stability during intense gaming sessions\nPrice: Typically under ₹1,500 1\nAliens XL RGB Gaming Mousepad\nSize: 80 x 30 cm (Extended)\nLighting Modes: 14 LED modes\nBase: Non-slip rubber, anti-skid\nAdditional Feature: Designed for full desk coverage in gaming setups 1\nTukzer XL RGB Gaming Mousepad\nSize: 80 x 30 cm (Extended)\nLighting Modes: 14 modes customizable via touch controls\nBase: Non-slip rubber with durable construction for extended use\nSurface: Smooth for fast mouse tracking 1\nEvoFox Falcon LX35 RGB Gaming Mousepad\nSize: 350 x 250 mm, compact yet efficient for gaming\nRGB Modes: 12 lighting effects\nBase: Non-slip rubber for steady gaming performance\nSurface: Micro-textured speed surface for both control and swipes 1\nJCBL RGB Gaming Mousepad with Wireless Charger\nUnique Feature: Qi-compatible wireless charging for iPhone and Android devices\nLighting Modes: LED lighting integrated with desk mat design\nBase: Non-slip rubber, multifunctional for gaming and office use 1\nConsiderations for Choosing a Budget RGB Mousepad\nSize and Desk Coverage: Extended mousepads are better for wide mouse movements, improving gameplay.\nSurface Material: Micro-weave or smooth cloth surfaces optimize mouse accuracy for both optical and laser sensors.\nBase Grip: Ensure non-slip rubber base to avoid shifting during gameplay.\nRGB Features: Check number of lighting modes, brightness control, and customizable effects if aesthetics matter.\nAdditional Features: Some pads include wireless charging or stitched edges for durability, adding value within a budget-friendly range 2.\nThese mousepads combine affordable pricing with RGB aesthetics and functional gaming surfaces, making them suitable candidates for Indian gamers seeking high value under ₹1,500 +1.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/best-rgb-mousepad/s?k=best+rgb+mousepad",
+        "position": 0,
+        "title": "Amazon.in: Best Rgb Mousepad",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/41fe352e-4dab-4ea9-b670-fac5f9aa8b01"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-gaming-mousepad-under-1000/",
+        "position": 1,
+        "title": "Best Gaming Mousepad Under 1000 in India (2026): 7 Picks",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/608b2e29-417a-4b46-8a43-d015b29e1894"
+        }
+      },
+      {
+        "url": "https://www.smartprix.com/computer_mouse_pads/price-below_1500",
+        "position": 2,
+        "title": "Mouse Pads Under ₹1,500 - Smartprix",
+        "meta": {
+          "publisher": "smartprix.com",
+          "icon_url": "blob:https://www.bing.com/b3b7909a-ee9e-44e8-af9b-cbf82f1d64b5"
+        }
+      },
+      {
+        "url": "https://elitehubs.com/collections/mousepad",
+        "position": 3,
+        "title": "Buy Mousepads / Gaming Mousepads At Best Prices In India | EliteHubs",
+        "meta": {
+          "publisher": "elitehubs.com",
+          "icon_url": "blob:https://www.bing.com/e1121f6c-e78e-409f-a1b4-75b488475614"
+        }
+      },
+      {
+        "url": "https://www.flipkart.com/gaming-accesories/mousepads/pr?sid=4rr,km5,jd7",
+        "position": 4,
+        "title": "Mousepads - Buy Mousepads Online at Best Prices in India",
+        "meta": {
+          "publisher": "flipkart.com",
+          "icon_url": "blob:https://www.bing.com/77795997-2c9c-49fd-9424-992c4600f288"
+        }
+      },
+      {
+        "url": "https://getbestindia.in/best-gaming-mouse-pad/",
+        "position": 5,
+        "title": "13 Best Gaming Mouse Pad to Buy in India 2026 - Get Best India",
+        "meta": {
+          "publisher": "getbestindia.in",
+          "icon_url": "blob:https://www.bing.com/2ab4184e-c4c6-4253-82ab-f8f5b849f5c2"
+        }
+      },
+      {
+        "url": "https://www.producthunter.in/gaming/best-gaming-mousepads-india",
+        "position": 6,
+        "title": "Best Gaming Mousepads in India (2026)",
+        "meta": {
+          "publisher": "producthunter.in",
+          "icon_url": "blob:https://www.bing.com/cdfc7653-3cb9-46fe-8add-a80b4f87761b"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "amazon.in: retailer search page",
+      "1": "gamingnation.in: listicle blog, not in the publisher registry",
+      "2": "unsure: smartprix.com is a price-comparison listing site, not clearly a user-review platform",
+      "3": "elitehubs.com: retailer collection page",
+      "4": "flipkart.com: retailer listing page",
+      "5": "getbestindia.in: listicle blog, not in the publisher registry",
+      "6": "producthunter.in: listicle blog, not in the publisher registry"
+    },
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the text. The answer names ZEBRONICS, Aliens, Tukzer, EvoFox and JCBL only. No citation is on thecosmicbyte.com."
+  }
+}

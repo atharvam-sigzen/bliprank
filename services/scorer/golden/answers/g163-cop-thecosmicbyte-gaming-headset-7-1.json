@@ -1,0 +1,222 @@
+{
+  "id": "g163-cop-thecosmicbyte-gaming-headset-7-1",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively · seen on reading: cited on the owned domain but never named in the prose",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:32:07.211Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming headset with 7.1 surround sound under 2500",
+    "cell": {
+      "key": "1fa74cb9d0eb68eaa58569c570bf4b5f311dba8585a24cb9aafecea6bf8b6fe9",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For immersive gaming with 7.1 surround sound under ₹2500, options like the EvoFox Hyperion and Acer Nitro Phantom HX5 offer excellent audio, comfortable over-ear design, and USB connectivity.\nTop Recommendations\nEvoFox Hyperion 7.1 Gaming Headphones\nDrivers: 50mm for deep audio and bass clarity\nSurround Sound: Software-supported 7.1 virtual surround sound 1\nConnectivity: Wired USB A + Type-C\nDesign: Over-ear, swappable ear pads for comfort during long sessions\nMic: Retractable microphone with inline controls\nOther Features: Durable build, RGB lighting on some models 2\n2 Sources\nAcer Nitro Phantom HX5 Wired Gaming Headset\nDrivers: 50mm dynamic drivers for rich gaming audio\nSurround Sound: Virtual 7.1 surround sound\nConnectivity: USB for PC/Laptop\nMic: Noise reduction microphone for clear communication\nOther Features: RGB lighting, designed for long-term comfort with padded headband 1\n1 Source\nEvoFox Hyperion Gaming Headphones (3.5mm + Type-C)\nDrivers: 50mm for immersive audio experience\nSurround Sound: Immersive virtual surround sound (7.1)\nConnectivity: Wired via 3.5mm or Type-C, compatible with mobile and PC\nDesign: Over-ear with swappable ear pads, durable build\nMic: Retractable mic for gaming communication 2\n2 Sources\nBuying Considerations\nConnectivity: USB headsets generally provide software-enabled 7.1 surround support, while 3.5mm may have only stereo or simulated surround.\nComfort: Over-ear designs with soft padding are preferable for long gaming sessions.\nCompatibility: Ensure the headset works with your PC, PlayStation, Xbox, or mobile if needed.\nAudio Features: Look for headsets with 50mm drivers for better bass and spatial awareness in games.\nExtras: RGB lighting and inline controls may enhance user experience but are secondary to audio quality.\nFor purchase, these headsets are available on Amazon India with detailed specifications and pricing .\nThese options provide good surround sound performance under ₹2500 and are suitable for immersive gaming while staying within budget.",
+    "citations": [
+      {
+        "url": "https://www.amazon.in/gaming-headphones-with-mic-under-2500/s?k=gaming+headphones+with+mic+under+2500",
+        "position": 0,
+        "title": "Amazon.in: Gaming Headphones With Mic Under 2500",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/71adb4be-eec6-400e-a72f-a917c54419d8"
+        }
+      },
+      {
+        "url": "https://pixelandpistons.com/best-gaming-headset-under-2500-top-picks-for-indian-gamers-2026/",
+        "position": 1,
+        "title": "Best Gaming Headset Under 2500 - Pixel and Pistons",
+        "meta": {
+          "publisher": "pixelandpistons.com",
+          "icon_url": "blob:https://www.bing.com/abc6450b-0b56-4cba-b205-3061a4b32e16"
+        }
+      },
+      {
+        "url": "https://www.flipkart.com/q/gaming-headphones",
+        "position": 2,
+        "title": "Gaming Headphones - Buy Gaming Headphones Online at Best ... - Flipkart",
+        "meta": {
+          "publisher": "flipkart.com",
+          "icon_url": "blob:https://www.bing.com/a85f3a70-8a84-42e0-b7a4-d9571ceece25"
+        }
+      },
+      {
+        "url": "https://gamingnation.in/best-gaming-headphones-india/",
+        "position": 3,
+        "title": "Best Gaming Headphones India 2026: Top 7, Rs 500-10k",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/fbdccf77-f23d-493b-9d28-41907548e8c0"
+        }
+      },
+      {
+        "url": "https://bigdeals99.com/gaming-headphones-under-2500/",
+        "position": 4,
+        "title": "Best Gaming Headphones Under 2500₹ in India - bigdeals99.com",
+        "meta": {
+          "publisher": "bigdeals99.com",
+          "icon_url": "blob:https://www.bing.com/1529b66b-d17f-485b-b29b-ba0ae3ff555c"
+        }
+      },
+      {
+        "url": "https://etadviser.com/electronics/headphones/best-gaming-headphones-in-india-under-rs-2500-for-crystal-clear-sound/articleshow/99666086.cms",
+        "position": 5,
+        "title": "Best Gaming Headphones: 7 Best Gaming Headphones in India Under Rs ...",
+        "meta": {
+          "publisher": "etadviser.com",
+          "icon_url": "blob:https://www.bing.com/c8c6582e-7e66-4546-bdcd-4c2aea3a51b2"
+        }
+      },
+      {
+        "url": "https://www.thecosmicbyte.com/product/cosmic-byte-cryocore-7-1-surround-wired-gaming-headset/",
+        "position": 6,
+        "title": "Cosmic Byte CryoCore 7.1.4 Surround Wired Headset with THX Spatial ...",
+        "meta": {
+          "publisher": "thecosmicbyte.com",
+          "icon_url": "blob:https://www.bing.com/2f5ca7c0-2d58-4363-9364-571ce60f98f8"
+        }
+      },
+      {
+        "url": "https://www.primeabgb.com/buy-online-price-india/gaming-headset/",
+        "position": 7,
+        "title": "Buy Gaming Headset Online in India At Best Price",
+        "meta": {
+          "publisher": "primeabgb.com",
+          "icon_url": "blob:https://www.bing.com/bc9ce447-08ce-4157-9417-ceceffea4487"
+        }
+      },
+      {
+        "url": "https://www.amazon.com/7-1-headphones/s?k=7.1+headphones",
+        "position": 8,
+        "title": "Amazon.com: 7.1 Headphones",
+        "meta": {
+          "publisher": "amazon.com",
+          "icon_url": "blob:https://www.bing.com/186b8108-3c77-4c2b-9ab9-f47d289ef0d0"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/gaming-headphones-under-2500/s?k=gaming+headphones+under+2500",
+        "position": 9,
+        "title": "Amazon.in: Gaming Headphones Under 2500",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "https://th.bing.com/th/id/ODF.R78Eph0Za3lAUNkY3fwTSg?w=16&h=16&c=10&pid=genserp&rm=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": true,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "owned",
+      "7": "other",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "amazon.in: retailer search page",
+      "1": "pixelandpistons.com: listicle blog, not in the publisher registry",
+      "2": "flipkart.com: retailer listing page",
+      "3": "gamingnation.in: listicle blog, not in the publisher registry",
+      "4": "bigdeals99.com: deals/listicle blog, not in the publisher registry",
+      "5": "etadviser.com: shopping-advice site, domain not in the publisher registry",
+      "6": "host www.thecosmicbyte.com is a subdomain of the subject's domain thecosmicbyte.com",
+      "7": "primeabgb.com: retailer category page",
+      "8": "amazon.com: retailer search page",
+      "9": "amazon.in: retailer search page"
+    },
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the answer text: the prose names only EvoFox and Acer. Citation 6 is a product page on www.thecosmicbyte.com, so cited is true while mentioned is false. The brand name appears only in that citation's URL and title, never in the prose."
+  }
+}

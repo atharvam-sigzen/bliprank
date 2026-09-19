@@ -1,0 +1,270 @@
+{
+  "id": "g085-aim-pipedrive-crm-works-best-10",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: ordinary-word collision: \"closely\" precedes the real \"Close\" product heading",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:04:21.312Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM works best for a 10-person B2B sales team?",
+    "cell": {
+      "key": "06572b1d34039df1414828b67203261a3f272ab1d91613569784c08d39f4e050",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Pipedrive and HubSpot Sales Hub work best for a 10-person B2B sales team, balancing ease of use, robust pipeline tracking, and scalability without enterprise-level complexity.\nTop CRM Options for a 10-Person Team\nPipedrive:: Ideal if your team needs a clean, visual sales pipeline that reps will actually update. It requires minimal setup, offers great activity-based selling features, and integrates smoothly with standard email and calendar tools.\nHubSpot Sales Hub:: Best if you run an inbound motion or plan to closely align sales with marketing. It offers powerful email tracking, templates, and seamless document sharing, though costs can scale up quickly as you add advanced automation.\nClose:: Perfect for outbound-heavy or phone-driven B2B teams. It includes built-in calling, SMS, and email sequencing features that eliminate the need for costly third-party dialer integrations.\nZoho CRM:: Great for teams needing advanced automation and custom modules on a tighter budget. It has a steeper learning curve than Pipedrive, but offers massive flexibility for the price.",
+    "citations": [
+      {
+        "url": "https://www.coevera.com/blog/best-crm-b2b-sales-teams-2026/",
+        "position": 0,
+        "title": "Best CRM for B2B Sales Teams in 2026 - Coevera",
+        "meta": {
+          "snippet": "Table_title: Best CRM for B2B sales at a glance Table_content: | CRM | Best for | Free plan | | --- | --- | --- | | Pipedrive | Su...",
+          "source": "Coevera",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.coevera.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 2, 2026"
+        }
+      },
+      {
+        "url": "https://www.salesgenie.com/blog/best-crms-for-b2b-sales-teams/",
+        "position": 1,
+        "title": "Best CRMs for B2B Sales Teams to Drive Growth - Salesgenie",
+        "meta": {
+          "snippet": "7 Top CRMs for B2B Sales Teams * Salesforce Sales Cloud: Enterprise power and ecosystem. * HubSpot Sales Hub: All-in-one for SMB/s...",
+          "source": "Salesgenie",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.salesgenie.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      },
+      {
+        "url": "https://www.cleanlist.ai/blog/2026-04-25-best-crm-for-outbound-sales",
+        "position": 2,
+        "title": "11 Best CRMs for Outbound Sales Teams Tested [2026]",
+        "meta": {
+          "snippet": "We tested 11 CRMs by running real outbound campaigns, 500 leads each, same templates, same ICP. Response rates ranged from 2% to 1...",
+          "source": "Cleanlist",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.cleanlist.ai&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 3,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Close",
+      "Zoho CRM"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 0
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 213
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1021
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 14
+      },
+      {
+        "brand": "close",
+        "span": "Close",
+        "offset": 694
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 889
+      }
+    ],
+    "order": [
+      "Pipedrive",
+      "HubSpot",
+      "Close",
+      "Zoho CRM"
+    ],
+    "citations": {
+      "0": "coevera.com: vendor/agency blog, not in registry",
+      "1": "salesgenie.com: vendor blog, not in registry",
+      "2": "cleanlist.ai: vendor blog, not in registry"
+    },
+    "notes": "\"closely\" at 515 (\"plan to closely align sales\") is an ordinary word with the name glued inside it and is NOT Close; the brand's first real mention is the list heading \"Close::\" at 694. It is the brand's name but not a listed alias."
+  }
+}

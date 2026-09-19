@@ -1,0 +1,158 @@
+{
+  "id": "g102-gpt-sigzen-erp-solution-jewellery-business",
+  "covers": "real chatgpt answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T11:22:47.958Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP solution for jewellery business with retail POS",
+    "cell": {
+      "key": "05ec1b958e9556b9d9d3d18db641f760d2bc8e7b26253c54b36bc574c0bd17da",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If you're looking for an **ERP specifically for a jewellery business with a strong retail POS**, I would avoid generic ERP/POS systems and shortlist jewellery-specific platforms.\n\n### Strong options to evaluate\n\n| ERP | Best for | Retail POS | Inventory | Manufacturing/Karigar | Multi-branch |\n| --- | --- | --- | --- | --- | --- |\n| **Ornexa** | Modern retail + wholesale | ✅ | ✅ | ✅ | ✅ |\n| **Akrut Jewellery ERP** | Growing showrooms/chains | ✅ | ✅ RFID | ✅ | ✅ |\n| **Gehna ERP** | Retail + broad jewellery operations | ✅ | ✅ Barcode/RFID | ✅ | ✅ |\n| **Aurex ERP** | Indian jewellers wanting GST/HUID workflows | ✅ | ✅ | ✅ | ✅ |\n| **24KaratSolutions** | Retail + accounting + offline POS | ✅ | ✅ | ✅ | — |\n| **Jewellers Pro** | Cloud-first retail businesses | ✅ | ✅ | ✅ | ✅ |\n\nThese platforms advertise jewellery-specific functions such as **gold/purity/weight inventory, barcode tagging, making charges, old-gold exchange, GST billing, HUID/hallmarking, customer CRM, karigar management and multi-store control**, rather than simply adding a jewellery category to a generic POS.\n\n### My shortlist\n\n**1. Ornexa** — particularly interesting if your priority is **fast showroom POS + inventory + GST/HUID + multi-branch**. It supports barcode-based counter sales, customer/loyalty workflows, old-gold/URD, rate locks and branch-level controls.\n\n**2. Akrut** — worth considering for a **growing jewellery chain**, especially if RFID, manufacturing/karigar operations and centralized branch reporting are important.\n\n**3. Gehna ERP** — broader feature set covering **retail, barcode/RFID, inventory, CRM, GST billing, orders and karigar management**.\n\n**4. Aurex ERP** — good candidate if you want a system designed around Indian jewellery terminology and workflows, including **daily rates, GST, metal ledgers, repairs, schemes, CRM and branches**.\n\n### What I would insist on in the POS\n\nFor a jewellery showroom, the POS should handle:\n\n- Barcode/QR/RFID tagging\n- Gross weight, stone weight and net weight\n- Purity/karat and fine-gold calculation\n- Daily gold/silver rates\n- Making charges — percentage, per gram and fixed\n- Stone/diamond charges\n- Old-gold exchange/URD\n- Customer advances and bookings\n- Multiple payment modes\n- GST invoices and e-invoicing where applicable\n- HUID/hallmark information\n- Returns/exchanges\n- Customer CRM, birthdays/anniversaries and loyalty\n- Salesperson commission\n- Stock transfers between branches\n- Physical stock verification\n- Role-based permissions and audit trail\n- Offline billing if internet connectivity is unreliable\n- Integration with accounting software if you don't want accounting inside the ERP\n\n**If you tell me your country, number of stores, approximate annual turnover, and whether you also do manufacturing/wholesale, I can narrow this to the 2–3 best ERP/POS options and compare pricing, features, implementation and hardware requirements.**\n\nOAGSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "No brand from the set: only jewellery-specific ERPs (Ornexa, Akrut, Gehna, Aurex, 24KaratSolutions, Jewellers Pro) are named."
+  }
+}

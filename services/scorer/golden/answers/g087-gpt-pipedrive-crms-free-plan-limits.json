@@ -1,0 +1,214 @@
+{
+  "id": "g087-gpt-pipedrive-crms-free-plan-limits",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: competitor first named by an expanded unlisted form (\"Zoho Corporation CRM\") in a table cell; subject absent",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:26:55.385Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+    "cell": {
+      "key": "2f5be4831e3e8dc0e7683d5b2076173dfd565542a202dd45c63e825e7149c462",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Here are some popular CRMs with **permanent free plans** (not just trials) and the main limits you’ll run into. Limits change often, so it’s worth checking the vendor’s pricing page before committing.\n\n| CRM | Free plan limits | Best fit |\n| --- | --- | --- |\n| HubSpot | Up to **2 users** on the free account according to HubSpot’s current FAQ; up to **1,000 contacts** and **1 million records across other standard object types**; no time limit. | Startups, small businesses, teams wanting a polished all-in-one CRM |\n| Zoho Corporation CRM | Up to **3 users**; about **5,000 records** on the free edition; advanced automation and customization require paid tiers. | Small sales teams needing customization |\n| Freshworks Freshsales | Up to **3 users**; unlimited contacts are commonly included, but advanced workflows, automation, and some sales features are paid. | Small sales teams wanting simple pipelines and email tools |\n| Bitrix24 | Free CRM with contact/deal management; limits include storage and feature restrictions (commonly **5 GB storage** on free plans; user limits/features have changed over time). | Teams wanting CRM plus collaboration/project features |\n| Agile CRM | Up to **10 users** and around **1,000 contacts/companies**; automation and marketing features are limited. | Small companies combining CRM with basic marketing |\n| EngageBay | Free tier commonly includes up to **15 users** and around **250 contacts**; larger databases and advanced marketing require paid plans. | Small teams needing CRM + marketing tools |\n| Capsule CRM | Up to **2 users** and about **250 contacts**; limited reporting and customization. | Freelancers and very small businesses |\n\n## Quick recommendations\n\n- **Best overall free CRM:** HubSpot — strong interface, broad integrations, and a generous free feature set.\n- **Best for a 2–3 person sales team:** Zoho CRM or Freshsales.\n- **Best if you need many users without paying:** Bitrix24 or Agile CRM (check current user limits before rollout).\n- **Best for marketing + CRM together:** HubSpot or EngageBay.\n\nA few common free-plan tradeoffs:\n\n- Automation/workflows are usually the first thing locked behind paid plans.\n- Advanced reporting and forecasting are often limited.\n- Email marketing sends, sequences, and integrations usually have caps.\n- User limits matter more than contact limits once a team grows.\n\nIf you tell me your use case (solo freelancer, startup, sales team size, e-commerce, agency, etc.), I can narrow this to the best 2–3 options.\n\nHSRSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 262
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho Corporation CRM",
+        "offset": 522
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 724
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citations": {},
+    "notes": "Subject absent: the only \"pipe\" hit is \"pipelines\" at 903. unlisted form: \"Zoho Corporation CRM\" at 522 (table cell in the CRM column, 3 users / free edition) is read as naming Zoho CRM; the plain form \"Zoho CRM\" follows at 1867. UNSURE, and it matters for the order: if \"Zoho Corporation CRM\" is not accepted, Zoho CRM's first mention moves to 1867 and the order becomes HubSpot, Freshsales, Zoho CRM. Freshsales is first written as \"Freshworks Freshsales\" (company name at 713, product name at 724). No citations."
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "id": "g171-aio-thecosmicbyte-gaming-microphone-under-2000",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:41:06.706Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming microphone under 2000 for streaming india",
+    "cell": {
+      "key": "bd26405c90395f7347cdbdeed4e8960ddb3ace0b15591bd9231a961c9deab888",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "You can buy entry-level USB condenser and lavalier microphones like the Fifine K054 USB Microphone or a Boya BY-M1 Lavalier Mic for under ₹2,000 in India.\nBest Budget Microphones Under ₹2,000\nWhat to Expect at This Price\nTo help you get the best setup for your budget, watch this video overview on choosing budget streaming options:5:57The Ultimate Budget Mic for Streaming & Gaming51K views · 11 months agoYouTube · The Indian Budget Gamer\nIf you tell me whether you are streaming from a PC or a smartphone, I can recommend the most compatible microphone option.",
+    "citations": [
+      {
+        "url": "https://www.quora.com/Which-is-the-best-mic-under-Rs-2000-for-making-YouTube-videos",
+        "position": 0,
+        "title": "Which is the best mic under Rs 2000 for making YouTube ...",
+        "meta": {
+          "snippet": "Lavalier Microphones: Lavalier mics are widely used by YouTube creators for voice recording and are available in a range from Rs. ...",
+          "source": "Quora",
+          "date": "Aug 27, 2021"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/PC-Microphones-%E2%82%B91-000-%E2%82%B92/s?rh=n%3A1375461031%2Cp_36%3A100000-200000",
+        "position": 1,
+        "title": "1,000 - ₹2,000 - PC Microphones / Webcams & VoIP Equipment",
+        "meta": {
+          "snippet": "Fifine USB Computer Microphone, Plug &Play Desktop Condenser PC Laptop Mic,Mute Button with LED Indicator, Compatible with Windows...",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/condenser-mic-under-2000/s?k=condenser+mic+under+2000",
+        "position": 2,
+        "title": "Condenser Mic Under 2000 - Amazon.in",
+        "meta": {
+          "snippet": "Akkord USB Condenser Microphone with RGB Lights, Real-Time Monitoring, Noise Cancellation, Plug & Play USB-C Mic for PC, Mac, Andr...",
+          "source": "Amazon.in"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "community",
+      "1": "other",
+      "2": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "quora.com: Q&A community platform",
+      "1": "amazon.in: retailer",
+      "2": "amazon.in: retailer"
+    },
+    "notes": "Whole answer read; no occurrence of \"cosmic\" or \"byte\". Subject absent."
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "id": "g168-cop-thecosmicbyte-gaming-microphone-under-2000",
+  "covers": "real copilot answer, gaming-peripherals-india, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T10:40:31.519Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming microphone under 2000 for streaming india",
+    "cell": {
+      "key": "7f887de7d75a895eee5709a7050e91992feac01ae0e3f5379cfda8a383154513",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For gaming and streaming under ₹2,000, the Maono AU-PM360TR is the top choice for PC and desk setups, while the Boya BY-M1 offers excellent versatility for starter setups across devices.\nRecommended Microphones\n1. Maono AU-PM360TR – Best for Gaming and Desktop Streaming\nType: Mini Condenser Microphone\nPrice: ₹1,700–₹2,000\nBest For: Gaming, voice-over, podcasts, tutorial recordings, and livestreams\nCompatibility: Windows PC, Mac, laptops, and recording software\nKey Features: Captures rich and clear desktop audio; ideal for close-range recordings at your desk; plug-and-play for immediate use 1.\nPros: Excellent voice clarity, suitable for live streaming, reliable performance, smooth plug-and-play experience.\nCons: Not designed for mobile recording or on-the-go vlogging.\n2. Boya BY-M1 – Most Versatile Wired Lavalier Mic\nType: Wired Clip-on Lavalier (TRRS)\nPrice: ₹900–₹1,200\nBest For: Beginners, tutorials, gaming commentary, indoor recording, and flexible setups where mobility is needed\nCompatibility: Android smartphones (adapter may be required for Type-C/Lightning), DSLR/mirrorless cameras, laptops, PCs, audio recorders 1.\nKey Features: Long 6m cable, foam windscreen, and clean vocal capture; reduces room echo effectively.\nPros: Excellent value for money, multi-device compatibility, natural voice capture, widely trusted for beginner content creators.\nCons: Cable management can become cumbersome; requires proper battery/mode setup for mobile devices.\n3. pTron KWM-1 – Wireless Type-C Option for Mobile Gaming and Streaming\nType: Wireless Lavalier Microphone (USB-C)\nPrice: ₹800–₹1,000\nBest For: Mobile-first creators, YouTube Shorts, Instagram Reels, on-the-go gaming content recording.\nKey Features: Plug-and-play with USB-C compatibility, rechargeable, portable, freedom to move while recording 1.\nPros: Wireless convenience, ideal for walking vlogs or mobile setups.\nCons: Audio quality slightly behind condenser or wired mics; short-range limitations compared to premium wireless mics.\nSelection Tips\nFor desktop streaming or PC gaming: Go with the Maono AU-PM360TR due to better audio fidelity and direct USB/PC compatibility.\nFor multi-device or beginner setups: The Boya BY-M1 provides versatility at an affordable price.\nFor mobile streaming or content creation on the go: Choose the pTron KWM-1 wireless microphone for freedom of movement.\nConsiderations\nBudget microphones under ₹2,000 usually offer clean vocal quality but may not capture studio-grade audio. Focus on positioning the mic closer to your mouth, minimizing background noise, and using basic acoustic treatment in your room for the best results.\nConfirm device compatibility (USB-C, Lightning, or TRRS) before purchasing to avoid connectivity issues.\nThese options provide a balance of affordability, quality, and usability, making them excellent picks for beginners to mid-level streamers and gamers in India Sourav Joshi's Unofficial Website+1.",
+    "citations": [
+      {
+        "url": "https://gamingnation.in/best-microphone-for-streaming-under-2000/",
+        "position": 0,
+        "title": "Best Microphone for Gaming and Streaming Under 2000 in",
+        "meta": {
+          "publisher": "gamingnation.in",
+          "icon_url": "blob:https://www.bing.com/4d753ccf-359e-4385-97a0-903991bd7c66"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/Dynamic-Up-to-%E2%82%B92-000-Microphones/s?rh=n%3A4654390031%2Cp_36%3A-200000",
+        "position": 1,
+        "title": "Amazon.in: Up To ₹2,000 - Dynamic / Microphones: Musical Instruments",
+        "meta": {
+          "publisher": "amazon.in",
+          "icon_url": "blob:https://www.bing.com/947ecb84-da9b-44da-ae0a-c2b6cb0199a6"
+        }
+      },
+      {
+        "url": "https://souravjoshivlogs.in/best-microphone-for-youtube/",
+        "position": 2,
+        "title": "Top 6 Microphone For YouTube Under ₹2000 In India (2026 Buying Guide)",
+        "meta": {
+          "publisher": "souravjoshivlogs.in",
+          "icon_url": "blob:https://www.bing.com/85451149-ec57-441f-a2a4-2d92e4c7cc4c"
+        }
+      },
+      {
+        "url": "https://www.flipkart.com/musical-instruments/studiostage-equipment-accessories/microphone/gaming~lifestyle/pr?sid=ypu,alc,3d4",
+        "position": 3,
+        "title": "Gaming Microphone - Buy Gaming Microphone Online at Best ... - Flipkart",
+        "meta": {
+          "publisher": "flipkart.com",
+          "icon_url": "blob:https://www.bing.com/2a5723d3-f4be-45f7-b316-1bf123af3240"
+        }
+      },
+      {
+        "url": "https://pakkapick.in/gaming/best-streaming-microphone-under-5000-india",
+        "position": 4,
+        "title": "Best Streaming Mic Under ₹5000 India 2026: 5 Picks",
+        "meta": {
+          "publisher": "pakkapick.in",
+          "icon_url": "blob:https://www.bing.com/9e5f324d-f9c2-46f9-8a05-8a00b30a54b1"
+        }
+      },
+      {
+        "url": "https://techlomedia.in/top-products/best-microphones-for-youtube-under-rs-2000/",
+        "position": 5,
+        "title": "Best Microphones for YouTube under Rs. 2000 - TechloMedia",
+        "meta": {
+          "publisher": "techlomedia.in",
+          "icon_url": "blob:https://www.bing.com/2f9b157b-c1e8-4cd8-b2b2-cf384e6a9a9d"
+        }
+      },
+      {
+        "url": "https://priceindia.in/esports-gaming-microphones/",
+        "position": 6,
+        "title": "Best Gaming Microphones in India for eSports, Youtube & Twitch",
+        "meta": {
+          "publisher": "priceindia.in",
+          "icon_url": "blob:https://www.bing.com/29b0a86b-394a-4490-9ca7-52921fc5d948"
+        }
+      },
+      {
+        "url": "https://reviehub.in/5-best-budget-microphones-in-india-2026-under-%E2%82%B9500-2000/",
+        "position": 7,
+        "title": "5 Best Budget Microphones in India 2026 | Under ₹500-2000",
+        "meta": {
+          "publisher": "reviehub.in",
+          "icon_url": "blob:https://www.bing.com/44f50548-0b28-4673-9747-a96d679e3593"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=tC2RiSriDiY",
+        "position": 8,
+        "title": "🎙️ Top 3 RGB Gaming Mics Under ₹2000 💥 Perfect for YouTube, Streaming & Gaming (2025)",
+        "meta": {
+          "publisher": "youtube.com",
+          "icon_url": "blob:https://www.bing.com/86c23509-8256-4071-9fc4-06b796c14412"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "gamingnation.in: gaming blog listicle, not in the publisher registry",
+      "1": "amazon.in: retailer",
+      "2": "souravjoshivlogs.in: blog, not in the publisher registry",
+      "3": "flipkart.com: retailer",
+      "4": "pakkapick.in: buying-guide blog, not in the publisher registry",
+      "5": "techlomedia.in: tech blog, not in the publisher registry",
+      "6": "priceindia.in: price/listicle site, not in the publisher registry",
+      "7": "reviehub.in: blogger's best-of article, not a user-review platform; unsure what else it is",
+      "8": "youtube.com watch page: video platform"
+    },
+    "notes": "Whole answer read; no occurrence of \"cosmic\" or \"byte\". Subject absent."
+  }
+}

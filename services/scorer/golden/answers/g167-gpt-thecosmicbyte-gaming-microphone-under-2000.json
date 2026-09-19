@@ -1,0 +1,117 @@
+{
+  "id": "g167-gpt-thecosmicbyte-gaming-microphone-under-2000",
+  "covers": "real chatgpt answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T10:39:55.397Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming microphone under 2000 for streaming india",
+    "cell": {
+      "key": "4a593819fec38ced6a77eaf5c1d8524841948efa7258c2fa82f25ec2c31cac32",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If your budget is **under ₹2,000 in India** and the main use is **gaming + YouTube/streaming**, these are the ones I’d shortlist:\n\nFIFINE K669B USB Condenser Microphone★ 4.7 · 249 reviewsR$77.80 · eBayMAONO Gaming USB Condenser Microphone★ 4.9 · 751 reviewsR$207.43 · eBay + othersSADES Night Owl USB Gaming MicrophoneR$183.31 · Microless.com\n\n### 🎙️ My picks\n\n- **🥇 FIFINE K669B — best overall**\n\nUSB, cardioid pickup and very good voice clarity for the money. It’s a commonly recommended starter streaming mic, although current Indian pricing can sometimes exceed ₹2,000.\n- **🥈 MAONO USB Gaming Mic — best for features**\n\nGood choice if you want **RGB + mute/noise-cancellation features** rather than the simplest possible mic.\n- **🥉 Cosmic Byte Lunatico — best cheap option**\n\nAround ₹1,200 in recent Indian listings; suitable for starting out with gaming/Discord/streaming.\n- **If your room is noisy:** look for a **dynamic USB mic** such as the **Maono PD100** or **FIFINE AM8**. Dynamic mics generally reject fan/room noise better, and recent Indian listings put these around ₹1,900–₹2,000.\n\n**My choice:** If you can find the **FIFINE K669B around ₹2,000 or less, get it.** If your room has a loud fan/people talking nearby, I'd prioritize a **dynamic mic** instead.\n\nIf you tell me **PC or laptop + whether your room has fan/AC noise**, I can pick the **single best mic under ₹2,000** for your setup.\n\nPGSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 740
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 740, in the list item \"Cosmic Byte Lunatico\". No citations. Other brands (FIFINE, MAONO, SADES) are outside the set and ignored."
+  }
+}

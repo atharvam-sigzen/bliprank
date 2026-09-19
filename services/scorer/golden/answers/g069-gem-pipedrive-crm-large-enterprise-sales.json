@@ -1,0 +1,214 @@
+{
+  "id": "g069-gem-pipedrive-crm-large-enterprise-sales",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: alias collision \"SAP Sales Cloud\"; brand names repeated inside engine UI markup attributes",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T05:26:02.594Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM do large enterprise sales organisations typically use?",
+    "cell": {
+      "key": "2cb7f80c1bec2f02ffd046d2b5d728bf48556b9a33570a51e8240e3b06dac11f",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Large enterprise sales organizations typically rely on a few dominant platforms capable of handling massive deal sizes, complex multi-tier territory structures, extensive customization, and strict compliance requirements.\n\n---\n\n### Key Enterprise CRM Platforms\n\n| Platform | Market Fit & Primary Focus | Strengths | Typical Use Cases |\n| :--- | :--- | :--- | :--- |\n| **Salesforce (Sales Cloud)** | **The Industry Standard**<br>Dominates global enterprise CRM market share. | Unmatched customization, massive AppExchange ecosystem, advanced reporting, robust AI workflow automation. | Multi-region Fortune 500 companies, highly complex sales models, multi-product revenue streams. |\n| **Microsoft Dynamics 365 Sales** | **Microsoft Ecosystem Centric**<br>Top choice for enterprises tied to Azure & Office 365. | Native Microsoft 365/Teams integration, strong ERP capabilities (Finance & Operations), enterprise security. | Financial services, healthcare, industrial manufacturing, organizations heavily invested in Microsoft stack. |\n| **HubSpot Enterprise** | **Fast-Growing Contender**<br>Popular for modern enterprise B2B tech and scale-ups. | Higher adoption rates, faster deployment, lower total cost of ownership (TCO) compared to legacy options. | B2B SaaS, mid-to-large tech companies needing tight alignment between Sales and Inbound Marketing. |\n| **Oracle CX / SAP Sales Cloud** | **ERP-Integrated Enterprises**<br>Chosen when CRM must tightly couple with back-office ERP systems. | Deep supply chain and ERP synchronization, handling complex global pricing models, custom quoting (CPQ). | Heavy industry, global manufacturing, supply chain, telecoms, large-scale consumer goods. |\n\n---\n\n### Why Enterprises Choose These over Mid-Market CRMs\n\n* **Complex Governance & Security:** Enterprise platforms offer granular field-level security, single sign-on (SSO), data residency options, and compliance certifications (SOC2, HIPAA, GDPR).\n* **Deep Customization (CPQ & Billing):** Large organizations require specialized Configure, Price, Quote (CPQ) tools to generate custom contracts, tiered discounts, and multi-currency billing.\n* **Integrations & Data Infrastructure:** These platforms feature extensive API frameworks to aggregate data from data warehouses (Snowflake, BigQuery), ERPs, and marketing automation stacks.\n* **Territory & Commission Management:** Built-in engine capacity to automatically route leads and assign accounts across thousands of sales reps based on region, deal size, or vertical.\n\n<ElicitationsGroup message=\"Where would you like to take this?\">\n\n  <Elicitation label=\"Compare Salesforce vs Microsoft Dynamics pricing and implementation costs\" query=\"Compare the total cost of ownership and implementation complexity between Salesforce Enterprise and Microsoft Dynamics 365.\"/>\n\n  <Elicitation label=\"Explore the best enterprise CPQ tools for complex sales\" query=\"What are the top Configure, Price, Quote (CPQ) tools that enterprise sales teams integrate into their CRM?\"/>\n\n  <Elicitation label=\"Analyze CRM options for a specific industry\" query=\"Which enterprise CRM is best suited for healthcare and financial services companies?\"/>\n</ElicitationsGroup>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales",
+      "HubSpot"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 370
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Microsoft Dynamics 365 Sales",
+        "offset": 687
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 1038
+      }
+    ],
+    "order": [
+      "Salesforce",
+      "Microsoft Dynamics 365 Sales",
+      "HubSpot"
+    ],
+    "citations": {},
+    "notes": "Subject absent. All three competitors first appear in table cells. Alias collision: \"Oracle CX / SAP Sales Cloud\" at 1376 contains Salesforce's alias \"Sales Cloud\" but names SAP's product (no effect: Salesforce is already named at 370). Salesforce and Microsoft Dynamics are named again inside the trailing <Elicitation .../> engine markup (2616, 2640, 2764, 2790); that is after their first appearances and changes nothing. No citations."
+  }
+}

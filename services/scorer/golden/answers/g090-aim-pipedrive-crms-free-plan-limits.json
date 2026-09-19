@@ -1,0 +1,328 @@
+{
+  "id": "g090-aim-pipedrive-crms-free-plan-limits",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: competitor's real site (www.zoho.com/crm) is not on its listed domain (crm.zoho.com), so it is other; subject absent",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:27:55.018Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRMs have a free plan, and what are the limits on it?",
+    "cell": {
+      "key": "2fdb9e633d88787e5ffa55242a0d5d31d415583d3ba0f2f7d9f82e4d7c5446ad",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Several popular CRMs offer robust \"free-forever\" plans. While they don't cost anything, every provider enforces specific caps on user seats, contacts, pipelines, or advanced features.\nThe top free CRM options and their exact limits include:\nHubSpot CRM\nUser Limit:: Unlimited users.\nContact Limit:: 1,000 marketing contacts (with a cap of 1 million total records across standard objects like companies, deals, and tickets).\nKey Limits:: Advanced reporting, deeper automated workflows, and complex permissions require paid upgrades.\nCheck details on the HubSpot CRM Pricing page.\nZoho CRM\nUser Limit:: Up to 3 users.\nContact Limit:: 5,000 records.\nKey Limits:: Limited to 150 emails per day and basic standard reporting. Advanced features like heavy workflow automation or massive integrations are restricted.\nExplore the breakdown on Zoho CRM Pricing.\nFreshsales (Freshworks)\nUser Limit:: Up to 3 users.\nContact Limit:: Basic contact and deal management for small teams, but strictly capped on advanced customization.\nKey Limits:: Basic contact management, built-in chat/email, and mobile app access, but lacks advanced lifecycle stages and heavy customization.\nView specs on the Freshsales Suite Pricing page.\nBitrix24: User Limit: Unlimited users.Storage Limit: 5 GB of online cloud storage.Key Limits: Highly feature-rich (including collaboration and task tools), but customer support on the free tier is community-only, and advanced automation rules are severely restricted.\nUser Limit:: Unlimited users.\nStorage Limit:: 5 GB of online cloud storage.\nKey Limits:: Highly feature-rich (including collaboration and task tools), but customer support on the free tier is community-only, and advanced automation rules are severely restricted.\nEngageBay: User Limit: Up to 15 users.Contact Limit: 500 contacts and 500 branded emails per month.Key Limits: Very generous user count for a free tier, but tightly capped on total storage and email sending volume.\nUser Limit:: Up to 15 users.\nContact Limit:: 500 contacts and 500 branded emails per month.\nKey Limits:: Very generous user count for a free tier, but tightly capped on total storage and email sending volume.",
+    "citations": [
+      {
+        "url": "https://www.hubspot.com/pricing/crm",
+        "position": 0,
+        "title": "Free Tools | HubSpot",
+        "meta": {
+          "snippet": "What are the limits of my free HubSpot account? HubSpot's free tools offer many lite versions of select tools featured in our paid...",
+          "source": "HubSpot",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.hubspot.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      },
+      {
+        "url": "https://www.zoho.com/en-us/crm/zohocrm-pricing.html",
+        "position": 1,
+        "title": "Zoho CRM Pricing and Editions - Free for 3 users",
+        "meta": {
+          "snippet": "Close more. Pay less. ... Contact managementManage all contacts important to your business in one place. No more scattered busines...",
+          "source": "Zoho",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.zoho.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      },
+      {
+        "url": "https://www.featurebase.app/blog/free-crm-software",
+        "position": 2,
+        "title": "Best Free CRM Software in 2026: 8 Top Picks Tested",
+        "meta": {
+          "snippet": "Is there a 100% free CRM? Yes, several CRMs offer free-forever plans, including HubSpot, Zoho, Bitrix24, Freshsales, and Agile CRM...",
+          "source": "Featurebase",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.featurebase.app&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 28, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=8lIyddD40as",
+        "position": 3,
+        "title": "3 Best Free CRM Tools (2026) I Moved My Whole Team Off ...",
+        "meta": {
+          "snippet": "and collaboration in one place. but if you only need the simplest. possible contact manager it may feel like more than you need gu...",
+          "source": "YouTube·Daniel | Tech & Data",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 23, 2026"
+        }
+      },
+      {
+        "url": "https://www.zoho.com/crm/what-is-zoho-crm-free-edition.html",
+        "position": 4,
+        "title": "A guide to Zoho CRM's free edition",
+        "meta": {
+          "snippet": "A guide to the Zoho CRM free edition. Zoho CRM's free edition isn't a trial CRM or a feature-locked starter kit; it's a full-funne...",
+          "source": "Zoho",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.zoho.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      },
+      {
+        "url": "https://www.freshworks.com/crm/suite/pricing/",
+        "position": 5,
+        "title": "Freshsales Suite Pricing & Plans - Freshworks",
+        "meta": {
+          "snippet": "Plans for. Freshsales Suite. Save 20% Annually Monthly. $9/user/month with 500 marketing contacts, billed annuallyFor startups and...",
+          "source": "Freshworks",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.freshworks.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=Mk3l5A9tL5w",
+        "position": 6,
+        "title": "Best Free CRM Software 2026 (Top 5 Free CRMs Handpicked)",
+        "meta": {
+          "snippet": "strong integrations with popular apps great for both sales and marketing teams scales easily as your business grows cons: paid pla...",
+          "source": "YouTube·Business Toolset",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Sep 7, 2025"
+        }
+      },
+      {
+        "url": "https://www.agenciareinicia.com/en/blog/free-vs-paid-zoho-crm/",
+        "position": 7,
+        "title": "Free vs. Paid Zoho CRM: Limits and Differences",
+        "meta": {
+          "snippet": "What's Included in the Free Zoho CRM Plan. Zoho CRM's free plan supports up to three users and includes the most basic features fo...",
+          "source": "Agencia Reinicia",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.agenciareinicia.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      },
+      {
+        "url": "https://www.emailtooltester.com/en/crm/freshsales-review/pricing/",
+        "position": 8,
+        "title": "Freshsales Pricing 2026 | Is it Really Worth it?",
+        "meta": {
+          "snippet": "Growth is the most affordable of the three plans, with prices starting at $11/user/month. The Pro plan starts at $47/month per use...",
+          "source": "EmailTooltester.com",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.emailtooltester.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citationClasses": {
+      "0": "competitor",
+      "1": "other",
+      "2": "other",
+      "3": "video",
+      "4": "other",
+      "5": "competitor",
+      "6": "video",
+      "7": "other",
+      "8": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 241
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 579
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 852
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Zoho CRM",
+      "Freshsales"
+    ],
+    "citations": {
+      "0": "host www.hubspot.com is on the competitor HubSpot's domain hubspot.com",
+      "1": "host www.zoho.com is NOT on Zoho CRM's listed domain crm.zoho.com, so other (rule 5)",
+      "2": "featurebase.app blog: vendor site, not in registry",
+      "3": "youtube.com watch page: video platform",
+      "4": "host www.zoho.com is NOT on Zoho CRM's listed domain crm.zoho.com, so other (rule 5)",
+      "5": "host www.freshworks.com is on the competitor Freshsales' domain freshworks.com",
+      "6": "youtube.com watch page: video platform",
+      "7": "agenciareinicia.com: agency blog, not in registry",
+      "8": "emailtooltester.com: editorial review blog, unsure, not a user-review platform I am confident of, not in registry"
+    },
+    "notes": "Subject absent from prose and citations. Citations 1 and 4 are Zoho's own pages about Zoho CRM (www.zoho.com/.../crm/...), but the competitor set lists only crm.zoho.com for Zoho CRM, and www.zoho.com is neither that host nor a subdomain of it, so by the protocol they are other, not competitor. Flagged because a reader plainly sees these as the competitor's site."
+  }
+}

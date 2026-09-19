@@ -1,0 +1,190 @@
+{
+  "id": "g032-gpt-pipedrive-move-customer-data-spreadsheets",
+  "covers": "real chatgpt answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: brand names elided from the stored text (\"include , , , and .\")",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-08-25T05:31:10.180Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+    "cell": {
+      "key": "840015ea1807935c3d4bb80cdd1f124bb7fd8a236f83bab30510b45738f31025",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Moving customer data from spreadsheets into a CRM safely is mostly a **migration and data preservation** problem. The goal is not just to copy names and emails — it’s to preserve the customer timeline: past purchases, notes, communications, ownership, and important context.\n\n## 1. Inventory what you have before moving anything\n\nStart by mapping your spreadsheets:\n\n- Customer/company records\n- Contacts and roles\n- Deals/opportunities\n- Past purchases or transactions\n- Support issues\n- Email/communication history\n- Notes and follow-up reminders\n- Sales rep ownership\n- Tags, categories, or segments\n\nCreate a simple field map:\n\n| Spreadsheet column | CRM field |\n| --- | --- |\n| Company Name | Account name |\n| Contact Name | Contact name |\n| Email | Email |\n| Phone | Phone |\n| Last Purchase Date | Custom date field |\n| Notes | Activity notes/timeline |\n| Sales Rep | Owner |\n\nAvoid importing everything blindly. Old duplicates, outdated contacts, and inconsistent fields create problems later.\n\n## 2. Clean the spreadsheet data first\n\nBefore importing:\n\n- Remove duplicate customers\n- Standardize formatting:\n\nPhone numbers\nCountry/state names\nDates\nCompany names\n- Separate contacts from companies if the CRM uses different records\n- Decide which fields should become:\n\nStandard CRM fields\nCustom fields\nNotes\nTags\n\nKeep a backup copy of the original spreadsheets.\n\n## 3. Preserve history, not just customer records\n\nCommon mistake: importing only the contact list and losing the story.\n\nWays to preserve history:\n\n- **Notes/history fields:** Import old notes into a CRM timeline or notes section.\n- **Activities:** If the CRM supports activity imports, map old calls, meetings, and follow-ups.\n- **Deals:** Import historical opportunities separately rather than attaching them as notes.\n- **Attachments:** Export and attach contracts, proposals, invoices, or documents where possible.\n- **Dates:** Preserve original timestamps so teams know when interactions happened.\n\nIf your spreadsheet has a column like:\n\n> \"Called Jan 12, interested, follow up after budget approval\"\n\ndon’t put that into a generic comment column if your CRM can represent it as an activity.\n\n## 4. Choose an import strategy\n\nMost migrations work best in stages:\n\n1. Import companies/accounts\n2. Import contacts\n3. Import deals or transactions\n4. Import activities/history\n5. Import attachments\n6. Validate everything\n\nDo a **test import with 50–100 records first**. Check:\n\n- Are contacts linked to the right companies?\n- Are owners assigned correctly?\n- Are dates preserved?\n- Are duplicates created?\n\n## 5. Use migration tools when history is complex\n\nFor simple spreadsheets, CSV import is usually enough.\n\nFor larger migrations with relationships and history, consider:\n\n- CRM migration services\n- Built-in migration tools\n- Data integration platforms\n\nExamples of CRM platforms with import/migration capabilities include , , , and . Their exact import options differ, especially for activities and historical records.\n\n## 6. Run a reconciliation check\n\nAfter migration, compare:\n\n- Total customers before vs. after\n- Number of contacts\n- Number of deals\n- Number of transactions\n- Random samples of customer histories\n\nKeep the spreadsheets read-only for a while as an archive until everyone trusts the CRM.\n\n## 7. Set rules so spreadsheets don’t come back\n\nAfter migration:\n\n- Make the CRM the source of truth\n- Define who owns customer updates\n- Create required fields\n- Train users on logging interactions\n- Restrict new customer tracking outside the CRM\n\nA good migration preserves not only **who the customer is**, but **why your team knows what it knows about that customer**.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "No brand is written anywhere. The sentence \"Examples of CRM platforms with import/migration capabilities include , , , and .\" has had its names removed before storage: four empty slots, nothing a reader can see, so nothing is counted."
+  }
+}

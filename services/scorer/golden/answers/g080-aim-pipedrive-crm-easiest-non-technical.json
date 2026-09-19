@@ -1,0 +1,272 @@
+{
+  "id": "g080-aim-pipedrive-crm-easiest-non-technical",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: duplicated answer blocks inflate counts; competitor also named by bare domain (monday.com) in prose",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:29:12.158Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Which CRM is easiest for a non-technical team to set up on their own?",
+    "cell": {
+      "key": "1f63cb4a9cc38d95337b9f8a8745a3d5b1e33fc2d2475e831c82264aa0f953cb",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For a non-technical team looking to set up a CRM entirely on their own without an IT specialist or developer, a few stand out for their intuitive interfaces, guided onboarding, and minimal learning curves.\nThe top recommendations, ranked by their ease of self-setup, include:\nPipedrive: Why it's great: Pipedrive was built explicitly by salespeople for salespeople. The entire philosophy is centered around a visual, drag-and-drop sales pipeline.Setup experience: It takes minutes to configure. You map out your deal stages (e.g., Lead In, Contact Made, Proposal Sent), import a CSV of contacts, and your team is ready to go. There is virtually no technical admin required.\nWhy it's great:: Pipedrive was built explicitly by salespeople for salespeople. The entire philosophy is centered around a visual, drag-and-drop sales pipeline.\nSetup experience:: It takes minutes to configure. You map out your deal stages (e.g., Lead In, Contact Made, Proposal Sent), import a CSV of contacts, and your team is ready to go. There is virtually no technical admin required.\nHubSpot CRM: Why it's great: HubSpot is widely recognized as one of the most user-friendly and polished platforms on the market. It offers a robust free tier and scales smoothly as you grow.Setup experience: The onboarding prompts guide you step-by-step through setting up your database, connecting your email inbox, and tracking your first deals. The interface is clean, modern, and hard to mess up, though it can feel overwhelming if you try to turn on all of its advanced marketing features at once.\nWhy it's great:: HubSpot is widely recognized as one of the most user-friendly and polished platforms on the market. It offers a robust free tier and scales smoothly as you grow.\nSetup experience:: The onboarding prompts guide you step-by-step through setting up your database, connecting your email inbox, and tracking your first deals. The interface is clean, modern, and hard to mess up, though it can feel overwhelming if you try to turn on all of its advanced marketing features at once.\nFreshsales (Freshworks): Why it's great: Known for out-of-the-box simplicity, Freshsales offers intuitive contact management, built-in email and phone tracking, and AI-powered lead scoring without needing complex configurations.Setup experience: It features a clean dashboard and a straightforward setup wizard. Teams can get basic automations (like auto-assigning leads) running using simple \"if/then\" visual logic instead of code.\nWhy it's great:: Known for out-of-the-box simplicity, Freshsales offers intuitive contact management, built-in email and phone tracking, and AI-powered lead scoring without needing complex configurations.\nSetup experience:: It features a clean dashboard and a straightforward setup wizard. Teams can get basic automations (like auto-assigning leads) running using simple \"if/then\" visual logic instead of code.\nMonday CRM (by Monday.com): Why it's great: If your team already uses a spreadsheet-style task tracker or project management tool, monday.com will feel instantly familiar.Setup experience: It uses highly visual, customizable board layouts. Setting up your CRM feels like building a smart spreadsheet, making it exceptionally friendly for non-technical users who want to customize fields and views visually.\nWhy it's great:: If your team already uses a spreadsheet-style task tracker or project management tool, monday.com will feel instantly familiar.\nSetup experience:: It uses highly visual, customizable board layouts. Setting up your CRM feels like building a smart spreadsheet, making it exceptionally friendly for non-technical users who want to customize fields and views visually.",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/watch?v=6XtgDmEtP1E&vl=en-US",
+        "position": 0,
+        "title": "Top 5 CRM Software For Small Businesses in 2026",
+        "meta": {
+          "snippet": "Top 5 CRM Software For Small Businesses in 2026 but also requires a bit more structure in how everything is set up so Zoho is a gr...",
+          "source": "YouTube·Daniel | Tech & Data",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "May 25, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=8lIyddD40as",
+        "position": 1,
+        "title": "3 Best Free CRM Tools (2026) I Moved My Whole Team Off ...",
+        "meta": {
+          "snippet": "mates most free CRM tools look helpful at first but the real question is what they actually give you without forcing you to upgrad...",
+          "source": "YouTube·Daniel | Tech & Data",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Jul 23, 2026"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=oR4QKEqV6MQ",
+        "position": 2,
+        "title": "5 Best Open Source CRM Software in 2026",
+        "meta": {
+          "snippet": "and plenty of room to customize the system around your own business process The main thing to keep in mind is that self-hosting do...",
+          "source": "YouTube·CRM Central",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Aug 13, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 3,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Freshsales",
+      "monday CRM"
+    ],
+    "citationClasses": {
+      "0": "video",
+      "1": "video",
+      "2": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 276
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 303
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 691
+      },
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 1064
+      },
+      {
+        "brand": "freshsales",
+        "span": "Freshsales",
+        "offset": 2060
+      },
+      {
+        "brand": "monday-crm",
+        "span": "Monday CRM",
+        "offset": 2904
+      }
+    ],
+    "order": [
+      "Pipedrive",
+      "HubSpot",
+      "Freshsales",
+      "monday CRM"
+    ],
+    "citations": {
+      "0": "youtube.com watch page: video platform",
+      "1": "youtube.com watch page: video platform",
+      "2": "youtube.com watch page: video platform"
+    },
+    "notes": "The answer repeats each block (the scraped layout duplicates the \"Why it's great\" / \"Setup experience\" text); each written occurrence is counted, so the subject is 3 (276 list heading, 303, and the repeated sentence at 691). monday CRM's first mention is \"Monday CRM\" at 2904 (casing variant of the name). bare-domain mention at offset 2919 (\"Monday.com\"), bare-domain mention at offset 3035 (\"monday.com\"), bare-domain mention at offset 3415 (\"monday.com\"): all three are the competitor monday CRM, none is the first occurrence."
+  }
+}

@@ -1,0 +1,295 @@
+{
+  "id": "g098-cop-sigzen-erp-software-real-estate",
+  "covers": "real copilot answer, erp-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively · seen on reading: competitors named only as integration targets in one parenthesis; short form Microsoft Dynamics; bare SAP not counted",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T11:19:24.983Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP software for real estate business with project tracking",
+    "cell": {
+      "key": "0b34466ad415972af0dbf20ea67ca5c215f1c376b8a1753bbd698c867b3c1665",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Several ERP platforms combine financial management, property operations, and project tracking, helping real estate businesses streamline both administrative and field workflows.\nTop ERP Platforms for Real Estate with Project Tracking\n1. Yardi Voyager – Flagship ERP for property management across residential, commercial, student, and affordable housing. It integrates lease management, maintenance, procurement, financials, and reporting. Yardi excels at consolidating multi-property operations, tracking project progress, and generating real-time dashboards .\n2. MRI Software – An extensible platform suitable for residential and commercial portfolios. Includes modules for property accounting, lease administration, maintenance, budgeting, and analytics. MRI supports project management through customizable workflows and reporting .\n3. RealPage – Focused on residential property management, this ERP provides analytics for leasing, revenue optimization, maintenance, and project metrics. RealPage supports timelines, budget tracking, and operational KPIs, ideal for project oversight .\n4. Focus ERP – Designed for real estate and construction industries, Focus provides AI-driven applications, project and sales tracking, construction progress monitoring, and real-time reporting. Offers customizable modules to track development or renovation projects, integrate financials, and manage CRM, inventory, and HR .\n5. NWAY ERP – Cloud-based ERP that emphasizes project management, resource allocation, and financial tracking for the real estate sector. Real-time data synchronization allows teams to monitor multiple projects from various locations, ensuring timely updates and accountability .\n6. DualEntry – AI-native ERP optimized for multi-entity consolidation, real-time dashboards, lease accounting, and asset tracking. Useful for complex property portfolios with multiple projects, offering compliance support (ASC 842, IFRS 16) and advanced reporting .\nFeatures to Look For in Real Estate ERP for Project Tracking\nIntegrated Project Management – Ability to plan, track, and report on construction or property renovation projects in real time.\nFinancial Consolidation – Manage multiple entities and automate intercompany transactions.\nWorkflow Automation – Automate lease tracking, approvals, maintenance requests, and billing for faster project execution.\nDashboards & Analytics – Real-time insights into budgets, project timelines, occupancy rates, and cash flow.\nThird-Party Integrations – Seamless integration with accounting software (QuickBooks, Microsoft Dynamics, SAP), CRM (Salesforce, Zoho), and collaboration tools.\nCloud Access and Mobility – Teams can access ERP on-site or remotely for efficient project oversight.\nRecommendations for Selection\nSmall to Mid-Sized Real Estate Firms: Consider Buildium or AppFolio for cost-effective property management with basic project tracking 2.\nLarge or Multi-Entity Operations: Yardi Voyager, MRI Software, Focus ERP, and NWAY ERP provide more robust project management, financial consolidation, and multi-entity handling 2.\nPilot Testing: Run a pilot on live projects to assess usability for budget tracking, scheduling accuracy, and team collaboration before full deployment 1.\nIn conclusion, selecting the right ERP depends on your portfolio size, project complexity, and need for integrated financial and operational visibility. Platforms like Yardi Voyager, Focus ERP, and NWAY ERP stand out for combining property management with robust project tracking, ensuring projects run efficiently and financial performance is transparent across multiple properties +1.",
+    "citations": [
+      {
+        "url": "https://thecfoclub.com/tools/best-real-estate-erp-software/",
+        "position": 0,
+        "title": "10 Best Real Estate ERP Software Reviewed in 2026 - The CFO Club",
+        "meta": {
+          "publisher": "thecfoclub.com",
+          "icon_url": "blob:https://www.bing.com/3d4361a5-39a0-4783-a918-8bec65076232"
+        }
+      },
+      {
+        "url": "https://www.proprofsproject.com/blog/best-real-estate-project-management-software/",
+        "position": 1,
+        "title": "10 Best Real Estate Project Management Software for 2026",
+        "meta": {
+          "publisher": "proprofsproject.com",
+          "icon_url": "blob:https://www.bing.com/d651398a-4af5-4123-878a-fdaf38b7d3a2"
+        }
+      },
+      {
+        "url": "https://www.cleverence.com/articles/erp-reviews/best-10-erps-for-real-estate-and-property-5832/",
+        "position": 2,
+        "title": "Top 10 ERP Platforms for Real Estate and Property Management",
+        "meta": {
+          "publisher": "cleverence.com",
+          "icon_url": "blob:https://www.bing.com/d37e7aff-845d-4355-a123-4f2ff3f5a6c6"
+        }
+      },
+      {
+        "url": "https://research.com/software/real-estate-erp-software",
+        "position": 3,
+        "title": "Best Real Estate ERP Software for 2026 - Research.com",
+        "meta": {
+          "publisher": "research.com",
+          "icon_url": "blob:https://www.bing.com/2a9ef600-b314-4d2d-af6f-95c1971b324b"
+        }
+      },
+      {
+        "url": "https://www.randgroup.com/insights/industries/construction-real-estate/top-erp-for-real-estate-flexible-erp-platforms-for-growing-portfolios/",
+        "position": 4,
+        "title": "Top ERP for real estate: Flexible ERP platforms for growing portfolios",
+        "meta": {
+          "publisher": "randgroup.com",
+          "icon_url": "blob:https://www.bing.com/51a39ea0-4a3a-4e44-b101-272f40a10825"
+        }
+      },
+      {
+        "url": "https://thedigitalprojectmanager.com/tools/best-real-estate-project-management-software/",
+        "position": 5,
+        "title": "10 Best Real Estate Project Management Software In 2026",
+        "meta": {
+          "publisher": "thedigitalprojectmanager.com",
+          "icon_url": "blob:https://www.bing.com/290a4494-051e-45cd-b25e-21120accee8b"
+        }
+      },
+      {
+        "url": "https://estateerp.com/",
+        "position": 6,
+        "title": "EstateERP - Trusted Real Estate Software",
+        "meta": {
+          "publisher": "estateerp.com",
+          "icon_url": "blob:https://www.bing.com/f61b2372-786b-4179-9561-47e195cbab04"
+        }
+      },
+      {
+        "url": "https://softwarefinder.com/enterprise-resource-planning-software/real-estate-erp",
+        "position": 7,
+        "title": "ERP For Real Estate 2026 – Top Features, Benefits, And Expert Guide",
+        "meta": {
+          "publisher": "softwarefinder.com",
+          "icon_url": "blob:https://www.bing.com/76eea000-5043-412a-b952-40d0a78e236c"
+        }
+      },
+      {
+        "url": "https://www.itransition.com/erp/real-estate",
+        "position": 8,
+        "title": "ERP for Real Estate: Features, Integrations, Tools and Value",
+        "meta": {
+          "publisher": "itransition.com",
+          "icon_url": "blob:https://www.bing.com/eaabf060-d7a2-4e29-bea4-b84fcf96e435"
+        }
+      },
+      {
+        "url": "https://askdaman.com/real-estate-erp-software/",
+        "position": 9,
+        "title": "10 Best Real Estate ERP Software In 2025 - askdaman.com",
+        "meta": {
+          "publisher": "askdaman.com",
+          "icon_url": "blob:https://www.bing.com/242953c9-d97b-45af-aae5-f9f97b796a33"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "QuickBooks",
+      "Microsoft Dynamics 365",
+      "Salesforce"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:quickbooks",
+        "span": "QuickBooks",
+        "offset": 2548
+      },
+      {
+        "brand": "promoted:microsoftdynamics365",
+        "span": "Microsoft Dynamics",
+        "offset": 2560
+      },
+      {
+        "brand": "promoted:salesforce",
+        "span": "Salesforce",
+        "offset": 2591
+      }
+    ],
+    "order": [
+      "QuickBooks",
+      "Microsoft Dynamics 365",
+      "Salesforce"
+    ],
+    "citations": {
+      "0": "thecfoclub.com: blog listicle, not in registry",
+      "1": "proprofsproject.com blog: vendor site, not in registry",
+      "2": "cleverence.com articles: vendor site, not in registry",
+      "3": "research.com: rankings/guide site, not a reference source in ADR-0005's sense; other",
+      "4": "randgroup.com: consultancy site, not in registry",
+      "5": "thedigitalprojectmanager.com: blog listicle, not in registry",
+      "6": "estateerp.com: vendor site, not in registry",
+      "7": "softwarefinder.com: software listing/comparison site; unsure it is primarily a user-review platform, so other",
+      "8": "itransition.com: consultancy/vendor site, not in registry",
+      "9": "askdaman.com: blog listicle, not in registry"
+    },
+    "notes": "Subject absent. All three competitors appear once, in one parenthesis of integration targets (\"QuickBooks, Microsoft Dynamics, SAP), CRM (Salesforce, Zoho)\"). short form / unlisted form: \"Microsoft Dynamics\" at 2560 counted for Microsoft Dynamics 365. Bare \"SAP\" at 2580 NOT counted as SAP Business One (company name only). Unsure: citation 7 softwarefinder.com may be a review platform."
+  }
+}

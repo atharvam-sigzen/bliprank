@@ -1,0 +1,259 @@
+{
+  "id": "g016-aim-pipedrive-best-crm-mid-market",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, favicon, snippet, source) · seen on reading: competitor bare-domain mention (Monday.com)",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:05:29.789Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+    "cell": {
+      "key": "9f699ab9ee2ce5fb3e06ff5a2b5c9652543848bb1cd60d5bafe9bdbad0943194",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "When a mid-market company transitions away from spreadsheets, it typically needs a CRM that provides structured data, scalable automation, cross-department visibility, and a manageable learning curve without jumping straight into enterprise-level complexity and cost.\nThe best options tailored for mid-market growth depend heavily on your team's primary focus:\nHubSpot CRM: Best for marketing-led and inbound growth teams. It bridges marketing automation, sales pipelines, and customer service seamlessly. It is widely praised for having a user-friendly interface that encourages high user adoption—crucial when weaning a team off familiar spreadsheets. However, costs can accelerate quickly as you scale up contacts and add advanced features. Explore features on HubSpot.\nActiveCampaign:: Best for heavy email automation and customer experience. If your spreadsheet workaround relied heavily on custom tracking for segmented customer journeys, nurturing, and automated follow-ups, ActiveCampaign punches well above its weight class for mid-market budgets without the bloat of enterprise suites. Check details on ActiveCampaign.\nPipedrive: Best for sales-first organizations. If your spreadsheet was essentially a massive, manual sales tracker, Pipedrive offers a clean, visual, activity-based pipeline that forces good habits. It's fast to implement and easy to learn, though it requires third-party integrations if you need deep marketing or service desk tools. Look into it via Pipedrive.\nZoho CRM: Best for value and deep customizability. Zoho is an exceptional mid-market choice if you operate on a tighter budget or need heavily tailored modules that mimic your exact old spreadsheet logic. It has a steeper learning curve, but the breadth of its ecosystem is hard to beat for the price. Learn more at Zoho CRM.\nMonday CRM: Best for visual project-and-sales tracking. Built on top of Monday's flexible workflow framework, this option feels the most natural to teams who love the grid/table layout of spreadsheets but desperately need relational data, automations, and team collaboration attached to it. Check it out on Monday.com.",
+    "citations": [
+      {
+        "url": "https://www.youtube.com/watch?v=Zq1kfwRWkmk&t=29",
+        "position": 0,
+        "title": "BEST CRM Software | Tested 15 CRMs for 2026 (HONEST ...",
+        "meta": {
+          "snippet": "Zoho CRM is the top choice for budget-conscious teams seeking extensive customization within a connected ecosystem across various ...",
+          "source": "YouTube·Consumer Desire",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Dec 15, 2025"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=jtT5EHUaAsM&vl=en-US",
+        "position": 1,
+        "title": "5 Best CRM Software - 2026 | What is The Real Difference?",
+        "meta": {
+          "snippet": "Monday stands out for its user-friendliness and team collaboration capabilities but may lack depth in advanced sales functionaliti...",
+          "source": "YouTube·Daniel | Tech & Data",
+          "favicon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://www.youtube.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+          "date": "Mar 18, 2026"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 3,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 2,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Zoho CRM",
+      "monday CRM"
+    ],
+    "citationClasses": {
+      "0": "video",
+      "1": "video"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 361
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1129
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1245
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1481
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 1492
+      },
+      {
+        "brand": "monday-crm",
+        "span": "Monday CRM",
+        "offset": 1818
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Pipedrive",
+      "Zoho CRM",
+      "monday CRM"
+    ],
+    "citations": {
+      "0": "youtube.com watch page: video platform",
+      "1": "youtube.com watch page: video platform"
+    },
+    "notes": "The third subject mention (\"Look into it via Pipedrive.\" at 1481) is the visible text of a stripped link, which is prose. bare-domain mention at offset 2125 (\"Monday.com\", competitor monday CRM, not its first occurrence; first is \"Monday CRM\" at 1818). ActiveCampaign is not in the set."
+  }
+}

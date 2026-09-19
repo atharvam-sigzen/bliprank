@@ -1,0 +1,178 @@
+{
+  "id": "g161-aio-thecosmicbyte-gaming-controller-hall-effect",
+  "covers": "real google-ai-overviews answer, gaming-peripherals-india, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (date, snippet, source); domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-09-01T10:36:36.370Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming controller with hall effect joysticks for pc india",
+    "cell": {
+      "key": "e5988bad9331513d4c44dedff26f6ea94b4b56d8d69d60913d267fbb0ebc63a9",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The Ant Esports SUPERNOVA and Cosmic Byte Blitz are popular budget-friendly gaming controllers with Hall Effect joysticks available for PC users in India.\nTop Hall Effect Controllers for PC in India\nHall Effect joysticks use magnetic sensors instead of mechanical parts to prevent stick drift (unwanted movement on screen when you are not touching the stick) and last much longer.\nWatch this video review to see a performance and feature test of popular budget Hall Effect controllers in India:3:41Best Hall Effect Controller Under ₹1999 🔥 | Kreo Surge XB ...2.4K views · 4 months agoYouTube · Sahil Techzone",
+    "citations": [
+      {
+        "url": "https://www.reddit.com/r/IndianGaming/comments/1gnwzgr/need_opinions_on_hall_effect_controller_and/",
+        "position": 0,
+        "title": "Need opinions on hall effect controller and alternatives if any",
+        "meta": {
+          "snippet": "Cosmic Byte Blitz Controller: The Cosmic Byte Blitz is a highly recommended hall effect controller, often considered the cheapest ...",
+          "source": "Reddit·r/IndianGaming",
+          "date": "Nov 10, 2024"
+        }
+      },
+      {
+        "url": "https://www.reddit.com/r/buildapc/comments/1lmszlm/hall_effect_joysticks_what_is_the_best_controller/",
+        "position": 1,
+        "title": "Hall Effect joysticks: what is the best controller you can ...",
+        "meta": {
+          "snippet": "Hall Effect Joystick Benefits: Hall Effect joysticks utilize a magnet and voltage detection system, which significantly reduces ph...",
+          "source": "Reddit·r/buildapc",
+          "date": "Jun 28, 2025"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=ytRuagP2i1A",
+        "position": 2,
+        "title": "Best Hall Effect Controller Under ₹1999 🔥 | Kreo Surge XB ...",
+        "meta": {
+          "snippet": "gaming controllers in India for PC and mobile gaming. This Hall ... This Hall Effect controller comes with drift-free joysticks, 1...",
+          "source": "YouTube·Sahil Techzone",
+          "date": "Apr 2, 2026"
+        }
+      },
+      {
+        "url": "https://www.amazon.in/hall-effect-controller/s?k=hall+effect+controller",
+        "position": 3,
+        "title": "Hall Effect Controller - Amazon.in",
+        "meta": {
+          "snippet": "Ant Esports SUPERNOVA Tri-Mode Wireless Gaming Controller, Bluetooth & 2.4G USB Gamepad with Hall Effect Joysticks & Triggers, RGB...",
+          "source": "Amazon.in"
+        }
+      },
+      {
+        "url": "https://www.google.com/goto?url=CAESpQEB6zswFROylGevwgKmre__na6zfVzqB65AZEAyWI1-uXxv7JI7cJ9kCmZa038BpDZ590UBQ4hQ2dLvHHnJhoNWdhLvefujvH5An_HcNeLsX66XrYPVz9Aws-E-NgdoJagZ7eLEbcrFIMbQTB2Pv6KflIbCoO69pG-I0woB2DMVZKSPdH339rFyXWV4O063KxfvbiUI_bHQEAXH-FF3QgXjRDCBvsM",
+        "position": 4,
+        "title": "Gaming Controller with Hall Effect Joystick: A Comprehensive Guide | Lenovo India",
+        "meta": {
+          "snippet": "Hall effect joysticks are a type of joystick that uses magnetic sensors to detect movement. They offer a number of benefits for ga...",
+          "source": "Lenovo"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "community",
+      "1": "community",
+      "2": "video",
+      "3": "other",
+      "4": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 30
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {
+      "0": "reddit.com thread: community platform",
+      "1": "reddit.com thread: community platform",
+      "2": "youtube.com watch page: video platform",
+      "3": "amazon.in: retailer search page",
+      "4": "google.com/goto redirect; title and source say Lenovo India: vendor site, not in the publisher registry"
+    },
+    "notes": "unlisted form: \"Cosmic Byte\" (spaced trading name), in \"The Ant Esports SUPERNOVA and Cosmic Byte Blitz are popular...\". Ant Esports comes first in the text but is not in the brand set, so the subject is position 1 of 1. No citation is on thecosmicbyte.com."
+  }
+}

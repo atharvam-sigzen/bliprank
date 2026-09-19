@@ -1,0 +1,239 @@
+{
+  "id": "g066-aio-pipedrive-best-crm-solo-founder",
+  "covers": "real google-ai-overviews answer, crm-software, from the stratified worklist: citation metadata in google-ai-overviews's own dialect (source) · seen on reading: subject absent; a competitor company's other site (bigin.com) is not on the competitor's listed domain",
+  "source": {
+    "engine": "google-ai-overviews",
+    "collectedAt": "2026-08-25T05:00:28.722Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "What is the best CRM for a solo founder just starting out?",
+    "cell": {
+      "key": "9e2bd1041e02317baf43d93a3a1bb9ba0ce603638d265856d21cec8f9cb540ca",
+      "adapter": "openwebninja:google-ai-overviews",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "The best CRM for a solo founder just starting out is HubSpot CRM because its free tier offers a complete, user-friendly platform for contact management, email tracking, and deal pipelines without a steep learning curve.\nTop CRM Options for Solo Founders",
+    "citations": [
+      {
+        "url": "https://medium.com/@nikolaosdemetriou/best-crm-for-solopreneurs-in-2025-9d7bd32dc9cc",
+        "position": 0,
+        "meta": {
+          "source": "Medium"
+        }
+      },
+      {
+        "url": "https://getcoherence.io/blog/best-crm-solo-founders-2026",
+        "position": 1,
+        "meta": {
+          "source": "Coherence XRM"
+        }
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=vhVkw-jF01o&t=444",
+        "position": 2,
+        "meta": {
+          "source": "YouTube"
+        }
+      },
+      {
+        "url": "https://www.bigin.com/crm-for-solopreneurs.html",
+        "position": 3,
+        "meta": {
+          "source": "Bigin by Zoho CRM"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "HubSpot"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "video",
+      "3": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 53
+      }
+    ],
+    "order": [
+      "HubSpot"
+    ],
+    "citations": {
+      "0": "medium.com: a blogging platform post, not a forum or Q&A thread; unsure it is community, so other",
+      "1": "getcoherence.io blog: vendor site, not in registry",
+      "2": "www.youtube.com watch page: video platform",
+      "3": "bigin.com: Zoho's Bigin product site; not on the competitor's listed domain crm.zoho.com, so other (rule 5)"
+    },
+    "notes": "The answer is one sentence plus a heading; the subject is absent. Citation 3 (bigin.com, source \"Bigin by Zoho CRM\") is run by Zoho but is not on Zoho CRM's listed domain crm.zoho.com, so it cannot be competitor. Unsure about medium.com: it hosts user-written posts, but it is a blog host rather than a discussion forum, so other."
+  }
+}

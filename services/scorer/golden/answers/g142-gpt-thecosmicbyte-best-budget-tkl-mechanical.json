@@ -1,0 +1,137 @@
+{
+  "id": "g142-gpt-thecosmicbyte-best-budget-tkl-mechanical",
+  "covers": "real chatgpt answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively · seen on reading: brand named only by its spaced trading name; one mention sits in a product-card line glued to a price",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T10:32:54.989Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "best budget tkl mechanical keyboard for gaming in india",
+    "cell": {
+      "key": "4b4ea20634ce702338da28ae0e2149150e35cede5ac65325022eec08ded4f384",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If you want a **budget TKL mechanical keyboard specifically for gaming in India**, I’d shortlist these:\n\n### 🏆 Best picks\n\n1. **Cosmic Byte CB-GK-42 Phantom TKL — ~₹3,000**\n\n**Best overall value**\n82-key TKL\nPre-lubed Outemu Red switches\n**Hot-swappable**\nGasket mount\n1000 Hz polling\nUSB-C + per-key RGB\nGreat choice for FPS games and general use.\n\nCosmic Byte Phantom TKL$30.32 · Vishal Peripherals\n\n1. **Redragon K552 Kumara TKL — ~₹2,000–₹2,300**\n\n**Best cheap TKL**\n87 keys\nTraditional mechanical switches\nSolid, proven budget design\nWired, so no battery/connection concerns\nExcellent if you just want a reliable gaming keyboard without spending much.\n\nRedragon Kumara K552$36.99 · Best Buy\n\n1. **Cosmic Byte CB-GK-25 Pandora — ~₹1,600**\n\n**Best ultra-budget TKL**\nTKL layout\nSwappable mechanical switches\nRGB\nVery popular in India\nA good first mechanical keyboard if ₹3,000 feels too much.\n\n### My recommendation\n\n**If your budget is ₹3,000 → get the Cosmic Byte Phantom TKL.** Its gasket mount, pre-lubed Reds and hot-swap support make it a significant step up from basic budget boards.\n\n**If your budget is ₹2,000 or less → get the Cosmic Byte Pandora or look for the Redragon K552 on sale.**\n\nFor gaming, I'd choose **Red/linear switches** over Blue switches—they're smoother and less distracting during rapid key presses.\n\nIf you tell me your **exact budget (₹1,500 / ₹2,000 / ₹3,000 / ₹5,000)** and whether you play **Valorant/CS2 or single-player games**, I can pick the **single best keyboard currently available in India**.\n\n9GSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 5,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 129
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 351
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 703
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 958
+      },
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 1141
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (the spaced trading name; the listed alias is the squashed \"thecosmicbyte\"). The occurrence at 351 is a shopping product-card line (\"Cosmic Byte Phantom TKL$30.32 · Vishal Peripherals\"); it is visible answer text, not a URL, so it is counted. No competitor set. No citations."
+  }
+}

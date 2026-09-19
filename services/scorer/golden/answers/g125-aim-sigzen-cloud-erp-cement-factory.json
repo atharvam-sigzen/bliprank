@@ -1,0 +1,194 @@
+{
+  "id": "g125-aim-sigzen-cloud-erp-cement-factory",
+  "covers": "real google-ai-mode answer, erp-software, from the stratified worklist: citation metadata in google-ai-mode's own dialect (date, snippet, source); domain-label subject matched separator-insensitively · seen on reading: different product of the same company (SAP S/4HANA is not SAP Business One); citation URL is a relative /goto redirect with no host",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-09-01T11:22:31.971Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "cloud ERP for cement factory with quality control modules",
+    "cell": {
+      "key": "eac703c30b387830b1fbc9da9860e6861a621c39bd587b61bfaff4305f1144f2",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Shared0 files\nImplementing a cloud ERP for a cement manufacturing facility requires a system capable of handling continuous process manufacturing, heavy batch/formula management, high energy consumption tracking, strict environmental compliance, and rigorous quality control.\nThe key cloud ERP solutions capable of managing cement operations alongside robust Quality Management Systems (QMS) or quality control modules include:\nTop Cloud ERP Options for Cement Manufacturing\nSAP S/4HANA Cloud (Public or Private Edition):: The industry gold standard for large-scale heavy manufacturing and process industries. SAP's Quality Management (QM) module handles raw material inspection (limestone, clay, additives), in-process testing (clinker chemistry, fineness, setting time), and final product certification (AASHTO/ASTM compliance). It features robust integration with plant maintenance and process control systems. You can review deployment options via SAP S/4HANA Cloud.\nOracle NetSuite / Oracle Cloud ERP:: Highly scalable cloud ERP platforms with powerful supply chain and integrated quality management tools. Oracle’s quality management module lets you define specs for raw material input, track chemical composition variations, log lab test results, and trigger non-conformance workflows if a batch falls outside acceptable Blaine fineness or compressive strength parameters. Learn more via Oracle NetSuite.\nMicrosoft Dynamics 365 (Supply Chain Management / Finance & Operations):: A powerful enterprise cloud platform providing end-to-end visibility. D365 includes native quality management features to manage quality associations, test groups, and quarantine zones for defective cement lots, alongside deep analytics for energy usage and kiln efficiency. More information is available on Microsoft Dynamics 365.\nSage X3:: A popular cloud-enabled ERP for mid-to-large process manufacturers. It provides comprehensive formula/recipe management, batch tracking, inventory optimization, and robust shop-floor quality control checks essential for blending operations.\nCritical Quality Control (QC) Features Needed for Cement\nWhen vetting these cloud ERP modules, ensure the QC system covers:",
+    "citations": [
+      {
+        "url": "https://www.cementequipment.org/home/best-erp-system-for-cement-factory-a-comprehensive-guide-to-optimizing-your-operations/",
+        "position": 0,
+        "title": "ERP for Cement Factories - infinity for cement equipment",
+        "meta": {
+          "snippet": "1. Industry-Specific Modules A cement factory requires specialized modules that can handle unique industry needs such as raw mater...",
+          "source": "infinity for cement equipment"
+        }
+      },
+      {
+        "url": "/goto?url=CAESoQEB6zswFSk7aPWImDyk1Zon3YOYdu-ihdy6Rl86clNYPKVfMNijYezRpwfQH2xSuPcyyXgeDQ9KP1ui4EW-k0J5Z4Bp_Lg6LXnYv92vZjtrjn5IkGDVXA-_Wn3xnP8Uw043xkl-s6inzhCLDbsU_tssq9610IV0ZehG45_kBBbNCpx6CbTmdROh_LiIOHnkiBVt2xGCU4Nw5GuQyjjYJgouLQ",
+        "position": 1,
+        "title": "ERP in Cement Sector: Driving Operational Efficiency & Digital ...",
+        "meta": {
+          "snippet": "Cementing the Future: How ERP Systems Drive Efficiency in the Cement Sector * The prospects. Streamlining intricate operations and...",
+          "source": "Ramco",
+          "date": "Aug 25, 2023"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "Microsoft Dynamics 365"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:microsoftdynamics365",
+        "span": "Microsoft Dynamics 365",
+        "offset": 1412
+      }
+    ],
+    "order": [
+      "Microsoft Dynamics 365"
+    ],
+    "citations": {
+      "0": "cementequipment.org: industry blog/site, not in registry",
+      "1": "relative /goto?url= redirect with no host, destination not visible; publisher field names Ramco, a vendor: other"
+    },
+    "notes": "Sigzen absent. \"SAP S/4HANA Cloud\" (475, 952) and \"SAP's Quality Management (QM) module\" (610, about S/4HANA) are a different SAP product, not SAP Business One: not counted. \"D365\" at 1556 is a later short form of Microsoft Dynamics 365. Oracle NetSuite and Sage X3 are outside the brand set. Citation 1 has no host."
+  }
+}

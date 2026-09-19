@@ -1,0 +1,366 @@
+{
+  "id": "g014-cop-pipedrive-best-crm-mid-market",
+  "covers": "real copilot answer, crm-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher) · seen on reading: review-platform citation on a blog subdomain",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-08-25T05:05:07.406Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "Best CRM for a mid-market company that has outgrown spreadsheets",
+    "cell": {
+      "key": "239864ac3f7fd962b291fc7bd47a52a2bd397423c69685f68df6633310dbcba2",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For mid-market companies ready to move beyond spreadsheets, HubSpot Sales Hub Pro, Salesforce Sales Cloud Professional, and Zoho CRM Enterprise are the leading CRM options, selected for scalability, workflow automation, and cost-effectiveness.\nTop CRM Options for Mid-Market Companies\n1. HubSpot Sales Hub Pro – Best overall for marketing-led mid-market companies HubSpot offers a unified marketing and sales platform with strong automation workflows, lead scoring, and forecasting. It is ideal for companies already using marketing tools or inbound strategies. Key features include multi-step automation, custom dashboards, and deal-stage approvals. Pricing starts at $100 per seat per month with a 5-seat minimum, and it is highly user-friendly with rapid adoption potential. Its main limitation is that complex customizations are shallower than Salesforce.\n2. Salesforce Sales Cloud Professional – Best for scaling defined sales processes +1 Salesforce is highly customizable and suitable for companies with a defined sales methodology that need process enforcement at scale. It supports complex workflows, forecasting, and integration through AppExchange. Pricing starts at $165 per seat per month. Salesforce is extremely powerful for complex environments, but the implementation requires technical expertise and potentially significant investment in setup and administration.\n3. Zoho CRM Enterprise – Best customization for the price +1 Zoho CRM provides multi-pipeline support, territory management, AI predictions, and solid API integration. Pricing is $40 per seat per month, making it one of the most affordable options for extensive functionality. It is ideal for mid-market companies seeking customization and flexibility while keeping costs lower than Salesforce. Its UI is functional, and regional support may vary, so staying within the Zoho ecosystem can improve integration.\n4. Pipedrive Power – Best for pipeline-first organizations Designed for sales-driven teams, Pipedrive focuses on pipeline visualization, deal tracking, and forecasting at an affordable per-seat cost ($79 per month). While marketing features are limited, it supports adoption without a dedicated admin, making it suitable for organizations prioritizing deal flow over automated marketing.\n5. Microsoft Dynamics 365 Sales – Best for Microsoft-centric companies +1 If your company uses Microsoft 365 extensively, Dynamics 365 integrates seamlessly with Office tools, Teams, Power BI, and Azure. Pricing starts at $95 per seat per month for the enterprise version. It provides robust CRM and ERP functionality but has a steeper learning curve, and implementing advanced workflows may require a Microsoft partner.\nChoosing the Right CRM\nTo select the most suitable CRM for a mid-market company that has outgrown spreadsheets, consider these factors:\nExisting tech stack: Microsoft 365 → Dynamics 365; Google Workspace → HubSpot or Copper.\nSales process complexity: Standard B2B → HubSpot or Pipedrive; Bespoke processes → Salesforce or Creatio.\nAdmin capacity: No dedicated admin → HubSpot or Pipedrive; With RevOps team → Salesforce or Zoho.\nNeed for integrated marketing: Yes → HubSpot or Keap; No → focus on standalone CRM.\nThese CRMs are designed to handle teams of 50–500 employees and provide multi-pipeline reporting, automation, and analytics to replace spreadsheet-based tracking +1. For companies with budget constraints, Zoho CRM Enterprise or Odoo (affordable open-source alternative) can deliver strong features. Salesforce and HubSpot excel in flexibility and ecosystem support but require careful planning for adoption and cost management.\nBy assessing your team’s size, sales process, technical capacity, and integration needs, you can select a CRM that provides long-term growth potential and efficient management of customer relationships.",
+    "citations": [
+      {
+        "url": "https://findstack.com/software/crm/s/mid-market",
+        "position": 0,
+        "title": "Best CRM Software for Mid-Market 2026: Tested & Ranked",
+        "meta": {
+          "publisher": "findstack.com",
+          "icon_url": "blob:https://www.bing.com/d272de74-cf46-4864-b714-b773ff98c525"
+        }
+      },
+      {
+        "url": "https://bestforbusiness.org/crm/10-best-crms-for-medium-sized-businesses/",
+        "position": 1,
+        "title": "10 Best CRMs for Medium-Sized Businesses",
+        "meta": {
+          "publisher": "bestforbusiness.org",
+          "icon_url": "blob:https://www.bing.com/06627547-c0d7-44fd-9311-d9decd1c9456"
+        }
+      },
+      {
+        "url": "https://innovationvista.com/systems/crm-recommendations/",
+        "position": 2,
+        "title": "Innovation Vista’s 2026 Mid-market Picks · Top Ten CRMs",
+        "meta": {
+          "publisher": "innovationvista.com",
+          "icon_url": "blob:https://www.bing.com/52b83239-c679-41db-a418-77c2fd14eff8"
+        }
+      },
+      {
+        "url": "https://topbusinesssoftware.com/categories/crm/mid-size-business-orgs/",
+        "position": 3,
+        "title": "List of the Top CRM Software for Mid Size Business in 2026",
+        "meta": {
+          "publisher": "topbusinesssoftware.com",
+          "icon_url": "blob:https://www.bing.com/a9efb71a-d6f0-468f-9f50-0eafa9a8da1a"
+        }
+      },
+      {
+        "url": "https://www.elevatiq.com/post/top-mid-sized-crms/",
+        "position": 4,
+        "title": "Top 10 Mid-Sized CRMs In 2025",
+        "meta": {
+          "publisher": "elevatiq.com",
+          "icon_url": "blob:https://www.bing.com/170cc0ca-8f44-413f-9149-44acf95a34ad"
+        }
+      },
+      {
+        "url": "https://www.growthtechspotlight.com/directory/crm/for-mid-market",
+        "position": 5,
+        "title": "Best CRM Software for Mid-Market in 2026 (Ranked and Reviewed)",
+        "meta": {
+          "publisher": "growthtechspotlight.com",
+          "icon_url": "blob:https://www.bing.com/541ac66a-f520-4c99-b5c4-e4b73c3a2508"
+        }
+      },
+      {
+        "url": "https://www.omi.co/crm-configuration/salesforce-vs-microsoft-dynamics-vs-hub-spot-which-crm-is-best-for-mid-market-businesses-in-2026/",
+        "position": 6,
+        "title": "CRM 2026: Salesforce vs. Dynamics vs. HubSpot for Mid-Market | OMI",
+        "meta": {
+          "publisher": "omi.co",
+          "icon_url": "blob:https://www.bing.com/99ced9af-c985-4c3b-89d0-1df0de5b306d"
+        }
+      },
+      {
+        "url": "https://salespop.net/sales-technology/top-5-crms-for-the-mid-market-a-comparative-analysis/",
+        "position": 7,
+        "title": "Top 5 CRMs for the Mid-Market: A Comparative Analysis",
+        "meta": {
+          "publisher": "salespop.net",
+          "icon_url": "blob:https://www.bing.com/2d1daded-d9b1-4bde-bb10-2ddeac5ff22e"
+        }
+      },
+      {
+        "url": "https://www.folk.app/articles/best-crm-midsize-companies",
+        "position": 8,
+        "title": "Best CRM for midsize companies",
+        "meta": {
+          "publisher": "folk.app",
+          "icon_url": "blob:https://www.bing.com/25ba4a5c-9aa3-4f6a-9329-6ef6c5377ca8"
+        }
+      },
+      {
+        "url": "https://platformdex.com/guide/choosing-a-crm-mid-market",
+        "position": 9,
+        "title": "Choosing Mid-Market CRM: Salesforce vs HubSpot vs Dynamics",
+        "meta": {
+          "publisher": "platformdex.com",
+          "icon_url": "blob:https://www.bing.com/160e91cf-41c7-4d4c-af06-67753b197d86"
+        }
+      },
+      {
+        "url": "https://solutions.trustradius.com/buyer-blog/best-mid-sized-crm/",
+        "position": 10,
+        "title": "Best Customer Relationship Management (CRM) Software for Mid-Sized ...",
+        "meta": {
+          "publisher": "solutions.trustradius.com",
+          "icon_url": "blob:https://www.bing.com/64fde64b-9746-47ff-9d65-f7857c7890b7"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 4,
+    "brandsDetected": 5,
+    "cited": false,
+    "position": 4,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "review"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 60
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 83
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho CRM",
+        "offset": 124
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1895
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 1984
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 2978
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 3080
+      },
+      {
+        "brand": "dynamics-365-sales",
+        "span": "Microsoft Dynamics 365 Sales",
+        "offset": 2283
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM",
+      "Pipedrive",
+      "Microsoft Dynamics 365 Sales"
+    ],
+    "citations": {
+      "0": "findstack.com: unsure, software comparison site that may carry user reviews; not confident it is a review platform",
+      "1": "bestforbusiness.org: listicle site, not in the publisher registry",
+      "2": "innovationvista.com: consultancy site, not in the publisher registry",
+      "3": "topbusinesssoftware.com: unsure, unrecognised software directory",
+      "4": "elevatiq.com: consultancy blog, not in the publisher registry",
+      "5": "growthtechspotlight.com: unsure, unrecognised directory",
+      "6": "omi.co: consultancy site, not in the publisher registry",
+      "7": "salespop.net: vendor-run sales blog, not in the publisher registry",
+      "8": "folk.app: CRM vendor site, vendor not in the competitor set",
+      "9": "platformdex.com: unsure, unrecognised guide site",
+      "10": "solutions.trustradius.com: subdomain of trustradius.com, a review platform (the page itself is a buyer-blog article)"
+    },
+    "notes": "\"Pipedrive Power\" at 1895 is a plan name carrying the brand name: one mention. Copper, Creatio, Keap, Odoo are not in the set. Citation 10: classed by what the site is (TrustRadius is a review platform) although the cited page is a blog article on a subdomain; slightly unsure."
+  }
+}

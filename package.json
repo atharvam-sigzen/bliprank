@@ -27,7 +27,9 @@
     "grader:prompts": "tsx services/grader/src/prompts.ts",
     "grader:tick": "tsx services/grader/src/tick.ts",
     "grader:schedule": "tsx services/grader/src/schedule.ts",
-    "grader:track": "tsx services/grader/src/tick.ts track"
+    "grader:track": "tsx services/grader/src/tick.ts track",
+    "scorer:golden-worklist": "tsx services/scorer/src/golden-worklist-cli.ts",
+    "scorer:golden-report": "tsx services/scorer/src/golden-report-cli.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

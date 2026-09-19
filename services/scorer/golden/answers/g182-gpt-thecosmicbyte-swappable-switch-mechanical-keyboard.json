@@ -1,0 +1,117 @@
+{
+  "id": "g182-gpt-thecosmicbyte-swappable-switch-mechanical-keyboard",
+  "covers": "real chatgpt answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T10:41:12.766Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "swappable switch mechanical keyboard with usb c under 4000",
+    "cell": {
+      "key": "ff71f911390f25cb5aa43acfcf913a8698cc184963d04d7dd36937589ec6fcb9",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If you mean **₹4,000 in India**, there are some very good hot-swappable options with **USB-C** right now.\n\n### My picks\n\n- **Kreo Hive 75 / Hive 75 V2 — ~₹3,100–₹3,200**\n\n75% / 87-key layout\n**5-pin hot-swap**\nUSB-C wired\nGasket + sound-dampening\nVolume knob\nGreat choice if you want a **75% keyboard**.\n- **Cosmic Byte CB-GK-42 Phantom TKL — ~₹3,000**\n\nTKL / 82 keys\n**Hot-swappable Outemu Reds**\nUSB-C detachable cable\nSilicone gasket\nPer-key RGB\n**Best value if you want F-row + arrow keys.**\n- **Redragon K668 — ~₹3,800–₹4,000**\n\nFull-size 108 keys\n**3/5-pin hot-swap**\nUSB-C\nSound-absorbing foam\n1000 Hz polling\nPick this if you **need a numpad**.\n- **Redragon K617 Fizz — ~₹2,200**\n\n60% / 61 keys\n**3/5-pin hot-swap**\nUSB-C\nRGB\nExcellent cheap option, but no dedicated arrow/F-row keys.\n\n### 🏆 What I'd buy\n\n**Kreo Hive 75 V2** if you want the best overall experience under ₹4k. It gives you the modern 75% layout, hot-swap, USB-C, sound dampening and a knob without using the whole budget.\n\nIf you tell me **60% / 65% / 75% / TKL / full-size** and whether you want **red, brown, or blue switches**, I can narrow it down to the **best 2–3 options under ₹4,000**.\n\nT9MSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 1,
+    "cited": false,
+    "position": 1,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "domain:thecosmicbyte.com",
+        "span": "Cosmic Byte",
+        "offset": 308
+      }
+    ],
+    "order": [
+      "thecosmicbyte"
+    ],
+    "citations": {},
+    "notes": "unlisted form: \"Cosmic Byte\" (the trading name, written with a space) at 308. The model code \"CB-GK-42\" at 320 follows directly in the same product name (\"Cosmic Byte CB-GK-42 Phantom TKL\"): one stretch of text, one mention. No citations."
+  }
+}

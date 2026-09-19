@@ -1,0 +1,282 @@
+{
+  "id": "g108-cop-sigzen-affordable-erp-system-pharma",
+  "covers": "real copilot answer, erp-software, from the stratified worklist: citation metadata in copilot's own dialect (icon_url, publisher); domain-label subject matched separator-insensitively · seen on reading: different product of the same company (SAP S/4HANA) is not SAP Business One",
+  "source": {
+    "engine": "copilot",
+    "collectedAt": "2026-09-01T11:15:50.724Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "affordable ERP system for pharma company with batch tracking",
+    "cell": {
+      "key": "e0a1cdcb622a6aa57d05e8e3bfe7886d8e2365c0aa109fb8cd39ef9a3f9f2b38",
+      "adapter": "openwebninja:copilot",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "For pharmaceutical companies seeking affordable ERP solutions with robust batch tracking and regulatory compliance, options like Aptean Process Manufacturing ERP, BatchMaster ERP, Columbus Manufacturing ERP, and SYSPRO provide strong functionality at SMB-friendly pricing.\nKey ERP Options for Mid-sized Pharma\n1. Aptean Process Manufacturing ERP\nTailored for process manufacturers with regulated batch execution.\nSupports governed batch workflows, batch genealogy, recipe/formula management, and quality checkpoints, all linked for audit readiness 1.\nBest choice for multi-site operations needing consistent batch traceability without manual reconciliation.\nPros: Track batch status, recipe governance, audit trail for quality teams.\nCons: Requires disciplined master data governance and implementation effort 1.\n1 Source\n2. BatchMaster ERP\nFocused on life sciences compliance and batch processing.\nSupports regulatory reporting, electronic batch records (EBR), formula management, and QA workflows, making it suitable for cGMP-regulated production 1.\nPros: Maintains traceable batch records, supports deviations and CAPA investigations, streamlines compliance.\nCons: Limited customization, frequent updates needed 1.\n1 Source\n3. Columbus Manufacturing ERP\nDesigned for mid-size pharma manufacturers emphasizing recipe-based manufacturing.\nIntegrates production reporting, material consumption, and inventory reconciliation with batch-level traceability 1.\nPros: Reduces manual reconciliation, audit-friendly, operator-driven batch updates.\nCons: May need add-ons for complex MES functionalities 1.\n1 Source\n4. SYSPRO\nERP solution focused on manufacturing efficiency with serialization and lot tracking.\nSuitable for companies prioritizing real-time process visibility and inventory control.\nPros: Enhances production workflows, ensures compliance with regulations, real-time monitoring.\nCons: Setup complexity and need for technical expertise 1.\n1 Source\nConsiderations for Selecting an Affordable Pharma ERP\nEvaluate whether SMB-oriented ERPs meet your batch traceability and compliance needs; enterprise solutions like SAP S/4HANA offer robust features but at higher costs 1.\nEnsure the system supports audit-ready reports, electronic batch records, and deviation/CAPA tracking, critical for regulatory compliance.\nCheck for integration capabilities with existing finance, inventory, and laboratory systems.\nConsider support and scalability to accommodate future product lines or additional manufacturing sites.\n1 Source\nFor companies in Bukittinggi, Indonesia, these ERPs can be implemented with cloud or on-premise options, giving flexibility in deployment and reducing upfront infrastructure costs. Small-to-medium pharma businesses often find BatchMaster, Aptean, Columbus, and SYSPRO provide a strong balance between affordability and regulatory functionality +1.",
+    "citations": [
+      {
+        "url": "https://www.metaoption.com/blog/software/pharma-erp-systems/",
+        "position": 0,
+        "title": "11 Best Pharma ERP Systems and Software (Updated List)",
+        "meta": {
+          "publisher": "metaoption.com",
+          "icon_url": "blob:https://www.bing.com/018a99c6-16ae-4719-bde9-88b358e3c857"
+        }
+      },
+      {
+        "url": "https://worldmetrics.org/best/erp-pharma-software/",
+        "position": 1,
+        "title": "Top 10 Best ERP Pharma Software | 2026 Edition",
+        "meta": {
+          "publisher": "worldmetrics.org",
+          "icon_url": "blob:https://www.bing.com/e0209e8e-6bac-4a8c-bd74-2c3fb2e134fb"
+        }
+      },
+      {
+        "url": "https://thecfoclub.com/tools/best-erp-for-pharma/",
+        "position": 2,
+        "title": "10 Best ERP Pharma Software Reviewed in 2026",
+        "meta": {
+          "publisher": "thecfoclub.com",
+          "icon_url": "blob:https://www.bing.com/59540c1c-c9c3-4742-8446-6a4eb0b92c77"
+        }
+      },
+      {
+        "url": "https://www.jmjsoft.com/products/pharma-erp.php",
+        "position": 3,
+        "title": "Pharma ERP Software | Batch & Expiry Tracking | JMJ Soft",
+        "meta": {
+          "publisher": "jmjsoft.com",
+          "icon_url": "blob:https://www.bing.com/fa3aa3c8-cc90-45da-bff3-00be8b4a225f"
+        }
+      },
+      {
+        "url": "https://www.batchmaster.com/erp-for-pharmaceuticals-manufacturing/",
+        "position": 4,
+        "title": "Pharmaceutical Manufacturing ERP Software | ERP for Pharma Industry",
+        "meta": {
+          "publisher": "batchmaster.com",
+          "icon_url": "blob:https://www.bing.com/8de9950f-d706-4ed3-b119-207de1e5ae76"
+        }
+      },
+      {
+        "url": "https://www.raseedapp.com/free-cloud-accounting-billing-software/pharmaceutical-erp-system-software/",
+        "position": 5,
+        "title": "Pharmaceutical ERP Software | Raseed - Batch Tracking & GST",
+        "meta": {
+          "publisher": "raseedapp.com",
+          "icon_url": "blob:https://www.bing.com/18b12763-5e9b-4a1c-a95b-41f01dee2f08"
+        }
+      },
+      {
+        "url": "https://cloudconsultings.com/best-erp-software-for-pharmaceuticals-industry/",
+        "position": 6,
+        "title": "Best Pharmaceutical ERP Software 2026: Top Systems Compared",
+        "meta": {
+          "publisher": "cloudconsultings.com",
+          "icon_url": "blob:https://www.bing.com/1f08ae2e-2899-48ac-b681-9610eb5b0354"
+        }
+      },
+      {
+        "url": "https://www.eresourceerp.com/erp-for-pharmaceutical",
+        "position": 7,
+        "title": "Pharmaceutical ERP System GMP, Batch & Inventory Control",
+        "meta": {
+          "publisher": "eresourceerp.com",
+          "icon_url": "blob:https://www.bing.com/dabed6e9-e0e7-48d4-83dc-15f7b443e2fb"
+        }
+      },
+      {
+        "url": "https://rxerp.com/pharmaceutical-erp-systems-reviewed/",
+        "position": 8,
+        "title": "Pharmaceutical ERP Systems: 7 Best Options | RxERP",
+        "meta": {
+          "publisher": "rxerp.com",
+          "icon_url": "blob:https://www.bing.com/d9915eb7-d77f-4a4b-8780-85b88328dad0"
+        }
+      },
+      {
+        "url": "https://zipdo.co/best/erp-pharma-software/",
+        "position": 9,
+        "title": "Best ERP Pharma Software | 2026 Rankings - zipdo.co",
+        "meta": {
+          "publisher": "zipdo.co",
+          "icon_url": "blob:https://www.bing.com/58b4ad42-24f1-4962-881f-50672f4529b0"
+        }
+      },
+      {
+        "url": "https://www.gofrugal.com/retail/erp/pharma/",
+        "position": 10,
+        "title": "ERP for the pharmaceutical industry | Pharma ERP system - Gofrugal",
+        "meta": {
+          "publisher": "gofrugal.com",
+          "icon_url": "blob:https://www.bing.com/72470cc5-54fb-49c8-bdcb-ce8988a92c9d"
+        }
+      }
+    ]
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {
+      "0": "other",
+      "1": "other",
+      "2": "other",
+      "3": "other",
+      "4": "other",
+      "5": "other",
+      "6": "other",
+      "7": "other",
+      "8": "other",
+      "9": "other",
+      "10": "other"
+    }
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {
+      "0": "metaoption.com blog: vendor/partner site, not in registry",
+      "1": "worldmetrics.org: 'best of' listicle site, not in registry",
+      "2": "thecfoclub.com: blog listicle, not in registry",
+      "3": "jmjsoft.com: vendor site, not in registry",
+      "4": "batchmaster.com: vendor site, not in registry",
+      "5": "raseedapp.com: vendor site, not in registry",
+      "6": "cloudconsultings.com: consultancy blog, not in registry",
+      "7": "eresourceerp.com: vendor site, not in registry",
+      "8": "rxerp.com: vendor site, not in registry",
+      "9": "zipdo.co: 'best of' listicle site, not in registry",
+      "10": "gofrugal.com: vendor site, not in registry"
+    },
+    "notes": "No brand from the set. \"SAP S/4HANA\" at 2122 is a different SAP product, NOT SAP Business One."
+  }
+}

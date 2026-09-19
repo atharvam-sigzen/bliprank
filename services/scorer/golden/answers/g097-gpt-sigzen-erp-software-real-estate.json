@@ -1,0 +1,158 @@
+{
+  "id": "g097-gpt-sigzen-erp-software-real-estate",
+  "covers": "real chatgpt answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: bare SAP is not SAP Business One",
+  "source": {
+    "engine": "chatgpt",
+    "collectedAt": "2026-09-01T11:18:38.981Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "ERP software for real estate business with project tracking",
+    "cell": {
+      "key": "e5a8f898c5b8e05e545b61d4db63ea08a5887265b31650095fd599c16ec77c7d",
+      "adapter": "openwebninja:chatgpt",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "If you mean an **ERP for a real-estate developer/builder where project tracking is a core requirement**, I’d shortlist these:\n\n| ERP | Best for | Project tracking | Sales/CRM | Finance | Construction |\n| --- | --- | --- | --- | --- | --- |\n| **Abite ERP** | Brazil / construction & development | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |\n| **SAP + real-estate solutions** | Large enterprises | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |\n| **BidecERP** | Property developers | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |\n| **FlowSense Real Estate** | Developer-focused operations | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |\n| **REALe ERP** | Mid-sized developers | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |\n| **E-Hishabi** | Development companies | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |\n\n### My top choices\n\n**1. Abite ERP — particularly interesting if you're operating in Brazil**\n\nAbite integrates engineering, purchasing, inventory, finance, sales/CRM, customer service and corporate management. It specifically connects construction budgets, purchasing, inventory, expenses, contracts and commercial operations.\n\n**2. BidecERP — strong all-in-one developer ERP**\n\nIt links **project timelines, construction progress, sales/booking, installment collections, project accounting and reporting**, which is exactly the combination I'd look for in a property-development ERP.\n\n**3. FlowSense — good for project + unit + construction tracking**\n\nFlowSense provides project milestone tracking, unit inventory, bookings, CRM, payment schedules and construction-progress tracking, including photo documentation.\n\n### Features I'd insist on\n\nFor a real-estate business, don't choose an ERP based simply on \"project management.\" Ideally it should track:\n\n- **Project → phase → building/tower → floor → unit**\n- Land acquisition and approvals\n- Project budget vs. actual cost\n- Construction milestones and percentage completion\n- Contractor/subcontractor management\n- BOQ, procurement and materials\n- Sales pipeline and bookings\n- Unit inventory and availability\n- Customer payment schedules and collections\n- Project-wise P&L and cash flow\n- Documents/contracts\n- Change orders and approvals\n- Management dashboards\n- Multi-project and multi-company support\n\nFor example, REALe's development module supports zones, work packages, tasks/subtasks and real-time progress monitoring.\n\nIf you tell me **(1) your country, (2) number of projects/units, (3) whether you're a developer, realtor, or construction company, and (4) approximate budget**, I can narrow this to **3 best ERPs and compare pricing, project tracking, CRM, accounting, mobile app, and implementation**.\n\nABFSources",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "No brand from the set. Bare \"SAP\" at 332 (\"SAP + real-estate solutions\", for 'Large enterprises') NOT counted as SAP Business One: company name only, and the context points away from Business One."
+  }
+}

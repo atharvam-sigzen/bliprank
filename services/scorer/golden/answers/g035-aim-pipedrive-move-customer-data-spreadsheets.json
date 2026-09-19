@@ -1,0 +1,190 @@
+{
+  "id": "g035-aim-pipedrive-move-customer-data-spreadsheets",
+  "covers": "real google-ai-mode answer, crm-software, from the stratified worklist: engine emitted no citations",
+  "source": {
+    "engine": "google-ai-mode",
+    "collectedAt": "2026-08-25T05:32:59.351Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I move customer data out of spreadsheets into a CRM without losing history?",
+    "cell": {
+      "key": "5126b31f1e5196ed7f7c8064c881578c708ca68ef8d99ff39b2f2757ee865cc8",
+      "adapter": "openwebninja:google-ai-mode",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Moving historical customer data out of spreadsheets and into a CRM without losing context requires a meticulous, step-by-step approach. If done wrong, you end up with broken dates, scrambled notes, and a mess of duplicate contacts.\nHere is a structured playbook to get your historical data safely across the digital finish line:\nAudit and Clean Your Spreadsheet Data: Audit and Clean Your Spreadsheet Data\nDelete duplicates, fix glaring formatting errors (like phone numbers or state abbreviations), and ensure every row has a unique identifier (like an email address).\nStandardize columns so they match your future CRM fields (e.g., separating \"Full Name\" into \"First Name\" and \"Last Name\").\nMap Your Historical Timeline to CRM Activities: Map Your Historical Timeline to CRM Activities\nMap static fields (name, email, company) easily, but handle your historical interactions (emails, calls, meeting notes) with care.\nFormat past communication logs into a Notes, Activities, or Engagement history import format, ensuring timestamps are preserved.\nNormalize Dates and Timestamps: Normalize Dates and Timestamps\nEnsure all dates use a universal format (like YYYY-MM-DD or ISO 8601) so the CRM doesn't misinterpret past dates as \"today.\"\nRun a Small Test Import: Run a Small Test Import\nExport a sample of 5 to 10 rows of your cleaned spreadsheet data and import it into a sandbox or test view of your CRM.\nVerify that the historical dates, past notes, and deal stages attached to those contacts look correct and haven't collapsed into the current date.\nExecute the Full Migration in Batches: Execute the Full Migration in Batches\nImport your data in manageable segments (e.g., 500 to 1,000 rows at a time) rather than all at once, which makes troubleshooting failed rows much easier.\nVerify and Audit Post-Import: Verify and Audit Post-Import\nCheck random historical records against your original spreadsheet to ensure past touchpoints, owners, and creation dates transferred intact.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "Generic migration steps; no brand from the set (and no other vendor) is named. No citations, no URLs in the text."
+  }
+}

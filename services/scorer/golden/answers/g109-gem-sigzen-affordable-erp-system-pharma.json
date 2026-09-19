@@ -1,0 +1,182 @@
+{
+  "id": "g109-gem-sigzen-affordable-erp-system-pharma",
+  "covers": "real gemini answer, erp-software, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table · seen on reading: subject absent; first competitor named inside a table cell, slash-joined (QuickBooks/Sage)",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T11:15:34.735Z",
+    "domain": "sigzen.com",
+    "category": "erp-software",
+    "day": "2026-09-01",
+    "prompt": "affordable ERP system for pharma company with batch tracking",
+    "cell": {
+      "key": "683c26045b65c4e188e220a42feb7c80dc6312cb8190ee06798155b1c530fed3",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|erp-software@2|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:sigzen.com",
+    "name": "Sigzen",
+    "aliases": [
+      "sigzen",
+      "Sigzen"
+    ],
+    "squashedAliases": [
+      "sigzen"
+    ],
+    "domains": [
+      "sigzen.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "promoted:odoo",
+      "name": "Odoo",
+      "aliases": [
+        "Odoo"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:quickbooks",
+      "name": "QuickBooks",
+      "aliases": [
+        "QuickBooks"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:xero",
+      "name": "Xero",
+      "aliases": [
+        "Xero"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:microsoftdynamics365",
+      "name": "Microsoft Dynamics 365",
+      "aliases": [
+        "Microsoft Dynamics 365"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "Salesforce"
+      ],
+      "domains": []
+    },
+    {
+      "id": "promoted:sapbusinessone",
+      "name": "SAP Business One",
+      "aliases": [
+        "SAP Business One"
+      ],
+      "domains": []
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Selecting an affordable ERP system for a pharmaceutical company requires balancing low deployment costs with strict regulatory compliance (such as FDA 21 CFR Part 11 and cGMP), full forward/backward batch traceability, and Electronic Batch Records (EBR).\n\nThe top affordable ERP options tailored for small-to-midsize pharmaceutical manufacturers fall into three tiers based on operational scale and budget:\n\n---\n\n### Tier 1: Dedicated Mid-Market Pharma ERPs (Best overall compliance)\n\nThese systems are purpose-built for process and pharmaceutical manufacturing. They come pre-configured for regulatory compliance, which reduces custom development costs.\n\n| ERP System | Key Features | Deployment & Cost Profile |\n| :--- | :--- | :--- |\n| **BatchMaster ERP** | Built specifically for formula-based manufacturing. Includes built-in FDA 21 CFR Part 11, cGMP, master production records, and end-to-end batch lot traceability. Integrates with QuickBooks/Sage if full ERP is not needed. | Mid-range pricing; cloud or on-premise. Saves costs by eliminating third-party compliance add-ons. |\n| **QT9 ERP** | Combines ERP with a Quality Management System (QMS). Features batch release automation, lot genealogy tracking, certificate of analysis (CoA) generation, and audit trails. | Scalable cloud software (SaaS) priced competitively for mid-sized pharmaceutical and medical device companies. |\n| **xTuple** | Open-source/commercial hybrid platform tailored for biomedical and pharma. Features real-time lot tracing, expiration control, non-conformance tracking, and inventory control. | Offers a low barrier to entry for smaller manufacturers needing an end-to-end open platform. |\n\n---\n\n### Tier 2: Flexible & Modular ERPs (Best budget flexibility)\n\nIf upfront cash flow is tight, open-source or modular systems allow you to start small and add pharmaceutical modules over time.\n\n* **Odoo (with Process Manufacturing/Batch Modules)**\n  * **Strengths:** Highly affordable per-user pricing model with low upfront license costs. Has modular apps for inventory, batch manufacturing, quality control, and barcoding.\n  * **Caution:** Odoo requires configuration or third-party validation add-ons to meet 21 CFR Part 11 electronic signature requirements out-of-the-box.\n* **Katana Cloud Manufacturing**\n  * **Strengths:** Modern, easy-to-use cloud platform starting at low monthly rates. Tracks raw materials, work-in-progress (WIP), and finished goods by lot/batch number. Integrates directly with QuickBooks Online and Xero.\n  * **Best For:** Early-stage nutraceutical or light pharmaceutical packagers that need simple lot tracking and visual shop-floor management.\n\n---\n\n### Key Requirements Checklist for Pharma Batch Tracking\n\nWhen evaluating software options, verify that the following core features are natively supported or easily integrated:\n\n1. **Bi-directional Traceability:** The system must trace a raw material lot number from supplier receipt $\\rightarrow$ blend/batch production $\\rightarrow$ finished goods shipment (and back during recalls).\n2. **Electronic Batch Records (EBR):** Digital logging of formulas, quantities, parameters, operator actions, and approval steps during manufacturing.\n3. **Quality Control (QC) & Inspection Gates:** Ability to quarantine raw/finished stock automatically pending lab test approval and Certificate of Analysis (CoA) release.\n4. **Audit Trails & Electronic Signatures:** Compliance with FDA 21 CFR Part 11, requiring immutable audit logs for every system edit or sign-off.\n5. **Expiration & Shelf-Life Management:** Automated First-Expired, First-Out (FEFO) picking rules to prevent stock degradation.\n\n---\n\n### Recommendation Next Steps\n\n* **For startups or tight budgets ($300–$1,000/month):** Start with **Katana** or **Odoo** (configured with a certified partner) to keep software overhead minimal.\n* **For growing cGMP-regulated manufacturers ($1,000–$3,000+/month):** Request a demo for **BatchMaster** or **QT9 ERP**. Both deliver native pharma compliance workflows out-of-the-box, avoiding expensive custom validation work later on.",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 3,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [
+      "QuickBooks",
+      "Odoo",
+      "Xero"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "promoted:quickbooks",
+        "span": "QuickBooks",
+        "offset": 939
+      },
+      {
+        "brand": "promoted:odoo",
+        "span": "Odoo",
+        "offset": 1879
+      },
+      {
+        "brand": "promoted:xero",
+        "span": "Xero",
+        "offset": 2509
+      }
+    ],
+    "order": [
+      "QuickBooks",
+      "Odoo",
+      "Xero"
+    ],
+    "citations": {},
+    "notes": "Sigzen does not appear anywhere in the answer (find: 0 hits). QuickBooks first appears inside a table cell as \"QuickBooks/Sage\" at 939; \"QuickBooks Online\" at 2487 is a later occurrence. The three \"sig\" hits are the ordinary words signature/Signatures/sign-off. No citations."
+  }
+}

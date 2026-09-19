@@ -1,0 +1,109 @@
+{
+  "id": "g159-gem-thecosmicbyte-gaming-controller-hall-effect",
+  "covers": "real gemini answer, gaming-peripherals-india, from the stratified worklist: engine emitted no citations; domain-label subject matched separator-insensitively; answer contains a table",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-09-01T10:35:55.897Z",
+    "domain": "thecosmicbyte.com",
+    "category": "gaming-peripherals-india",
+    "day": "2026-09-01",
+    "prompt": "gaming controller with hall effect joysticks for pc india",
+    "cell": {
+      "key": "24dd66fadc77868720f4e4e5ccab5addc7121a235e0bbffd0bcb50ea4292734a",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|gaming-peripherals-india@1|unprompted=10|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "domain:thecosmicbyte.com",
+    "name": "thecosmicbyte",
+    "aliases": [
+      "thecosmicbyte"
+    ],
+    "squashedAliases": [
+      "thecosmicbyte",
+      "cosmicbyte"
+    ],
+    "domains": [
+      "thecosmicbyte.com"
+    ]
+  },
+  "competitors": [],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "Here are the best Hall Effect gaming controllers available in India across different price segments, ensuring you get drift-free magnetic joysticks and triggers.\n\n| Model | Price Range | Connection Modes | Key Specs & Standout Features |\n| :--- | :--- | :--- | :--- |\n| **8BitDo Ultimate 2C Wireless** | ₹2,499 – ₹2,700 | 2.4GHz Wireless, Bluetooth, USB-C Wired | • Hall Effect sticks & triggers<br>• 1000Hz polling rate (2.4G/wired)<br>• Re-mappable extra bumpers (L4/R4) |\n| **GameSir Nova Lite** | ₹2,300 – ₹2,900 | 2.4GHz Wireless, Bluetooth, USB-C Wired | • Budget entry-level Hall Effect sticks<br>• Analog triggers & dual rumble motors<br>• Multi-platform (PC, Switch, Android/iOS) |\n| **Kreo SurgeXB** | ₹2,099 – ₹2,200 | 2.4GHz Wireless, Bluetooth 5.3, Wired | • Hall Effect sticks & triggers<br>• 1000Hz polling rate on 2.4G<br>• 2 back macro buttons & customizable RGB light bar |\n| **8BitDo Ultimate Wireless (2.4G)** | ₹4,999 – ₹5,500 | 2.4GHz Wireless, USB-C Wired | • Hall Effect joysticks<br>• Included charging dock<br>• 2 back paddle buttons & macro software profile switching |\n| **GameSir G7 SE / G7 Pro** | ₹5,000 – ₹7,800 | USB-C Wired (G7 SE) / Tri-Mode (G7 Pro) | • Officially licensed Xbox/PC layout<br>• Anti-friction rings & magnetic faceplate<br>• 1000Hz polling rate & dedicated software mapping |\n\n---\n\n**Which option should you pick?**\n\n* **Best Overall Budget Pick (Under ₹3,000):** Go for the **8BitDo Ultimate 2C**. It offers premium Hall Effect responsiveness, 1000Hz polling for low latency on PC, and durable build quality.\n* **Best Native Indian Brand Support:** The **Kreo SurgeXB** delivers strong specs (1000Hz polling, back macros, tri-mode wireless) at an aggressive price tag with accessible local customer support.\n* **Best Pro/Competitive Pick (Wired Reliability):** The **GameSir G7 SE** or **G7 Pro** is ideal if you prioritize zero latency and custom button profiles via dedicated software.\n\n**Where to Buy in India:**  \nAvoid inflated third-party seller markups on Amazon by checking specialized Indian PC peripheral stores like *GenesisPC*, *Kreo Tech*, or *Mx2Games*.\n\n<FollowUp label=\"Want me to compare the 8BitDo Ultimate 2C and Kreo SurgeXB in detail?\" query=\"Can you compare the 8BitDo Ultimate 2C and Kreo SurgeXB in detail regarding build quality, battery life, and software features?\"/>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": false,
+    "mentionCount": 0,
+    "brandsDetected": 0,
+    "cited": false,
+    "position": null,
+    "competitorsMentioned": [],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [],
+    "order": [],
+    "citations": {},
+    "notes": "No \"cosmic\" or \"byte\" anywhere in the text. The answer names 8BitDo, GameSir and Kreo only (\"8BitDo\" is not a form of the subject's name). No citations."
+  }
+}

@@ -1,0 +1,220 @@
+{
+  "id": "g024-gem-pipedrive-connect-crm-gmail-calendar",
+  "covers": "real gemini answer, crm-software, from the stratified worklist: engine emitted no citations; answer contains a table · seen on reading: competitor named only by its short form",
+  "source": {
+    "engine": "gemini",
+    "collectedAt": "2026-08-25T06:13:14.961Z",
+    "domain": "pipedrive.com",
+    "category": "crm-software",
+    "day": "2026-08-25",
+    "prompt": "How do I connect a CRM to Gmail and calendar so nothing has to be entered twice?",
+    "cell": {
+      "key": "f6cc5b7c6df84b78f797c6e5b193c4addefca7da974d2c97e9be73c0729dc2b1",
+      "adapter": "openwebninja:gemini",
+      "run": 0
+    },
+    "comparisonBasis": "grader|engines=chatgpt,copilot,gemini,google-ai-mode,google-ai-overviews|en-US|US|crm-software@1|unprompted=17|runs=1",
+    "note": "real collected answer; brand, competitors and publishers are the specs the cycle was scored with"
+  },
+  "brand": {
+    "id": "pipedrive",
+    "name": "Pipedrive",
+    "aliases": [
+      "pipedrive"
+    ],
+    "domains": [
+      "pipedrive.com"
+    ]
+  },
+  "competitors": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "aliases": [
+        "hubspot",
+        "hub spot",
+        "hubspot crm",
+        "hubspot sales hub",
+        "hubspot marketing hub"
+      ],
+      "domains": [
+        "hubspot.com"
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "aliases": [
+        "salesforce",
+        "salesforce crm",
+        "sales cloud",
+        "sfdc"
+      ],
+      "domains": [
+        "salesforce.com"
+      ]
+    },
+    {
+      "id": "zoho-crm",
+      "name": "Zoho CRM",
+      "aliases": [
+        "zoho crm",
+        "zoho crm plus"
+      ],
+      "domains": [
+        "crm.zoho.com"
+      ]
+    },
+    {
+      "id": "freshsales",
+      "name": "Freshsales",
+      "aliases": [
+        "freshsales",
+        "freshsales suite"
+      ],
+      "domains": [
+        "freshworks.com",
+        "freshsales.io"
+      ]
+    },
+    {
+      "id": "monday-crm",
+      "name": "monday CRM",
+      "aliases": [
+        "monday crm",
+        "monday sales crm"
+      ],
+      "domains": [
+        "monday.com"
+      ]
+    },
+    {
+      "id": "dynamics-365-sales",
+      "name": "Microsoft Dynamics 365 Sales",
+      "aliases": [
+        "dynamics 365 sales",
+        "microsoft dynamics 365 sales",
+        "dynamics crm"
+      ],
+      "domains": [
+        "dynamics.microsoft.com"
+      ]
+    },
+    {
+      "id": "close",
+      "name": "Close",
+      "aliases": [
+        "close crm",
+        "close.com"
+      ],
+      "domains": [
+        "close.com"
+      ]
+    }
+  ],
+  "publishers": {
+    "techradar.com": "TechRadar",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "wired.com": "Wired",
+    "arstechnica.com": "Ars Technica",
+    "engadget.com": "Engadget",
+    "tomshardware.com": "Tom's Hardware",
+    "tomsguide.com": "Tom's Guide",
+    "digitaltrends.com": "Digital Trends",
+    "rtings.com": "RTINGS",
+    "computerworld.com": "Computerworld",
+    "infoworld.com": "InfoWorld",
+    "theregister.com": "The Register",
+    "venturebeat.com": "VentureBeat",
+    "searchenginejournal.com": "Search Engine Journal",
+    "forbes.com": "Forbes",
+    "fortune.com": "Fortune",
+    "businessinsider.com": "Business Insider",
+    "inc.com": "Inc.",
+    "fastcompany.com": "Fast Company",
+    "entrepreneur.com": "Entrepreneur",
+    "hbr.org": "Harvard Business Review",
+    "technologyreview.com": "MIT Technology Review",
+    "nytimes.com": "The New York Times",
+    "wsj.com": "The Wall Street Journal",
+    "ft.com": "Financial Times",
+    "bloomberg.com": "Bloomberg",
+    "reuters.com": "Reuters",
+    "theguardian.com": "The Guardian",
+    "bbc.co.uk": "BBC",
+    "bbc.com": "BBC",
+    "economist.com": "The Economist",
+    "smallbusiness.co.uk": "SmallBusiness.co.uk",
+    "livemint.com": "Mint",
+    "business-standard.com": "Business Standard",
+    "moneycontrol.com": "Moneycontrol",
+    "news18.com": "News18",
+    "hindustantimes.com": "Hindustan Times",
+    "indianexpress.com": "The Indian Express",
+    "thehindu.com": "The Hindu",
+    "ndtv.com": "NDTV",
+    "gadgets360.com": "Gadgets 360",
+    "digit.in": "Digit",
+    "yourstory.com": "YourStory",
+    "inc42.com": "Inc42",
+    "gulfnews.com": "Gulf News",
+    "khaleejtimes.com": "Khaleej Times",
+    "thenationalnews.com": "The National",
+    "arabianbusiness.com": "Arabian Business",
+    "zawya.com": "Zawya",
+    "sifted.eu": "Sifted",
+    "thenextweb.com": "The Next Web"
+  },
+  "answer": {
+    "text": "To completely eliminate double-data entry between your CRM, Gmail, and Google Calendar, you need a **two-way sync setup** combined with a **sidebar browser extension**.\n\n---\n\n### Step 1: Connect Native Accounts (Two-Way Sync)\nMost modern CRMs (HubSpot, Salesforce, Pipedrive, Zoho, Copper, Nutshell) offer direct, native integrations with Google Workspace.\n\n1. **Log in to your CRM** and navigate to **Settings > Integrations** or **Connected Apps**.\n2. **Select Google Workspace / Gmail & Calendar**.\n3. **Grant permissions** to connect your Google account.\n4. **Configure Sync Settings:**\n   * **Gmail Sync:** Enable **2-way email sync** so outgoing and incoming emails auto-log to the matching contact's timeline.\n   * **Google Calendar Sync:** Turn on **2-Way Calendar Sync**. Meetings created in Google Calendar will automatically show up in your CRM, and meetings scheduled in the CRM will populate directly onto your Google Calendar.\n\n---\n\n### Step 2: Install the CRM’s Chrome / Gmail Extension\nConnecting accounts in the background handles existing contacts, but creating *new* contacts or updating deal stages while reading emails still requires a sidebar extension.\n\n1. Go to the **Chrome Web Store** or **Google Workspace Marketplace**.\n2. Search for and install your specific CRM extension (e.g., *HubSpot Sales*, *Salesforce Extension*, or *Copper for Gmail*).\n3. Log in to the extension.\n4. **How it stops double-entry:**\n   * **Auto-Create Contacts:** When an email arrives from a new contact, click \"Add to CRM\" directly inside Gmail—the extension pulls their name, email, and signature details automatically.\n   * **Log Notes & Tasks:** You can log call notes, create tasks, or move pipeline stages right from your Gmail sidebar without switching tabs.\n\n---\n\n### Step 3: Implement Workaround Sync Tools (If Using Custom / Legacy CRMs)\nIf your CRM lacks a direct native integration with Google Workspace, use a third-party automation bridge:\n\n* **Zapier / Make.com:** Set up automated workflows:\n  * *Trigger:* New Google Calendar Event $\\rightarrow$ *Action:* Create/Update Activity in CRM.\n  * *Trigger:* New Lead in CRM $\\rightarrow$ *Action:* Create Contact in Google Contacts/Gmail.\n* **PieSync / SyncApps:** Provides true multi-directional, continuous background synchronization for contacts across legacy platforms.\n\n---\n\n### Key Settings to Enable Zero Manual Entry\n\n| Feature | What It Does | Why It Prevents Double Entry |\n| :--- | :--- | :--- |\n| **BCC / Email Forwarding Relay** | Assigns a unique BCC email address for your CRM. | Automatically logs external emails to the contact timeline if native sync ever drops. |\n| **Integrated Scheduling Links** | Replaces external booking tools (e.g., HubSpot Meetings / Chili Piper). | When a client books time, it creates the Google Calendar event *and* logs the lead/activity in your CRM simultaneously. |\n| **Contact Auto-Enrichment** | Pulls company info and social profiles from email domains. | Fills out contact details in your CRM automatically when a new email is received. |\n\n<FollowUp label=\"Want help setting up specific sync rules for your CRM brand?\" query=\"How do I configure automatic email and calendar sync settings for my specific CRM?\"/>",
+    "citations": []
+  },
+  "label": {
+    "mentioned": true,
+    "mentionCount": 1,
+    "brandsDetected": 4,
+    "cited": false,
+    "position": 3,
+    "competitorsMentioned": [
+      "HubSpot",
+      "Salesforce",
+      "Zoho CRM"
+    ],
+    "citationClasses": {}
+  },
+  "labelledBy": "agent-proposed",
+  "verifiedBy": null,
+  "evidence": {
+    "mentions": [
+      {
+        "brand": "hubspot",
+        "span": "HubSpot",
+        "offset": 244
+      },
+      {
+        "brand": "salesforce",
+        "span": "Salesforce",
+        "offset": 253
+      },
+      {
+        "brand": "pipedrive",
+        "span": "Pipedrive",
+        "offset": 265
+      },
+      {
+        "brand": "zoho-crm",
+        "span": "Zoho",
+        "offset": 276
+      }
+    ],
+    "order": [
+      "HubSpot",
+      "Salesforce",
+      "Pipedrive",
+      "Zoho CRM"
+    ],
+    "citations": {},
+    "notes": "short form: \"Zoho\" for Zoho CRM at 276, in a parenthesised list of CRMs (its only occurrence). Subject named once, in that same list. \"Chili Piper\" at 2742 and \"pipeline\" at 1700 are not the subject. Copper, Nutshell, Zapier, Make.com, PieSync are not in the set."
+  }
+}
